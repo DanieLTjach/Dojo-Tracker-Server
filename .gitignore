@@ -1,1 +1,4 @@
 node_modules
+.vscode
+users.db
+auth_test.session.sql
