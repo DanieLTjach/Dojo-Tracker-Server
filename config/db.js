@@ -1,12 +1,12 @@
 const sqlite3 = require('sqlite3').verbose();
-const users_db = new sqlite3.Database('./storage/users.db');
+const db = new sqlite3.Database('./storage/data.db');
 
-users_db.serialize(function () {
-    users_db.run(`
+db.serialize(function () {
+    db.run(`
         CREATE TABLE IF NOT EXISTS players (
             user_id INTEGER PRIMARY KEY,
             user_telegram TEXT,
-            user_Name TEXT NOT NULL,
+            user_name TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
@@ -14,14 +14,14 @@ users_db.serialize(function () {
         )
     `);
 
-    users_db.run(`
+    db.run(`
         CREATE TABLE IF NOT EXISTS game_type_dict (
             game_type INTEGER PRIMARY KEY,
             type_desc TEXT NOT NULL UNIQUE
         )
     `);
 
-    users_db.run(`
+    db.run(`
         CREATE TABLE IF NOT EXISTS games (
             game_id INTEGER PRIMARY KEY,
             game_type INTEGER NOT NULL,
@@ -32,8 +32,8 @@ users_db.serialize(function () {
         )
     `);
 
-    users_db.run(`
-        CREATE TABLE IF NOT EXISTS player_To_game (
+    db.run(`
+        CREATE TABLE IF NOT EXISTS player_to_game (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             game_id INTEGER,
@@ -46,14 +46,14 @@ users_db.serialize(function () {
         )
     `);
 
-    users_db.run(`
+    db.run(`
         CREATE TABLE IF NOT EXISTS start_place_dict (
             start_place INTEGER PRIMARY KEY,
             start_place_desc TEXT NOT NULL UNIQUE
         )
     `);
 
-    users_db.run(`
+    db.run(`
         CREATE TABLE IF NOT EXISTS standart_hanchan_result (
             game_id INTEGER,
             east INTEGER NOT NULL,
@@ -67,7 +67,7 @@ users_db.serialize(function () {
         )
     `);
 
-    users_db.run(`
+    db.run(`
         CREATE TABLE IF NOT EXISTS standart_hanchan_hands (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             game_id INTEGER NOT NULL,
@@ -90,14 +90,14 @@ users_db.serialize(function () {
         )
     `);
 
-    users_db.run(`
+    db.run(`
         CREATE TABLE IF NOT EXISTS hand_type_dist (
             hand_type INTEGER PRIMARY KEY,
             hand_type_desc TEXT NOT NULL UNIQUE
         )
     `);
 
-    users_db.run(`
+    db.run(`
         CREATE TABLE IF NOT EXISTS win_type_dist (
             win_type INTEGER PRIMARY KEY,
             win_type_desc TEXT NOT NULL UNIQUE
@@ -106,4 +106,4 @@ users_db.serialize(function () {
 });
 
 
-module.exports = users_db;
+module.exports = db;

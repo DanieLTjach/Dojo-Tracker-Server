@@ -1,16 +1,17 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
 const app = express()
 const PORT = 3000;
 
 const authRoutes = require('./service/auth/authRoutes');
+const gameRoutes = require('./service/game/gameRoutes')
 
 app.use(express.json());
 
 app.use(cors());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/game', gameRoutes);
 // app.post('/get_game', (req, res) =>{
 //     const players = req.body;
 
