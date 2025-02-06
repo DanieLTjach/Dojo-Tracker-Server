@@ -3,7 +3,7 @@ const cors = require('cors');
 const app = express()
 const PORT = 3000;
 
-const authRoutes = require('./service/auth/authRoutes');
+const authRoutes = require('./service/auth/UserRoutes');
 
 app.use(express.json());
 

@@ -1,11 +1,11 @@
-const { use } = require('./authRoutes');
+const { use } = require('./UserRoutes');
 const DatabaseManager = require('../db/dbManager');
 const db = new DatabaseManager();
 
 exports.register = async (req, res) => {
-    const { user_name, user_telegram } = req.body;
+    const { user_name, user_telegram, user_telegram_id } = req.body;
     try {
-        let result = db.registration(user_name, user_telegram, 0);
+        let result = db.registration(user_name, user_telegram, user_telegram_id, user_telegram_id);
         if(result === 400){
             return res.status(400).json({ message: "Користувач з таким telegram вже існує."});
         }
