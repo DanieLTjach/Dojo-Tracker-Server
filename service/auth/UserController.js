@@ -19,11 +19,17 @@ exports.register = async (req, res) => {
     }
 }
 
-exports.login = async (req, res) => {
-    const { email, password } = req.body;
+exports.edit = async (req, res) => {
+    const { user_id, updateField, updateInfo, modified_by } = req.body;
 
     try {
-        // Тут должна быть логика авторизации
+        let result = db.edit_user(user_id, updateField, updateInfo, modified_by);
+        if(result = true){
+            return res.status(400).json({message: "Користувача змінено"});
+        }
+        else{
+            return res.status(201).json({ message: "Помилка"});
+        }
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: "Помилка серверу" });

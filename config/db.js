@@ -3,14 +3,15 @@ const db = new sqlite3.Database('./storage/data.db');
 
 db.serialize(function () {
     db.run(`
-        CREATE TABLE IF NOT EXISTS players (
-            user_id INTEGER PRIMARY KEY,
-            user_telegram TEXT,
+        CREATE TABLE IF NOT EXISTS player (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_telegram_nickname TEXT,
+            user_telegram_userid INTEGER,
             user_name TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
-            is_activated BOOL DEFAULT false
+            is_admin BOOL DEFAULT false
         )
     `);
 
@@ -22,8 +23,8 @@ db.serialize(function () {
     `);
 
     db.run(`
-        CREATE TABLE IF NOT EXISTS games (
-            game_id INTEGER PRIMARY KEY,
+        CREATE TABLE IF NOT EXISTS game (
+            game_id INTEGER PRIMARY KEY AUTOINCREMENT,
             game_type INTEGER NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -41,6 +42,7 @@ db.serialize(function () {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
+            FOREIGN KEY (start_place) REFERENCES start_place_dict (start_place)
             FOREIGN KEY (user_id) REFERENCES players(user_id),
             FOREIGN KEY (game_id) REFERENCES games(game_id)
         )
@@ -56,10 +58,10 @@ db.serialize(function () {
     db.run(`
         CREATE TABLE IF NOT EXISTS standart_hanchan_result (
             game_id INTEGER,
-            east INTEGER NOT NULL,
-            south INTEGER NOT NULL,
-            west INTEGER NOT NULL,
-            north INTEGER NOT NULL,
+            east_points INTEGER NOT NULL,
+            south_points INTEGER NOT NULL,
+            west_points INTEGER NOT NULL,
+            north_points INTEGER NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
@@ -74,10 +76,10 @@ db.serialize(function () {
             hand_type INTEGER NOT NULL,
             repeat INTEGER DEFAULT 0,
             win_type INTEGER,
-            east INTEGER NOT NULL,
-            south INTEGER NOT NULL,
-            west INTEGER NOT NULL,
-            north INTEGER NOT NULL,
+            east_points INTEGER NOT NULL,
+            south_points INTEGER NOT NULL,
+            west_points INTEGER NOT NULL,
+            north_points INTEGER NOT NULL,
             riichi_east BOOL,
             riichi_south BOOL,
             riichi_west BOOL,
@@ -91,18 +93,30 @@ db.serialize(function () {
     `);
 
     db.run(`
-        CREATE TABLE IF NOT EXISTS hand_type_dist (
+        CREATE TABLE IF NOT EXISTS hand_type_dict (
             hand_type INTEGER PRIMARY KEY,
             hand_type_desc TEXT NOT NULL UNIQUE
         )
     `);
 
     db.run(`
-        CREATE TABLE IF NOT EXISTS win_type_dist (
+        CREATE TABLE IF NOT EXISTS win_type_dict (
             win_type INTEGER PRIMARY KEY,
             win_type_desc TEXT NOT NULL UNIQUE
         )
     `);
+
+    db.run(`
+        INSERT OR IGNORE INTO game_type_dict(game_type, type_desc) VALUES (0, "Yonma")
+        `);
+
+    db.run(`
+        INSERT OR IGNORE INTO start_place_dict(start_place, start_place_desc) VALUES (0, "East"), (1, "South"), (2, "West"), (3, "North")
+        `);
+
+    db.run(`
+        INSERT OR IGNORE INTO player (user_id, user_name, user_telegram_nickname, user_telegram_userid, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1)
+        `);
 });
 
 
