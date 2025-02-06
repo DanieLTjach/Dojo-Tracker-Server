@@ -36,3 +36,21 @@ exports.edit = async (req, res) => {
     }
 };
 
+exports.remove_user = async (req, res) => {
+    const { user_id, modified_by } = req.body;
+
+    try {
+        let result = db.remove_user(user_id, modified_by);
+        if(result = true){
+            return res.status(400).json({message: "Користувача видалено"});
+        }
+        else{
+            return res.status(201).json({ message: "Помилка"});
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Помилка серверу" });
+    }
+
+}
+

@@ -11,6 +11,7 @@ db.serialize(function () {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
+            is_active BOOL DEFAULT true,
             is_admin BOOL DEFAULT false
         )
     `);
