@@ -1,8 +1,6 @@
-const { use } = require('../auth/UserRoutes');
+const { use } = require('../user/UserRoutes');
 
 const sqlite3 = require('sqlite3').verbose();
-
-const ID_LENGH = 4
 
 module.exports = class DatabaseManager {
     #db;
@@ -111,10 +109,10 @@ module.exports = class DatabaseManager {
                 const result = await this.db_register(Number(user_id), user_name, user_telegram_nickname, user_telegram_id, modified_by);
                 return result;
             }
-            return 400;
+            return false;
         } catch (error) {
             console.error("Ошибка регистрации:", error);
-            return 400;
+            return false;
         }
     }
 
