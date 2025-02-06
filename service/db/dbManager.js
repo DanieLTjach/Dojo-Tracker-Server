@@ -1,12 +1,14 @@
 const sqlite3 = require('sqlite3').verbose();
 
+const ID_LENGH = 4
+
 module.exports = class DatabaseManager {
     #db;
     constructor() {
         this.#db = require("../../config/db");
     }
 
-    #select_by_telegram(user_telegram) {
+    async select_by_telegram(user_telegram) {
         return new Promise((resolve, reject) => {
             this.#db.get(
                 `SELECT * FROM players WHERE user_telegram = ?`,
@@ -43,7 +45,7 @@ module.exports = class DatabaseManager {
             user_id = this.generateRandomId();
         }
         try {
-            const is_user_exist = await this.#select_by_telegram(user_telegram);
+            const is_user_exist = await this.select_by_telegram(user_telegram);
             if (!is_user_exist) {
                 const result = await this.#registration(user_id, user_name, user_telegram, modified_by);
                 return result;
@@ -55,11 +57,13 @@ module.exports = class DatabaseManager {
         }
     }
 
+
+// Убрать
     generateRandomId() {
         const numbers = '0123456789';
         let id = '';
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < ID_LENGH; i++) {
             id += numbers.charAt(Math.floor(Math.random() * numbers.length));
         }
         return id;
