@@ -1,25 +1,26 @@
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./storage/data.db');
+const db = new sqlite3.Database('./service/db/storage/data.db');
 
 db.serialize(function () {
     db.run(`
         CREATE TABLE IF NOT EXISTS player (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_telegram_nickname TEXT,
-            user_telegram_userid INTEGER,
+            user_telegram_id INTEGER,
             user_name TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
             is_active BOOL DEFAULT true,
-            is_admin BOOL DEFAULT false
-        )
+            is_admin BOOL DEFAULT false,
+            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+        );
     `);
 
     db.run(`
         CREATE TABLE IF NOT EXISTS game_type_dict (
             game_type INTEGER PRIMARY KEY,
-            type_desc TEXT NOT NULL UNIQUE
+            type_desc TEXT NOT NULL
         )
     `);
 
@@ -30,8 +31,9 @@ db.serialize(function () {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
-            FOREIGN KEY (game_type) REFERENCES game_type_dict (game_type)
-        )
+            FOREIGN KEY (game_type) REFERENCES game_type_dict(game_type),
+            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+        );
     `);
 
     db.run(`
@@ -43,16 +45,17 @@ db.serialize(function () {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
-            FOREIGN KEY (start_place) REFERENCES start_place_dict (start_place)
-            FOREIGN KEY (user_id) REFERENCES players(user_id),
-            FOREIGN KEY (game_id) REFERENCES games(game_id)
-        )
+            FOREIGN KEY (start_place) REFERENCES start_place_dict(start_place),
+            FOREIGN KEY (user_id) REFERENCES player(user_id),
+            FOREIGN KEY (game_id) REFERENCES game(game_id),
+            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+        );
     `);
 
     db.run(`
         CREATE TABLE IF NOT EXISTS start_place_dict (
             start_place INTEGER PRIMARY KEY,
-            start_place_desc TEXT NOT NULL UNIQUE
+            start_place_desc TEXT NOT NULL
         )
     `);
 
@@ -66,8 +69,9 @@ db.serialize(function () {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
-            FOREIGN KEY (game_id) REFERENCES games (game_id)
-        )
+            FOREIGN KEY (game_id) REFERENCES game(game_id),
+            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+        );
     `);
 
     db.run(`
@@ -88,22 +92,23 @@ db.serialize(function () {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
-            FOREIGN KEY (hand_type) REFERENCES hand_type_dist (hand_type),
-            FOREIGN KEY (win_type) REFERENCES win_type_dist (win_type)
-        )
+            FOREIGN KEY (hand_type) REFERENCES hand_type_dict(hand_type),
+            FOREIGN KEY (win_type) REFERENCES win_type_dict(win_type),
+            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+        );
     `);
 
     db.run(`
         CREATE TABLE IF NOT EXISTS hand_type_dict (
             hand_type INTEGER PRIMARY KEY,
-            hand_type_desc TEXT NOT NULL UNIQUE
+            hand_type_desc TEXT NOT NULL
         )
     `);
 
     db.run(`
         CREATE TABLE IF NOT EXISTS win_type_dict (
             win_type INTEGER PRIMARY KEY,
-            win_type_desc TEXT NOT NULL UNIQUE
+            win_type_desc TEXT NOT NULL
         )
     `);
 
@@ -116,7 +121,7 @@ db.serialize(function () {
         `);
 
     db.run(`
-        INSERT OR IGNORE INTO player (user_id, user_name, user_telegram_nickname, user_telegram_userid, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1)
+        INSERT OR IGNORE INTO player (user_id, user_name, user_telegram_nickname, user_telegram_id, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1)
         `);
 });
 
