@@ -4,10 +4,7 @@ module.exports = class DatabaseManager {
     #db;
     constructor() {
         this.#db = require("./db_init");
-    }
-    // User CRUD
-    
-    // Registation / Insert 
+    }    
 
     async register(user_id, user_name, user_telegram_nickname, user_telegram_id, modified_by){
         return new Promise((resolve, reject) => {
@@ -33,17 +30,13 @@ module.exports = class DatabaseManager {
         });
     }
 
-    // Read / Select
-
     async select_by(column, value){
         return new Promise((resolve, reject) => {
-            // Add input validation
             if (!column || !value) {
                 reject({success: false, result: "Invalid search parameters"});
                 return;
             }
     
-            // Use parameterized query to prevent SQL injection
             const query = `SELECT * FROM player WHERE ${column} = ?`;
             
             this.#db.get(query, [value], (err, result) => {
@@ -51,12 +44,10 @@ module.exports = class DatabaseManager {
                     console.error('Database select error:', err);
                     reject({success: false, result: err.message});
                     return;
-                }
-    
-                // When no user is found, resolve with success: false
+                } 
                 if(result === undefined){
                     resolve({success: false, result: null});
-                }
+                } 
                 else{
                     resolve({success: true, result: result});
                 }
@@ -80,9 +71,11 @@ module.exports = class DatabaseManager {
                 (err) => {
                     if(err){
                         reject({success: false, result: err.message});
-                    }else if(this.changes === 0){
+                    }
+                    else if(this.changes === 0){
                         reject({success: false, result: "You are not admin."})
-                    } else {
+                    } 
+                    else {
                         resolve({success: true, result: "User edited."});
                     }
                 }

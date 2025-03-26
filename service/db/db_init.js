@@ -38,7 +38,7 @@ db.serialize(function () {
 
     db.run(`
         CREATE TABLE IF NOT EXISTS player_to_game (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            record_id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             game_id INTEGER,
             start_place INTEGER,
@@ -76,7 +76,7 @@ db.serialize(function () {
 
     db.run(`
         CREATE TABLE IF NOT EXISTS standart_hanchan_hands (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hand_id INTEGER PRIMARY KEY AUTOINCREMENT,
             game_id INTEGER NOT NULL,
             hand_type INTEGER NOT NULL,
             repeat INTEGER DEFAULT 0,
