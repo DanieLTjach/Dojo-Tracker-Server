@@ -30,7 +30,7 @@ module.exports = class DatabaseManager {
         });
     }
 
-    async select_by(column, value){
+    async player_select_by(column, value){
         return new Promise((resolve, reject) => {
             if (!column || !value) {
                 reject({success: false, result: "Invalid search parameters"});

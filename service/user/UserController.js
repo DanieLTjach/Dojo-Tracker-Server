@@ -1,6 +1,6 @@
 const status = require('../../config/config').STATUS;
 const errors = require('../../config/messages');
-const { registation, edit, remove, activate_user } = require('./UserLogic');
+const { registation, edit, remove, activate_user, get_user } = require('./UserLogic');
 
 exports.register = async (req, res) => {
     const { user_name, user_telegram, user_telegram_id } = req.body;
@@ -134,6 +134,37 @@ exports.activate_user = async (req, res) => {
     }
     catch(error){
         console.error('Activate error:', error);
+        return res.status(status.ERROR).json({ 
+            message: errors.InternalServerError, 
+            details: error.message 
+        });
+    }
+}
+
+exports.get_user = async (req, res) => {
+    try {
+        const { user_id } = req.body;
+
+        if (!user_id) {
+            return res.status(status.ERROR).json({ 
+                message: errors.EmptyFields, 
+                details: { user_id: !!user_id } 
+            });
+        }
+
+        const result = await get_user(user_id);
+
+        if (result.success === true) {
+            return res.status(status.OK).json({ message: result.result });
+        } else {
+            return res.status(status.ERROR).json({ 
+                message: result.result,
+                details: result
+            });
+        }
+    }
+    catch (error) {
+        console.error('Get user error:', error);
         return res.status(status.ERROR).json({ 
             message: errors.InternalServerError, 
             details: error.message 
