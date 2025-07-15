@@ -4,7 +4,80 @@ module.exports = class DatabaseManager {
     #db;
     constructor() {
         this.#db = require("./db_init");
-    }    
+    }
+
+    async #insertGame(game_type, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `INSERT INTO game (game_type, modified_by) VALUES (?, ?)`,
+                [game_type, modified_by],
+                function(err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(this.lastID);
+                    }
+                }
+            );
+        });
+    }
+
+    async #insertPlayer(player, gameId, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `INSERT INTO player_to_game (user_id, game_id, start_place, modified_by) VALUES (?, ?, ?, ?)`,
+                [player.user_id, gameId, player.start_place, modified_by],
+                (err) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                }
+            );
+        });
+    }
+
+    async #insertHanchan(gameId, players_data, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `INSERT INTO standart_hanchan_result (game_id, east_points, south_points, west_points, north_points, modified_by)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [
+                    gameId,
+                    players_data[0]?.points ?? null,
+                    players_data[1]?.points ?? null,
+                    players_data[2]?.points ?? null,
+                    players_data[3]?.points ?? null,
+                    modified_by
+                ],
+                (err) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                }
+            );
+        });
+    }
+
+    async add_game(game_type, players_data, modified_by) {
+        try {
+            const gameId = await this.#insertGame(game_type, modified_by);
+            const playerPromises = players_data.map(player => 
+                this.#insertPlayer(player, gameId, modified_by)
+            );
+            const hanchanPromise = this.#insertHanchan(gameId, players_data, modified_by);
+            
+            await Promise.all([...playerPromises, hanchanPromise]);
+            return { success: true, result: "Game, players, and hanchan result added successfully" };
+        } catch (err) {
+            console.error('Database error during game addition:', err);
+            return { success: false, result: err.message };
+        }
+    }
+
 
     async register(user_id, user_name, user_telegram_nickname, user_telegram_id, modified_by){
         return new Promise((resolve, reject) => {
@@ -84,6 +157,76 @@ module.exports = class DatabaseManager {
     }
 
     // Remove / Delete
+
+    async #removePlayersFromGame(game_id, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `DELETE FROM player_to_game 
+                 WHERE game_id = ? 
+                 AND EXISTS (SELECT 1 FROM player WHERE user_id = ? AND is_admin = 1)`,
+                [game_id, modified_by],
+                (err) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                }
+            );
+        });
+    }
+
+    async #removeHanchanResult(game_id, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `DELETE FROM standart_hanchan_result 
+                 WHERE game_id = ? 
+                 AND EXISTS (SELECT 1 FROM player WHERE user_id = ? AND is_admin = 1)`,
+                [game_id, modified_by],
+                (err) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                }
+            );
+        });
+    }
+
+    async #removeGameRecord(game_id, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `DELETE FROM game 
+                 WHERE game_id = ? 
+                 AND EXISTS (SELECT 1 FROM player WHERE user_id = ? AND is_admin = 1)`,
+                [game_id, modified_by],
+                function(err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(this.changes);
+                    }
+                }
+            );
+        });
+    }
+
+    async remove_game(game_id, modified_by) {
+        try {
+            await this.#removePlayersFromGame(game_id, modified_by);
+            await this.#removeHanchanResult(game_id, modified_by);
+            const changes = await this.#removeGameRecord(game_id, modified_by);
+            
+            if (changes === 0) {
+                return { success: false, result: "You are not admin or game not found." };
+            }
+            return { success: true, result: "Game removed." };
+        } catch (err) {
+            console.error('Database error during game removal:', err);
+            return { success: false, result: err.message };
+        }
+    }
 
     async remove_user(user_id, modified_by) {
         return new Promise((resolve, reject) => {

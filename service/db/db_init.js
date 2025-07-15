@@ -99,6 +99,31 @@ db.serialize(function () {
     `);
 
     db.run(`
+        CREATE TABLE if not exists achievements (
+            achievement_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            description TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_by INTEGER,
+            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+        );
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS player_to_achievements (
+            record_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            achievement_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_by INTEGER,
+            FOREIGN KEY (user_id) REFERENCES player(user_id),
+            FOREIGN KEY (achievement_id) REFERENCES achievements(achievement_id),
+            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+        );
+    `);
+
+    db.run(`
         CREATE TABLE IF NOT EXISTS hand_type_dict (
             hand_type INTEGER PRIMARY KEY,
             hand_type_desc TEXT NOT NULL
@@ -111,6 +136,20 @@ db.serialize(function () {
             win_type_desc TEXT NOT NULL
         )
     `);
+
+    db.run(`
+        create table if not exists cites (
+            city_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            city_name TEXT NOT NULL)
+        `);
+    
+    db.run(`create table if not exists city_to_game (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            city_id INTEGER NOT NULL,
+            game_id INTEGER NOT NULL,
+            FOREIGN KEY (city_id) REFERENCES cites(city_id),
+            FOREIGN KEY (game_id) REFERENCES game(game_id)
+        )`)
 
     db.run(`
         INSERT OR IGNORE INTO game_type_dict(game_type, type_desc) VALUES (0, "Yonma")
