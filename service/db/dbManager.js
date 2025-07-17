@@ -6,6 +6,68 @@ module.exports = class DatabaseManager {
         this.#db = require("./db_init");
     }
 
+    async list_games(game_type, date_from, date_to, user_id = null) {
+        return new Promise((resolve, reject) => {
+            this.#db.all(`SELECT
+                g.game_id,
+                g.created_at
+                FROM game g
+                WHERE g.created_at BETWEEN ? AND ?
+                AND g.game_type = ?
+                AND (
+                    ? IS NULL OR EXISTS (
+                    SELECT 1
+                    FROM player_to_game ptg
+                    WHERE ptg.game_id = g.game_id
+                        AND ptg.user_id = ?
+                    )
+                );`, [date_from, date_to, game_type, user_id, user_id], (err, rows) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    reject({ success: false, result: err.message });
+                } else if (rows.length === 0) {
+                    resolve({ success: false, result: "No games found" });
+                } else {
+                    console.log('Games found:', rows);
+                    resolve({ success: true, result: rows });
+                }
+            });
+        });
+    }
+
+    async get_game(game_id) {
+        return new Promise((resolve, reject) => {
+            this.#db.all(
+                `SELECT
+                    p.user_name,
+                    CASE ptg.start_place
+                        WHEN 0 THEN shr.east_points
+                        WHEN 1 THEN shr.south_points
+                        WHEN 2 THEN shr.west_points
+                        WHEN 3 THEN shr.north_points
+                    END AS points,
+                    g.created_at
+                FROM player_to_game ptg
+                JOIN player p ON ptg.user_id = p.user_id
+                JOIN game g ON ptg.game_id = g.game_id
+                JOIN standart_hanchan_result shr ON g.game_id = shr.game_id
+                WHERE g.game_id = ?;`,
+                [game_id],
+                (err, row) => {
+                    if (err) {
+                        console.error('Database error:', err);
+                        reject({ success: false, result: err.message });
+                    } else if (!row) {
+                        resolve({ success: false, result: "Game not found" });
+                    } else {
+                        console.log('Game found:', row);
+                        resolve({ success: true, result: row });
+                    }
+                }
+            );
+        });
+    }
+
     async #insertGame(game_type, modified_by) {
         return new Promise((resolve, reject) => {
             this.#db.run(

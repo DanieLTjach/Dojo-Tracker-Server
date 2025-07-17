@@ -53,10 +53,36 @@ exports.removeGame = async (game_id, modified_by) => {
     }
 };
 
-exports.listGames = async () => {
-
+exports.listGames = async (game_type, date_from, date_to, user_id) => {
+    try {
+        const result = await db.list_games(game_type, date_from, date_to, user_id);
+        if (result.success === true) {
+            return { success: true, result: result.result };
+        }
+        return { success: false, result: result.result || "Failed to list games" };
+    } catch (err) {
+        console.error("Error during listing games:", err);
+        return { 
+            success: false, 
+            result: err.message,
+            details: err.toString() 
+        }; 
+    }
 };
 
-exports.getGame = async () => {
-
+exports.getGame = async (game_id) => {
+    try {
+        const result = await db.get_game(game_id);
+        if (result.success === true) {
+            return { success: true, result: result.result };
+        }
+        return { success: false, result: result.result || "Failed to get game" };
+    } catch (err) {
+        console.error("Error during getting game:", err);
+        return { 
+            success: false, 
+            result: err.message,
+            details: err.toString() 
+        }; 
+    }
 };
