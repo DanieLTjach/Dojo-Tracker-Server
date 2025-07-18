@@ -101,6 +101,7 @@ db.serialize(function () {
     db.run(`
         CREATE TABLE if not exists achievements (
             achievement_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
             description TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -1,7 +1,7 @@
 const DatabaseManager = require('../db/dbManager');
 const db = new DatabaseManager();
 
-exports.addGame = async (game_type, players_data, modified_by) => {
+exports.addGame = async (game_type, players_data, modified_by, created_at) => {
     try{
         for (const player of players_data) {
             if (!player.user_id || !player.points || player.start_place == null) {
@@ -15,7 +15,7 @@ exports.addGame = async (game_type, players_data, modified_by) => {
             }
         }
 
-        const result = await db.add_game(game_type, players_data, modified_by);
+        const result = await db.add_game(game_type, players_data, modified_by, created_at);
         if (result.success === true) {
             return { success: true, result: "Game added successfully" };
         }

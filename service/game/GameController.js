@@ -4,7 +4,7 @@ const errors = require('../../config/messages');
 const { addGame, editGame, removeGame, listGames, getGame } = require('./GameLogic');
 
 exports.add = async (req, res) => {
-    const {game_type, players_data, modified_by} = req.body;
+    const {game_type, players_data, modified_by, created_at} = req.body;
     try{
         console.log("Received game data:", { game_type, players_data, modified_by });
         if (game_type == null || !players_data) {
@@ -18,7 +18,7 @@ exports.add = async (req, res) => {
             });
         }
 
-        const result = await addGame(game_type, players_data, modified_by);
+        const result = await addGame(game_type, players_data, modified_by, created_at);
 
         if (result.success === true) {
             return res.status(status.OK).json({ message: result.result });

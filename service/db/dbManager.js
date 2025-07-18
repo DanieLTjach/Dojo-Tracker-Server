@@ -68,11 +68,11 @@ module.exports = class DatabaseManager {
         });
     }
 
-    async #insertGame(game_type, modified_by) {
+    async #insertGame(game_type, modified_by, created_at = null) {
         return new Promise((resolve, reject) => {
             this.#db.run(
-                `INSERT INTO game (game_type, modified_by) VALUES (?, ?)`,
-                [game_type, modified_by],
+                `INSERT INTO game (game_type, modified_by, created_at) VALUES (?, ?, ?)`,
+                [game_type, modified_by, created_at || new Date().toISOString().replace('T', ' ').split('.')[0]],
                 function(err) {
                     if (err) {
                         reject(err);
@@ -84,11 +84,11 @@ module.exports = class DatabaseManager {
         });
     }
 
-    async #insertPlayer(player, gameId, modified_by) {
+    async #insertPlayer(player, gameId, modified_by, created_at = null) {
         return new Promise((resolve, reject) => {
             this.#db.run(
-                `INSERT INTO player_to_game (user_id, game_id, start_place, modified_by) VALUES (?, ?, ?, ?)`,
-                [player.user_id, gameId, player.start_place, modified_by],
+                `INSERT INTO player_to_game (user_id, game_id, start_place, modified_by, created_at) VALUES (?, ?, ?, ?, ?)`,
+                [player.user_id, gameId, player.start_place, modified_by, created_at || new Date().toISOString().replace('T', ' ').split('.')[0]],
                 (err) => {
                     if (err) {
                         reject(err);
@@ -100,18 +100,19 @@ module.exports = class DatabaseManager {
         });
     }
 
-    async #insertHanchan(gameId, players_data, modified_by) {
+    async #insertHanchan(gameId, players_data, modified_by, created_at = null) {
         return new Promise((resolve, reject) => {
             this.#db.run(
-                `INSERT INTO standart_hanchan_result (game_id, east_points, south_points, west_points, north_points, modified_by)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO standart_hanchan_result (game_id, east_points, south_points, west_points, north_points, modified_by, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, datetime(?))`,
                 [
                     gameId,
                     players_data[0]?.points ?? null,
                     players_data[1]?.points ?? null,
                     players_data[2]?.points ?? null,
                     players_data[3]?.points ?? null,
-                    modified_by
+                    modified_by,
+                    created_at || new Date().toISOString().replace('T', ' ').split('.')[0]
                 ],
                 (err) => {
                     if (err) {
@@ -124,13 +125,13 @@ module.exports = class DatabaseManager {
         });
     }
 
-    async add_game(game_type, players_data, modified_by) {
+    async add_game(game_type, players_data, modified_by, created_at = null) {
         try {
-            const gameId = await this.#insertGame(game_type, modified_by);
+            const gameId = await this.#insertGame(game_type, modified_by, created_at);
             const playerPromises = players_data.map(player => 
-                this.#insertPlayer(player, gameId, modified_by)
+                this.#insertPlayer(player, gameId, modified_by, created_at)
             );
-            const hanchanPromise = this.#insertHanchan(gameId, players_data, modified_by);
+            const hanchanPromise = this.#insertHanchan(gameId, players_data, modified_by, created_at);
             
             await Promise.all([...playerPromises, hanchanPromise]);
             return { success: true, result: "Game, players, and hanchan result added successfully" };
@@ -138,6 +139,81 @@ module.exports = class DatabaseManager {
             console.error('Database error during game addition:', err);
             return { success: false, result: err.message };
         }
+    }
+
+
+    async add_achievement(name, description, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `INSERT INTO achievements (name, description, modified_by) 
+                 VALUES (?, ?, ?)`,
+                [name, description, modified_by],
+                function(err) {
+                    if (err) {
+                        console.error('Database error:', err);
+                        reject({ success: false, result: err.message });
+                    } else {
+                        resolve({ success: true, result: "Achievement added successfully", id: this.lastID });
+                    }
+                }
+            );
+        })}
+
+    async grant_achievement(user_id, achievement_id, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `INSERT INTO player_to_achievements (user_id, achievement_id, modified_by) 
+                 VALUES (?, ?, ?)`,
+                [user_id, achievement_id, modified_by],
+                function(err) {
+                    if (err) {
+                        console.error('Database error:', err);
+                        reject({ success: false, result: err.message });
+                    } else {
+                        resolve({ success: true, result: "Achievement granted successfully", id: this.lastID });
+                    }
+                }
+            );
+        });
+    }
+
+    async list_achievements() {
+        return new Promise((resolve, reject) => {
+            this.#db.all(
+                `SELECT * FROM achievements`,
+                (err, rows) => {
+                    if (err) {
+                        console.error('Database error:', err);
+                        reject({ success: false, result: err.message });
+                    } else if (rows.length === 0) {
+                        resolve({ success: false, result: "No achievements found" });
+                    } else {
+                        resolve({ success: true, result: rows });
+                    }
+                }
+            );
+        });
+    }
+
+    async user_achievements(user_id) {
+        return new Promise((resolve, reject) => {
+            this.#db.all(
+                `SELECT a.* FROM player_to_achievements pta
+                 JOIN achievements a ON pta.achievement_id = a.achievement_id
+                 WHERE pta.user_id = ?`,
+                [user_id],
+                (err, rows) => {
+                    if (err) {
+                        console.error('Database error:', err);
+                        reject({ success: false, result: err.message });
+                    } else if (rows.length === 0) {
+                        resolve({ success: false, result: "No achievements found for user" });
+                    } else {
+                        resolve({ success: true, result: rows });
+                    }
+                }
+            );
+        });
     }
 
 
