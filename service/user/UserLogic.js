@@ -3,24 +3,22 @@ const { generateShortUserId } = require('../functions/userIdGenerator')
 const DatabaseManager = require('../db/dbManager');
 const db = new DatabaseManager();
 
-exports.registation = async (user_name, user_telegram_nickname, user_telegram_id, modified_by) => {
+exports.registation = async (user_name, user_telegram_nickname, user_telegram_id = null, user_id, modified_by) => {
     try {
-        const user_id = generateShortUserId(user_telegram_id);
-        console.log("Generated user_id:", user_id);
-
-        const is_user_exist = await db.player_select_by('user_telegram_id', user_telegram_id);
-
-        if (!is_user_exist) {
-            console.error("Error: db.select_by() returned null or undefined");
-            return { success: false, result: errors.DatabaseError };
+        if(user_id === null || user_id === undefined || user_id === '') {
+            user_id = generateShortUserId(user_telegram_id);
+            console.log("Generated user_id:", user_id);
         }
 
-        if (is_user_exist.success === true) {
-            console.error("User already exists:", is_user_exist.result);
+        const userCheck = await db.custom_select(`select user_id from player where (? is not null and user_id = ?) or (? is not null and user_telegram_id = ?);`, [user_id, user_id, user_telegram_id, user_telegram_id]);
+        console.log("User check result:", userCheck);
+
+        if (userCheck.success === true) {
+            console.error("User already exists:", userCheck.result);
             return { success: false, result: errors.UserExists };
         }
 
-        if (is_user_exist.success === false) {
+        if(userCheck.success === false) {
             const result = await db.register(
                 user_id, 
                 user_name, 

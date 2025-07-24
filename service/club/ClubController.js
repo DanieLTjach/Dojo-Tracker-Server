@@ -1,53 +1,47 @@
 const status = require('../../config/config').STATUS;
 const errors = require('../../config/messages');
 
-const { addGame, editGame, removeGame, listGames, getGame } = require('./GameLogic');
+const { addClub, editClub, removeClub, listClubs, getClub } = require('./ClubLogic');
 
 exports.add = async (req, res) => {
-    const {game_type, players_data, modified_by, created_at, club_id} = req.body;
-    try{
-        console.log("Received game data:", { game_type, players_data, modified_by });
-        if (game_type == null || !players_data || club_id) {
-            console.log(1);
+    const { club_name, modified_by } = req.body;
+    try {
+        if (!club_name || modified_by === null) {
             return res.status(status.ERROR).json({ 
                 message: errors.EmptyFields, 
                 details: {
-                    game_type: !!game_type,
-                    players_data: !!players_data,
-                    club_id: !!club_id,
+                    club_name: !!club_name
                 }
             });
         }
 
-        const result = await addGame(game_type, players_data, modified_by, created_at, club_id);
+        const result = await addClub(club_name, modified_by);
 
         if (result.success === true) {
             return res.status(status.OK).json({ message: result.result });
         } else {
-            console.log(2);
             return res.status(status.ERROR).json({ 
                 message: result.result,
                 details: result
             });
         }
-    }
-    catch(error) {
-        console.error('Add game error:', error);
+    } catch(error) {
+        console.error('Add club error:', error);
         return res.status(status.ERROR).json({ 
             message: errors.InternalServerError, 
             details: error.message 
         });
     }
-};
+}
 
 exports.edit = async (req, res) => {
-    const { game_id, updateField, updateInfo,  modified_by } = req.body;
+    const { club_id, updateField, updateInfo, modified_by } = req.body;
     try {
-        if (!game_id || !updateField || !updateInfo || !modified_by) {
+        if (club_id === null || !updateField || !updateInfo || modified_by === null) {
             return res.status(status.ERROR).json({ 
                 message: errors.EmptyFields, 
                 details: {
-                    game_id: !!game_id,
+                    club_id: !!club_id,
                     updateField: !!updateField,
                     updateInfo: !!updateInfo,
                     modified_by: !!modified_by
@@ -55,7 +49,7 @@ exports.edit = async (req, res) => {
             });
         }
 
-        const result = await editGame(game_id, updateField, updateInfo, modified_by);
+        const result = await editClub(club_id, updateField, updateInfo, modified_by);
         if (result.success === true) {
             return res.status(status.OK).json({ message: result.result });
         } else {
@@ -65,25 +59,25 @@ exports.edit = async (req, res) => {
             });
         }
     } catch (error) {
-        console.error('Edit game error:', error);
+        console.error('Edit club error:', error);
         return res.status(status.ERROR).json({ 
             message: errors.InternalServerError, 
             details: error.message 
         });
     }
-};
+}
 
 exports.remove = async (req, res) => {
-    const { game_id, modified_by } = req.body;
+    const { club_id, modified_by } = req.body;
     try {
-        if (!game_id || !modified_by) {
+        if (club_id === null || !modified_by === null) {
             return res.status(status.ERROR).json({ 
                 message: errors.EmptyFields, 
-                details: { game_id: !!game_id , modified_by: !!modified_by }
+                details: { club_id: !!club_id , modified_by: !!modified_by }
             });
         }
 
-        const result = await removeGame(game_id, modified_by);
+        const result = await removeClub(club_id, modified_by);
         if (result.success === true) {
             return res.status(status.OK).json({ message: result.result });
         } else {
@@ -93,69 +87,58 @@ exports.remove = async (req, res) => {
             });
         }
     } catch (error) {
-        console.error('Remove game error:', error);
+        console.error('Remove club error:', error);
         return res.status(status.ERROR).json({ 
             message: errors.InternalServerError, 
             details: error.message 
         });
     }
-};
+}
 
 exports.list = async (req, res) => {
-    const { game_type, date_from, date_to, user_id } = req.body;
     try {
-        if (game_type == null || !date_from || !date_to) {
-            return res.status(status.ERROR).json({
-                message: errors.EmptyFields,
-                details: {
-                    game_type: !!game_type,
-                    date_from: !!date_from,
-                    date_to: !!date_to
-                }
-            });
-        }
-        const games = await listGames(game_type, date_from, date_to, user_id);
-        if (games.success === true) {
-            return res.status(status.OK).json({ games: games.result });
+        const result = await listClubs();
+        if (result.success === true) {
+            return res.status(status.OK).json({ result: result.result });
         } else {
             return res.status(status.ERROR).json({ 
-                message: games.result,
-                details: games
+                message: result.result,
+                details: result
             });
         }
     } catch (error) {
-        console.error('List games error:', error);
+        console.error('List clubs error:', error);
         return res.status(status.ERROR).json({ 
             message: errors.InternalServerError, 
             details: error.message 
         });
     }
-};
+}
 
 exports.get = async (req, res) => {
-    const { game_id } = req.body;
+    const { club_id } = req.params;
     try {
-        if (!game_id) {
+        if (!club_id) {
             return res.status(status.ERROR).json({ 
                 message: errors.EmptyFields, 
-                details: { game_id: !!game_id }
+                details: { club_id: !!club_id }
             });
         }
 
-        const game = await getGame(game_id);
-        if (game.success === true) {
-            return res.status(status.OK).json({ game: game.result });
+        const result = await getClub(club_id);
+        if (result.success === true) {
+            return res.status(status.OK).json({ result: result.result });
         } else {
             return res.status(status.ERROR).json({ 
-                message: game.result,
-                details: game
+                message: result.result,
+                details: result
             });
         }
     } catch (error) {
-        console.error('Get game error:', error);
+        console.error('Get club error:', error);
         return res.status(status.ERROR).json({ 
             message: errors.InternalServerError, 
             details: error.message 
         });
     }
-};
+}

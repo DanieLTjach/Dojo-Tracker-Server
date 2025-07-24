@@ -3,20 +3,19 @@ const errors = require('../../config/messages');
 const { registation, edit, remove, activate_user, get_user } = require('./UserLogic');
 
 exports.register = async (req, res) => {
-    const { user_name, user_telegram, user_telegram_id } = req.body;
+    const { user_name, user_telegram, user_telegram_id, user_id } = req.body;
     try {
-        if (!user_name || !user_telegram || !user_telegram_id) {
+        if (!user_name || !user_telegram) {
             return res.status(status.ERROR).json({ 
                 message: errors.EmptyFields, 
                 details: {
                     user_name: !!user_name,
-                    user_telegram: !!user_telegram,
-                    user_telegram_id: !!user_telegram_id
+                    user_telegram: !!user_telegram
                 }
             });
         }
 
-        const result = await registation(user_name, user_telegram, user_telegram_id, 0);
+        const result = await registation(user_name, user_telegram, user_telegram_id, user_id, 0);
         
         if (result.success === true) {
             return res.status(status.OK).json({ message: result.result });

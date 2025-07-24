@@ -5,7 +5,24 @@ module.exports = class DatabaseManager {
     constructor() {
         this.#db = require("./db_init");
     }
+    async addClub(club_name, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `INSERT INTO clubs (club_name, modified_by) VALUES (?, ?)`,
+                [club_name, modified_by],
+                function(err) {
+                    if (err) {
+                        console.error('Database error:', err);
+                        reject({ success: false, result: err.message });
+                    } else {
+                        resolve({ success: true, result: "Club added successfully", id: this.lastID });
+                    }
+                }
+            )
+        })
+    };
 
+        
     async list_games(game_type, date_from, date_to, user_id = null) {
         return new Promise((resolve, reject) => {
             this.#db.all(`SELECT
@@ -125,15 +142,33 @@ module.exports = class DatabaseManager {
         });
     }
 
-    async add_game(game_type, players_data, modified_by, created_at = null) {
+    async #insertClubToGame(club_id, game_id) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `INSERT INTO club_to_game (club_id, game_id) VALUES (?, ?)`,
+                [club_id, game_id],
+                function(err) {
+                    if (err) {
+                        console.error('Database error:', err);
+                        reject({ success: false, result: err.message });
+                    } else {
+                        resolve({ success: true, result: "Club linked to game successfully", id: this.lastID });
+                    }
+                }
+            );
+        })
+    }
+
+    async add_game(game_type, players_data, modified_by, created_at = null, club_id) {
         try {
             const gameId = await this.#insertGame(game_type, modified_by, created_at);
             const playerPromises = players_data.map(player => 
                 this.#insertPlayer(player, gameId, modified_by, created_at)
             );
             const hanchanPromise = this.#insertHanchan(gameId, players_data, modified_by, created_at);
+            const clubPromise = this.#insertClubToGame(club_id, gameId);
             
-            await Promise.all([...playerPromises, hanchanPromise]);
+            await Promise.all([...playerPromises, hanchanPromise, clubPromise]);
             return { success: true, result: "Game, players, and hanchan result added successfully" };
         } catch (err) {
             console.error('Database error during game addition:', err);
@@ -217,7 +252,7 @@ module.exports = class DatabaseManager {
     }
 
 
-    async register(user_id, user_name, user_telegram_nickname, user_telegram_id, modified_by){
+    async register(user_id, user_name, user_telegram_nickname, user_telegram_id = null, modified_by){
         return new Promise((resolve, reject) => {
             this.#db.run(
                 `INSERT INTO player (user_id, user_name, user_telegram_nickname, user_telegram_id, modified_by) 
@@ -266,7 +301,50 @@ module.exports = class DatabaseManager {
         });
     }
 
+    async custom_select(query, params = []){
+        return new Promise((resolve, reject) => {
+            this.#db.all(query, params, (err, rows) => {
+                if (err) {
+                    console.error('Database custom select error:', err);
+                    reject({ success: false, result: err.message });
+                } else if (rows.length === 0) {
+                    console.log(rows)
+                    resolve({ success: false, result: "No results found" });
+                } else {
+                    console.log(rows)
+                    resolve({ success: true, result: rows });
+                }
+            });
+        });
+    }
+
     // Edit / Update 
+
+    async editClub(club_id, column, value, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `UPDATE clubs
+                    SET ${column} = ?, modified_by = ?
+                    WHERE club_id = ?
+                    AND EXISTS (
+                        SELECT 1 FROM player WHERE user_id = ? AND is_admin = 1
+                    );
+                `,
+                [value, modified_by, club_id, modified_by],
+                (err) => {
+                    if(err){
+                        reject({success: false, result: err.message});
+                    }
+                    else if(this.changes === 0){
+                        reject({success: false, result: "You are not admin."})
+                    } 
+                    else {
+                        resolve({success: true, result: "Club edited."});
+                    }
+                }
+            )
+        });
+    }
 
     async user_edit(column, value, user_id, modified_by){
         return new Promise((resolve, reject) => {
@@ -295,6 +373,26 @@ module.exports = class DatabaseManager {
     }
 
     // Remove / Delete
+
+    removeClub(club_id, modified_by) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(
+                `DELETE FROM clubs 
+                 WHERE club_id = ? 
+                 AND EXISTS (SELECT 1 FROM player WHERE user_id = ? AND is_admin = 1)`,
+                [club_id, modified_by],
+                function(err) {
+                    if (err) {
+                        reject({ success: false, result: err.message });
+                    } else if (this.changes === 0) {
+                        resolve({ success: false, result: "You are not admin or club not found." });
+                    } else {
+                        resolve({ success: true, result: "Club removed." });
+                    }
+                }
+            );
+        });
+    }
 
     async #removePlayersFromGame(game_id, modified_by) {
         return new Promise((resolve, reject) => {

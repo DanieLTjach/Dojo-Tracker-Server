@@ -139,17 +139,26 @@ db.serialize(function () {
     `);
 
     db.run(`
-        create table if not exists cites (
-            city_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            city_name TEXT NOT NULL)
+        create table if not exists clubs (
+            club_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            club_name TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_by INTEGER,
+            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+        )
         `);
     
-    db.run(`create table if not exists city_to_game (
+    db.run(`create table if not exists club_to_game (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            city_id INTEGER NOT NULL,
+            club_id INTEGER NOT NULL,
             game_id INTEGER NOT NULL,
-            FOREIGN KEY (city_id) REFERENCES cites(city_id),
-            FOREIGN KEY (game_id) REFERENCES game(game_id)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_by INTEGER,
+            FOREIGN KEY (club_id) REFERENCES cites(club_id),
+            FOREIGN KEY (game_id) REFERENCES game(game_id),
+            FOREIGN KEY (modified_by) REFERENCES player(user_id)
         )`)
 
     db.run(`
