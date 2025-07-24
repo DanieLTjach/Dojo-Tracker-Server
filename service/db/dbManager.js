@@ -23,7 +23,7 @@ module.exports = class DatabaseManager {
     };
 
         
-    async list_games(game_type, date_from, date_to, user_id = null) {
+    async list_games(game_type, date_from, date_to, user_id = null, club_id) {
         return new Promise((resolve, reject) => {
             this.#db.all(`SELECT
                 g.game_id,
@@ -38,7 +38,8 @@ module.exports = class DatabaseManager {
                     WHERE ptg.game_id = g.game_id
                         AND ptg.user_id = ?
                     )
-                );`, [date_from, date_to, game_type, user_id, user_id], (err, rows) => {
+                AND (SELECT 1 FROM club_to_game ctg WHERE ctg.game_id = g.game_id AND ctg.club_id = ?)
+                );`, [date_from, date_to, game_type, user_id, user_id, club_id], (err, rows) => {
                 if (err) {
                     console.error('Database error:', err);
                     reject({ success: false, result: err.message });
@@ -142,11 +143,11 @@ module.exports = class DatabaseManager {
         });
     }
 
-    async #insertClubToGame(club_id, game_id) {
+    async #insertClubToGame(club_id, game_id, modified_by) {
         return new Promise((resolve, reject) => {
             this.#db.run(
-                `INSERT INTO club_to_game (club_id, game_id) VALUES (?, ?)`,
-                [club_id, game_id],
+                `INSERT INTO club_to_game (club_id, game_id, modified_by) VALUES (?, ?, ?)`,
+                [club_id, game_id, modified_by],
                 function(err) {
                     if (err) {
                         console.error('Database error:', err);
@@ -166,7 +167,7 @@ module.exports = class DatabaseManager {
                 this.#insertPlayer(player, gameId, modified_by, created_at)
             );
             const hanchanPromise = this.#insertHanchan(gameId, players_data, modified_by, created_at);
-            const clubPromise = this.#insertClubToGame(club_id, gameId);
+            const clubPromise = this.#insertClubToGame(club_id, gameId, modified_by);
             
             await Promise.all([...playerPromises, hanchanPromise, clubPromise]);
             return { success: true, result: "Game, players, and hanchan result added successfully" };

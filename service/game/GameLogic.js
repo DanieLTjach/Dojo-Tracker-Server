@@ -53,9 +53,9 @@ exports.removeGame = async (game_id, modified_by) => {
     }
 };
 
-exports.listGames = async (game_type, date_from, date_to, user_id) => {
+exports.listGames = async (game_type, date_from, date_to, user_id, club_id) => {
     try {
-        const result = await db.list_games(game_type, date_from, date_to, user_id);
+        const result = await db.list_games(game_type, date_from, date_to, user_id, club_id);
         if (result.success === true) {
             return { success: true, result: result.result };
         }

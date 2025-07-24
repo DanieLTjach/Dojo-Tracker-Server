@@ -7,7 +7,7 @@ exports.add = async (req, res) => {
     const {game_type, players_data, modified_by, created_at, club_id} = req.body;
     try{
         console.log("Received game data:", { game_type, players_data, modified_by });
-        if (game_type == null || !players_data || club_id) {
+        if (game_type == null || !players_data || club_id === null) {
             console.log(1);
             return res.status(status.ERROR).json({ 
                 message: errors.EmptyFields, 
@@ -102,19 +102,20 @@ exports.remove = async (req, res) => {
 };
 
 exports.list = async (req, res) => {
-    const { game_type, date_from, date_to, user_id } = req.body;
+    const { game_type, date_from, date_to, user_id, club_id } = req.body;
     try {
-        if (game_type == null || !date_from || !date_to) {
+        if (game_type == null || !date_from || !date_to || club_id === null) {
             return res.status(status.ERROR).json({
                 message: errors.EmptyFields,
                 details: {
                     game_type: !!game_type,
                     date_from: !!date_from,
-                    date_to: !!date_to
+                    date_to: !!date_to,
+                    club_id: !!club_id,
                 }
             });
         }
-        const games = await listGames(game_type, date_from, date_to, user_id);
+        const games = await listGames(game_type, date_from, date_to, user_id, club_id);
         if (games.success === true) {
             return res.status(status.OK).json({ games: games.result });
         } else {
