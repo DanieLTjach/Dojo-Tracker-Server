@@ -1,21 +1,25 @@
 const DatabaseManager = require('../db/dbManager');
 const db = new DatabaseManager();
 
-exports.addGame = async (game_type, players_data, modified_by, created_at, club_id) => {
+exports.addGame = async (game_type, players_data, modified_by, created_at, club_id, event_id) => {
     try{
         for (const player of players_data) {
-            if (!player.user_id || !player.points || player.start_place == null) {
+            if (!player.user || !player.points || player.start_place == null) {
                 console.error("Invalid player data:", player);
                 return { success: false, result: "Invalid player data" };
             }
-            const is_user_exist = await db.player_select_by('user_id', player.user_id);
+            const is_user_exist = await db.player_select_by('user_telegram_nickname', player.user);
             if (!is_user_exist || is_user_exist.success === false) {
-                console.error("User does not exist:", player.user_id);
+                console.error("User does not exist:", player.user);
                 return { success: false, result: "User does not exist" };
             }
         }
+        if(club_id === null || club_id === undefined || event_id === null || event_id === undefined) {
+            console.error("Invalid club or event ID");
+            return { success: false, result: "Invalid club or event ID" };
+        }
 
-        const result = await db.add_game(game_type, players_data, modified_by, created_at, club_id);
+        const result = await db.add_game(game_type, players_data, modified_by, created_at, club_id, event_id);
         if (result.success === true) {
             return { success: true, result: "Game added successfully" };
         }

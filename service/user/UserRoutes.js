@@ -7,5 +7,6 @@ router.post('/edit', UserController.edit);
 router.post('/remove', UserController.remove_user);
 router.post('/activate', UserController.activate_user);
 router.get('/get', UserController.get_user);
+router.get('/getBy', UserController.get_by); // ЗАТЫЧКА
 
 module.exports = router;

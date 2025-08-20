@@ -47,9 +47,9 @@ exports.registation = async (user_name, user_telegram_nickname, user_telegram_id
     }
 };
 
-exports.edit = async (user_id, column, value, modified_by) => {
+exports.edit = async (user_telegram_id, column, value, modified_by) => {
     try{
-        const is_user_exist = await db.player_select_by('user_id', user_id);
+        const is_user_exist = await db.player_select_by('user_telegram_id', user_telegram_id);
 
         if (!is_user_exist) {
             console.error("Error: db.select_by() returned null or undefined");
@@ -57,7 +57,7 @@ exports.edit = async (user_id, column, value, modified_by) => {
         }
 
         if(is_user_exist.success === true){
-            const result = await db.user_edit(column, value, user_id, modified_by);
+            const result = await db.user_edit(column, value, user_telegram_id, modified_by);
             if (!result) {
                 console.error("Editing failed: No result returned");
                 return { success: false, result: errors.EditFailed };
@@ -145,6 +145,32 @@ exports.activate_user = async (user_id, modified_by) => {
 exports.get_user = async (user_id) => {
     try{
         const is_user_exist = await db.player_select_by('user_id', user_id);
+        if (!is_user_exist) {
+            console.error("Error: db.select_by() returned null or undefined");
+            return { success: false, result: errors.DatabaseError };
+        }
+
+        if(is_user_exist.success === true){
+            return is_user_exist;
+        }
+        
+        else{
+            return {success: false, result: errors.UserNotExists};
+        }
+    }
+    catch (err) {
+        console.error("Error during getting user:", err);
+        return { 
+            success: false, 
+            result: err.message,
+            details: err.toString() 
+        }; 
+    }
+}
+
+exports.get_by = async(column, value) => {
+   try{
+        const is_user_exist = await db.player_select_by(column, value);
         if (!is_user_exist) {
             console.error("Error: db.select_by() returned null or undefined");
             return { success: false, result: errors.DatabaseError };

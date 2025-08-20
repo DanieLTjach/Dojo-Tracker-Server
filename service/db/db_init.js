@@ -160,6 +160,30 @@ db.serialize(function () {
             FOREIGN KEY (game_id) REFERENCES game(game_id),
             FOREIGN KEY (modified_by) REFERENCES player(user_id)
         )`)
+    db.run(`create table if not exists event_type_dict (
+            event_type integer primary key,
+            event_type_desc text not null
+        )`);
+
+    db.run(`create table if not exists event (
+            id integer primary key autoincrement,
+            name text,
+            type integer,
+            date_from timestamp,
+            date_to timestamp,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_by INTEGER,
+            foreign key (type) references ivent_type_dict(ivent_type)
+        )`)
+
+    db.run(`create table if not exists game_to_ivent (
+            id integer primary key autoincrement,
+            game_id integer not null,
+            ivent_id integer not null,
+            foreign key(game_id) references game(game_id),
+            foreign key(ivent_id) references ivent(id)
+            )`)
 
     db.run(`
         INSERT OR IGNORE INTO game_type_dict(game_type, type_desc) VALUES (0, "Yonma")
@@ -171,6 +195,10 @@ db.serialize(function () {
 
     db.run(`
         INSERT OR IGNORE INTO player (user_id, user_name, user_telegram_nickname, user_telegram_id, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1)
+        `);
+
+    db.run(`
+        insert or ignore into event_type_dict(event_type, event_type_desc) values (0, "Yonma Ranked"), (1, "Tournament"), (2, "Friendly Match"), (4, "Other")
         `);
 });
 
