@@ -17,7 +17,7 @@ app.use('/api/user', authRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/achievements', achievementsRoutes);
 app.use("/api/club", clubRoutes);
-app.use('/api/events', eventsRoutes);
+app.use('/api/event', eventsRoutes);
 
 app.listen(config.PORT, () => {
 });

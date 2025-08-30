@@ -174,15 +174,15 @@ db.serialize(function () {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_by INTEGER,
-            foreign key (type) references ivent_type_dict(ivent_type)
+            foreign key (type) references Event_type_dict(Event_type)
         )`)
 
-    db.run(`create table if not exists game_to_ivent (
+    db.run(`create table if not exists game_to_Event (
             id integer primary key autoincrement,
             game_id integer not null,
-            ivent_id integer not null,
+            Event_id integer not null,
             foreign key(game_id) references game(game_id),
-            foreign key(ivent_id) references ivent(id)
+            foreign key(Event_id) references Event(id)
             )`)
 
     db.run(`
