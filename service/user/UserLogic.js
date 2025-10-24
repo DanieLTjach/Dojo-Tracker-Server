@@ -142,9 +142,9 @@ exports.activate_user = async (user_id, modified_by) => {
     }
 }
 
-exports.get_user = async (user_id) => {
+exports.get_user = async (user_telegram_id) => {
     try{
-        const is_user_exist = await db.player_select_by('user_id', user_id);
+        const is_user_exist = await db.player_select_by('user_telegram_id', user_telegram_id);
         if (!is_user_exist) {
             console.error("Error: db.select_by() returned null or undefined");
             return { success: false, result: errors.DatabaseError };

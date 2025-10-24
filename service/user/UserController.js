@@ -142,16 +142,16 @@ exports.activate_user = async (req, res) => {
 
 exports.get_user = async (req, res) => {
     try {
-        const { user_id } = req.body;
+        const { user_telegram_id } = req.body;
 
-        if (!user_id) {
+        if (!user_telegram_id) {
             return res.status(status.ERROR).json({ 
                 message: errors.EmptyFields, 
-                details: { user_id: !!user_id } 
+                details: { user_telegram_id: !!user_telegram_id } 
             });
         }
 
-        const result = await get_user(user_id);
+        const result = await get_user(user_telegram_id);
 
         if (result.success === true) {
             return res.status(status.OK).json({ message: result.result });
