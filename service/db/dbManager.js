@@ -3,7 +3,7 @@ const sqlite3 = require('sqlite3').verbose();
 module.exports = class DatabaseManager {
     #db;
     constructor() {
-        this.#db = require("./db_init");
+        this.#db = require("./dbInit");
     }
     async addClub(club_name, modified_by) {
         return new Promise((resolve, reject) => {
