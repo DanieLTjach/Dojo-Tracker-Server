@@ -3,14 +3,14 @@ const { generateShortUserId } = require('../functions/userIdGenerator')
 const DatabaseManager = require('../db/dbManager');
 const db = new DatabaseManager();
 
-exports.registation = async (user_name, user_telegram_nickname, user_telegram_id = null, user_id, modified_by) => {
+exports.registration = async (user_name, user_telegram_nickname, user_telegram_id = null, user_id, modified_by) => {
     try {
         if(user_id === null || user_id === undefined || user_id === '') {
             user_id = generateShortUserId(user_telegram_id);
             console.log("Generated user_id:", user_id);
         }
 
-        const userCheck = await db.custom_select(`select user_id from player where (? is not null and user_id = ?) or (? is not null and user_telegram_id = ?);`, [user_id, user_id, user_telegram_id, user_telegram_id]);
+        const userCheck = await db.custom_select(`select id from user where (? is not null and id = ?) or (? is not null and telegram_id = ?);`, [user_id, user_id, user_telegram_id, user_telegram_id]);
         console.log("User check result:", userCheck);
 
         if (userCheck.success === true) {
@@ -49,7 +49,7 @@ exports.registation = async (user_name, user_telegram_nickname, user_telegram_id
 
 exports.edit = async (user_telegram_id, column, value, modified_by) => {
     try{
-        const is_user_exist = await db.player_select_by('user_telegram_id', user_telegram_id);
+        const is_user_exist = await db.user_select_by('telegram_id', user_telegram_id);
 
         if (!is_user_exist) {
             console.error("Error: db.select_by() returned null or undefined");
@@ -82,7 +82,7 @@ exports.edit = async (user_telegram_id, column, value, modified_by) => {
 
 exports.remove = async (user_id, modified_by) => {
     try{
-        const is_user_exist = await db.player_select_by('user_id', user_id);
+        const is_user_exist = await db.user_select_by('id', user_id);
         if (!is_user_exist) {
             console.error("Error: db.select_by() returned null or undefined");
             return { success: false, result: errors.DatabaseError };
@@ -113,7 +113,7 @@ exports.remove = async (user_id, modified_by) => {
 
 exports.activate_user = async (user_id, modified_by) => {
     try{
-        const is_user_exist = await db.player_select_by('user_id', user_id);
+        const is_user_exist = await db.user_select_by('id', user_id);
         if (!is_user_exist) {
             console.error("Error: db.select_by() returned null or undefined");
             return { success: false, result: errors.DatabaseError };
@@ -144,7 +144,7 @@ exports.activate_user = async (user_id, modified_by) => {
 
 exports.get_user = async (user_telegram_id) => {
     try{
-        const is_user_exist = await db.player_select_by('user_telegram_id', user_telegram_id);
+        const is_user_exist = await db.user_select_by('telegram_id', user_telegram_id);
         if (!is_user_exist) {
             console.error("Error: db.select_by() returned null or undefined");
             return { success: false, result: errors.DatabaseError };
@@ -170,7 +170,7 @@ exports.get_user = async (user_telegram_id) => {
 
 exports.get_by = async(column, value) => {
    try{
-        const is_user_exist = await db.player_select_by(column, value);
+        const is_user_exist = await db.user_select_by(column, value);
         if (!is_user_exist) {
             console.error("Error: db.select_by() returned null or undefined");
             return { success: false, result: errors.DatabaseError };

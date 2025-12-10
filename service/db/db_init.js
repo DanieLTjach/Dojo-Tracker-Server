@@ -2,75 +2,82 @@ const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('./service/db/storage/data.db');
 
 db.serialize(function () {
+
+    db.run('PRAGMA foreign_keys = ON;');
+    
     db.run(`
-        CREATE TABLE IF NOT EXISTS player (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_telegram_nickname TEXT,
-            user_telegram_id INTEGER,
-            user_name TEXT NOT NULL,
+        CREATE TABLE IF NOT EXISTS user (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            telegram_nickname TEXT,
+            telegram_id INTEGER,
+            name TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER,
+            modified_by INTEGER REFERENCES user(id),
             is_active BOOL DEFAULT true,
-            is_admin BOOL DEFAULT false,
-            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+            is_admin BOOL DEFAULT false
         );
     `);
 
     db.run(`
-        CREATE TABLE IF NOT EXISTS game_type_dict (
-            game_type INTEGER PRIMARY KEY,
-            type_desc TEXT NOT NULL
+        CREATE TABLE IF NOT EXISTS club (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_by INTEGER REFERENCES user(id)
+        )
+    `);
+
+    db.run(`CREATE TABLE IF NOT EXISTS event_type (
+        type TEXT NOT NULL PRIMARY KEY
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS event (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            type INTEGER REFERENCES event_type(type),
+            date_from TIMESTAMP,
+            date_to TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modified_by INTEGER REFERENCES user(id)
+        )`)
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS game_type (
+            type TEXT NOT NULL PRIMARY KEY
         )
     `);
 
     db.run(`
         CREATE TABLE IF NOT EXISTS game (
-            game_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            game_type INTEGER NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type INTEGER NOT NULL REFERENCES game_type(type),
+            club_id INTEGER REFERENCES club(id),
+            event_id INTEGER REFERENCES event(id),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER,
-            FOREIGN KEY (game_type) REFERENCES game_type_dict(game_type),
-            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+            modified_by INTEGER REFERENCES user(id)
         );
     `);
 
     db.run(`
-        CREATE TABLE IF NOT EXISTS player_to_game (
-            record_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            game_id INTEGER,
-            start_place INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER,
-            FOREIGN KEY (start_place) REFERENCES start_place_dict(start_place),
-            FOREIGN KEY (user_id) REFERENCES player(user_id),
-            FOREIGN KEY (game_id) REFERENCES game(game_id),
-            FOREIGN KEY (modified_by) REFERENCES player(user_id)
-        );
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS start_place_dict (
-            start_place INTEGER PRIMARY KEY,
-            start_place_desc TEXT NOT NULL
+        CREATE TABLE IF NOT EXISTS game_start_place (
+            start_place TEXT NOT NULL PRIMARY KEY
         )
     `);
 
     db.run(`
-        CREATE TABLE IF NOT EXISTS standart_hanchan_result (
-            game_id INTEGER,
-            east_points INTEGER NOT NULL,
-            south_points INTEGER NOT NULL,
-            west_points INTEGER NOT NULL,
-            north_points INTEGER NOT NULL,
+        CREATE TABLE IF NOT EXISTS user_to_game (
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            game_id INTEGER NOT NULL REFERENCES game(id),
+            start_place TEXT REFERENCES game_start_place(start_place),
+            points INTEGER NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER,
-            FOREIGN KEY (game_id) REFERENCES game(game_id),
-            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+            modified_by INTEGER REFERENCES user(id),
+            PRIMARY KEY (user_id, game_id)
         );
     `);
 
@@ -78,9 +85,9 @@ db.serialize(function () {
         CREATE TABLE IF NOT EXISTS standart_hanchan_hands (
             hand_id INTEGER PRIMARY KEY AUTOINCREMENT,
             game_id INTEGER NOT NULL,
-            hand_type INTEGER NOT NULL,
+            hand_type INTEGER NOT NULL REFERENCES hand_type_dict(hand_type),
             repeat INTEGER DEFAULT 0,
-            win_type INTEGER,
+            win_type INTEGER REFERENCES win_type_dict(win_type),
             east_points INTEGER NOT NULL,
             south_points INTEGER NOT NULL,
             west_points INTEGER NOT NULL,
@@ -91,10 +98,7 @@ db.serialize(function () {
             riichi_north BOOL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER,
-            FOREIGN KEY (hand_type) REFERENCES hand_type_dict(hand_type),
-            FOREIGN KEY (win_type) REFERENCES win_type_dict(win_type),
-            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+            modified_by INTEGER REFERENCES user(id)
         );
     `);
 
@@ -105,22 +109,18 @@ db.serialize(function () {
             description TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER,
-            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+            modified_by INTEGER REFERENCES user(id)
         );
     `);
 
     db.run(`
-        CREATE TABLE IF NOT EXISTS player_to_achievements (
+        CREATE TABLE IF NOT EXISTS user_to_achievements (
             record_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            achievement_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            achievement_id INTEGER NOT NULL REFERENCES achievements(achievement_id),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER,
-            FOREIGN KEY (user_id) REFERENCES player(user_id),
-            FOREIGN KEY (achievement_id) REFERENCES achievements(achievement_id),
-            FOREIGN KEY (modified_by) REFERENCES player(user_id)
+            modified_by INTEGER REFERENCES user(id)
         );
     `);
 
@@ -139,66 +139,19 @@ db.serialize(function () {
     `);
 
     db.run(`
-        create table if not exists clubs (
-            club_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            club_name TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER,
-            FOREIGN KEY (modified_by) REFERENCES player(user_id)
-        )
-        `);
-    
-    db.run(`create table if not exists club_to_game (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            club_id INTEGER NOT NULL,
-            game_id INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER,
-            FOREIGN KEY (club_id) REFERENCES cites(club_id),
-            FOREIGN KEY (game_id) REFERENCES game(game_id),
-            FOREIGN KEY (modified_by) REFERENCES player(user_id)
-        )`)
-    db.run(`create table if not exists event_type_dict (
-            event_type integer primary key,
-            event_type_desc text not null
-        )`);
-
-    db.run(`create table if not exists event (
-            id integer primary key autoincrement,
-            name text,
-            type integer,
-            date_from timestamp,
-            date_to timestamp,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER,
-            foreign key (type) references Event_type_dict(Event_type)
-        )`)
-
-    db.run(`create table if not exists game_to_Event (
-            id integer primary key autoincrement,
-            game_id integer not null,
-            Event_id integer not null,
-            foreign key(game_id) references game(game_id),
-            foreign key(Event_id) references Event(id)
-            )`)
-
-    db.run(`
-        INSERT OR IGNORE INTO game_type_dict(game_type, type_desc) VALUES (0, "Yonma")
+        INSERT OR IGNORE INTO game_type(type) VALUES ("YONMA")
         `);
 
     db.run(`
-        INSERT OR IGNORE INTO start_place_dict(start_place, start_place_desc) VALUES (0, "East"), (1, "South"), (2, "West"), (3, "North")
+        INSERT OR IGNORE INTO game_start_place(start_place) VALUES ("EAST"), ("SOUTH"), ("WEST"), ("NORTH")
         `);
 
     db.run(`
-        INSERT OR IGNORE INTO player (user_id, user_name, user_telegram_nickname, user_telegram_id, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1)
+        INSERT OR IGNORE INTO user (id, name, telegram_nickname, telegram_id, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1)
         `);
 
     db.run(`
-        insert or ignore into event_type_dict(event_type, event_type_desc) values (0, "Yonma Ranked"), (1, "Tournament"), (2, "Friendly Match"), (4, "Other")
+        INSERT OR IGNORE INTO event_type(type) VALUES ("YONMA_RANKED"), ("TOURNAMENT"), ("FRIENDLY_MATCH")
         `);
 });
 

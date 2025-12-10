@@ -1,14 +1,14 @@
 const DatabaseManager = require('../db/dbManager');
 const db = new DatabaseManager();
 
-exports.addGame = async (game_type, players_data, modified_by, created_at, club_id, event_id) => {
+exports.addGame = async (type, players_data, modified_by, created_at, club_id, event_id) => {
     try{
         for (const player of players_data) {
             if (!player.user || !player.points || player.start_place == null) {
                 console.error("Invalid player data:", player);
                 return { success: false, result: "Invalid player data" };
             }
-            const is_user_exist = await db.player_select_by('user_telegram_nickname', player.user);
+            const is_user_exist = await db.user_select_by('telegram_nickname', player.user);
             if (!is_user_exist || is_user_exist.success === false) {
                 console.error("User does not exist:", player.user);
                 return { success: false, result: "User does not exist" };
@@ -19,7 +19,7 @@ exports.addGame = async (game_type, players_data, modified_by, created_at, club_
             return { success: false, result: "Invalid club or event ID" };
         }
 
-        const result = await db.add_game(game_type, players_data, modified_by, created_at, club_id, event_id);
+        const result = await db.add_game(type, players_data, modified_by, created_at, club_id, event_id);
         if (result.success === true) {
             return { success: true, result: "Game added successfully" };
         }
@@ -57,9 +57,9 @@ exports.removeGame = async (game_id, modified_by) => {
     }
 };
 
-exports.listGames = async (game_type, date_from, date_to, user_id, club_id) => {
+exports.listGames = async (type, date_from, date_to, user_id, club_id) => {
     try {
-        const result = await db.list_games(game_type, date_from, date_to, user_id, club_id);
+        const result = await db.list_games(type, date_from, date_to, user_id, club_id);
         if (result.success === true) {
             return { success: true, result: result.result };
         }

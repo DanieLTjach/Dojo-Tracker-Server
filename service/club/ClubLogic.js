@@ -8,7 +8,7 @@ exports.addClub = async (club_name, modified_by) => {
             return { success: false, result: errors.EmptyFields };
         }
 
-        const clubCheck = await db.custom_select(`SELECT club_id FROM clubs WHERE club_name = ?;`, [club_name]);
+        const clubCheck = await db.custom_select(`SELECT id FROM club WHERE name = ?;`, [club_name]);
         
         if (clubCheck.success === true && clubCheck.result.length > 0) {
             return { success: false, result: errors.ClubExists };
@@ -33,7 +33,7 @@ exports.editClub = async (club_id, updateField, updateInfo, modified_by) => {
             return { success: false, result: errors.EmptyFields };
         }
 
-        const isClubExist = await db.custom_select(`SELECT * FROM clubs WHERE club_id = ?;`, [club_id]);
+        const isClubExist = await db.custom_select(`SELECT * FROM club WHERE id = ?;`, [club_id]);
         
         if (!isClubExist) {
             return { success: false, result: errors.ClubNotFound };
@@ -58,7 +58,7 @@ exports.removeClub = async (club_id, modified_by) => {
             return { success: false, result: errors.EmptyFields };
         }
 
-        const isClubExist = await db.custom_select(`SELECT club_id FROM clubs WHERE club_id = ?;`, [club_id]);
+        const isClubExist = await db.custom_select(`SELECT id FROM club WHERE id = ?;`, [club_id]);
         
         if (!isClubExist) {
             return { success: false, result: errors.ClubNotFound };
@@ -79,7 +79,7 @@ exports.removeClub = async (club_id, modified_by) => {
 
 exports.listClubs = async (club_id) => {
     try {
-        const result = await db.custom_select(`SELECT * FROM clubs;`);
+        const result = await db.custom_select(`SELECT * FROM club;`);
         
         if (result.success === true) {
             return { success: true, result: result.result };
@@ -98,7 +98,7 @@ exports.getClub = async (club_id) => {
             return { success: false, result: errors.EmptyFields };
         }
 
-        const result = await db.custom_select(`SELECT * FROM clubs WHERE club_id = ?;`, [club_id]);
+        const result = await db.custom_select(`SELECT * FROM club WHERE id = ?;`, [club_id]);
         
         if (result.success === true && result.result.length > 0) {
             return { success: true, result: result.result[0] };

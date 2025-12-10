@@ -4,22 +4,22 @@ const errors = require('../../config/messages');
 const { addGame, editGame, removeGame, listGames, getGame } = require('./GameLogic');
 
 exports.add = async (req, res) => {
-    const {game_type, players_data, modified_by, created_at, club_id} = req.body;
+    const {type, players_data, modified_by, created_at, club_id, event_id} = req.body;
     try{
-        console.log("Received game data:", { game_type, players_data, modified_by });
-        if (game_type == null || !players_data || club_id === null) {
+        console.log("Received game data:", { type, players_data, modified_by });
+        if (type == null || !players_data || club_id === null) {
             console.log(1);
             return res.status(status.ERROR).json({ 
                 message: errors.EmptyFields, 
                 details: {
-                    game_type: !!game_type,
+                    type: !!type,
                     players_data: !!players_data,
                     club_id: !!club_id,
                 }
             });
         }
 
-        const result = await addGame(game_type, players_data, modified_by, created_at, club_id);
+        const result = await addGame(type, players_data, modified_by, created_at, club_id, event_id);
 
         if (result.success === true) {
             return res.status(status.OK).json({ message: result.result });
@@ -41,13 +41,13 @@ exports.add = async (req, res) => {
 };
 
 exports.edit = async (req, res) => {
-    const { game_id, updateField, updateInfo,  modified_by } = req.body;
+    const { id, updateField, updateInfo,  modified_by } = req.body;
     try {
-        if (!game_id || !updateField || !updateInfo || !modified_by) {
+        if (!id || !updateField || !updateInfo || !modified_by) {
             return res.status(status.ERROR).json({ 
                 message: errors.EmptyFields, 
                 details: {
-                    game_id: !!game_id,
+                    id: !!id,
                     updateField: !!updateField,
                     updateInfo: !!updateInfo,
                     modified_by: !!modified_by
@@ -102,20 +102,20 @@ exports.remove = async (req, res) => {
 };
 
 exports.list = async (req, res) => {
-    const { game_type, date_from, date_to, user_id, club_id } = req.body;
+    const { type, date_from, date_to, user_id, club_id } = req.body;
     try {
-        if (game_type == null || !date_from || !date_to || club_id === null) {
+        if (type == null || !date_from || !date_to || club_id === null) {
             return res.status(status.ERROR).json({
                 message: errors.EmptyFields,
                 details: {
-                    game_type: !!game_type,
+                    type: !!type,
                     date_from: !!date_from,
                     date_to: !!date_to,
                     club_id: !!club_id,
                 }
             });
         }
-        const games = await listGames(game_type, date_from, date_to, user_id, club_id);
+        const games = await listGames(type, date_from, date_to, user_id, club_id);
         if (games.success === true) {
             return res.status(status.OK).json({ games: games.result });
         } else {
