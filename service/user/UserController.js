@@ -1,4 +1,4 @@
-const status = require('../../config/config').STATUS;
+const status = require('../../config/constants').STATUS;
 const errors = require('../../config/messages');
 const { registration, edit, remove, activate_user, get_user, get_by } = require('./UserLogic');
 

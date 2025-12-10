@@ -1,4 +1,4 @@
-const status = require('../../config/config').STATUS;
+const status = require('../../config/constants').STATUS;
 const errors = require('../../config/messages');
 
 const { addClub, editClub, removeClub, listClubs, getClub } = require('./ClubLogic');

@@ -19,5 +19,5 @@ app.use('/api/achievements', achievementsRoutes);
 app.use("/api/club", clubRoutes);
 app.use('/api/event', eventsRoutes);
 
-app.listen(config.PORT, () => {
+app.listen(config.port, () => {
 });

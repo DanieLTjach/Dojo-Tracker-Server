@@ -1,9 +1,6 @@
-const PORT = 3000;
+var config = {}
 
-const STATUS = {
-    OK: 200,
-    SERVER_ERROR: 500,
-    ERROR: 201
-}
+config.port = process.env.PORT || 3000
+config.db_path = process.env.DB_PATH || './db/data/data.db'
 
-module.exports = { PORT, STATUS }
+module.exports = config

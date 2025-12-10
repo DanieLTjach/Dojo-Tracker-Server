@@ -1,159 +1,128 @@
+const fs = require('fs');
+const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./service/db/storage/data.db');
+const { db_path } = require('../../config/config');
 
-db.serialize(function () {
+const dbDir = path.dirname(db_path);
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
 
-    db.run('PRAGMA foreign_keys = ON;');
+const db = new sqlite3.Database(db_path);
+
+function getCurrentDBVersion() {
+    return new Promise((resolve, reject) => {
+        db.get('PRAGMA user_version', (err, row) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(row.user_version);
+            }
+        });
+    });
+}
+
+function setDBVersion(version) {
+    return new Promise((resolve, reject) => {
+        db.exec(`PRAGMA user_version = ${version}`, (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
+function runSqlFile(filePath) {
+    return new Promise((resolve, reject) => {
+        const sql = fs.readFileSync(filePath, 'utf8');
+        db.exec(sql, (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
+function getMigrationFiles() {
+    const migrationsDir = path.join(__dirname, '../../db/migrations');
     
-    db.run(`
-        CREATE TABLE IF NOT EXISTS user (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telegram_nickname TEXT,
-            telegram_id INTEGER,
-            name TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER REFERENCES user(id),
-            is_active BOOL DEFAULT true,
-            is_admin BOOL DEFAULT false
-        );
-    `);
+    if (!fs.existsSync(migrationsDir)) {
+        return [];
+    }
+    
+    const files = fs.readdirSync(migrationsDir)
+        .filter(file => file.match(/^\d+\.sql$/))
+        .sort((a, b) => {
+            const numA = parseInt(a.split('.')[0]);
+            const numB = parseInt(b.split('.')[0]);
+            return numA - numB;
+        });
+    
+    return files;
+}
 
-    db.run(`
-        CREATE TABLE IF NOT EXISTS club (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER REFERENCES user(id)
-        )
-    `);
+async function runMigrations() {
+    const currentVersion = await getCurrentDBVersion();
+    const migrationFiles = getMigrationFiles();
+    const migrationsDir = path.join(__dirname, '../../db/migrations');
+    
+    console.log(`Database version: ${currentVersion}`);
+    
+    let migrationsRun = 0;
+    
+    for (const file of migrationFiles) {
+        const migrationNumber = parseInt(file.split('.')[0]);
+        
+        if (migrationNumber > currentVersion) {
+            const filePath = path.join(migrationsDir, file);
+            console.log(`Running migration: ${file}`);
+            
+            try {
+                await runSqlFile(filePath);
+                await setDBVersion(migrationNumber);
+                console.log(`✓ Migration ${file} completed`);
+                migrationsRun++;
+            } catch (error) {
+                console.error(`✗ Migration ${file} failed:`, error.message);
+                throw error;
+            }
+        }
+    }
+    
+    if (migrationsRun > 0) {
+        const finalVersion = await getCurrentDBVersion();
+        console.log(`Database updated to version: ${finalVersion}`);
+    } else {
+        console.log('Database is up to date');
+    }
+}
 
-    db.run(`CREATE TABLE IF NOT EXISTS event_type (
-        type TEXT NOT NULL PRIMARY KEY
-    )`);
+async function enableForeignKeys() {
+    return new Promise((resolve, reject) => {
+        db.run(`PRAGMA foreign_keys = ON;`, (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
 
-    db.run(`CREATE TABLE IF NOT EXISTS event (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            type INTEGER REFERENCES event_type(type),
-            date_from TIMESTAMP,
-            date_to TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER REFERENCES user(id)
-        )`)
+async function initDB() {
+    try {
+        await enableForeignKeys();
+        await runMigrations();
+    } catch (error) {
+        console.error('Failed to initialize database:', error);
+        process.exit(1);
+    }
+}
 
-    db.run(`
-        CREATE TABLE IF NOT EXISTS game_type (
-            type TEXT NOT NULL PRIMARY KEY
-        )
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS game (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            type INTEGER NOT NULL REFERENCES game_type(type),
-            club_id INTEGER REFERENCES club(id),
-            event_id INTEGER REFERENCES event(id),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER REFERENCES user(id)
-        );
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS game_start_place (
-            start_place TEXT NOT NULL PRIMARY KEY
-        )
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS user_to_game (
-            user_id INTEGER NOT NULL REFERENCES user(id),
-            game_id INTEGER NOT NULL REFERENCES game(id),
-            start_place TEXT REFERENCES game_start_place(start_place),
-            points INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER REFERENCES user(id),
-            PRIMARY KEY (user_id, game_id)
-        );
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS standart_hanchan_hands (
-            hand_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            game_id INTEGER NOT NULL,
-            hand_type INTEGER NOT NULL REFERENCES hand_type_dict(hand_type),
-            repeat INTEGER DEFAULT 0,
-            win_type INTEGER REFERENCES win_type_dict(win_type),
-            east_points INTEGER NOT NULL,
-            south_points INTEGER NOT NULL,
-            west_points INTEGER NOT NULL,
-            north_points INTEGER NOT NULL,
-            riichi_east BOOL,
-            riichi_south BOOL,
-            riichi_west BOOL,
-            riichi_north BOOL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER REFERENCES user(id)
-        );
-    `);
-
-    db.run(`
-        CREATE TABLE if not exists achievements (
-            achievement_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER REFERENCES user(id)
-        );
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS user_to_achievements (
-            record_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL REFERENCES user(id),
-            achievement_id INTEGER NOT NULL REFERENCES achievements(achievement_id),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            modified_by INTEGER REFERENCES user(id)
-        );
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS hand_type_dict (
-            hand_type INTEGER PRIMARY KEY,
-            hand_type_desc TEXT NOT NULL
-        )
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS win_type_dict (
-            win_type INTEGER PRIMARY KEY,
-            win_type_desc TEXT NOT NULL
-        )
-    `);
-
-    db.run(`
-        INSERT OR IGNORE INTO game_type(type) VALUES ("YONMA")
-        `);
-
-    db.run(`
-        INSERT OR IGNORE INTO game_start_place(start_place) VALUES ("EAST"), ("SOUTH"), ("WEST"), ("NORTH")
-        `);
-
-    db.run(`
-        INSERT OR IGNORE INTO user (id, name, telegram_nickname, telegram_id, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1)
-        `);
-
-    db.run(`
-        INSERT OR IGNORE INTO event_type(type) VALUES ("YONMA_RANKED"), ("TOURNAMENT"), ("FRIENDLY_MATCH")
-        `);
-});
-
+initDB();
 
 module.exports = db;

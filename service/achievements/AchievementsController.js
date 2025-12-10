@@ -1,4 +1,4 @@
-const status = require('../../config/config').STATUS;
+const status = require('../../config/constants').STATUS;
 const errors = require('../../config/messages');
 
 const { new_Achievement, grant_Achievement, list_Achievements, user_achievements } = require('./AchievementsLogic');
