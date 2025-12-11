@@ -1,6 +1,6 @@
-const status = require('../../config/config').STATUS;
+const status = require('../../config/constants').STATUS;
 const errors = require('../../config/messages');
-const { registation, edit, remove, activate_user, get_user, get_by } = require('./UserLogic');
+const { registration, edit, remove, activate_user, get_user, get_by } = require('./UserLogic');
 
 exports.register = async (req, res) => {
     const { user_name, user_telegram, user_telegram_id, user_id } = req.body;
@@ -15,7 +15,7 @@ exports.register = async (req, res) => {
             });
         }
 
-        const result = await registation(user_name, user_telegram, user_telegram_id, user_id, 0);
+        const result = await registration(user_name, user_telegram, user_telegram_id, user_id, 0);
         
         if (result.success === true) {
             return res.status(status.OK).json({ message: result.result });
@@ -35,14 +35,14 @@ exports.register = async (req, res) => {
 };
 
 exports.edit = async (req, res) => {
-    const { user_telegram_id, updateField, updateInfo, modified_by } = req.body;
+    const { telegram_id, updateField, updateInfo, modified_by } = req.body;
 
     try {
-        if (!user_telegram_id || !updateField || updateInfo === undefined || updateInfo === null || modified_by === undefined || modified_by === null) {
+        if (!telegram_id || !updateField || updateInfo === undefined || updateInfo === null || modified_by === undefined || modified_by === null) {
             return res.status(status.ERROR).json({
                 message: errors.EmptyFields,
                 details: {
-                    user_telegram_id: !!user_telegram_id,
+                    telegram_id: !!telegram_id,
                     updateField: !!updateField,
                     updateInfo: !!updateInfo,
                     modified_by: modified_by !== undefined && modified_by !== null
@@ -50,7 +50,7 @@ exports.edit = async (req, res) => {
             });
         }
 
-        const result = await edit(user_telegram_id, updateField, updateInfo, modified_by);
+        const result = await edit(telegram_id, updateField, updateInfo, modified_by);
 
         if(result.success === true){
             return res.status(status.OK).json({ message: result.result});
@@ -142,16 +142,16 @@ exports.activate_user = async (req, res) => {
 
 exports.get_user = async (req, res) => {
     try {
-        const { user_telegram_id } = req.body;
+        const { telegram_id } = req.body;
 
-        if (!user_telegram_id) {
+        if (!telegram_id) {
             return res.status(status.ERROR).json({ 
                 message: errors.EmptyFields, 
-                details: { user_telegram_id: !!user_telegram_id } 
+                details: { telegram_id: !!telegram_id } 
             });
         }
 
-        const result = await get_user(user_telegram_id);
+        const result = await get_user(telegram_id);
 
         if (result.success === true) {
             return res.status(status.OK).json({ message: result.result });

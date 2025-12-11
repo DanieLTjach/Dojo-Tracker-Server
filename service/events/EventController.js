@@ -1,4 +1,4 @@
-const status = require('../../config/config').STATUS;
+const status = require('../../config/constants').STATUS;
 const errors = require('../../config/messages');
 
 const { addEvent, editEvent, removeEvent, listEvents} = require("./EventLogic");

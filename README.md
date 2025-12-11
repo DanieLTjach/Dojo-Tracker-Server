@@ -4,46 +4,46 @@
 URL: /api/user/register
 Type: POST
 Format: {
-  user_name
-  user_telegram
-  user_telegram_id
-  user_id?
+  name
+  telegram
+  telegram_id
+  id?
 }
 ### Edit:
 URL: /api/user/edit
 Type: POST
 Format: {
-  user_telgram_id
-  updateField (user_telegram_nickname, user_name)
+  telegram_id
+  updateField (telegram_nickname, name)
   updateInfo
-  modified_by
-}
-### Remove User:
-URL: /api/user/activate
-Type: POST
-Format: {
-  user_id
   modified_by
 }
 ### Activate User:
 URL: /api/user/activate
 Type: POST
 Format: {
-  user_id
+  id
+  modified_by
+}
+### Remove User:
+URL: /api/user/remove
+Type: POST
+Format: {
+  id
   modified_by
 }
 ### Get User:
 URL: /api/user/get
 Type: POST
 Format: {
-  user_id
+  id
 }
 ## Games API
 ### Add Game:
 URL: /api/game/add
 Type: POST
 Format: {
-  game_type
+  type
   players_data: [{user, 
   points, 
   start_place
@@ -56,7 +56,7 @@ Format: {
 URL: /api/game/edit
 Type: POST
 Format: {
-  game_id
+  id
   update_field
   update_info
   modified_by
@@ -65,14 +65,14 @@ Format: {
 URL: /api/game/remove
 Type: POST
 Format: {
-  game_id
+  id
   modified_by
 }
 ### Games List:
 URL: /api/game/list
 Type: GET
 Format: {
-  game_type
+  type
   date_from
   date_to
   user_id?
@@ -82,7 +82,7 @@ Format: {
 URL: /api/game/get
 Type: GET
 Format: {
-  game_id
+  id
 }
 ## Achievements API
 ### New Achievement
@@ -115,14 +115,14 @@ Format: {
 URL: /api/club/add
 Type: POST
 Format: {
-  club_name
+  name
   modified_by
 }
 ### Edit Club
 URL: /api/club/edit
 Type: POST
 Format: {
-  club_id
+  id
   updateField
   updateInfo
   modified_by
@@ -130,7 +130,7 @@ Format: {
 ### Remove Club
 URL: /api/club/remove
 Format: {
-  club_id
+  id
   modified_by
 }
 Type: POST
@@ -140,8 +140,8 @@ Type: GET
 ### Get Club
 URL: /api/club/get
 Type: GET
-Foemat: {
-  club_id
+Format: {
+  id
 }
 ## Events API
 ### Add Event
