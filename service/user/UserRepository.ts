@@ -9,6 +9,10 @@ export class UserRepository {
         this.dbManager = new DatabaseManager();
     }
 
+    async findAllUsers(): Promise<User[]> {
+        return await this.dbManager.all('SELECT * FROM user ORDER BY id');
+    }
+
     async findUserBy(column: string, value: any): Promise<User | null> {
         if (!column || value === undefined || value === null) {
             throw new DatabaseError("Invalid search parameters");
@@ -24,21 +28,21 @@ export class UserRepository {
         );
     }
 
-    async editUser(column: string, value: any, userTelegramId: number, modifiedBy: number): Promise<void> {
+    async editUser(userId: number, column: string, value: any, modifiedBy: number): Promise<void> {
         await this.dbManager.run(
             `UPDATE user
              SET ${column} = ?, modified_by = ?, modified_at = CURRENT_TIMESTAMP
-             WHERE telegram_id = ?`,
-            [value, modifiedBy, userTelegramId]
+             WHERE id = ?`,
+            [value, modifiedBy, userId]
         );
     }
 
-    async updateUserActivationStatus(userTelegramId: number, newStatus: boolean, modifiedBy: number): Promise<void> {
+    async updateUserActivationStatus(userId: number, newStatus: boolean, modifiedBy: number): Promise<void> {
         await this.dbManager.run(
             `UPDATE user
              SET is_active = ?, modified_by = ?, modified_at = CURRENT_TIMESTAMP
-             WHERE telegram_id = ?`,
-            [newStatus, modifiedBy, userTelegramId]
+             WHERE id = ?`,
+            [newStatus, modifiedBy, userId]
         )
     }
 }

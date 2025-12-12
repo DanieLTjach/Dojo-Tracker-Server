@@ -22,10 +22,20 @@ CREATE TABLE event_type (
     type TEXT NOT NULL PRIMARY KEY
 );
 
+CREATE TABLE game_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    number_of_players INTEGER NOT NULL,
+    uma TEXT NOT NULL,
+    starting_points INTEGER NOT NULL
+);
+
 CREATE TABLE event (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
+    club_id INTEGER NOT NULL REFERENCES club(id),
     type INTEGER REFERENCES event_type(type),
+    game_rules INTEGER NOT NULL REFERENCES game_rules(id),
     date_from TIMESTAMP,
     date_to TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -33,15 +43,9 @@ CREATE TABLE event (
     modified_by INTEGER NOT NULL REFERENCES user(id)
 );
 
-CREATE TABLE game_type (
-    type TEXT NOT NULL PRIMARY KEY
-);
-
 CREATE TABLE game (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type INTEGER NOT NULL REFERENCES game_type(type),
-    club_id INTEGER REFERENCES club(id),
-    event_id INTEGER REFERENCES event(id),
+    event_id INTEGER NOT NULL REFERENCES event(id),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     modified_by INTEGER NOT NULL REFERENCES user(id)
@@ -49,6 +53,15 @@ CREATE TABLE game (
 
 CREATE TABLE game_start_place (
     start_place TEXT NOT NULL PRIMARY KEY
+);
+
+CREATE TABLE user_rating (
+    user_id INTEGER NOT NULL REFERENCES user(id),
+    event_id INTEGER NOT NULL REFERENCES event(id),
+    rating REAL NOT NULL,
+    modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_by INTEGER NOT NULL REFERENCES user(id),
+    PRIMARY KEY (user_id, event_id)
 );
 
 CREATE TABLE user_to_game (
@@ -110,10 +123,12 @@ CREATE TABLE win_type_dict (
 );
 
 -- Insert initial data
-INSERT INTO game_type(type) VALUES ("YONMA");
+INSERT INTO game_rules(id, name, number_of_players, uma, starting_points) VALUES
+    (1, "Standard yonma", 4, "[15, 5, -5, -15]", 30000),
+    (2, "Standard sanma", 3, "[15, 0, -15]", 35000);
+
+INSERT INTO event_type(type) VALUES ("SEASON"), ("TOURNAMENT");
 
 INSERT INTO game_start_place(start_place) VALUES ("EAST"), ("SOUTH"), ("WEST"), ("NORTH");
 
 INSERT INTO user (id, name, telegram_username, telegram_id, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1);
-
-INSERT INTO event_type(type) VALUES ("YONMA_RANKED"), ("TOURNAMENT"), ("FRIENDLY_MATCH");

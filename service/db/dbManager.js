@@ -33,6 +33,18 @@ export default class DatabaseManager {
         });
     }
 
+    all(query, params = []) {
+        return new Promise((resolve, reject) => {
+            this.#db.all(query, params, (err, rows) => {
+                if (err) {
+                    reject(new DatabaseError(err.message));
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    }
+
     async addClub(club_name, modified_by) {
         return new Promise((resolve, reject) => {
             this.#db.run(

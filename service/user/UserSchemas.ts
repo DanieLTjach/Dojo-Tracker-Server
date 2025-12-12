@@ -1,32 +1,44 @@
 import { z } from 'zod';
 
-const telegramUsernameSchema = z.string()
+export const userNameSchema = z.string().trim().min(1, "Name cannot be empty");
+
+export const telegramUsernameSchema = z.string()
     .startsWith('@', "Telegram username must start with '@'")
     .min(2, "Telegram username cannot be empty");
 
+export const telegramIdParamSchema = z.coerce.number().int("Telegram ID must be an integer");
+export const userIdSchema = z.number().int("User ID must be an integer");
+export const userIdParamSchema = z.coerce.number().int("User ID must be an integer");
+
 export const userRegistrationSchema = z.object({
     body: z.object({
-        name: z.string().min(1, "Name cannot be empty"),
+        name: userNameSchema,
         telegramUsername: telegramUsernameSchema,
-        telegramId: z.coerce.number(),
-        createdBy: z.number().optional()
+        telegramId: telegramIdParamSchema,
+        createdBy: userIdSchema.optional()
     })
 });
 
-export const userGetSchema = z.object({
+export const getUserByIdSchema = z.object({
     params: z.object({
-        telegramId: z.coerce.number()
+        id: userIdParamSchema
+    })
+});
+
+export const getUserByTelegramIdSchema = z.object({
+    params: z.object({
+        telegramId: telegramIdParamSchema
     })
 });
 
 export const userEditSchema = z.object({
     params: z.object({
-        telegramId: z.coerce.number()
+        id: userIdParamSchema
     }),
     body: z.object({
-        name: z.string().min(1, "Name cannot be empty").optional(),
+        name: userNameSchema.optional(),
         telegramUsername: telegramUsernameSchema.optional(),
-        modifiedBy: z.number()
+        modifiedBy: userIdSchema
     })
 }).refine((data) => data.body.name || data.body.telegramUsername, {
     message: "At least one of 'name' or 'telegramUsername' must be provided"
@@ -34,10 +46,10 @@ export const userEditSchema = z.object({
 
 export const userActivationSchema = z.object({
     params: z.object({
-        telegramId: z.coerce.number()
+        id: userIdParamSchema
     }),
     body: z.object({
-        modifiedBy: z.number()
+        modifiedBy: userIdSchema
     })
 });
 

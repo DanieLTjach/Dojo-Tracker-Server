@@ -41,12 +41,29 @@ function setDBVersion(version) {
 function runSqlFile(filePath) {
     return new Promise((resolve, reject) => {
         const sql = fs.readFileSync(filePath, 'utf8');
-        db.exec(sql, (err) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve();
-            }
+        
+        db.serialize(() => {
+            db.run('BEGIN TRANSACTION', (err) => {
+                if (err) {
+                    return reject(err);
+                }
+                
+                db.exec(sql, (err) => {
+                    if (err) {
+                        db.run('ROLLBACK', () => {
+                            reject(err);
+                        });
+                    } else {
+                        db.run('COMMIT', (err) => {
+                            if (err) {
+                                reject(err);
+                            } else {
+                                resolve();
+                            }
+                        });
+                    }
+                });
+            });
         });
     });
 }
