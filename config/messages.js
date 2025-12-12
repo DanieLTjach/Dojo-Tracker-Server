@@ -11,4 +11,4 @@ const errors = {
     UnexpectedError: `Unexpected error`,
 }
 
-module.exports = errors;
+export default errors;

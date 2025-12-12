@@ -1,11 +1,13 @@
-const express = require('express');
+import express from 'express';
+import { ClubController } from './ClubController.js';
+
 const router = express.Router();
-const ClubController = require('./ClubController');
+const clubController = new ClubController();
 
-router.post('/add', ClubController.add);
-router.post('/edit', ClubController.edit);
-router.post('/remove', ClubController.remove);
-router.get('/list', ClubController.list);
-router.get('/get', ClubController.get);
+router.post('/add', (req, res) => clubController.add(req, res));
+router.post('/edit', (req, res) => clubController.edit(req, res));
+router.post('/remove', (req, res) => clubController.remove(req, res));
+router.get('/list', (req, res) => clubController.list(req, res));
+router.get('/get', (req, res) => clubController.get(req, res));
 
-module.exports = router;
+export default router;

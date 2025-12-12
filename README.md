@@ -14,7 +14,7 @@ URL: /api/user/edit
 Type: POST
 Format: {
   telegram_id
-  updateField (telegram_nickname, name)
+  updateField (telegram_username, name)
   updateInfo
   modified_by
 }
