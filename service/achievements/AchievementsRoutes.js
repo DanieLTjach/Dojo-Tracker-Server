@@ -1,10 +1,12 @@
-const express = require('express');
-const router = express.Router();
-const AchievementsController = require('./AchievementsController');
+import { Router } from 'express';
+import { AchievementsController } from './AchievementsController.js';
 
-router.post('/new', AchievementsController.newAchievement);
-router.post('/grant', AchievementsController.grantAchievement);
-router.get('/list', AchievementsController.listAchievements);
-router.get('/user_list', AchievementsController.userAchievements);
+const router = Router();
+const achievementsController = new AchievementsController();
 
-module.exports = router;
+router.post('/new', (req, res) => achievementsController.newAchievement(req, res));
+router.post('/grant', (req, res) => achievementsController.grantAchievement(req, res));
+router.get('/list', (req, res) => achievementsController.listAchievements(req, res));
+router.get('/user_list', (req, res) => achievementsController.userAchievements(req, res));
+
+export default router;

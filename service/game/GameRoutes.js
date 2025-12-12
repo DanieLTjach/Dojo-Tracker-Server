@@ -1,11 +1,13 @@
-const express = require('express');
-const router = express.Router();
-const GameController = require('./GameController');
+import { Router } from 'express';
+import { GameController } from './GameController.js';
 
-router.post('/add', GameController.add);
-router.post('/edit', GameController.edit);
-router.post('/remove', GameController.remove);
-router.get('/list', GameController.list);
-router.get('/get', GameController.get);
+const router = Router();
+const gameController = new GameController();
 
-module.exports = router;
+router.post('/add', (req, res) => gameController.add(req, res));
+router.post('/edit', (req, res) => gameController.edit(req, res));
+router.post('/remove', (req, res) => gameController.remove(req, res));
+router.get('/list', (req, res) => gameController.list(req, res));
+router.get('/get', (req, res) => gameController.get(req, res));
+
+export default router;

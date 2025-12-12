@@ -1,9 +1,10 @@
-const sqlite3 = require('sqlite3').verbose();
+import sqlite3 from 'sqlite3';
+import db from './dbInit.js';
 
-module.exports = class DatabaseManager {
+export default class DatabaseManager {
     #db;
     constructor() {
-        this.#db = require("./dbInit");
+        this.#db = db;
     }
     async addClub(club_name, modified_by) {
         return new Promise((resolve, reject) => {
@@ -133,7 +134,7 @@ module.exports = class DatabaseManager {
         try {
             const gameId = await this.#insertGame(type, club_id, modified_by, created_at);
             for (const player of players_data) {
-                const user = await this.user_select_by("telegram_nickname", player.user);
+                const user = await this.user_select_by("telegram_username", player.user);
                 if (user.success && user.result) {
                     const uid = user.result.id;
                     await this.#insertPlayer(uid, player.start_place, player.points, gameId, modified_by, created_at);
@@ -241,13 +242,13 @@ module.exports = class DatabaseManager {
     }
 
 
-    async register(user_id, user_name, user_telegram_nickname, user_telegram_id = null, modified_by){
+    async register(user_id, user_name, user_telegram_username, user_telegram_id = null, modified_by){
         return new Promise((resolve, reject) => {
             this.#db.run(
-                `INSERT INTO user (id, name, telegram_nickname, telegram_id, modified_by) 
+                `INSERT INTO user (id, name, telegram_username, telegram_id, modified_by) 
                  VALUES (?, ?, ?, ?, ?)
                  ON CONFLICT (id) DO NOTHING`,
-                [user_id, user_name, user_telegram_nickname, user_telegram_id, modified_by],
+                [user_id, user_name, user_telegram_username, user_telegram_id, modified_by],
                 (err) => {
                     if(err){
                         console.error('Registration error:', err);

@@ -1,6 +1,6 @@
 CREATE TABLE user (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    telegram_nickname TEXT,
+    telegram_username TEXT,
     telegram_id INTEGER,
     name TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -114,6 +114,6 @@ INSERT INTO game_type(type) VALUES ("YONMA");
 
 INSERT INTO game_start_place(start_place) VALUES ("EAST"), ("SOUTH"), ("WEST"), ("NORTH");
 
-INSERT INTO user (id, name, telegram_nickname, telegram_id, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1);
+INSERT INTO user (id, name, telegram_username, telegram_id, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1);
 
 INSERT INTO event_type(type) VALUES ("YONMA_RANKED"), ("TOURNAMENT"), ("FRIENDLY_MATCH");

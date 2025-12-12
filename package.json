@@ -2,6 +2,7 @@
   "name": "dojo-tracker-server",
   "version": "0.1.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "npx ts-node index.ts",
     "dev": "nodemon --ext \"js,ts,json\" index.ts"
@@ -13,7 +14,9 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "sqlite3": "^5.1.7"
+    "http-status-codes": "^2.3.0",
+    "sqlite3": "^5.1.7",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

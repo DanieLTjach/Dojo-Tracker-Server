@@ -1,14 +1,18 @@
-const fs = require('fs');
-const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
-const { db_path } = require('../../config/config');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import sqlite3 from 'sqlite3';
+import config from '../../config/config.ts';
 
-const dbDir = path.dirname(db_path);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const dbDir = path.dirname(config.db_path);
 if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const db = new sqlite3.Database(db_path);
+const db = new sqlite3.Database(config.db_path);
 
 function getCurrentDBVersion() {
     return new Promise((resolve, reject) => {
@@ -125,4 +129,4 @@ async function initDB() {
 
 initDB();
 
-module.exports = db;
+export default db;
