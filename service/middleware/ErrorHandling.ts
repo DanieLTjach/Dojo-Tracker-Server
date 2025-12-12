@@ -18,6 +18,7 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
 
     const status = err instanceof ResponseStatusError ? err.statusCode : StatusCodes.INTERNAL_SERVER_ERROR;
     res.status(status).json({
+        errorCode: err instanceof ResponseStatusError ? err.errorCode : undefined,
         message: err.message || 'Internal Server Error',
     });
 }

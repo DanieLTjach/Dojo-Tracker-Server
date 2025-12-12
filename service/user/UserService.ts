@@ -1,5 +1,5 @@
 import { UserRepository } from './UserRepository.ts';
-import { UserIsNotAdmin, UserNotFoundById, UserNotFoundByTelegramId, UserWithTelegramIdAlreadyExists } from './UserErrors.ts';
+import { UserIsNotAdmin, UserNotFoundById, UserNotFoundByTelegramId, UserWithThisNameAlreadyExists, UserWithThisTelegramIdAlreadyExists, UserWithThisTelegramUsernameAlreadyExists } from './UserErrors.ts';
 import type { User } from './UserModels.ts';
 
 export class UserService {
@@ -15,8 +15,14 @@ export class UserService {
         userTelegramId: number,
         modifiedBy: number
     ): Promise<User> {
+        if (await this.userExistsByName(userName)) {
+            throw new UserWithThisNameAlreadyExists(userName);
+        }
         if (await this.userExistsByTelegramId(userTelegramId)) {
-            throw new UserWithTelegramIdAlreadyExists(userTelegramId);
+            throw new UserWithThisTelegramIdAlreadyExists(userTelegramId);
+        }
+        if (await this.userExistsByTelegramUsername(userTelegramUsername)) {
+            throw new UserWithThisTelegramUsernameAlreadyExists(userTelegramUsername);
         }
 
         await this.userRepository.registerUser(userName, userTelegramUsername, userTelegramId, modifiedBy);
@@ -69,6 +75,16 @@ export class UserService {
         if (!this.userExistsByTelegramId(telegramId)) {
             throw new UserNotFoundByTelegramId(telegramId);
         }
+    }
+
+    async userExistsByName(name: string): Promise<boolean> {
+        const user = await this.userRepository.findUserBy('name', name);
+        return !!user;
+    }
+
+    async userExistsByTelegramUsername(telegramUsername: string): Promise<boolean> {
+        const user = await this.userRepository.findUserBy('telegram_username', telegramUsername);
+        return !!user;
     }
 
     async userExistsByTelegramId(telegramId: number): Promise<boolean> {
