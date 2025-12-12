@@ -3,3 +3,5 @@ export const status = {
     SERVER_ERROR: 500,
     ERROR: 201
 };
+
+export const SYSTEM_USER_ID = 0;

@@ -1,21 +1,21 @@
 CREATE TABLE user (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    telegram_username TEXT,
-    telegram_id INTEGER,
+    telegram_username TEXT UNIQUE,
+    telegram_id INTEGER UNIQUE,
     name TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_by INTEGER REFERENCES user(id),
-    is_active BOOL DEFAULT true,
-    is_admin BOOL DEFAULT false
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_by INTEGER NOT NULL REFERENCES user(id),
+    is_active BOOL NOT NULL DEFAULT true,
+    is_admin BOOL NOT NULL DEFAULT false
 );
 
 CREATE TABLE club (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_by INTEGER REFERENCES user(id)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_by INTEGER NOT NULL REFERENCES user(id)
 );
 
 CREATE TABLE event_type (
@@ -28,9 +28,9 @@ CREATE TABLE event (
     type INTEGER REFERENCES event_type(type),
     date_from TIMESTAMP,
     date_to TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_by INTEGER REFERENCES user(id)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_by INTEGER NOT NULL REFERENCES user(id)
 );
 
 CREATE TABLE game_type (
@@ -42,9 +42,9 @@ CREATE TABLE game (
     type INTEGER NOT NULL REFERENCES game_type(type),
     club_id INTEGER REFERENCES club(id),
     event_id INTEGER REFERENCES event(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_by INTEGER REFERENCES user(id)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_by INTEGER NOT NULL REFERENCES user(id)
 );
 
 CREATE TABLE game_start_place (
@@ -56,9 +56,9 @@ CREATE TABLE user_to_game (
     game_id INTEGER NOT NULL REFERENCES game(id),
     start_place TEXT REFERENCES game_start_place(start_place),
     points INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_by INTEGER REFERENCES user(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_by INTEGER NOT NULL REFERENCES user(id),
     PRIMARY KEY (user_id, game_id)
 );
 
@@ -76,27 +76,27 @@ CREATE TABLE standart_hanchan_hands (
     riichi_south BOOL,
     riichi_west BOOL,
     riichi_north BOOL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_by INTEGER REFERENCES user(id)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_by INTEGER NOT NULL REFERENCES user(id)
 );
 
 CREATE TABLE achievements (
     achievement_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_by INTEGER REFERENCES user(id)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_by INTEGER NOT NULL REFERENCES user(id)
 );
 
 CREATE TABLE user_to_achievements (
     record_id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES user(id),
     achievement_id INTEGER NOT NULL REFERENCES achievements(achievement_id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified_by INTEGER REFERENCES user(id)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_by INTEGER NOT NULL REFERENCES user(id)
 );
 
 CREATE TABLE hand_type_dict (

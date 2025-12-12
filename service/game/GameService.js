@@ -12,7 +12,7 @@ export class GameService {
                     console.error("Invalid player data:", player);
                     return { success: false, result: "Invalid player data" };
                 }
-                const is_user_exist = await this.db.user_select_by('telegram_username', player.user);
+                const is_user_exist = await this.db.findUserBy('telegram_username', player.user);
                 if (!is_user_exist || is_user_exist.success === false) {
                     console.error("User does not exist:", player.user);
                     return { success: false, result: "User does not exist" };
