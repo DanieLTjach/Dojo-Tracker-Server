@@ -1,17 +1,44 @@
 import sqlite3 from 'sqlite3';
 import db from './dbInit.js';
+import { DatabaseError } from '../error/errors.ts';
 
 export default class DatabaseManager {
     #db;
     constructor() {
         this.#db = db;
     }
+
+    run(query, params = []) {
+        return new Promise((resolve, reject) => {
+            this.#db.run(query, params, (err) => {
+                if (err) {
+                    reject(new DatabaseError(err.message));
+                }
+                else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    get(query, params = []) {
+        return new Promise((resolve, reject) => {
+            this.#db.get(query, params, (err, result) => {
+                if (err) {
+                    reject(new DatabaseError(err.message));
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+    }
+
     async addClub(club_name, modified_by) {
         return new Promise((resolve, reject) => {
             this.#db.run(
                 `INSERT INTO club (name, modified_by) VALUES (?, ?)`,
                 [club_name, modified_by],
-                function(err) {
+                function (err) {
                     if (err) {
                         console.error('Database error:', err);
                         reject({ success: false, result: err.message });
@@ -23,7 +50,7 @@ export default class DatabaseManager {
         })
     };
 
-        
+
     async list_games(type, date_from, date_to, user_id = null, club_id) {
         return new Promise((resolve, reject) => {
             this.#db.all(`SELECT
@@ -86,7 +113,7 @@ export default class DatabaseManager {
             this.#db.run(
                 `INSERT INTO game (type, club_id, modified_by, created_at) VALUES (?, ?, ?, ?)`,
                 [type, club_id, modified_by, created_at || new Date().toISOString().replace('T', ' ').split('.')[0]],
-                function(err) {
+                function (err) {
                     if (err) {
                         reject(err);
                     } else {
@@ -112,13 +139,13 @@ export default class DatabaseManager {
             );
         });
     }
-    
+
     async #insertEventToGame(event_id, game_id, modified_by) {
         return new Promise((resolve, reject) => {
             this.#db.run(
                 `INSERT INTO event_to_game (event_id, game_id, modified_by) VALUES (?, ?, ?)`,
                 [event_id, game_id, modified_by],
-                function(err) {
+                function (err) {
                     if (err) {
                         console.error('Database error:', err);
                         reject({ success: false, result: err.message });
@@ -134,7 +161,7 @@ export default class DatabaseManager {
         try {
             const gameId = await this.#insertGame(type, club_id, modified_by, created_at);
             for (const player of players_data) {
-                const user = await this.user_select_by("telegram_username", player.user);
+                const user = await this.findUserBy("telegram_username", player.user);
                 if (user.success && user.result) {
                     const uid = user.result.id;
                     await this.#insertPlayer(uid, player.start_place, player.points, gameId, modified_by, created_at);
@@ -155,7 +182,7 @@ export default class DatabaseManager {
             this.#db.run(
                 `INSERT INTO event (name, type, date_from, date_to, modified_by) VALUES (?, ?, ?, ?, ?)`,
                 [name, type, date_from, date_to, modified_by],
-                function(err) {
+                function (err) {
                     if (err) {
                         console.error('Database error:', err);
                         reject({ success: false, result: err.message });
@@ -173,7 +200,7 @@ export default class DatabaseManager {
                 `INSERT INTO achievements (name, description, modified_by) 
                  VALUES (?, ?, ?)`,
                 [name, description, modified_by],
-                function(err) {
+                function (err) {
                     if (err) {
                         console.error('Database error:', err);
                         reject({ success: false, result: err.message });
@@ -182,7 +209,8 @@ export default class DatabaseManager {
                     }
                 }
             );
-        })}
+        })
+    }
 
     async grant_achievement(user_id, achievement_id, modified_by) {
         return new Promise((resolve, reject) => {
@@ -190,7 +218,7 @@ export default class DatabaseManager {
                 `INSERT INTO user_to_achievements (user_id, achievement_id, modified_by) 
                  VALUES (?, ?, ?)`,
                 [user_id, achievement_id, modified_by],
-                function(err) {
+                function (err) {
                     if (err) {
                         console.error('Database error:', err);
                         reject({ success: false, result: err.message });
@@ -241,57 +269,14 @@ export default class DatabaseManager {
         });
     }
 
-
-    async register(user_id, user_name, user_telegram_username, user_telegram_id = null, modified_by){
-        return new Promise((resolve, reject) => {
-            this.#db.run(
-                `INSERT INTO user (id, name, telegram_username, telegram_id, modified_by) 
-                 VALUES (?, ?, ?, ?, ?)
-                 ON CONFLICT (id) DO NOTHING`,
-                [user_id, user_name, user_telegram_username, user_telegram_id, modified_by],
-                (err) => {
-                    if(err){
-                        console.error('Registration error:', err);
-                        reject({success: false, result: err.message});
-                    }
-                    else if(this.changes === 0){
-                        console.warn('User registration conflict');
-                        resolve({success: false, result: "User already exists"});
-                    }
-                    else {
-                        resolve({success: true, result: "User added"});
-                    }
-                }
-            );
-        });
+    async findUserBy(column, value) {
+        if (!column || value === undefined || value === null) {
+            throw new DatabaseError("Invalid search parameters");
+        }
+        return await this.get(`SELECT * FROM user WHERE ${column} = ?`, [value]);
     }
 
-    async user_select_by(column, value){
-        return new Promise((resolve, reject) => {
-            if (!column || !value) {
-                reject({success: false, result: "Invalid search parameters"});
-                return;
-            }
-    
-            const query = `SELECT * FROM user WHERE ${column} = ?`;
-            
-            this.#db.get(query, [value], (err, result) => {
-                if(err){
-                    console.error('Database select error:', err);
-                    reject({success: false, result: err.message});
-                    return;
-                } 
-                if(result === undefined){
-                    resolve({success: false, result: null});
-                } 
-                else{
-                    resolve({success: true, result: result});
-                }
-            });
-        });
-    }
-
-    async custom_select(query, params = []){
+    async custom_select(query, params = []) {
         return new Promise((resolve, reject) => {
             this.#db.all(query, params, (err, rows) => {
                 if (err) {
@@ -322,45 +307,19 @@ export default class DatabaseManager {
                 `,
                 [value, modified_by, club_id, modified_by],
                 (err) => {
-                    if(err){
-                        reject({success: false, result: err.message});
+                    if (err) {
+                        reject({ success: false, result: err.message });
                     }
-                    else if(this.changes === 0){
-                        reject({success: false, result: "You are not admin."})
-                    } 
+                    else if (this.changes === 0) {
+                        reject({ success: false, result: "You are not admin." })
+                    }
                     else {
-                        resolve({success: true, result: "Club edited."});
+                        resolve({ success: true, result: "Club edited." });
                     }
                 }
             )
         });
-    }
-
-    async user_edit(column, value, user_telegram_id, modified_by){
-        return new Promise((resolve, reject) => {
-            this.#db.run(
-                `UPDATE user
-                    SET ${column} = ?, modified_by = ?, modified_at = CURRENT_TIMESTAMP
-                    WHERE telegram_id = ?
-                    AND EXISTS (
-                        SELECT 1 FROM user WHERE telegram_id = ? AND is_admin = 1
-                    );
-                `,
-                [value, modified_by, telegram_id, modified_by],
-                (err) => {
-                    if(err){
-                        reject({success: false, result: err.message});
-                    }
-                    else if(this.changes === 0){
-                        reject({success: false, result: "You are not admin."})
-                    } 
-                    else {
-                        resolve({success: true, result: "User edited."});
-                    }
-                }
-            )
-        })
-    }
+    } 
 
     // Remove / Delete
 
@@ -371,7 +330,7 @@ export default class DatabaseManager {
                  WHERE id = ? 
                  AND EXISTS (SELECT 1 FROM user WHERE id = ? AND is_admin = 1)`,
                 [club_id, modified_by],
-                function(err) {
+                function (err) {
                     if (err) {
                         reject({ success: false, result: err.message });
                     } else if (this.changes === 0) {
@@ -409,7 +368,7 @@ export default class DatabaseManager {
                  WHERE id = ? 
                  AND EXISTS (SELECT 1 FROM user WHERE id = ? AND is_admin = 1)`,
                 [game_id, modified_by],
-                function(err) {
+                function (err) {
                     if (err) {
                         reject(err);
                     } else {
@@ -424,7 +383,7 @@ export default class DatabaseManager {
         try {
             await this.#removePlayersFromGame(game_id, modified_by);
             const changes = await this.#removeGameRecord(game_id, modified_by);
-            
+
             if (changes === 0) {
                 return { success: false, result: "You are not admin or game not found." };
             }
@@ -433,31 +392,5 @@ export default class DatabaseManager {
             console.error('Database error during game removal:', err);
             return { success: false, result: err.message };
         }
-    }
-
-    async remove_user(user_id, modified_by) {
-        return new Promise((resolve, reject) => {
-            this.#db.run(
-                `UPDATE user
-                    SET is_active = 0, modified_by = ?
-                    WHERE id = ?
-                    AND EXISTS (
-                        SELECT 1 FROM user WHERE id = ? AND is_admin = 1
-                    );
-                `,
-                [modified_by, user_id, modified_by],
-                (err) => {
-                    if(err){
-                        reject({success: false, result: err.message});
-                    }
-                    else if(this.changes === 0){
-                        reject({success: false, result: "You are not admin."})
-                    }
-                    else{
-                        resolve({success: true, result: "User deactivated."});
-                    }
-                }
-            )
-        })
     }
 };
