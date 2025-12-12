@@ -147,7 +147,7 @@ export class UserController {
 
     async get_user (req, res) {
         try {
-            const { telegram_id } = req.body;
+            const { telegram_id } = req.params;
 
             if (!telegram_id) {
                 return res.status(status.ERROR).json({
