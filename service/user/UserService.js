@@ -155,7 +155,7 @@ export class UserService {
             }
 
             if(is_user_exist.success === true){
-                return is_user_exist;
+                return is_user_exist.result;
             }
             
             else{

@@ -1,3 +1,4 @@
+import { success } from 'zod';
 import { status } from '../../config/constants.js';
 import errors from '../../config/messages.js';
 import { UserService } from './UserService.js';
@@ -159,7 +160,7 @@ export class UserController {
             const result = await this.userService.get_user(telegram_id);
 
             if (result.success === true) {
-                return res.status(status.OK).json({ message: result.result });
+                return res.status(status.OK).json({ success: true, message: result.result });
             } else {
                 return res.status(status.ERROR).json({
                     message: result.result,
