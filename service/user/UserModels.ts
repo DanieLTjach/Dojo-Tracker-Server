@@ -9,3 +9,14 @@ export interface User {
     modified_at: string;
     modified_by: string;
 }
+
+export interface UnresolvedUserInfo {
+    telegramUsername?: string | undefined;
+    name?: string | undefined;
+}
+
+export interface ResolvedUserInfo {
+    id: number;
+    telegramUsername?: string | undefined;
+    name?: string | undefined;
+}

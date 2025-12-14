@@ -35,7 +35,11 @@ export class UserController {
     }
 
     async editUser(req: Request, res: Response) {
-        const { params: { id }, body: { name, telegramUsername, modifiedBy } } = userEditSchema.parse(req);
+        const { 
+            params: { id },
+            body: { name, telegramUsername, modifiedBy }
+        } = userEditSchema.parse(req);
+        
         const editedUser = await this.userService.editUser(id, name, telegramUsername, modifiedBy);
         return res.status(StatusCodes.OK).json(editedUser);
     }
