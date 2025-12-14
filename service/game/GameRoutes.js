@@ -1,13 +1,13 @@
 import { Router } from 'express';
-import { GameController } from './GameController.js';
+import { GameController } from './GameController.ts';
 
 const router = Router();
 const gameController = new GameController();
 
-router.post('/add', (req, res) => gameController.add(req, res));
-router.post('/edit', (req, res) => gameController.edit(req, res));
-router.post('/remove', (req, res) => gameController.remove(req, res));
-router.get('/list', (req, res) => gameController.list(req, res));
-router.get('/get', (req, res) => gameController.get(req, res));
+router.post('/', (req, res) => gameController.addGame(req, res));
+router.get('/', (req, res) => gameController.getGames(req, res));
+router.get('/:gameId', (req, res) => gameController.getGameById(req, res));
+router.put('/:gameId', (req, res) => gameController.editGame(req, res));
+router.delete('/:gameId', (req, res) => gameController.deleteGame(req, res));
 
 export default router;

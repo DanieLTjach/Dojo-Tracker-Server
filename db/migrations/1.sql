@@ -124,11 +124,14 @@ CREATE TABLE win_type_dict (
 
 -- Insert initial data
 INSERT INTO game_rules(id, name, number_of_players, uma, starting_points) VALUES
-    (1, "Standard yonma", 4, "[15, 5, -5, -15]", 30000),
-    (2, "Standard sanma", 3, "[15, 0, -15]", 35000);
+    (1, 'Standard yonma', 4, '[15, 5, -5, -15]', 30000),
+    (2, 'Standard sanma', 3, '[15, 0, -15]', 35000);
 
-INSERT INTO event_type(type) VALUES ("SEASON"), ("TOURNAMENT");
+INSERT INTO event_type(type) VALUES ('SEASON'), ('TOURNAMENT');
 
-INSERT INTO game_start_place(start_place) VALUES ("EAST"), ("SOUTH"), ("WEST"), ("NORTH");
+INSERT INTO game_start_place(start_place) VALUES ('EAST'), ('SOUTH'), ('WEST'), ('NORTH');
 
-INSERT INTO user (id, name, telegram_username, telegram_id, modified_by, is_admin) VALUES (0, "SYSTEM", NULL, NULL, 0, 1);
+INSERT INTO user (id, name, telegram_username, telegram_id, modified_by, is_admin) VALUES (0, 'SYSTEM', NULL, NULL, 0, 1);
+
+INSERT INTO club (id, name, modified_by) VALUES (1, 'Test Club', 0);
+INSERT INTO event (id, name, club_id, type, game_rules, modified_by) VALUES (1, 'Test Event', 1, 'SEASON', 1, 0);
