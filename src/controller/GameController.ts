@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { GameService } from './GameService.ts';
+import { GameService } from '../service/GameService.ts';
 import { 
     gameCreationSchema, 
     gameGetByIdSchema, 
     gameGetListSchema, 
     gameUpdateSchema, 
     gameDeletionSchema 
-} from './GameSchemas.ts';
+} from '../schema/GameSchemas.ts';
 
 export class GameController {
     private gameService: GameService;

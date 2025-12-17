@@ -1,7 +1,13 @@
-import { GameRepository } from './GameRepository.ts';
-import { UserService } from '../user/UserService.ts';
-import { GameNotFoundById, IncorrectPlayerCountError, DuplicatePlayerError, EventNotFoundError, TooManyGamesFoundError } from './GameErrors.ts';
-import type { GameWithPlayers, PlayerData, GameFilters, ResolvedPlayerData } from './GameModels.ts';
+import { GameRepository } from '../repository/GameRepository.ts';
+import { UserService } from '../service/UserService.ts';
+import { 
+    GameNotFoundById,
+    IncorrectPlayerCountError,
+    DuplicatePlayerError,
+    EventNotFoundError,
+    TooManyGamesFoundError
+} from '../error/GameErrors.ts';
+import type { GameWithPlayers, PlayerData, GameFilters, ResolvedPlayerData } from '../model/GameModels.ts';
 
 export class GameService {
     private gameRepository: GameRepository;

@@ -1,7 +1,13 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { UserService } from './UserService.ts';
-import { userActivationSchema, userEditSchema, getUserByTelegramIdSchema, userRegistrationSchema, getUserByIdSchema } from './UserSchemas.ts';
+import { UserService } from '../service/UserService.ts';
+import { 
+    userActivationSchema,
+    userEditSchema,
+    getUserByTelegramIdSchema,
+    userRegistrationSchema, 
+    getUserByIdSchema 
+} from '../schema/UserSchemas.ts';
 import { SYSTEM_USER_ID } from '../../config/constants.js';
 
 export class UserController {

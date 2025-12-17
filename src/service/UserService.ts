@@ -1,4 +1,4 @@
-import { UserRepository } from './UserRepository.ts';
+import { UserRepository } from '../repository/UserRepository.ts';
 import {
     UserIsNotAdmin,
     UserNotFoundById,
@@ -9,8 +9,8 @@ import {
     UserNotFoundByTelegramUsername,
     UserNotFoundByName,
     MissingUserInformationError
-} from './UserErrors.ts';
-import type { User, UnresolvedUserInfo, ResolvedUserInfo } from './UserModels.ts';
+} from '../error/UserErrors.ts';
+import type { User, UnresolvedUserInfo, ResolvedUserInfo } from '../model/UserModels.ts';
 
 export class UserService {
     private userRepository: UserRepository;

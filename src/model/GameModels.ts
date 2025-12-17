@@ -1,4 +1,4 @@
-import type { UnresolvedUserInfo, ResolvedUserInfo } from '../user/UserModels.ts';
+import type { UnresolvedUserInfo, ResolvedUserInfo } from './UserModels.ts';
 
 export interface Game {
     id: number;

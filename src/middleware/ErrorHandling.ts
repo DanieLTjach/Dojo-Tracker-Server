@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { StatusCodes } from "http-status-codes";
-import { ResponseStatusError } from "../error/errors.ts";
+import { ResponseStatusError } from "../error/BaseErrors.ts";
 import { ZodError } from "zod";
 
 export const handleErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {

@@ -1,5 +1,5 @@
 import db from './dbInit.js';
-import { DatabaseError } from '../error/errors.ts';
+import { DatabaseError } from '../error/BaseErrors.ts';
 
 export default class DatabaseManager {
     #db;

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { telegramUsernameSchema, userIdParamSchema, userIdSchema, userNameSchema } from '../user/UserSchemas.ts';
+import { telegramUsernameSchema, userIdParamSchema, userIdSchema, userNameSchema } from './UserSchemas.ts';
 
 export const gameStartPlace = z.enum(['EAST', 'WEST', 'NORTH', 'SOUTH']);
 
