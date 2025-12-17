@@ -1,6 +1,6 @@
 import DatabaseManager from '../db/dbManager.js';
-import { DatabaseError } from '../error/errors.ts';
-import type { User } from './UserModels.ts';
+import { DatabaseError } from '../error/BaseErrors.ts';
+import type { User } from '../model/UserModels.ts';
 
 export class UserRepository {
     private dbManager: DatabaseManager;

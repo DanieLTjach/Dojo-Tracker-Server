@@ -1,4 +1,4 @@
-import { BadRequestError, ForbiddenError, NotFoundError } from "../error/errors.ts";
+import { BadRequestError, ForbiddenError, NotFoundError } from "./BaseErrors.ts";
 
 export class UserWithThisNameAlreadyExists extends BadRequestError {
     constructor(name: string) {

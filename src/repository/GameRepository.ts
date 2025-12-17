@@ -1,6 +1,6 @@
 import DatabaseManager from '../db/dbManager.js';
 import { formatDateForSqlite } from '../db/dbUtils.ts';
-import type { Game, GameFilters, GamePlayer } from './GameModels.ts';
+import type { Game, GameFilters, GamePlayer } from '../model/GameModels.ts';
 
 export class GameRepository {
     private dbManager: DatabaseManager;
