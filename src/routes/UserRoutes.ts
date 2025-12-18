@@ -6,6 +6,7 @@ const router = Router();
 const userController = new UserController();
 
 router.post('/', withTransaction((req, res) => userController.registerUser(req, res)));
+router.post('/without-telegram', withTransaction((req, res) => userController.registerUserWithoutTelegram(req, res)));
 router.get('/', withTransaction((req, res) => userController.getAllUsers(req, res)));
 router.get('/:id', withTransaction((req, res) => userController.getUserById(req, res)));
 router.get('/by-telegram-id/:telegramId', withTransaction((req, res) => userController.getUserByTelegramId(req, res)));

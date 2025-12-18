@@ -1,22 +1,29 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { UserService } from '../service/UserService.ts';
-import { 
+import {
     userActivationSchema,
     userEditSchema,
     getUserByTelegramIdSchema,
-    userRegistrationSchema, 
-    getUserByIdSchema 
+    userRegistrationSchema,
+    getUserByIdSchema,
+    userRegistrationWithoutTelegramSchema
 } from '../schema/UserSchemas.ts';
-import { SYSTEM_USER_ID } from '../../config/constants.js';
+import { SYSTEM_USER_ID } from '../../config/constants.ts';
 
 export class UserController {
-    
+
     private userService: UserService = new UserService();
 
     registerUser(req: Request, res: Response) {
         const { name, telegramUsername, telegramId, createdBy } = userRegistrationSchema.parse(req).body;
         const newUser = this.userService.registerUser(name, telegramUsername, telegramId, createdBy ?? SYSTEM_USER_ID);
+        return res.status(StatusCodes.CREATED).json(newUser);
+    }
+
+    registerUserWithoutTelegram(req: Request, res: Response) {
+        const { name, createdBy } = userRegistrationWithoutTelegramSchema.parse(req).body;
+        const newUser = this.userService.registerUser(name, undefined, undefined, createdBy);
         return res.status(StatusCodes.CREATED).json(newUser);
     }
 
@@ -38,11 +45,11 @@ export class UserController {
     }
 
     editUser(req: Request, res: Response) {
-        const { 
+        const {
             params: { id },
             body: { name, telegramUsername, modifiedBy }
         } = userEditSchema.parse(req);
-        
+
         const editedUser = this.userService.editUser(id, name, telegramUsername, modifiedBy);
         return res.status(StatusCodes.OK).json(editedUser);
     }

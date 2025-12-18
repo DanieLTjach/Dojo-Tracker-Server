@@ -22,7 +22,14 @@ const playerDataSchema = z.object({
     startPlace: gameStartPlace.optional()
 });
 
-const playerListSchema = z.array(playerDataSchema);
+const playerListSchema = z.array(playerDataSchema).refine((players) => {
+    const startPlaces = players
+        .map(p => p.startPlace)
+        .filter((sp) => sp !== undefined);
+    return new Set(startPlaces).size === startPlaces.length;
+}, {
+    message: "Each player must have a unique start place"
+});
 
 export const gameCreationSchema = z.object({
     body: z.object({

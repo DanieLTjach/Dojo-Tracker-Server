@@ -59,6 +59,7 @@ All endpoints are prefixed with `/api`.
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `POST` | `/` | Register a new user |
+| `POST` | `/without-telegram` | Register a new user without Telegram |
 | `GET` | `/` | Get all users |
 | `GET` | `/:id` | Get user by ID |
 | `GET` | `/by-telegram-id/:telegramId` | Get user by Telegram ID |
