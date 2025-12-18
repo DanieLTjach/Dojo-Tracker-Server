@@ -41,16 +41,16 @@ export class UserRepository {
 
     private registerUserStatement: Statement<{
         name: string,
-        telegramUsername: string,
-        telegramId: number,
+        telegramUsername: string | undefined,
+        telegramId: number | undefined,
         modifiedBy: number 
     }, void> = db.prepare(
         `INSERT INTO user (name, telegramUsername, telegramId, modifiedBy) 
          VALUES (:name, :telegramUsername, :telegramId, :modifiedBy)`
     );
 
-    registerUser(name: string, telegramUsername: string, telegramId: number, modifiedBy: number) {
-        this.registerUserStatement.run({ name, telegramUsername, telegramId, modifiedBy });
+    registerUser(name: string, telegramUsername: string | undefined, telegramId: number | undefined, createdBy: number): number {
+        return Number(this.registerUserStatement.run({ name, telegramUsername, telegramId, modifiedBy: createdBy }).lastInsertRowid);
     }
 
     private updateUserNameStatement: Statement<{

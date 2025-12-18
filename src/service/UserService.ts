@@ -8,32 +8,34 @@ import {
     UserWithThisTelegramUsernameAlreadyExists,
     UserNotFoundByTelegramUsername,
     UserNotFoundByName,
-    MissingUserInformationError
+    MissingUserInformationError,
+    UserIsNotActive
 } from '../error/UserErrors.ts';
 import type { User, UnresolvedUserInfo, ResolvedUserInfo } from '../model/UserModels.ts';
 
 export class UserService {
-    
+
     private userRepository: UserRepository = new UserRepository();
 
     registerUser(
         userName: string,
-        userTelegramUsername: string,
-        userTelegramId: number,
-        modifiedBy: number
+        userTelegramUsername: string | undefined,
+        userTelegramId: number | undefined,
+        createdBy: number
     ): User {
+        this.validateUserIsAdmin(createdBy);
         if (this.userExistsByName(userName)) {
             throw new UserWithThisNameAlreadyExists(userName);
         }
-        if (this.userExistsByTelegramId(userTelegramId)) {
+        if (userTelegramId !== undefined && this.userExistsByTelegramId(userTelegramId)) {
             throw new UserWithThisTelegramIdAlreadyExists(userTelegramId);
         }
-        if (this.userExistsByTelegramUsername(userTelegramUsername)) {
+        if (userTelegramUsername !== undefined && this.userExistsByTelegramUsername(userTelegramUsername)) {
             throw new UserWithThisTelegramUsernameAlreadyExists(userTelegramUsername);
         }
 
-        this.userRepository.registerUser(userName, userTelegramUsername, userTelegramId, modifiedBy);
-        return this.getUserByTelegramId(userTelegramId);
+        const newUserId = this.userRepository.registerUser(userName, userTelegramUsername, userTelegramId, createdBy);
+        return this.getUserById(newUserId);
     }
 
     getAllUsers(): User[] {
@@ -62,8 +64,10 @@ export class UserService {
         telegramUsername: string | undefined,
         modifiedBy: number
     ): User {
-        this.validateUserIsAdmin(modifiedBy);
-        this.validateUserExistsById(userId);
+        if (userId !== modifiedBy) {
+            this.validateUserIsAdmin(modifiedBy);
+        }
+        this.validateUserIsActiveById(userId);
 
         if (name !== undefined) {
             this.userRepository.updateUserName(userId, name, modifiedBy);
@@ -87,12 +91,22 @@ export class UserService {
         if (!user.isAdmin) {
             throw new UserIsNotAdmin(id);
         }
+        if (!user.isActive) {
+            throw new UserIsNotActive(id);
+        }
     }
 
     validateUserExistsById(id: number): void {
         const userExists = this.userExistsById(id);
         if (!userExists) {
             throw new UserNotFoundById(id);
+        }
+    }
+
+    validateUserIsActiveById(id: number): void {
+        const user = this.getUserById(id);
+        if (!user.isActive) {
+            throw new UserIsNotActive(id);
         }
     }
 
@@ -111,43 +125,48 @@ export class UserService {
         return !!user;
     }
 
-    resolveUser(unresolvedUser: UnresolvedUserInfo): ResolvedUserInfo {
+    private userExistsByTelegramId(telegramId: number): boolean {
+        const user = this.userRepository.findUserByTelegramId(telegramId);
+        return !!user;
+    }
+
+    resolveActiveUser(unresolvedUser: UnresolvedUserInfo): ResolvedUserInfo {
         if (unresolvedUser.telegramUsername) {
-            let user = this.findUserByTelegramUsernameOrThrow(unresolvedUser.telegramUsername);
+            let user = this.findActiveUserByTelegramUsernameOrThrow(unresolvedUser.telegramUsername);
             return {
                 id: user.id,
                 telegramUsername: unresolvedUser.telegramUsername
             };
         } else if (unresolvedUser.name) {
-            let user = this.findUserByNameOrThrow(unresolvedUser.name);
+            let user = this.findActiveUserByNameOrThrow(unresolvedUser.name);
             return {
                 id: user.id,
                 name: unresolvedUser.name
             };
-        }
-        else {
+        } else {
             throw new MissingUserInformationError();
         }
     }
 
-    private findUserByTelegramUsernameOrThrow(telegramUsername: string): User {
+    private findActiveUserByTelegramUsernameOrThrow(telegramUsername: string): User {
         let user = this.userRepository.findUserByTelegramUsername(telegramUsername);
         if (!user) {
             throw new UserNotFoundByTelegramUsername(telegramUsername);
         }
-        return user;
-    }
-
-    private findUserByNameOrThrow(name: string): User {
-        let user = this.userRepository.findUserByName(name);
-        if (!user) {
-            throw new UserNotFoundByName(name);
+        if (!user.isActive) {
+            throw new UserIsNotActive(user.id);
         }
         return user;
     }
 
-    private userExistsByTelegramId(telegramId: number): boolean {
-        const user = this.userRepository.findUserByTelegramId(telegramId);
-        return !!user;
+    private findActiveUserByNameOrThrow(name: string): User {
+        let user = this.userRepository.findUserByName(name);
+        if (!user) {
+            throw new UserNotFoundByName(name);
+        }
+        if (!user.isActive) {
+            throw new UserIsNotActive(user.id);
+        }
+        return user;
     }
 }

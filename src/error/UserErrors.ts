@@ -30,12 +30,6 @@ export class UserNotFoundByTelegramId extends NotFoundError {
     }
 }
 
-export class UserIsNotAdmin extends ForbiddenError {
-    constructor(id: number) {
-        super(`User with id ${id} is not an admin`, 'userIsNotAdmin');
-    }
-}
-
 export class UserNotFoundByTelegramUsername extends NotFoundError {
     constructor(telegramUsername: string) {
         super(`User not found with telegram username: ${telegramUsername}`, 'userNotFoundByTelegramUsername');
@@ -51,5 +45,17 @@ export class UserNotFoundByName extends NotFoundError {
 export class MissingUserInformationError extends BadRequestError {
     constructor() {
         super('User information must contain either telegramUsername or name', 'missingUserInformation');
+    }
+}
+
+export class UserIsNotAdmin extends ForbiddenError {
+    constructor(id: number) {
+        super(`User with id ${id} is not an admin`, 'userIsNotAdmin');
+    }
+}
+
+export class UserIsNotActive extends ForbiddenError {
+    constructor(id: number) {
+        super(`User with id ${id} is not active`, 'userIsNotActive');
     }
 }

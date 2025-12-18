@@ -20,15 +20,15 @@ export class GameService {
         playersData: PlayerData[],
         createdBy: number
     ): GameWithPlayers {
-        this.userService.validateUserIsAdmin(createdBy);
+        this.userService.validateUserIsActiveById(createdBy);
 
         this.eventService.validateEventExists(eventId);
         const resolvedPlayersData = this.validateAndResolvePlayers(playersData);
 
-        const gameId = this.gameRepository.createGame(eventId, createdBy);
-        this.addPlayersToGame(gameId, resolvedPlayersData, createdBy);
+        const newGameId = this.gameRepository.createGame(eventId, createdBy);
+        this.addPlayersToGame(newGameId, resolvedPlayersData, createdBy);
 
-        return this.getGameById(gameId);
+        return this.getGameById(newGameId);
     }
 
     getGameById(gameId: number): GameWithPlayers {
@@ -122,7 +122,7 @@ export class GameService {
 
         for (const playerData of playersData) {
             resolvedPlayersData.push({
-                user: this.userService.resolveUser(playerData.user),
+                user: this.userService.resolveActiveUser(playerData.user),
                 points: playerData.points,
                 startPlace: playerData.startPlace
             });

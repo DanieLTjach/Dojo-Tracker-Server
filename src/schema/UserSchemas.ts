@@ -19,6 +19,13 @@ export const userRegistrationSchema = z.object({
     })
 });
 
+export const userRegistrationWithoutTelegramSchema = z.object({
+    body: z.object({
+        name: userNameSchema,
+        createdBy: userIdSchema
+    })
+});
+
 export const getUserByIdSchema = z.object({
     params: z.object({
         id: userIdParamSchema
