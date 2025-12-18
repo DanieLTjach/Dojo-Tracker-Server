@@ -23,9 +23,3 @@ export class DuplicatePlayerError extends BadRequestError {
         super(`Player ${userIdentifier} is present more than once in this game`, 'duplicatePlayer');
     }
 }
-
-export class EventNotFoundError extends NotFoundError {
-    constructor(eventId: number) {
-        super(`Event with id ${eventId} not found`, 'eventNotFound');
-    }
-}

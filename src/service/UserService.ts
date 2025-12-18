@@ -13,116 +13,113 @@ import {
 import type { User, UnresolvedUserInfo, ResolvedUserInfo } from '../model/UserModels.ts';
 
 export class UserService {
-    private userRepository: UserRepository;
+    
+    private userRepository: UserRepository = new UserRepository();
 
-    constructor() {
-        this.userRepository = new UserRepository();
-    }
-
-    async registerUser(
+    registerUser(
         userName: string,
         userTelegramUsername: string,
         userTelegramId: number,
         modifiedBy: number
-    ): Promise<User> {
-        if (await this.userExistsByName(userName)) {
+    ): User {
+        if (this.userExistsByName(userName)) {
             throw new UserWithThisNameAlreadyExists(userName);
         }
-        if (await this.userExistsByTelegramId(userTelegramId)) {
+        if (this.userExistsByTelegramId(userTelegramId)) {
             throw new UserWithThisTelegramIdAlreadyExists(userTelegramId);
         }
-        if (await this.userExistsByTelegramUsername(userTelegramUsername)) {
+        if (this.userExistsByTelegramUsername(userTelegramUsername)) {
             throw new UserWithThisTelegramUsernameAlreadyExists(userTelegramUsername);
         }
 
-        await this.userRepository.registerUser(userName, userTelegramUsername, userTelegramId, modifiedBy);
-        return await this.getUserByTelegramId(userTelegramId);
+        this.userRepository.registerUser(userName, userTelegramUsername, userTelegramId, modifiedBy);
+        return this.getUserByTelegramId(userTelegramId);
     }
 
-    async getAllUsers(): Promise<User[]> {
-        return await this.userRepository.findAllUsers();
+    getAllUsers(): User[] {
+        return this.userRepository.findAllUsers();
     }
 
-    async getUserById(id: number): Promise<User> {
-        const user = await this.userRepository.findUserBy('id', id);
+    getUserById(id: number): User {
+        const user = this.userRepository.findUserById(id);
         if (!user) {
             throw new UserNotFoundById(id);
         }
         return user;
     }
 
-    async getUserByTelegramId(telegramId: number): Promise<User> {
-        const user = await this.userRepository.findUserBy('telegram_id', telegramId);
+    getUserByTelegramId(telegramId: number): User {
+        const user = this.userRepository.findUserByTelegramId(telegramId);
         if (!user) {
             throw new UserNotFoundByTelegramId(telegramId);
         }
         return user;
     }
 
-    async editUser(
+    editUser(
         userId: number,
         name: string | undefined,
         telegramUsername: string | undefined,
         modifiedBy: number
-    ): Promise<User> {
-        await this.validateUserIsAdmin(modifiedBy);
-        await this.validateUserExistsById(userId);
+    ): User {
+        this.validateUserIsAdmin(modifiedBy);
+        this.validateUserExistsById(userId);
 
         if (name !== undefined) {
-            await this.userRepository.editUser(userId, 'name', name, modifiedBy);
+            this.userRepository.updateUserName(userId, name, modifiedBy);
         }
         if (telegramUsername !== undefined) {
-            await this.userRepository.editUser(userId, 'telegram_username', telegramUsername, modifiedBy);
+            this.userRepository.updateUserTelegramUsername(userId, telegramUsername, modifiedBy);
         }
-        return await this.getUserById(userId);
+        return this.getUserById(userId);
     }
 
-    async updateUserActivationStatus(userId: number, isActive: boolean, modifiedBy: number): Promise<User> {
-        await this.validateUserIsAdmin(modifiedBy);
-        await this.validateUserExistsById(userId);
+    updateUserActivationStatus(userId: number, isActive: boolean, modifiedBy: number): User {
+        this.validateUserIsAdmin(modifiedBy);
+        this.validateUserExistsById(userId);
 
-        await this.userRepository.updateUserActivationStatus(userId, isActive, modifiedBy);
-        return await this.getUserById(userId);
+        this.userRepository.updateUserActivationStatus(userId, isActive, modifiedBy);
+        return this.getUserById(userId);
     }
 
-    async validateUserIsAdmin(id: number): Promise<void> {
-        const user = await this.getUserById(id);
+    validateUserIsAdmin(id: number): void {
+        const user = this.getUserById(id);
         if (!user.is_admin) {
             throw new UserIsNotAdmin(id);
         }
     }
 
-    async validateUserExistsById(id: number): Promise<void> {
-        const userExists = await this.userExistsById(id);
+    validateUserExistsById(id: number): void {
+        const userExists = this.userExistsById(id);
         if (!userExists) {
             throw new UserNotFoundById(id);
         }
     }
 
-    private async userExistsByName(name: string): Promise<boolean> {
-        const user = await this.userRepository.findUserBy('name', name);
+    private userExistsByName(name: string): boolean {
+        const user = this.userRepository.findUserByName(name);
         return !!user;
     }
 
-    private async userExistsByTelegramUsername(telegramUsername: string): Promise<boolean> {
-        const user = await this.userRepository.findUserBy('telegram_username', telegramUsername);
+    private userExistsByTelegramUsername(telegramUsername: string): boolean {
+        const user = this.userRepository.findUserByTelegramUsername(telegramUsername);
         return !!user;
     }
 
-    private async userExistsById(id: number): Promise<boolean> {
-        const user = await this.userRepository.findUserBy('id', id);
+    private userExistsById(id: number): boolean {
+        const user = this.userRepository.findUserById(id);
         return !!user;
     }
 
-    async resolveUser(unresolvedUser: UnresolvedUserInfo): Promise<ResolvedUserInfo> {
+    resolveUser(unresolvedUser: UnresolvedUserInfo): ResolvedUserInfo {
         if (unresolvedUser.telegramUsername) {
-            let user = await this.findUserByTelegramUsernameOrThrow(unresolvedUser.telegramUsername);
+            let user = this.findUserByTelegramUsernameOrThrow(unresolvedUser.telegramUsername);
             return {
                 id: user.id,
                 telegramUsername: unresolvedUser.telegramUsername
             };
         } else if (unresolvedUser.name) {
-            let user = await this.findUserByNameOrThrow(unresolvedUser.name);
+            let user = this.findUserByNameOrThrow(unresolvedUser.name);
             return {
                 id: user.id,
                 name: unresolvedUser.name
@@ -133,24 +130,24 @@ export class UserService {
         }
     }
 
-    private async findUserByTelegramUsernameOrThrow(telegramUsername: string): Promise<User> {
-        let user = await this.userRepository.findUserBy('telegram_username', telegramUsername);
+    private findUserByTelegramUsernameOrThrow(telegramUsername: string): User {
+        let user = this.userRepository.findUserByTelegramUsername(telegramUsername);
         if (!user) {
             throw new UserNotFoundByTelegramUsername(telegramUsername);
         }
         return user;
     }
 
-    private async findUserByNameOrThrow(name: string): Promise<User> {
-        let user = await this.userRepository.findUserBy('name', name);
+    private findUserByNameOrThrow(name: string): User {
+        let user = this.userRepository.findUserByName(name);
         if (!user) {
             throw new UserNotFoundByName(name);
         }
         return user;
     }
 
-    private async userExistsByTelegramId(telegramId: number): Promise<boolean> {
-        const user = await this.userRepository.findUserBy('telegram_id', telegramId);
+    private userExistsByTelegramId(telegramId: number): boolean {
+        const user = this.userRepository.findUserByTelegramId(telegramId);
         return !!user;
     }
 }

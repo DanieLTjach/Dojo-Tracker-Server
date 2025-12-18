@@ -11,48 +11,45 @@ import {
 import { SYSTEM_USER_ID } from '../../config/constants.js';
 
 export class UserController {
-    private userService: UserService;
+    
+    private userService: UserService = new UserService();
 
-    constructor() {
-        this.userService = new UserService();
-    }
-
-    async registerUser(req: Request, res: Response) {
+    registerUser(req: Request, res: Response) {
         const { name, telegramUsername, telegramId, createdBy } = userRegistrationSchema.parse(req).body;
-        const newUser = await this.userService.registerUser(name, telegramUsername, telegramId, createdBy ?? SYSTEM_USER_ID);
+        const newUser = this.userService.registerUser(name, telegramUsername, telegramId, createdBy ?? SYSTEM_USER_ID);
         return res.status(StatusCodes.OK).json(newUser);
     }
 
-    async getAllUsers(_req: Request, res: Response) {
-        const users = await this.userService.getAllUsers();
+    getAllUsers(_req: Request, res: Response) {
+        const users = this.userService.getAllUsers();
         return res.status(StatusCodes.OK).json(users);
     }
 
-    async getUserById(req: Request, res: Response) {
+    getUserById(req: Request, res: Response) {
         const { id } = getUserByIdSchema.parse(req).params;
-        const user = await this.userService.getUserById(id);
+        const user = this.userService.getUserById(id);
         return res.status(StatusCodes.OK).json(user);
     }
 
-    async getUserByTelegramId(req: Request, res: Response) {
+    getUserByTelegramId(req: Request, res: Response) {
         const { telegramId } = getUserByTelegramIdSchema.parse(req).params;
-        const user = await this.userService.getUserByTelegramId(telegramId);
+        const user = this.userService.getUserByTelegramId(telegramId);
         return res.status(StatusCodes.OK).json(user);
     }
 
-    async editUser(req: Request, res: Response) {
+    editUser(req: Request, res: Response) {
         const { 
             params: { id },
             body: { name, telegramUsername, modifiedBy }
         } = userEditSchema.parse(req);
         
-        const editedUser = await this.userService.editUser(id, name, telegramUsername, modifiedBy);
+        const editedUser = this.userService.editUser(id, name, telegramUsername, modifiedBy);
         return res.status(StatusCodes.OK).json(editedUser);
     }
 
-    async updateUserActivationStatus(req: Request, res: Response, isActive: boolean) {
+    updateUserActivationStatus(req: Request, res: Response, isActive: boolean) {
         const { params: { id }, body: { modifiedBy } } = userActivationSchema.parse(req);
-        const activatedUser = await this.userService.updateUserActivationStatus(id, isActive, modifiedBy);
+        const activatedUser = this.userService.updateUserActivationStatus(id, isActive, modifiedBy);
         return res.status(StatusCodes.OK).json(activatedUser);
     }
 }

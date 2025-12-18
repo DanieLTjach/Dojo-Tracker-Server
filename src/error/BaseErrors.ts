@@ -39,10 +39,3 @@ export class InternalServerError extends ResponseStatusError {
         this.name = 'InternalServerError';
     }
 }
-
-export class DatabaseError extends InternalServerError {
-    constructor(message: string, errorCode?: string) {
-        super(message, errorCode);
-        this.name = 'DatabaseError';
-    }
-}
