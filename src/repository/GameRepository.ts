@@ -9,7 +9,7 @@ export class GameRepository {
         eventId: number,
         modifiedBy: number
     }, void> = db.prepare(
-        `INSERT INTO game (event_id, modified_by) 
+        `INSERT INTO game (eventId, modifiedBy) 
          VALUES (:eventId, :modifiedBy)`
     );
 
@@ -24,7 +24,7 @@ export class GameRepository {
         startPlace: string | undefined,
         modifiedBy: number
     }, void> = db.prepare(
-        `INSERT INTO user_to_game (game_id, user_id, points, start_place, modified_by)
+        `INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy)
          VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy)`
     );
 
@@ -40,11 +40,11 @@ export class GameRepository {
     }
 
     private findGamePlayersByGameIdStatement: Statement<{ gameId: number }, GamePlayer> = db.prepare(
-        `SELECT utg.*, u.name, u.telegram_username
-         FROM user_to_game utg
-         JOIN user u ON utg.user_id = u.id
-         WHERE utg.game_id = :gameId
-         ORDER BY points DESC, user_id`
+        `SELECT utg.*, u.name, u.telegramUsername
+         FROM userToGame utg
+         JOIN user u ON utg.userId = u.id
+         WHERE utg.gameId = :gameId
+         ORDER BY points DESC, userId`
     );
 
     findGamePlayersByGameId(gameId: number): GamePlayer[] {
@@ -58,10 +58,10 @@ export class GameRepository {
 
         const placeholders = gameIds.map(() => '?').join(',');
         const query = `
-            SELECT utg.*, u.name, u.telegram_username
-            FROM user_to_game utg
-            JOIN user u ON utg.user_id = u.id
-            WHERE utg.game_id IN (${placeholders})
+            SELECT utg.*, u.name, u.telegramUsername
+            FROM userToGame utg
+            JOIN user u ON utg.userId = u.id
+            WHERE utg.gameId IN (${placeholders})
         `;
 
         const statement: Statement<number[], GamePlayer> = db.prepare(query);
@@ -77,23 +77,23 @@ export class GameRepository {
         const conditions: string[] = [];
 
         if (filters.userId !== undefined) {
-            query += ` JOIN user_to_game utg ON g.id = utg.game_id`;
-            conditions.push('utg.user_id = ?');
+            query += ` JOIN userToGame utg ON g.id = utg.gameId`;
+            conditions.push('utg.userId = ?');
             params.push(filters.userId);
         }
 
         if (filters.dateFrom !== undefined) {
-            conditions.push('g.created_at >= ?');
+            conditions.push('g.createdAt >= ?');
             params.push(formatDateForSqlite(filters.dateFrom));
         }
 
         if (filters.dateTo !== undefined) {
-            conditions.push('g.created_at <= ?');
+            conditions.push('g.createdAt <= ?');
             params.push(formatDateForSqlite(filters.dateTo));
         }
 
         if (filters.eventId !== undefined) {
-            conditions.push('g.event_id = ?');
+            conditions.push('g.eventId = ?');
             params.push(filters.eventId);
         }
 
@@ -101,7 +101,7 @@ export class GameRepository {
             query += ' WHERE ' + conditions.join(' AND ');
         }
 
-        query += ' ORDER BY g.created_at';
+        query += ' ORDER BY g.createdAt';
 
         const statement: Statement<any[], Game> = db.prepare(query);
         return statement.all(...params);
@@ -113,7 +113,7 @@ export class GameRepository {
         id: number
     }, void> = db.prepare(
         `UPDATE game
-         SET event_id = :eventId, modified_by = :modifiedBy, modified_at = CURRENT_TIMESTAMP
+         SET eventId = :eventId, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
          WHERE id = :id`
     );
 
@@ -122,7 +122,7 @@ export class GameRepository {
     }
 
     private deleteGamePlayersByGameIdStatement: Statement<{ gameId: number }, void> =
-        db.prepare('DELETE FROM user_to_game WHERE game_id = :gameId');
+        db.prepare('DELETE FROM userToGame WHERE gameId = :gameId');
 
     deleteGamePlayersByGameId(gameId: number): void {
         this.deleteGamePlayersByGameIdStatement.run({ gameId });

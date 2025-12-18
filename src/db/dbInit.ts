@@ -7,12 +7,12 @@ import config from '../../config/config.ts';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbDir = path.dirname(config.db_path);
+const dbDir = path.dirname(config.dbPath);
 if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
 }
 
-export const db = new Database(config.db_path);
+export const db = new Database(config.dbPath);
 
 function getCurrentDBVersion(): number {
     const result = db.pragma('user_version', { simple: true });

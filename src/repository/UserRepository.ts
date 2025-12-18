@@ -20,14 +20,14 @@ export class UserRepository {
     }
 
     private findUserByTelegramIdStatement: Statement<{ telegramId: number }, User> =
-        db.prepare('SELECT * FROM user WHERE telegram_id = :telegramId');
+        db.prepare('SELECT * FROM user WHERE telegramId = :telegramId');
 
     findUserByTelegramId(telegramId: number): User | undefined {
         return this.findUserByTelegramIdStatement.get({ telegramId });
     }
 
     private findUserByTelegramUsernameStatement: Statement<{ telegramUsername: string }, User> =
-        db.prepare('SELECT * FROM user WHERE telegram_username = :telegramUsername');
+        db.prepare('SELECT * FROM user WHERE telegramUsername = :telegramUsername');
 
     findUserByTelegramUsername(telegramUsername: string): User | undefined {
         return this.findUserByTelegramUsernameStatement.get({ telegramUsername: telegramUsername });
@@ -45,7 +45,7 @@ export class UserRepository {
         telegramId: number,
         modifiedBy: number 
     }, void> = db.prepare(
-        `INSERT INTO user (name, telegram_username, telegram_id, modified_by) 
+        `INSERT INTO user (name, telegramUsername, telegramId, modifiedBy) 
          VALUES (:name, :telegramUsername, :telegramId, :modifiedBy)`
     );
 
@@ -59,7 +59,7 @@ export class UserRepository {
         id: number
     }, void> = db.prepare(
         `UPDATE user
-         SET name = :name, modified_by = :modifiedBy, modified_at = CURRENT_TIMESTAMP
+         SET name = :name, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
          WHERE id = :id`
     );
     
@@ -73,7 +73,7 @@ export class UserRepository {
         id: number
     }, void> = db.prepare(
         `UPDATE user
-         SET telegram_username = :telegramUsername, modified_by = :modifiedBy, modified_at = CURRENT_TIMESTAMP
+         SET telegramUsername = :telegramUsername, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
          WHERE id = :id`
     );
 
@@ -87,7 +87,7 @@ export class UserRepository {
         id: number
     }, void> = db.prepare(
         `UPDATE user
-         SET is_active = :isActive, modified_by = :modifiedBy, modified_at = CURRENT_TIMESTAMP
+         SET isActive = :isActive, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
          WHERE id = :id`
     );
 

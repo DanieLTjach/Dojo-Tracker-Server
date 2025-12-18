@@ -56,7 +56,7 @@ export class GameService {
 
         return games.map(game => ({
             ...game,
-            players: gamePlayers.filter(gp => gp.game_id === game.id)
+            players: gamePlayers.filter(gp => gp.gameId === game.id)
         }));
     }
 
