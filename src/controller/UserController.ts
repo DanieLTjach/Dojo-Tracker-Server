@@ -17,7 +17,7 @@ export class UserController {
     registerUser(req: Request, res: Response) {
         const { name, telegramUsername, telegramId, createdBy } = userRegistrationSchema.parse(req).body;
         const newUser = this.userService.registerUser(name, telegramUsername, telegramId, createdBy ?? SYSTEM_USER_ID);
-        return res.status(StatusCodes.OK).json(newUser);
+        return res.status(StatusCodes.CREATED).json(newUser);
     }
 
     getAllUsers(_req: Request, res: Response) {

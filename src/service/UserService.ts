@@ -84,7 +84,7 @@ export class UserService {
 
     validateUserIsAdmin(id: number): void {
         const user = this.getUserById(id);
-        if (!user.is_admin) {
+        if (!user.isAdmin) {
             throw new UserIsNotAdmin(id);
         }
     }

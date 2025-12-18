@@ -2,19 +2,19 @@ import type { UnresolvedUserInfo, ResolvedUserInfo } from './UserModels.ts';
 
 export interface Game {
     id: number;
-    event_id: number;
-    created_at: string;
-    modified_at: string;
-    modified_by: number;
+    eventId: number;
+    createdAt: string;
+    modifiedAt: string;
+    modifiedBy: number;
 }
 
 export interface GamePlayer {
-    game_id: number;
-    user_id: number;
+    gameId: number;
+    userId: number;
     name: string;
-    telegram_username: string | null;
+    telegramUsername: string | null;
     points: number;
-    start_place: string;
+    startPlace: string;
 }
 
 export interface GameWithPlayers extends Game {
