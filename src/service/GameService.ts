@@ -4,58 +4,55 @@ import {
     GameNotFoundById,
     IncorrectPlayerCountError,
     DuplicatePlayerError,
-    EventNotFoundError,
     TooManyGamesFoundError
 } from '../error/GameErrors.ts';
 import type { GameWithPlayers, PlayerData, GameFilters, ResolvedPlayerData } from '../model/GameModels.ts';
+import { EventService } from './EventService.ts';
 
 export class GameService {
-    private gameRepository: GameRepository;
-    private userService: UserService;
 
-    constructor() {
-        this.gameRepository = new GameRepository();
-        this.userService = new UserService();
-    }
+    private gameRepository: GameRepository = new GameRepository();
+    private userService: UserService = new UserService();
+    private eventService: EventService = new EventService();
 
-    async createGame(
+    createGame(
         eventId: number,
         playersData: PlayerData[],
         createdBy: number
-    ): Promise<GameWithPlayers> {
-        await this.userService.validateUserIsAdmin(createdBy);
+    ): GameWithPlayers {
+        this.userService.validateUserIsAdmin(createdBy);
 
-        await this.validateEventExists(eventId);
-        const resolvedPlayersData = await this.validateAndResolvePlayers(playersData);
+        this.eventService.validateEventExists(eventId);
+        const resolvedPlayersData = this.validateAndResolvePlayers(playersData);
 
-        const gameId = await this.gameRepository.createGame(eventId, createdBy);
-        await this.addPlayersToGame(gameId, resolvedPlayersData, createdBy);
+        const gameId = this.gameRepository.createGame(eventId, createdBy);
+        this.addPlayersToGame(gameId, resolvedPlayersData, createdBy);
 
-        return await this.getGameById(gameId);
+        return this.getGameById(gameId);
     }
 
-    async getGameById(gameId: number): Promise<GameWithPlayers> {
-        const game = await this.gameRepository.findGameById(gameId);
+    getGameById(gameId: number): GameWithPlayers {
+        const game = this.gameRepository.findGameById(gameId);
         if (!game) {
             throw new GameNotFoundById(gameId);
         }
 
         return {
             ...game,
-            players: await this.gameRepository.findGamePlayersByGameId(gameId)
+            players: this.gameRepository.findGamePlayersByGameId(gameId)
         };
     }
 
-    async getGames(filters: GameFilters): Promise<GameWithPlayers[]> {
-        await this.validateGameFilters(filters);
+    getGames(filters: GameFilters): GameWithPlayers[] {
+        this.validateGameFilters(filters);
 
-        const games = await this.gameRepository.findGames(filters);
+        const games = this.gameRepository.findGames(filters);
 
         if (games.length > 100) {
             throw new TooManyGamesFoundError();
         }
 
-        const gamePlayers = await this.gameRepository.findGamePlayersByGameIds(games.map(g => g.id));
+        const gamePlayers = this.gameRepository.findGamePlayersByGameIds(games.map(g => g.id));
 
         return games.map(game => ({
             ...game,
@@ -63,76 +60,69 @@ export class GameService {
         }));
     }
 
-    async updateGame(
+    updateGame(
         gameId: number,
         eventId: number,
         playersData: PlayerData[],
         modifiedBy: number
-    ): Promise<GameWithPlayers> {
-        await this.userService.validateUserIsAdmin(modifiedBy);
+    ): GameWithPlayers {
+        this.userService.validateUserIsAdmin(modifiedBy);
 
-        await this.validateGameExists(gameId);
-        await this.validateEventExists(eventId);
-        const resolvedPlayersData = await this.validateAndResolvePlayers(playersData);
+        this.validateGameExists(gameId);
+        this.eventService.validateEventExists(eventId);
+        const resolvedPlayersData = this.validateAndResolvePlayers(playersData);
 
-        await this.gameRepository.updateGame(gameId, eventId, modifiedBy);
-        await this.gameRepository.deleteGamePlayersByGameId(gameId);
-        await this.addPlayersToGame(gameId, resolvedPlayersData, modifiedBy);
+        this.gameRepository.updateGame(gameId, eventId, modifiedBy);
+        this.gameRepository.deleteGamePlayersByGameId(gameId);
+        this.addPlayersToGame(gameId, resolvedPlayersData, modifiedBy);
 
-        return await this.getGameById(gameId);
+        return this.getGameById(gameId);
     }
 
-    async deleteGame(gameId: number, deletedBy: number): Promise<void> {
-        await this.userService.validateUserIsAdmin(deletedBy);
+    deleteGame(gameId: number, deletedBy: number): void {
+        this.userService.validateUserIsAdmin(deletedBy);
 
-        await this.validateGameExists(gameId);
+        this.validateGameExists(gameId);
 
-        await this.gameRepository.deleteGamePlayersByGameId(gameId);
-        await this.gameRepository.deleteGameById(gameId);
+        this.gameRepository.deleteGamePlayersByGameId(gameId);
+        this.gameRepository.deleteGameById(gameId);
     }
 
-    private async validateGameFilters(filters: GameFilters): Promise<void> {
+    private validateGameFilters(filters: GameFilters): void {
         if (filters?.userId !== undefined) {
-            await this.userService.validateUserExistsById(filters.userId);
+            this.userService.validateUserExistsById(filters.userId);
         }
         if (filters?.eventId !== undefined) {
-            await this.validateEventExists(filters.eventId);
+            this.eventService.validateEventExists(filters.eventId);
         }
     }
 
-    private async validateGameExists(gameId: number): Promise<void> {
-        const game = await this.gameRepository.findGameById(gameId);
+    private validateGameExists(gameId: number): void {
+        const game = this.gameRepository.findGameById(gameId);
         if (!game) {
             throw new GameNotFoundById(gameId);
         }
     }
 
-    private async validateEventExists(eventId: number): Promise<void> {
-        const event = await this.gameRepository.findEventById(eventId);
-        if (!event) {
-            throw new EventNotFoundError(eventId);
-        }
-    }
-
-    private async validateAndResolvePlayers(playersData: PlayerData[]): Promise<ResolvedPlayerData[]> {
+    private validateAndResolvePlayers(playersData: PlayerData[]): ResolvedPlayerData[] {
         // TODO: add validation based on event rules
         const requiredPlayersCount = 4;
         if (playersData.length !== requiredPlayersCount) {
             throw new IncorrectPlayerCountError(requiredPlayersCount);
         }
 
-        const resolvedPlayersData = await this.resolvePlayersData(playersData);
+        const resolvedPlayersData = this.resolvePlayersData(playersData);
         this.validateNoDuplicatePlayers(resolvedPlayersData);
 
         return resolvedPlayersData;
     }
 
-    private async resolvePlayersData(playersData: PlayerData[]): Promise<ResolvedPlayerData[]> {
+    private resolvePlayersData(playersData: PlayerData[]): ResolvedPlayerData[] {
         const resolvedPlayersData: ResolvedPlayerData[] = [];
 
         for (const playerData of playersData) {
             resolvedPlayersData.push({
-                user: await this.userService.resolveUser(playerData.user),
+                user: this.userService.resolveUser(playerData.user),
                 points: playerData.points,
                 startPlace: playerData.startPlace
             });
@@ -141,9 +131,9 @@ export class GameService {
         return resolvedPlayersData;
     }
 
-    private async addPlayersToGame(gameId: number, resolvedPlayers: ResolvedPlayerData[], modifiedBy: number): Promise<void> {
+    private addPlayersToGame(gameId: number, resolvedPlayers: ResolvedPlayerData[], modifiedBy: number): void {
         for (const resolvedPlayer of resolvedPlayers) {
-            await this.gameRepository.addGamePlayer(
+            this.gameRepository.addGamePlayer(
                 gameId,
                 resolvedPlayer.user.id,
                 resolvedPlayer.points,

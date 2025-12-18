@@ -7,3 +7,7 @@ export function formatDateForSqlite(date: Date): string {
     const seconds = String(date.getUTCSeconds()).padStart(2, '0');
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
+
+export function booleanToInteger(value: boolean): number {
+    return value ? 1 : 0;
+}

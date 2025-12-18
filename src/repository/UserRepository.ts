@@ -1,48 +1,97 @@
-import DatabaseManager from '../db/dbManager.js';
-import { DatabaseError } from '../error/BaseErrors.ts';
+import type { Statement } from 'better-sqlite3';
 import type { User } from '../model/UserModels.ts';
+import { db } from '../db/dbInit.ts';
+import { booleanToInteger } from '../db/dbUtils.ts';
 
 export class UserRepository {
-    private dbManager: DatabaseManager;
 
-    constructor() {
-        this.dbManager = new DatabaseManager();
+    private findAllUsersStatement: Statement<unknown[], User> =
+        db.prepare('SELECT * FROM user ORDER BY id');
+
+    findAllUsers(): User[] {
+        return this.findAllUsersStatement.all();
     }
 
-    async findAllUsers(): Promise<User[]> {
-        return await this.dbManager.all('SELECT * FROM user ORDER BY id');
+    private findUserByIdStatement: Statement<{ id: number }, User> =
+        db.prepare('SELECT * FROM user WHERE id = :id');
+
+    findUserById(id: number): User | undefined {
+        return this.findUserByIdStatement.get({ id });
     }
 
-    async findUserBy(column: string, value: any): Promise<User | null> {
-        if (!column || value === undefined || value === null) {
-            throw new DatabaseError("Invalid search parameters");
-        }
-        return await this.dbManager.get(`SELECT * FROM user WHERE ${column} = ?`, [value]);
+    private findUserByTelegramIdStatement: Statement<{ telegramId: number }, User> =
+        db.prepare('SELECT * FROM user WHERE telegram_id = :telegramId');
+
+    findUserByTelegramId(telegramId: number): User | undefined {
+        return this.findUserByTelegramIdStatement.get({ telegramId });
     }
 
-    async registerUser(userName: string, userTelegramUsername: string, userTelegramId: number, modifiedBy: number): Promise<void> {
-        await this.dbManager.run(
-            `INSERT INTO user (name, telegram_username, telegram_id, modified_by) 
-             VALUES (?, ?, ?, ?)`,
-            [userName, userTelegramUsername, userTelegramId, modifiedBy]
-        );
+    private findUserByTelegramUsernameStatement: Statement<{ telegramUsername: string }, User> =
+        db.prepare('SELECT * FROM user WHERE telegram_username = :telegramUsername');
+
+    findUserByTelegramUsername(telegramUsername: string): User | undefined {
+        return this.findUserByTelegramUsernameStatement.get({ telegramUsername: telegramUsername });
     }
 
-    async editUser(userId: number, column: string, value: any, modifiedBy: number): Promise<void> {
-        await this.dbManager.run(
-            `UPDATE user
-             SET ${column} = ?, modified_by = ?, modified_at = CURRENT_TIMESTAMP
-             WHERE id = ?`,
-            [value, modifiedBy, userId]
-        );
+    private findUserByNameStatement: Statement<{ name: string }, User> =
+        db.prepare('SELECT * FROM user WHERE name = :name');
+    findUserByName(name: string): User | undefined {
+        return this.findUserByNameStatement.get({ name });
     }
 
-    async updateUserActivationStatus(userId: number, newStatus: boolean, modifiedBy: number): Promise<void> {
-        await this.dbManager.run(
-            `UPDATE user
-             SET is_active = ?, modified_by = ?, modified_at = CURRENT_TIMESTAMP
-             WHERE id = ?`,
-            [newStatus, modifiedBy, userId]
-        )
+    private registerUserStatement: Statement<{
+        name: string,
+        telegramUsername: string,
+        telegramId: number,
+        modifiedBy: number 
+    }, void> = db.prepare(
+        `INSERT INTO user (name, telegram_username, telegram_id, modified_by) 
+         VALUES (:name, :telegramUsername, :telegramId, :modifiedBy)`
+    );
+
+    registerUser(name: string, telegramUsername: string, telegramId: number, modifiedBy: number) {
+        this.registerUserStatement.run({ name, telegramUsername, telegramId, modifiedBy });
+    }
+
+    private updateUserNameStatement: Statement<{
+        name: string,
+        modifiedBy: number,
+        id: number
+    }, void> = db.prepare(
+        `UPDATE user
+         SET name = :name, modified_by = :modifiedBy, modified_at = CURRENT_TIMESTAMP
+         WHERE id = :id`
+    );
+    
+    updateUserName(userId: number, name: string, modifiedBy: number) {
+        this.updateUserNameStatement.run({ name, modifiedBy, id: userId });
+    }
+
+    private updateUserTelegramUsernameStatement: Statement<{
+        telegramUsername: string,
+        modifiedBy: number,
+        id: number
+    }, void> = db.prepare(
+        `UPDATE user
+         SET telegram_username = :telegramUsername, modified_by = :modifiedBy, modified_at = CURRENT_TIMESTAMP
+         WHERE id = :id`
+    );
+
+    updateUserTelegramUsername(userId: number, telegramUsername: string, modifiedBy: number) {
+        this.updateUserTelegramUsernameStatement.run({ telegramUsername, modifiedBy, id: userId });
+    }
+
+    private updateUserActivationStatusStatement: Statement<{
+        isActive: number,
+        modifiedBy: number,
+        id: number
+    }, void> = db.prepare(
+        `UPDATE user
+         SET is_active = :isActive, modified_by = :modifiedBy, modified_at = CURRENT_TIMESTAMP
+         WHERE id = :id`
+    );
+
+    updateUserActivationStatus(userId: number, newStatus: boolean, modifiedBy: number) {
+        this.updateUserActivationStatusStatement.run({ isActive: booleanToInteger(newStatus), modifiedBy, id: userId });
     }
 }
