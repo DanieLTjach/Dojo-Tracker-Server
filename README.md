@@ -93,10 +93,11 @@ All endpoints are prefixed with `/api`.
   "eventId": 1,
   "playersData": [
     {
-      "user": { "telegramUsername": "@player1" },
+      "userId": 1,
       "points": 100,
       "startPlace": "NORTH"
-    }
+    },
+    ...
   ],
   "createdBy": 1
 }

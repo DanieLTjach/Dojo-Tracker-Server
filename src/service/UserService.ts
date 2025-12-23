@@ -6,12 +6,9 @@ import {
     UserWithThisNameAlreadyExists,
     UserWithThisTelegramIdAlreadyExists,
     UserWithThisTelegramUsernameAlreadyExists,
-    UserNotFoundByTelegramUsername,
-    UserNotFoundByName,
-    MissingUserInformationError,
     UserIsNotActive
 } from '../error/UserErrors.ts';
-import type { User, UnresolvedUserInfo, ResolvedUserInfo } from '../model/UserModels.ts';
+import type { User } from '../model/UserModels.ts';
 
 export class UserService {
 
@@ -128,45 +125,5 @@ export class UserService {
     private userExistsByTelegramId(telegramId: number): boolean {
         const user = this.userRepository.findUserByTelegramId(telegramId);
         return !!user;
-    }
-
-    resolveActiveUser(unresolvedUser: UnresolvedUserInfo): ResolvedUserInfo {
-        if (unresolvedUser.telegramUsername) {
-            let user = this.findActiveUserByTelegramUsernameOrThrow(unresolvedUser.telegramUsername);
-            return {
-                id: user.id,
-                telegramUsername: unresolvedUser.telegramUsername
-            };
-        } else if (unresolvedUser.name) {
-            let user = this.findActiveUserByNameOrThrow(unresolvedUser.name);
-            return {
-                id: user.id,
-                name: unresolvedUser.name
-            };
-        } else {
-            throw new MissingUserInformationError();
-        }
-    }
-
-    private findActiveUserByTelegramUsernameOrThrow(telegramUsername: string): User {
-        let user = this.userRepository.findUserByTelegramUsername(telegramUsername);
-        if (!user) {
-            throw new UserNotFoundByTelegramUsername(telegramUsername);
-        }
-        if (!user.isActive) {
-            throw new UserIsNotActive(user.id);
-        }
-        return user;
-    }
-
-    private findActiveUserByNameOrThrow(name: string): User {
-        let user = this.userRepository.findUserByName(name);
-        if (!user) {
-            throw new UserNotFoundByName(name);
-        }
-        if (!user.isActive) {
-            throw new UserIsNotActive(user.id);
-        }
-        return user;
     }
 }

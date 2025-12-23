@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { telegramUsernameSchema, userIdParamSchema, userIdSchema, userNameSchema } from './UserSchemas.ts';
+import { userIdParamSchema, userIdSchema } from './UserSchemas.ts';
 
 export const gameStartPlace = z.enum(['EAST', 'WEST', 'NORTH', 'SOUTH']);
 
@@ -9,15 +9,8 @@ const eventIdParamSchema = z.coerce.number().int("Event ID must be an integer");
 
 const dateSchema = z.coerce.date("Invalid date format");
 
-const userDataSchema = z.object({
-    telegramUsername: telegramUsernameSchema.optional(),
-    name: userNameSchema.optional()
-}).refine((data) => data.telegramUsername || data.name, {
-    message: "At least one of 'telegramUsername' or 'name' must be provided"
-});
-
 const playerDataSchema = z.object({
-    user: userDataSchema,
+    userId: userIdSchema,
     points: z.number().int("Points must be an integer"),
     startPlace: gameStartPlace.optional()
 });
