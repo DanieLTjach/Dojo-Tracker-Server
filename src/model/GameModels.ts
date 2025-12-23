@@ -1,4 +1,3 @@
-import type { UnresolvedUserInfo, ResolvedUserInfo } from './UserModels.ts';
 
 export interface Game {
     id: number;
@@ -22,13 +21,7 @@ export interface GameWithPlayers extends Game {
 }
 
 export interface PlayerData {
-    user: UnresolvedUserInfo;
-    points: number;
-    startPlace?: string | undefined;
-}
-
-export interface ResolvedPlayerData {
-    user: ResolvedUserInfo;
+    userId: number;
     points: number;
     startPlace?: string | undefined;
 }

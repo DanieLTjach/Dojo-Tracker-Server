@@ -6,7 +6,7 @@ import {
     DuplicatePlayerError,
     TooManyGamesFoundError
 } from '../error/GameErrors.ts';
-import type { GameWithPlayers, PlayerData, GameFilters, ResolvedPlayerData } from '../model/GameModels.ts';
+import type { GameWithPlayers, PlayerData, GameFilters } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
 
 export class GameService {
@@ -23,10 +23,10 @@ export class GameService {
         this.userService.validateUserIsActiveById(createdBy);
 
         this.eventService.validateEventExists(eventId);
-        const resolvedPlayersData = this.validateAndResolvePlayers(playersData);
+        this.validatePlayers(playersData);
 
         const newGameId = this.gameRepository.createGame(eventId, createdBy);
-        this.addPlayersToGame(newGameId, resolvedPlayersData, createdBy);
+        this.addPlayersToGame(newGameId, playersData, createdBy);
 
         return this.getGameById(newGameId);
     }
@@ -70,12 +70,12 @@ export class GameService {
 
         this.validateGameExists(gameId);
         this.eventService.validateEventExists(eventId);
-        const resolvedPlayersData = this.validateAndResolvePlayers(playersData);
+        this.validatePlayers(playersData);
 
         this.gameRepository.updateGame(gameId, eventId, modifiedBy);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
-        this.addPlayersToGame(gameId, resolvedPlayersData, modifiedBy);
-
+        this.addPlayersToGame(gameId, playersData, modifiedBy);
+        
         return this.getGameById(gameId);
     }
 
@@ -104,57 +104,43 @@ export class GameService {
         }
     }
 
-    private validateAndResolvePlayers(playersData: PlayerData[]): ResolvedPlayerData[] {
+    private validatePlayers(playersData: PlayerData[]): void {
         // TODO: add validation based on event rules
         const requiredPlayersCount = 4;
         if (playersData.length !== requiredPlayersCount) {
             throw new IncorrectPlayerCountError(requiredPlayersCount);
         }
-
-        const resolvedPlayersData = this.resolvePlayersData(playersData);
-        this.validateNoDuplicatePlayers(resolvedPlayersData);
-
-        return resolvedPlayersData;
-    }
-
-    private resolvePlayersData(playersData: PlayerData[]): ResolvedPlayerData[] {
-        const resolvedPlayersData: ResolvedPlayerData[] = [];
-
+        
         for (const playerData of playersData) {
-            resolvedPlayersData.push({
-                user: this.userService.resolveActiveUser(playerData.user),
-                points: playerData.points,
-                startPlace: playerData.startPlace
-            });
+            this.userService.validateUserIsActiveById(playerData.userId);
         }
 
-        return resolvedPlayersData;
+        this.validateNoDuplicatePlayers(playersData);
     }
 
-    private addPlayersToGame(gameId: number, resolvedPlayers: ResolvedPlayerData[], modifiedBy: number): void {
-        for (const resolvedPlayer of resolvedPlayers) {
+    private addPlayersToGame(gameId: number, players: PlayerData[], modifiedBy: number): void {
+        for (const player of players) {
             this.gameRepository.addGamePlayer(
                 gameId,
-                resolvedPlayer.user.id,
-                resolvedPlayer.points,
-                resolvedPlayer.startPlace,
+                player.userId,
+                player.points,
+                player.startPlace,
                 modifiedBy
             );
         }
     }
 
-    private validateNoDuplicatePlayers(resolvedPlayers: ResolvedPlayerData[]): void {
-        const userIds = resolvedPlayers.map(p => p.user.id);
+    private validateNoDuplicatePlayers(players: PlayerData[]): void {
+        const userIds = players.map(p => p.userId);
         const uniqueUserIds = new Set(userIds);
 
         if (uniqueUserIds.size !== userIds.length) {
-            const seen = new Map<number, ResolvedPlayerData>();
-            for (const player of resolvedPlayers) {
-                if (seen.has(player.user.id)) {
-                    const identifier = player.user.telegramUsername || player.user.name || `with ID ${player.user.id}`;
-                    throw new DuplicatePlayerError(identifier);
+            const seen = new Set<number>();
+            for (const player of players) {
+                if (seen.has(player.userId)) {
+                    throw new DuplicatePlayerError(player.userId);
                 }
-                seen.set(player.user.id, player);
+                seen.add(player.userId);
             }
         }
     }
