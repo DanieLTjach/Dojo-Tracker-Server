@@ -1,3 +1,11 @@
 node_modules
 .vscode
 db/data
+
+# Environment files
+# Keep .env.example, .env.development, .env.test in repo
+# Ignore local overrides and sensitive production configs
+.env
+.env.local
+.env.production
+.env.*.local
