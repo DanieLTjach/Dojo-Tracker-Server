@@ -254,7 +254,8 @@ describe('Game API Endpoints', () => {
     describe('GET /api/games/:gameId - Get Game by ID', () => {
         test('should retrieve a game by ID', async () => {
             const response = await request(app)
-                .get(`/api/games/${testGameId}`);
+                .get(`/api/games/${testGameId}`)
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
             expect(response.body.id).toBe(testGameId);
@@ -266,7 +267,8 @@ describe('Game API Endpoints', () => {
 
         test('should fail with non-existent game ID', async () => {
             const response = await request(app)
-                .get('/api/games/99999');
+                .get('/api/games/99999')
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(404);
             expect(response.body.message).toContain('Game');
@@ -274,7 +276,8 @@ describe('Game API Endpoints', () => {
 
         test('should fail with invalid game ID (non-integer)', async () => {
             const response = await request(app)
-                .get('/api/games/invalid');
+                .get('/api/games/invalid')
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBe('Invalid request data');
@@ -284,7 +287,8 @@ describe('Game API Endpoints', () => {
     describe('GET /api/games - Get Games with Filters', () => {
         test('should retrieve all games without filters', async () => {
             const response = await request(app)
-                .get('/api/games');
+                .get('/api/games')
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
@@ -296,7 +300,8 @@ describe('Game API Endpoints', () => {
 
         test('should filter games by eventId', async () => {
             const response = await request(app)
-                .get(`/api/games?eventId=${TEST_EVENT_ID}`);
+                .get(`/api/games?eventId=${TEST_EVENT_ID}`)
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
@@ -307,7 +312,8 @@ describe('Game API Endpoints', () => {
 
         test('should filter games by userId', async () => {
             const response = await request(app)
-                .get(`/api/games?userId=${testUser1Id}`);
+                .get(`/api/games?userId=${testUser1Id}`)
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
@@ -320,7 +326,8 @@ describe('Game API Endpoints', () => {
         test('should filter games by dateFrom', async () => {
             const dateFrom = new Date('2024-01-01').toISOString();
             const response = await request(app)
-                .get(`/api/games?dateFrom=${dateFrom}`);
+                .get(`/api/games?dateFrom=${dateFrom}`)
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
@@ -329,7 +336,8 @@ describe('Game API Endpoints', () => {
         test('should filter games by dateTo', async () => {
             const dateTo = new Date('2025-12-31').toISOString();
             const response = await request(app)
-                .get(`/api/games?dateTo=${dateTo}`);
+                .get(`/api/games?dateTo=${dateTo}`)
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
@@ -339,7 +347,8 @@ describe('Game API Endpoints', () => {
             const dateFrom = new Date('2024-01-01').toISOString();
             const dateTo = new Date('2025-12-31').toISOString();
             const response = await request(app)
-                .get(`/api/games?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+                .get(`/api/games?dateFrom=${dateFrom}&dateTo=${dateTo}`)
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
@@ -347,7 +356,8 @@ describe('Game API Endpoints', () => {
 
         test('should filter games by multiple criteria', async () => {
             const response = await request(app)
-                .get(`/api/games?eventId=${TEST_EVENT_ID}&userId=${testUser1Id}`);
+                .get(`/api/games?eventId=${TEST_EVENT_ID}&userId=${testUser1Id}`)
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
@@ -360,7 +370,8 @@ describe('Game API Endpoints', () => {
 
         test('should return empty array for non-existent userId filter', async () => {
             const response = await request(app)
-                .get('/api/games?userId=99999');
+                .get('/api/games?userId=99999')
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(404);
             expect(response.body.message).toContain('User');
@@ -368,7 +379,8 @@ describe('Game API Endpoints', () => {
 
         test('should fail with invalid dateFrom format', async () => {
             const response = await request(app)
-                .get('/api/games?dateFrom=invalid-date');
+                .get('/api/games?dateFrom=invalid-date')
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBe('Invalid request data');
@@ -379,6 +391,7 @@ describe('Game API Endpoints', () => {
         test('should update a game successfully', async () => {
             const response = await request(app)
                 .put(`/api/games/${testGameId}`)
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -386,8 +399,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000, startPlace: 'SOUTH' },
                         { userId: testUser3Id, points: 20000, startPlace: 'WEST' },
                         { userId: testUser4Id, points: 10000, startPlace: 'NORTH' }
-                    ],
-                    modifiedBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(200);
