@@ -19,6 +19,13 @@ export class BadRequestError extends ResponseStatusError {
     }
 }
 
+export class UnauthorizedError extends ResponseStatusError {
+    constructor(message: string, errorCode?: string) {
+        super(StatusCodes.UNAUTHORIZED, message, errorCode);
+        this.name = 'UnauthorizedError';
+    }
+}
+
 export class ForbiddenError extends ResponseStatusError {
     constructor(message: string, errorCode?: string) {
         super(StatusCodes.FORBIDDEN, message, errorCode);
