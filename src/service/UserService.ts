@@ -9,6 +9,8 @@ import {
     UserIsNotActive
 } from '../error/UserErrors.ts';
 import type { User } from '../model/UserModels.ts';
+import type { TelegramUser } from '../model/AuthModels.ts';
+import { SYSTEM_USER_ID } from '../../config/constants.ts';
 
 export class UserService {
 
@@ -53,6 +55,51 @@ export class UserService {
             throw new UserNotFoundByTelegramId(telegramId);
         }
         return user;
+    }
+
+    /**
+     * Gets an existing user by Telegram ID or creates a new one if it doesn't exist.
+     * Used for automatic user registration during Telegram authentication.
+     *
+     * @param telegramId - The Telegram user ID
+     * @param userDataJson - Optional JSON string with Telegram user data
+     * @returns The existing or newly created user
+     */
+    getOrCreateUserByTelegramId(telegramId: number, userDataJson?: string): User {
+        // Try to find existing user
+        const existingUser = this.userRepository.findUserByTelegramId(telegramId);
+        if (existingUser) {
+            return existingUser;
+        }
+
+        // Parse Telegram user data if provided
+        let telegramUser: TelegramUser | undefined;
+        if (userDataJson) {
+            try {
+                telegramUser = JSON.parse(userDataJson);
+            } catch {
+                // If parsing fails, continue without user data
+            }
+        }
+
+        // Generate name from Telegram data or use fallback
+        const userName = telegramUser?.username
+            ? `@${telegramUser.username}`
+            : telegramUser?.first_name
+            ? `${telegramUser.first_name}${telegramUser.last_name ? ' ' + telegramUser.last_name : ''}`
+            : `TelegramUser${telegramId}`;
+
+        const telegramUsername = telegramUser?.username ? `@${telegramUser.username}` : undefined;
+
+        // Create new user (using SYSTEM as creator for auto-registration)
+        const newUserId = this.userRepository.registerUser(
+            userName,
+            telegramUsername,
+            telegramId,
+            SYSTEM_USER_ID
+        );
+
+        return this.getUserById(newUserId);
     }
 
     editUser(
