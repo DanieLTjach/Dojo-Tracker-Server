@@ -92,6 +92,7 @@ describe('Game API Endpoints', () => {
         test('should create a game without startPlace', async () => {
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -99,8 +100,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(201);
@@ -110,14 +110,14 @@ describe('Game API Endpoints', () => {
         test('should fail with incorrect number of players (3 players)', async () => {
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
                         { userId: testUser1Id, points: 35000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 25000 }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(400);
@@ -127,6 +127,7 @@ describe('Game API Endpoints', () => {
         test('should fail with incorrect number of players (5 players)', async () => {
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -135,8 +136,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 },
                         { userId: testUser1Id, points: 30000 }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(400);
@@ -146,6 +146,7 @@ describe('Game API Endpoints', () => {
         test('should fail with duplicate players', async () => {
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -153,8 +154,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser3Id, points: 25000 },
                         { userId: testUser4Id, points: 20000 }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(400);
@@ -164,6 +164,7 @@ describe('Game API Endpoints', () => {
         test('should fail with duplicate start places', async () => {
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -171,8 +172,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000, startPlace: 'EAST' },
                         { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
                         { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(400);
@@ -182,6 +182,7 @@ describe('Game API Endpoints', () => {
         test('should fail with non-existent event', async () => {
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: 99999,
                     playersData: [
@@ -189,8 +190,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(404);
@@ -200,6 +200,7 @@ describe('Game API Endpoints', () => {
         test('should fail with non-existent user', async () => {
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -207,8 +208,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(404);
@@ -218,6 +218,7 @@ describe('Game API Endpoints', () => {
         test('should fail with invalid points (non-integer)', async () => {
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -225,8 +226,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(400);
@@ -236,6 +236,7 @@ describe('Game API Endpoints', () => {
         test('should fail with invalid startPlace', async () => {
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -243,8 +244,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000, startPlace: 'SOUTH' },
                         { userId: testUser3Id, points: 30000, startPlace: 'WEST' },
                         { userId: testUser4Id, points: 30000, startPlace: 'NORTH' }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(400);
