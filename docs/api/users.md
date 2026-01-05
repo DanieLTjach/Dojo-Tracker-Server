@@ -4,6 +4,16 @@ Base URL: `http://localhost:3000/api/users`
 
 All endpoints use JSON format for request and response bodies.
 
+## Authentication Required
+
+All user endpoints require JWT authentication. Include your JWT token in the `Authorization` header:
+
+```bash
+Authorization: Bearer <your-jwt-token>
+```
+
+To obtain a token, see the [Authentication documentation](authentication.md).
+
 ## Table of Contents
 
 - [Register User](#register-user)
@@ -24,11 +34,14 @@ Register a new user with Telegram information.
 
 **Endpoint:** `POST /api/users`
 
+**Authorization:** Requires valid JWT token with admin privileges
+
 **Request Body:**
 - `name` (string, required): User's name (cannot be empty)
 - `telegramUsername` (string, required): Telegram username (must start with '@')
 - `telegramId` (number, required): Telegram user ID (integer)
-- `createdBy` (number, optional): ID of the user creating this user (defaults to system user 0)
+
+**Note:** The `createdBy` field is automatically set from the JWT token and should not be included in the request body.
 
 **Success Response:** `201 Created`
 
@@ -36,12 +49,12 @@ Register a new user with Telegram information.
 
 ```bash
 curl -X POST http://localhost:3000/api/users \
+  -H "Authorization: Bearer <your-jwt-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "John Doe",
     "telegramUsername": "@johndoe",
-    "telegramId": 123456789,
-    "createdBy": 0
+    "telegramId": 123456789
   }'
 ```
 
@@ -67,7 +80,8 @@ curl -X POST http://localhost:3000/api/users \
 - `400 Bad Request` - If telegramId is not an integer
 
 **Business Logic Errors:**
-- `403 Forbidden` - If createdBy user is not an admin
+- `401 Unauthorized` - If JWT token is missing, invalid, or expired
+- `403 Forbidden` - If the authenticated user is not an admin
 - `409 Conflict` - If user with this name already exists
 - `409 Conflict` - If user with this telegram ID already exists
 - `409 Conflict` - If user with this telegram username already exists
@@ -80,9 +94,12 @@ Register a new user without Telegram information.
 
 **Endpoint:** `POST /api/users/without-telegram`
 
+**Authorization:** Requires valid JWT token with admin privileges
+
 **Request Body:**
 - `name` (string, required): User's name (cannot be empty)
-- `createdBy` (number, required): ID of the user creating this user
+
+**Note:** The `createdBy` field is automatically set from the JWT token and should not be included in the request body.
 
 **Success Response:** `201 Created`
 
@@ -90,10 +107,10 @@ Register a new user without Telegram information.
 
 ```bash
 curl -X POST http://localhost:3000/api/users/without-telegram \
+  -H "Authorization: Bearer <your-jwt-token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Jane Smith",
-    "createdBy": 0
+    "name": "Jane Smith"
   }'
 ```
 
@@ -115,7 +132,8 @@ curl -X POST http://localhost:3000/api/users/without-telegram \
 
 **Errors:**
 - `400 Bad Request` - If name is empty
-- `403 Forbidden` - If createdBy user is not an admin
+- `401 Unauthorized` - If JWT token is missing, invalid, or expired
+- `403 Forbidden` - If the authenticated user is not an admin
 - `409 Conflict` - If user with this name already exists
 
 ---
@@ -126,12 +144,15 @@ Retrieve all users in the system.
 
 **Endpoint:** `GET /api/users`
 
+**Authorization:** Requires valid JWT token
+
 **Success Response:** `200 OK`
 
 **Example Request:**
 
 ```bash
-curl -X GET http://localhost:3000/api/users
+curl -X GET http://localhost:3000/api/users \
+  -H "Authorization: Bearer <your-jwt-token>"
 ```
 
 **Example Response:**
@@ -171,6 +192,8 @@ Retrieve a specific user by their ID.
 
 **Endpoint:** `GET /api/users/:id`
 
+**Authorization:** Requires valid JWT token
+
 **URL Parameters:**
 - `id` (number, required): User ID (integer)
 
@@ -179,7 +202,8 @@ Retrieve a specific user by their ID.
 **Example Request:**
 
 ```bash
-curl -X GET http://localhost:3000/api/users/1
+curl -X GET http://localhost:3000/api/users/1 \
+  -H "Authorization: Bearer <your-jwt-token>"
 ```
 
 **Example Response:**
@@ -200,6 +224,7 @@ curl -X GET http://localhost:3000/api/users/1
 
 **Errors:**
 - `400 Bad Request` - If ID is not an integer
+- `401 Unauthorized` - If JWT token is missing, invalid, or expired
 - `404 Not Found` - If user with this ID does not exist
 
 ---
@@ -210,6 +235,8 @@ Retrieve a specific user by their Telegram ID.
 
 **Endpoint:** `GET /api/users/by-telegram-id/:telegramId`
 
+**Authorization:** Requires valid JWT token
+
 **URL Parameters:**
 - `telegramId` (number, required): Telegram user ID (integer)
 
@@ -218,7 +245,8 @@ Retrieve a specific user by their Telegram ID.
 **Example Request:**
 
 ```bash
-curl -X GET http://localhost:3000/api/users/by-telegram-id/123456789
+curl -X GET http://localhost:3000/api/users/by-telegram-id/123456789 \
+  -H "Authorization: Bearer <your-jwt-token>"
 ```
 
 **Example Response:**
@@ -239,6 +267,7 @@ curl -X GET http://localhost:3000/api/users/by-telegram-id/123456789
 
 **Errors:**
 - `400 Bad Request` - If telegramId is not an integer
+- `401 Unauthorized` - If JWT token is missing, invalid, or expired
 - `404 Not Found` - If user with this Telegram ID does not exist
 
 ---
@@ -249,19 +278,18 @@ Update user information (name and/or Telegram username).
 
 **Endpoint:** `PATCH /api/users/:id`
 
+**Authorization:** Requires valid JWT token. Users can edit their own information, or admins can edit any user's information.
+
 **URL Parameters:**
 - `id` (number, required): User ID to edit (integer)
 
 **Request Body:**
 - `name` (string, optional): New name for the user
 - `telegramUsername` (string, optional): New Telegram username (must start with '@')
-- `modifiedBy` (number, required): ID of the user making the modification
 
-**Note:** At least one of `name` or `telegramUsername` must be provided.
-
-**Authorization:**
-- Users can edit their own information (when `id` matches `modifiedBy`)
-- Admins can edit any user's information
+**Note:**
+- At least one of `name` or `telegramUsername` must be provided
+- The `modifiedBy` field is automatically set from the JWT token and should not be included in the request body
 
 **Success Response:** `200 OK`
 
@@ -269,10 +297,10 @@ Update user information (name and/or Telegram username).
 
 ```bash
 curl -X PATCH http://localhost:3000/api/users/1 \
+  -H "Authorization: Bearer <your-jwt-token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "John Smith",
-    "modifiedBy": 0
+    "name": "John Smith"
   }'
 ```
 
@@ -280,10 +308,10 @@ curl -X PATCH http://localhost:3000/api/users/1 \
 
 ```bash
 curl -X PATCH http://localhost:3000/api/users/1 \
+  -H "Authorization: Bearer <your-jwt-token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "telegramUsername": "@johnsmith",
-    "modifiedBy": 0
+    "telegramUsername": "@johnsmith"
   }'
 ```
 
@@ -291,11 +319,11 @@ curl -X PATCH http://localhost:3000/api/users/1 \
 
 ```bash
 curl -X PATCH http://localhost:3000/api/users/1 \
+  -H "Authorization: Bearer <your-jwt-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "John Smith",
-    "telegramUsername": "@johnsmith",
-    "modifiedBy": 0
+    "telegramUsername": "@johnsmith"
   }'
 ```
 
@@ -318,7 +346,8 @@ curl -X PATCH http://localhost:3000/api/users/1 \
 **Errors:**
 - `400 Bad Request` - If neither name nor telegramUsername is provided
 - `400 Bad Request` - If telegramUsername doesn't start with '@'
-- `403 Forbidden` - If modifiedBy user is not an admin and doesn't match the user being edited
+- `401 Unauthorized` - If JWT token is missing, invalid, or expired
+- `403 Forbidden` - If the authenticated user is not an admin and doesn't match the user being edited
 - `403 Forbidden` - If the user being edited is not active
 - `404 Not Found` - If user with this ID does not exist
 
@@ -330,11 +359,10 @@ Activate a deactivated user.
 
 **Endpoint:** `POST /api/users/:id/activate`
 
+**Authorization:** Requires valid JWT token with admin privileges
+
 **URL Parameters:**
 - `id` (number, required): User ID to activate (integer)
-
-**Request Body:**
-- `modifiedBy` (number, required): ID of the user performing the activation (must be an admin)
 
 **Success Response:** `200 OK`
 
@@ -342,10 +370,7 @@ Activate a deactivated user.
 
 ```bash
 curl -X POST http://localhost:3000/api/users/1/activate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "modifiedBy": 0
-  }'
+  -H "Authorization: Bearer <your-jwt-token>"
 ```
 
 **Example Response:**
@@ -366,7 +391,8 @@ curl -X POST http://localhost:3000/api/users/1/activate \
 
 **Errors:**
 - `400 Bad Request` - If ID is not an integer
-- `403 Forbidden` - If modifiedBy user is not an admin
+- `401 Unauthorized` - If JWT token is missing, invalid, or expired
+- `403 Forbidden` - If the authenticated user is not an admin
 - `404 Not Found` - If user with this ID does not exist
 
 ---
@@ -377,11 +403,10 @@ Deactivate an active user.
 
 **Endpoint:** `POST /api/users/:id/deactivate`
 
+**Authorization:** Requires valid JWT token with admin privileges
+
 **URL Parameters:**
 - `id` (number, required): User ID to deactivate (integer)
-
-**Request Body:**
-- `modifiedBy` (number, required): ID of the user performing the deactivation (must be an admin)
 
 **Success Response:** `200 OK`
 
@@ -389,10 +414,7 @@ Deactivate an active user.
 
 ```bash
 curl -X POST http://localhost:3000/api/users/1/deactivate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "modifiedBy": 0
-  }'
+  -H "Authorization: Bearer <your-jwt-token>"
 ```
 
 **Example Response:**
@@ -413,7 +435,8 @@ curl -X POST http://localhost:3000/api/users/1/deactivate \
 
 **Errors:**
 - `400 Bad Request` - If ID is not an integer
-- `403 Forbidden` - If modifiedBy user is not an admin
+- `401 Unauthorized` - If JWT token is missing, invalid, or expired
+- `403 Forbidden` - If the authenticated user is not an admin
 - `404 Not Found` - If user with this ID does not exist
 
 ---
@@ -421,6 +444,22 @@ curl -X POST http://localhost:3000/api/users/1/deactivate \
 ## Error Responses
 
 All endpoints may return the following standard error responses:
+
+### 401 Unauthorized
+
+Returned when JWT authentication fails.
+
+```json
+{
+  "message": "Authentication required"
+}
+```
+
+```json
+{
+  "message": "Invalid or expired token"
+}
+```
 
 ### 400 Bad Request
 
@@ -438,7 +477,14 @@ Returned when the user doesn't have permission to perform the action.
 
 ```json
 {
-  "error": "User with id {id} is not admin"
+  "message": "Insufficient permissions to perform this action"
+}
+```
+
+```json
+{
+  "errorCode": "userIsNotActive",
+  "message": "User with id {id} is not active"
 }
 ```
 
@@ -482,6 +528,10 @@ Returned for unexpected server errors.
 
 3. **Timestamps**: All timestamps are in ISO 8601 format (UTC).
 
-4. **Authorization**: Most modification endpoints require the requesting user to be an admin, except when users are editing their own information.
+4. **Authentication**: All user endpoints require JWT authentication. Obtain a token via `/api/auth/login` before making requests.
 
-5. **Active Users**: Only active users can perform actions. Attempting to use an inactive user's ID will result in a 403 error.
+5. **Authorization**: Most modification endpoints require the requesting user to be an admin, except when users are editing their own information.
+
+6. **Active Users**: Only active users can perform actions. Attempting to use an inactive user's ID will result in a 403 error.
+
+7. **Audit Fields**: The `createdBy` and `modifiedBy` fields are automatically extracted from the JWT token. Do not include these fields in your request bodies.
