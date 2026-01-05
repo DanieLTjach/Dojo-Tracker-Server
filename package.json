@@ -6,9 +6,9 @@
   "scripts": {
     "start": "npx ts-node src/index.ts",
     "dev": "nodemon --ext \"js,ts,json\" src/index.ts",
-    "test": "rm -f db/data/test.db* 2>/dev/null || true; DB_PATH=./db/data/test.db NODE_OPTIONS=--experimental-vm-modules jest --no-cache --runInBand",
-    "test:watch": "DB_PATH=./db/data/test.db NODE_OPTIONS=--experimental-vm-modules jest --watch",
-    "test:coverage": "rm -f db/data/test.db* 2>/dev/null || true; DB_PATH=./db/data/test.db NODE_OPTIONS=--experimental-vm-modules jest --coverage --no-cache --runInBand"
+    "test": "rm -f db/data/test.db* 2>/dev/null || true; DB_PATH=./db/data/test.db NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --no-cache --runInBand",
+    "test:watch": "DB_PATH=./db/data/test.db NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch",
+    "test:coverage": "rm -f db/data/test.db* 2>/dev/null || true; DB_PATH=./db/data/test.db NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --coverage --no-cache --runInBand"
   },
   "author": "Danylo Tkach",
   "license": "ISC",

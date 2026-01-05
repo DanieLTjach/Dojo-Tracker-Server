@@ -9,6 +9,10 @@ export default {
     '!src/**/*.test.ts',
     '!src/index.ts',
   ],
+  // Suppress console output during tests
+  silent: true,
+  // Show verbose output only on failures
+  verbose: false,
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.ts$': '$1',
