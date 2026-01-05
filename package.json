@@ -6,9 +6,9 @@
   "scripts": {
     "start": "npx ts-node src/index.ts",
     "dev": "dotenv -e .env.development -- nodemon --ext \"js,ts,json\" src/index.ts",
-    "test": "rm -f db/data/test.db* 2>/dev/null || true; dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --no-cache --runInBand",
+    "test": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --no-cache --runInBand",
     "test:watch": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch",
-    "test:coverage": "rm -f db/data/test.db* 2>/dev/null || true; dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --coverage --no-cache --runInBand"
+    "test:coverage": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --coverage --no-cache --runInBand"
   },
   "author": "Danylo Tkach",
   "license": "ISC",
