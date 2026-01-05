@@ -391,7 +391,7 @@ describe('Game API Endpoints', () => {
         test('should update a game successfully', async () => {
             const response = await request(app)
                 .put(`/api/games/${testGameId}`)
-                .set('Authorization', user1AuthHeader)
+                .set('Authorization', adminAuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -410,6 +410,7 @@ describe('Game API Endpoints', () => {
         test('should fail to update game without admin privileges', async () => {
             const response = await request(app)
                 .put(`/api/games/${testGameId}`)
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -417,17 +418,17 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
-                    ],
-                    modifiedBy: testUser1Id
+                    ]
                 });
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toContain('admin');
+            expect(response.body.message).toContain('Insufficient permissions');
         });
 
         test('should fail to update non-existent game', async () => {
             const response = await request(app)
                 .put('/api/games/99999')
+                .set('Authorization', adminAuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -435,8 +436,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
-                    ],
-                    modifiedBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(404);
@@ -446,13 +446,13 @@ describe('Game API Endpoints', () => {
         test('should fail to update game with incorrect player count', async () => {
             const response = await request(app)
                 .put(`/api/games/${testGameId}`)
+                .set('Authorization', adminAuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 }
-                    ],
-                    modifiedBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(400);
@@ -462,6 +462,7 @@ describe('Game API Endpoints', () => {
         test('should fail to update game with duplicate players', async () => {
             const response = await request(app)
                 .put(`/api/games/${testGameId}`)
+                .set('Authorization', adminAuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -469,8 +470,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
-                    ],
-                    modifiedBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(400);
@@ -485,6 +485,7 @@ describe('Game API Endpoints', () => {
             // Create a game to delete
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -492,8 +493,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
             gameToDeleteId = response.body.id;
         });
@@ -501,36 +501,31 @@ describe('Game API Endpoints', () => {
         test('should delete a game successfully', async () => {
             const response = await request(app)
                 .delete(`/api/games/${gameToDeleteId}`)
-                .send({
-                    deletedBy: SYSTEM_USER_ID
-                });
+                .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(204);
             expect(response.body).toEqual({});
 
             // Verify game is deleted
             const getResponse = await request(app)
-                .get(`/api/games/${gameToDeleteId}`);
+                .get(`/api/games/${gameToDeleteId}`)
+                .set('Authorization', adminAuthHeader);
             expect(getResponse.status).toBe(404);
         });
 
         test('should fail to delete game without admin privileges', async () => {
             const response = await request(app)
                 .delete(`/api/games/${testGameId}`)
-                .send({
-                    deletedBy: testUser1Id
-                });
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toContain('admin');
+            expect(response.body.message).toContain('Insufficient permissions');
         });
 
         test('should fail to delete non-existent game', async () => {
             const response = await request(app)
                 .delete('/api/games/99999')
-                .send({
-                    deletedBy: SYSTEM_USER_ID
-                });
+                .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(404);
             expect(response.body.message).toContain('Game');
@@ -539,9 +534,7 @@ describe('Game API Endpoints', () => {
         test('should fail to delete game with invalid ID', async () => {
             const response = await request(app)
                 .delete('/api/games/invalid')
-                .send({
-                    deletedBy: SYSTEM_USER_ID
-                });
+                .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBe('Invalid request data');
