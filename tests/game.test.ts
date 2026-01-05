@@ -4,6 +4,7 @@ import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { closeDB } from '../src/db/dbInit.ts';
 import { TEST_DB_PATH, cleanupTestDatabase } from './setup.ts';
+import { createAuthHeader } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -12,12 +13,17 @@ app.use(handleErrors);
 
 describe('Game API Endpoints', () => {
     const SYSTEM_USER_ID = 0; // System admin user
+    const ADMIN_TELEGRAM_ID = 123456789;
     const TEST_EVENT_ID = 1; // Test Event from migrations
     let testUser1Id: number;
     let testUser2Id: number;
     let testUser3Id: number;
     let testUser4Id: number;
     let testGameId: number;
+
+    // Auth headers
+    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID, ADMIN_TELEGRAM_ID, true, true);
+    let user1AuthHeader: string;
 
     // Helper function to create test users
     async function createTestUser(name: string, telegramId: number): Promise<number> {
@@ -29,11 +35,11 @@ describe('Game API Endpoints', () => {
 
         const response = await request(userApp)
             .post('/api/users')
+            .set('Authorization', adminAuthHeader)
             .send({
                 name,
                 telegramUsername: `@${name.toLowerCase()}`,
-                telegramId,
-                createdBy: SYSTEM_USER_ID
+                telegramId
             });
 
         return response.body.id;
@@ -45,6 +51,9 @@ describe('Game API Endpoints', () => {
         testUser2Id = await createTestUser('Player2', 222222222);
         testUser3Id = await createTestUser('Player3', 333333333);
         testUser4Id = await createTestUser('Player4', 444444444);
+
+        // Create auth header for regular user
+        user1AuthHeader = createAuthHeader(testUser1Id, 111111111, false, true);
     });
 
     afterAll(() => {
@@ -56,6 +65,7 @@ describe('Game API Endpoints', () => {
         test('should create a new game with 4 players', async () => {
             const response = await request(app)
                 .post('/api/games')
+                .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -63,8 +73,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 28000, startPlace: 'SOUTH' },
                         { userId: testUser3Id, points: 22000, startPlace: 'WEST' },
                         { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
-                    ],
-                    createdBy: SYSTEM_USER_ID
+                    ]
                 });
 
             expect(response.status).toBe(201);
