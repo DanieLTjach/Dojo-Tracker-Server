@@ -99,4 +99,9 @@ function initDB() {
     }
 }
 
+// Export function to close database connection (useful for tests)
+export function closeDB() {
+    db.close();
+}
+
 initDB();
