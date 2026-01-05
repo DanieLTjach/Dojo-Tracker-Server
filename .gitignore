@@ -2,6 +2,9 @@ node_modules
 .vscode
 db/data
 
+# macOS files
+.DS_Store
+
 # Environment files
 # Keep .env.example, .env.development, .env.test in repo
 # Ignore local overrides and sensitive production configs
