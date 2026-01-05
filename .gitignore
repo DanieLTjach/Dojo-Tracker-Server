@@ -1,6 +1,7 @@
 node_modules
 .vscode
 db/data
+coverage
 
 # macOS files
 .DS_Store
