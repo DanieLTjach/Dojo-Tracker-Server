@@ -14,7 +14,9 @@ export class GameController {
     private gameService: GameService = new GameService();
 
     addGame(req: Request, res: Response) {
-        const { body: { eventId, playersData, createdBy } } = gameCreationSchema.parse(req);
+        const { body: { eventId, playersData } } = gameCreationSchema.parse(req);
+        // createdBy comes from authenticated user
+        const createdBy = req.user!.userId;
         const newGame = this.gameService.createGame(eventId, playersData, createdBy);
         return res.status(StatusCodes.CREATED).json(newGame);
     }
@@ -32,26 +34,27 @@ export class GameController {
     }
 
     editGame(req: Request, res: Response) {
-        const { 
-            params: { gameId }, 
-            body: { playersData, eventId, modifiedBy } 
+        const {
+            params: { gameId },
+            body: { playersData, eventId }
         } = gameUpdateSchema.parse(req);
-        
+
+        // modifiedBy comes from authenticated user
+        const modifiedBy = req.user!.userId; // Non-null assertion safe because requireAdmin ensures user exists
         const updatedGame = this.gameService.updateGame(
-            gameId, 
-            eventId, 
-            playersData, 
+            gameId,
+            eventId,
+            playersData,
             modifiedBy
         );
         return res.status(StatusCodes.OK).json(updatedGame);
     }
 
     deleteGame(req: Request, res: Response) {
-        const { 
-            params: { gameId }, 
-            body: { deletedBy } 
-        } = gameDeletionSchema.parse(req);
-        
+        const { params: { gameId } } = gameDeletionSchema.parse(req);
+
+        // deletedBy comes from authenticated user
+        const deletedBy = req.user!.userId; // Non-null assertion safe because requireAdmin ensures user exists
         this.gameService.deleteGame(gameId, deletedBy);
         return res.status(StatusCodes.NO_CONTENT).send();
     }

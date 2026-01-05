@@ -16,13 +16,17 @@ export class UserController {
     private userService: UserService = new UserService();
 
     registerUser(req: Request, res: Response) {
-        const { name, telegramUsername, telegramId, createdBy } = userRegistrationSchema.parse(req).body;
-        const newUser = this.userService.registerUser(name, telegramUsername, telegramId, createdBy ?? SYSTEM_USER_ID);
+        const { name, telegramUsername, telegramId } = userRegistrationSchema.parse(req).body;
+        // createdBy comes from authenticated user (req.user set by requireAuth middleware)
+        const createdBy = req.user?.userId ?? SYSTEM_USER_ID;
+        const newUser = this.userService.registerUser(name, telegramUsername, telegramId, createdBy);
         return res.status(StatusCodes.CREATED).json(newUser);
     }
 
     registerUserWithoutTelegram(req: Request, res: Response) {
-        const { name, createdBy } = userRegistrationWithoutTelegramSchema.parse(req).body;
+        const { name } = userRegistrationWithoutTelegramSchema.parse(req).body;
+        // createdBy comes from authenticated user
+        const createdBy = req.user?.userId ?? SYSTEM_USER_ID;
         const newUser = this.userService.registerUser(name, undefined, undefined, createdBy);
         return res.status(StatusCodes.CREATED).json(newUser);
     }
@@ -47,15 +51,19 @@ export class UserController {
     editUser(req: Request, res: Response) {
         const {
             params: { id },
-            body: { name, telegramUsername, modifiedBy }
+            body: { name, telegramUsername }
         } = userEditSchema.parse(req);
 
+        // modifiedBy comes from authenticated user
+        const modifiedBy = req.user!.userId; // Non-null assertion safe because requireAuth ensures user exists
         const editedUser = this.userService.editUser(id, name, telegramUsername, modifiedBy);
         return res.status(StatusCodes.OK).json(editedUser);
     }
 
     updateUserActivationStatus(req: Request, res: Response, isActive: boolean) {
-        const { params: { id }, body: { modifiedBy } } = userActivationSchema.parse(req);
+        const { params: { id } } = userActivationSchema.parse(req);
+        // modifiedBy comes from authenticated user
+        const modifiedBy = req.user!.userId;
         const activatedUser = this.userService.updateUserActivationStatus(id, isActive, modifiedBy);
         return res.status(StatusCodes.OK).json(activatedUser);
     }
