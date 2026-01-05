@@ -14,15 +14,13 @@ export const userRegistrationSchema = z.object({
     body: z.object({
         name: userNameSchema,
         telegramUsername: telegramUsernameSchema,
-        telegramId: telegramIdParamSchema,
-        createdBy: userIdSchema.optional()
+        telegramId: telegramIdParamSchema
     })
 });
 
 export const userRegistrationWithoutTelegramSchema = z.object({
     body: z.object({
-        name: userNameSchema,
-        createdBy: userIdSchema
+        name: userNameSchema
     })
 });
 
@@ -44,8 +42,7 @@ export const userEditSchema = z.object({
     }),
     body: z.object({
         name: userNameSchema.optional(),
-        telegramUsername: telegramUsernameSchema.optional(),
-        modifiedBy: userIdSchema
+        telegramUsername: telegramUsernameSchema.optional()
     })
 }).refine((data) => data.body.name || data.body.telegramUsername, {
     message: "At least one of 'name' or 'telegramUsername' must be provided"
@@ -54,9 +51,6 @@ export const userEditSchema = z.object({
 export const userActivationSchema = z.object({
     params: z.object({
         id: userIdParamSchema
-    }),
-    body: z.object({
-        modifiedBy: userIdSchema
     })
 });
 
