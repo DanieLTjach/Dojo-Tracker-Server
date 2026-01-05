@@ -1,0 +1,246 @@
+import { TokenService } from '../src/service/TokenService.ts';
+import type { User } from '../src/model/UserModels.ts';
+import jwt from 'jsonwebtoken';
+import { jest } from '@jest/globals';
+
+describe('TokenService', () => {
+    let tokenService: TokenService;
+
+    beforeEach(() => {
+        tokenService = new TokenService();
+    });
+
+    describe('createTokenPair', () => {
+        it('should create a valid JWT token for a user', () => {
+            const user: User = {
+                id: 1,
+                name: 'Test User',
+                telegramId: 123456789,
+                telegramUsername: '@testuser',
+                isAdmin: 0,
+                isActive: 1,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                modifiedBy: 'SYSTEM'
+            };
+
+            const tokenPair = tokenService.createTokenPair(user);
+
+            expect(tokenPair).toHaveProperty('accessToken');
+            expect(typeof tokenPair.accessToken).toBe('string');
+            expect(tokenPair.accessToken.length).toBeGreaterThan(0);
+        });
+
+        it('should create token with correct payload structure', () => {
+            const user: User = {
+                id: 2,
+                name: 'Admin User',
+                telegramId: 987654321,
+                telegramUsername: '@admin',
+                isAdmin: 1,
+                isActive: 1,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                modifiedBy: 'SYSTEM'
+            };
+
+            const tokenPair = tokenService.createTokenPair(user);
+            const decoded = tokenService.verifyToken(tokenPair.accessToken);
+
+            expect(decoded.userId).toBe(user.id);
+            expect(decoded.telegramId).toBe(user.telegramId);
+            expect(decoded.isAdmin).toBe(true);
+            expect(decoded.isActive).toBe(true);
+            expect(decoded).toHaveProperty('iat');
+            expect(decoded).toHaveProperty('exp');
+        });
+
+        it('should convert isAdmin from 0/1 to boolean', () => {
+            const user: User = {
+                id: 3,
+                name: 'Regular User',
+                telegramId: 111111111,
+                telegramUsername: '@regular',
+                isAdmin: 0,
+                isActive: 1,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                modifiedBy: 'SYSTEM'
+            };
+
+            const tokenPair = tokenService.createTokenPair(user);
+            const decoded = tokenService.verifyToken(tokenPair.accessToken);
+
+            expect(decoded.isAdmin).toBe(false);
+            expect(typeof decoded.isAdmin).toBe('boolean');
+        });
+
+        it('should convert isActive from 0/1 to boolean', () => {
+            const user: User = {
+                id: 4,
+                name: 'Inactive User',
+                telegramId: 222222222,
+                telegramUsername: '@inactive',
+                isAdmin: 0,
+                isActive: 0,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                modifiedBy: 'SYSTEM'
+            };
+
+            const tokenPair = tokenService.createTokenPair(user);
+            const decoded = tokenService.verifyToken(tokenPair.accessToken);
+
+            expect(decoded.isActive).toBe(false);
+            expect(typeof decoded.isActive).toBe('boolean');
+        });
+    });
+
+    describe('verifyToken', () => {
+        it('should successfully verify a valid token', () => {
+            const user: User = {
+                id: 5,
+                name: 'Test User',
+                telegramId: 333333333,
+                telegramUsername: '@test',
+                isAdmin: 1,
+                isActive: 1,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                modifiedBy: 'SYSTEM'
+            };
+
+            const tokenPair = tokenService.createTokenPair(user);
+            const decoded = tokenService.verifyToken(tokenPair.accessToken);
+
+            expect(decoded).toBeDefined();
+            expect(decoded.userId).toBe(user.id);
+        });
+
+        it('should throw error for expired token', () => {
+            const user: User = {
+                id: 6,
+                name: 'Test User',
+                telegramId: 444444444,
+                telegramUsername: '@test',
+                isAdmin: 0,
+                isActive: 1,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                modifiedBy: 'SYSTEM'
+            };
+
+            // Create an expired token (expired 1 hour ago)
+            const expiredToken = jwt.sign(
+                { userId: user.id, telegramId: user.telegramId, isAdmin: false, isActive: true },
+                process.env.JWT_SECRET || 'test-secret',
+                { expiresIn: '-1h' }
+            );
+
+            expect(() => {
+                tokenService.verifyToken(expiredToken);
+            }).toThrow('Token has expired');
+        });
+
+        it('should throw error for invalid token signature', () => {
+            const user: User = {
+                id: 7,
+                name: 'Test User',
+                telegramId: 555555555,
+                telegramUsername: '@test',
+                isAdmin: 0,
+                isActive: 1,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                modifiedBy: 'SYSTEM'
+            };
+
+            // Create a token with wrong secret
+            const invalidToken = jwt.sign(
+                { userId: user.id, telegramId: user.telegramId, isAdmin: false, isActive: true },
+                'wrong-secret',
+                { expiresIn: '1h' }
+            );
+
+            expect(() => {
+                tokenService.verifyToken(invalidToken);
+            }).toThrow('Invalid token');
+        });
+
+        it('should throw error for malformed token', () => {
+            expect(() => {
+                tokenService.verifyToken('not-a-valid-jwt-token');
+            }).toThrow('Invalid token');
+        });
+
+        it('should throw error for empty token', () => {
+            expect(() => {
+                tokenService.verifyToken('');
+            }).toThrow('Invalid token');
+        });
+    });
+
+    describe('decodeToken', () => {
+        it('should decode a valid token without verification', () => {
+            const user: User = {
+                id: 8,
+                name: 'Test User',
+                telegramId: 666666666,
+                telegramUsername: '@test',
+                isAdmin: 1,
+                isActive: 1,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                modifiedBy: 'SYSTEM'
+            };
+
+            const tokenPair = tokenService.createTokenPair(user);
+            const decoded = tokenService.decodeToken(tokenPair.accessToken);
+
+            expect(decoded).toBeDefined();
+            expect(decoded!.userId).toBe(user.id);
+            expect(decoded!.telegramId).toBe(user.telegramId);
+            expect(decoded!.isAdmin).toBe(true);
+            expect(decoded!.isActive).toBe(true);
+        });
+
+        it('should decode token with wrong signature without throwing error', () => {
+            const invalidToken = jwt.sign(
+                { userId: 9, telegramId: 777777777, isAdmin: false, isActive: true },
+                'wrong-secret',
+                { expiresIn: '1h' }
+            );
+
+            const decoded = tokenService.decodeToken(invalidToken);
+
+            expect(decoded).toBeDefined();
+            expect(decoded!.userId).toBe(9);
+        });
+
+        it('should return null for malformed token', () => {
+            const decoded = tokenService.decodeToken('not-a-valid-token');
+
+            expect(decoded).toBeNull();
+        });
+
+        it('should return null for empty string', () => {
+            const decoded = tokenService.decodeToken('');
+
+            expect(decoded).toBeNull();
+        });
+
+        it('should decode expired token without throwing error', () => {
+            const expiredToken = jwt.sign(
+                { userId: 10, telegramId: 888888888, isAdmin: false, isActive: true },
+                process.env.JWT_SECRET || 'test-secret',
+                { expiresIn: '-1h' }
+            );
+
+            const decoded = tokenService.decodeToken(expiredToken);
+
+            expect(decoded).toBeDefined();
+            expect(decoded!.userId).toBe(10);
+        });
+    });
+
+});
