@@ -54,6 +54,10 @@ A backend server for tracking mahjong games and user statistics. Built with Node
 
 All endpoints are prefixed with `/api`.
 
+For detailed API documentation with curl examples, see:
+- **[User Endpoints](docs/api/users.md)** - Complete documentation for `/api/users`
+- **[Game Endpoints](docs/api/games.md)** - Complete documentation for `/api/games`
+
 ### Users (`/api/users`)
 
 | Method | Endpoint | Description |
