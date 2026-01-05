@@ -1,17 +1,18 @@
 import jwt from 'jsonwebtoken';
 import type { TokenPair, DecodedToken } from '../model/AuthModels.ts';
 import type { User } from '../model/UserModels.ts';
+import config from '../../config/config.ts';
 
 export class TokenService {
     private jwtSecret: string;
     private jwtExpiry: string;
 
     constructor() {
-        this.jwtSecret = process.env['JWT_SECRET'] || 'fallback_secret_change_this';
-        this.jwtExpiry = process.env['JWT_EXPIRY'] || '7d';
+        this.jwtSecret = config.jwtSecret;
+        this.jwtExpiry = config.jwtExpiry;
 
-        if (this.jwtSecret === 'fallback_secret_change_this') {
-            console.warn('⚠️  WARNING: Using fallback JWT secret. Set JWT_SECRET in environment variables!');
+        if (!this.jwtSecret) {
+            console.warn('⚠️  WARNING: JWT_SECRET is not set in environment variables!');
         }
     }
 

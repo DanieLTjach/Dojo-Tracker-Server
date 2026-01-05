@@ -6,6 +6,7 @@ import {
     InvalidInitDataError,
     ExpiredAuthDataError
 } from '../error/AuthErrors.ts';
+import config from '../../config/config.ts';
 
 export class AuthService {
     private botToken: string;
@@ -14,10 +15,8 @@ export class AuthService {
     private tokenService: TokenService;
 
     constructor() {
-        this.botToken = process.env['BOT_TOKEN'] || '';
-        this.initDataValiditySeconds = parseInt(
-            process.env['AUTH_INIT_DATA_VALIDITY_SECONDS'] || '3600'
-        );
+        this.botToken = config.botToken;
+        this.initDataValiditySeconds = config.authInitDataValiditySeconds;
         this.userService = new UserService();
         this.tokenService = new TokenService();
 
