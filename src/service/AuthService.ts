@@ -30,9 +30,9 @@ export class AuthService {
      * Validates the hash and creates a JWT token.
      *
      * @param params - Query parameters from initData (as key-value object)
-     * @returns TokenPair with JWT access token and user info
+     * @returns TokenPair with JWT access token, user info, and isNewUser flag
      */
-    authenticate(params: Record<string, string>): TokenPair & { user: any } {
+    authenticate(params: Record<string, string>): TokenPair & { user: any; isNewUser: boolean } {
         // Step 1: Validate initData hash
         this.validateInitData(params);
 
@@ -40,7 +40,7 @@ export class AuthService {
         const telegramId = this.extractTelegramId(params);
 
         // Step 3: Get or create user
-        const user = this.userService.getOrCreateUserByTelegramId(telegramId, params['user']);
+        const { user, isNewUser } = this.userService.getOrCreateUserByTelegramId(telegramId, params['user']);
 
         // Step 4: Generate JWT token
         const tokens = this.tokenService.createTokenPair(user);
@@ -54,7 +54,8 @@ export class AuthService {
                 telegramUsername: user.telegramUsername,
                 isAdmin: !!user.isAdmin,
                 isActive: !!user.isActive
-            }
+            },
+            isNewUser
         };
     }
 

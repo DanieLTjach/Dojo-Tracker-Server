@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(cors());
 
 // Authentication routes (no auth required)
-app.use('/api', authRoutes);
+app.use('/api/auth', authRoutes);
 
 // Protected routes (will add auth middleware later)
 app.use('/api/users', userRoutes);

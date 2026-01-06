@@ -63,13 +63,13 @@ export class UserService {
      *
      * @param telegramId - The Telegram user ID
      * @param userDataJson - Optional JSON string with Telegram user data
-     * @returns The existing or newly created user
+     * @returns Object with the user and a flag indicating if they were just created
      */
-    getOrCreateUserByTelegramId(telegramId: number, userDataJson?: string): User {
+    getOrCreateUserByTelegramId(telegramId: number, userDataJson?: string): { user: User; isNewUser: boolean } {
         // Try to find existing user
         const existingUser = this.userRepository.findUserByTelegramId(telegramId);
         if (existingUser) {
-            return existingUser;
+            return { user: existingUser, isNewUser: false };
         }
 
         // Parse Telegram user data if provided
@@ -99,7 +99,8 @@ export class UserService {
             SYSTEM_USER_ID
         );
 
-        return this.getUserById(newUserId);
+        const newUser = this.getUserById(newUserId);
+        return { user: newUser, isNewUser: true };
     }
 
     editUser(
