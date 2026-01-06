@@ -12,6 +12,11 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Health check endpoint
+app.get('/', (req, res) => {
+    res.json({ status: 'ok', message: 'Dojo Tracker Server is running' });
+});
+
 // Authentication routes (no auth required)
 app.use('/api/auth', authRoutes);
 
