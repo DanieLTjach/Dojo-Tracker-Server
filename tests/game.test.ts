@@ -3,7 +3,7 @@ import express from 'express';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { closeDB } from '../src/db/dbInit.ts';
-import { TEST_DB_PATH, cleanupTestDatabase } from './setup.ts';
+import { cleanupTestDatabase } from './setup.ts';
 
 const app = express();
 app.use(express.json());

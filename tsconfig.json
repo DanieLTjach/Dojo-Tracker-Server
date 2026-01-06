@@ -4,7 +4,7 @@
     "target": "esnext",
     // For nodejs:
     "lib": ["esnext"],
-    "types": ["node"],
+    "types": ["jest", "node"],
 
     "sourceMap": true,
 

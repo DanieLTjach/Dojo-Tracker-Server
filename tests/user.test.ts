@@ -3,7 +3,7 @@ import express from 'express';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { closeDB } from '../src/db/dbInit.ts';
-import { TEST_DB_PATH, cleanupTestDatabase } from './setup.ts';
+import { cleanupTestDatabase } from './setup.ts';
 
 const app = express();
 app.use(express.json());
@@ -41,8 +41,8 @@ describe('User API Endpoints', () => {
             expect(response.body.name).toBe(userData.name);
             expect(response.body.telegramUsername).toBe(userData.telegramUsername);
             expect(response.body.telegramId).toBe(userData.telegramId);
-            expect(response.body.isActive).toBe(1); // SQLite returns 1 for true
-            expect(response.body.isAdmin).toBe(0); // SQLite returns 0 for false
+            expect(response.body.isActive).toBe(true);
+            expect(response.body.isAdmin).toBe(false);
         });
 
         it('should register a new user without createdBy (defaults to SYSTEM)', async () => {
@@ -131,7 +131,7 @@ describe('User API Endpoints', () => {
             expect(response.body.name).toBe(userData.name);
             expect(response.body.telegramUsername).toBeNull();
             expect(response.body.telegramId).toBeNull();
-            expect(response.body.isActive).toBe(1); // SQLite returns 1 for true
+            expect(response.body.isActive).toBe(true);
         });
 
         it('should fail when name is missing', async () => {
@@ -302,7 +302,7 @@ describe('User API Endpoints', () => {
                 .send({ modifiedBy: SYSTEM_USER_ID })
                 .expect(200);
 
-            expect(response.body.isActive).toBe(1); // SQLite returns 1 for true
+            expect(response.body.isActive).toBe(true);
             expect(response.body.id).toBe(testUserId);
         });
 
@@ -328,7 +328,7 @@ describe('User API Endpoints', () => {
                 .send({ modifiedBy: SYSTEM_USER_ID })
                 .expect(200);
 
-            expect(response.body.isActive).toBe(0); // SQLite returns 0 for false
+            expect(response.body.isActive).toBe(false);
             expect(response.body.id).toBe(testUserId);
         });
 

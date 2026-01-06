@@ -1,4 +1,4 @@
-export function formatDateForSqlite(date: Date): string {
+export function dateToSqliteString(date: Date): string {
     const year = date.getUTCFullYear();
     const month = String(date.getUTCMonth() + 1).padStart(2, '0');
     const day = String(date.getUTCDate()).padStart(2, '0');
@@ -6,6 +6,11 @@ export function formatDateForSqlite(date: Date): string {
     const minutes = String(date.getUTCMinutes()).padStart(2, '0');
     const seconds = String(date.getUTCSeconds()).padStart(2, '0');
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+export function dateFromSqliteString(dateString: string): Date {
+    const utcDateString = dateString.split(' ').join('T') + 'Z';
+    return new Date(utcDateString);
 }
 
 export function booleanToInteger(value: boolean): number {

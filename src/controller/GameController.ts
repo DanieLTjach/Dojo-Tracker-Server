@@ -15,7 +15,7 @@ export class GameController {
 
     addGame(req: Request, res: Response) {
         const { body: { eventId, playersData, createdBy } } = gameCreationSchema.parse(req);
-        const newGame = this.gameService.createGame(eventId, playersData, createdBy);
+        const newGame = this.gameService.addGame(eventId, playersData, createdBy);
         return res.status(StatusCodes.CREATED).json(newGame);
     }
 
