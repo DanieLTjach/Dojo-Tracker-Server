@@ -19,7 +19,8 @@ CREATE TABLE gameRules (
     name TEXT NOT NULL,
     numberOfPlayers INTEGER NOT NULL,
     uma TEXT NOT NULL,
-    startingPoints INTEGER NOT NULL
+    startingPoints INTEGER NOT NULL,
+    startingRating REAL NOT NULL
 );
 
 CREATE TABLE event (
@@ -37,22 +38,13 @@ CREATE TABLE event (
 CREATE TABLE game (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     eventId INTEGER NOT NULL REFERENCES event(id),
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
 
 CREATE TABLE gameStartPlace (
     startPlace TEXT NOT NULL PRIMARY KEY
-);
-
-CREATE TABLE userRating (
-    userId INTEGER NOT NULL REFERENCES user(id),
-    eventId INTEGER NOT NULL REFERENCES event(id),
-    rating REAL NOT NULL,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedBy INTEGER NOT NULL REFERENCES user(id),
-    PRIMARY KEY (userId, eventId)
 );
 
 CREATE TABLE userToGame (
@@ -63,6 +55,16 @@ CREATE TABLE userToGame (
     createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     modifiedBy INTEGER NOT NULL REFERENCES user(id),
+    PRIMARY KEY (userId, gameId)
+);
+
+CREATE TABLE userRatingChange (
+    userId INTEGER NOT NULL REFERENCES user(id),
+    eventId INTEGER NOT NULL REFERENCES event(id),
+    gameId INTEGER NOT NULL REFERENCES game(id),
+    ratingChange INTEGER NOT NULL,
+    rating INTEGER NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
     PRIMARY KEY (userId, gameId)
 );
 
@@ -114,9 +116,9 @@ CREATE TABLE winTypeDict (
 );
 
 -- Insert initial data
-INSERT INTO gameRules(id, name, numberOfPlayers, uma, startingPoints) VALUES
-    (1, 'Standard yonma', 4, '[15, 5, -5, -15]', 30000),
-    (2, 'Standard sanma', 3, '[15, 0, -15]', 35000);
+INSERT INTO gameRules(id, name, numberOfPlayers, uma, startingPoints, startingRating) VALUES
+    (1, 'Standard yonma', 4, '15,5,-5,-15', 30000, 1000),
+    (2, 'Standard sanma', 3, '15,0,-15', 35000, 1000);
 
 INSERT INTO eventType(type) VALUES ('SEASON'), ('TOURNAMENT');
 

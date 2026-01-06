@@ -1,42 +1,46 @@
 import type { Statement } from 'better-sqlite3';
 import type { User } from '../model/UserModels.ts';
 import { db } from '../db/dbInit.ts';
-import { booleanToInteger } from '../db/dbUtils.ts';
+import { booleanToInteger, dateFromSqliteString } from '../db/dbUtils.ts';
 
 export class UserRepository {
 
-    private findAllUsersStatement: Statement<unknown[], User> =
+    private findAllUsersStatement: Statement<unknown[], UserDBEntity> =
         db.prepare('SELECT * FROM user ORDER BY id');
 
     findAllUsers(): User[] {
-        return this.findAllUsersStatement.all();
+        return this.findAllUsersStatement.all().map(userFromDBEntity);
     }
 
-    private findUserByIdStatement: Statement<{ id: number }, User> =
+    private findUserByIdStatement: Statement<{ id: number }, UserDBEntity> =
         db.prepare('SELECT * FROM user WHERE id = :id');
 
     findUserById(id: number): User | undefined {
-        return this.findUserByIdStatement.get({ id });
+        const userDBEntity = this.findUserByIdStatement.get({ id });
+        return userDBEntity !== undefined ? userFromDBEntity(userDBEntity) : undefined;
     }
 
-    private findUserByTelegramIdStatement: Statement<{ telegramId: number }, User> =
+    private findUserByTelegramIdStatement: Statement<{ telegramId: number }, UserDBEntity> =
         db.prepare('SELECT * FROM user WHERE telegramId = :telegramId');
 
     findUserByTelegramId(telegramId: number): User | undefined {
-        return this.findUserByTelegramIdStatement.get({ telegramId });
+        const userDBEntity = this.findUserByTelegramIdStatement.get({ telegramId });
+        return userDBEntity !== undefined ? userFromDBEntity(userDBEntity) : undefined;
     }
 
-    private findUserByTelegramUsernameStatement: Statement<{ telegramUsername: string }, User> =
+    private findUserByTelegramUsernameStatement: Statement<{ telegramUsername: string }, UserDBEntity> =
         db.prepare('SELECT * FROM user WHERE telegramUsername = :telegramUsername');
 
     findUserByTelegramUsername(telegramUsername: string): User | undefined {
-        return this.findUserByTelegramUsernameStatement.get({ telegramUsername: telegramUsername });
+        const userDBEntity = this.findUserByTelegramUsernameStatement.get({ telegramUsername: telegramUsername });
+        return userDBEntity !== undefined ? userFromDBEntity(userDBEntity) : undefined;
     }
 
-    private findUserByNameStatement: Statement<{ name: string }, User> =
+    private findUserByNameStatement: Statement<{ name: string }, UserDBEntity> =
         db.prepare('SELECT * FROM user WHERE name = :name');
     findUserByName(name: string): User | undefined {
-        return this.findUserByNameStatement.get({ name });
+        const userDBEntity = this.findUserByNameStatement.get({ name });
+        return userDBEntity !== undefined ? userFromDBEntity(userDBEntity) : undefined;
     }
 
     private registerUserStatement: Statement<{
@@ -94,4 +98,26 @@ export class UserRepository {
     updateUserActivationStatus(userId: number, newStatus: boolean, modifiedBy: number) {
         this.updateUserActivationStatusStatement.run({ isActive: booleanToInteger(newStatus), modifiedBy, id: userId });
     }
+}
+
+interface UserDBEntity {
+    id: number;
+    name: string;
+    telegramUsername: string | null;
+    telegramId: number | null;
+    isAdmin: number;
+    isActive: number;
+    createdAt: string;
+    modifiedAt: string;
+    modifiedBy: string;
+}
+
+function userFromDBEntity(dbEntity: UserDBEntity): User {
+    return {
+        ...dbEntity,
+        isAdmin: Boolean(dbEntity.isAdmin),
+        isActive: Boolean(dbEntity.isActive),
+        createdAt: dateFromSqliteString(dbEntity.createdAt),
+        modifiedAt: dateFromSqliteString(dbEntity.modifiedAt)
+    };
 }

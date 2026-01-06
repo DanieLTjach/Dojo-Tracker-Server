@@ -2,8 +2,8 @@
 export interface Game {
     id: number;
     eventId: number;
-    createdAt: string;
-    modifiedAt: string;
+    createdAt: Date;
+    modifiedAt: Date;
     modifiedBy: number;
 }
 

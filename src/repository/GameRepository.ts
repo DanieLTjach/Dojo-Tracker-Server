@@ -1,5 +1,5 @@
 import type { Statement } from 'better-sqlite3';
-import { formatDateForSqlite } from '../db/dbUtils.ts';
+import { dateFromSqliteString, dateToSqliteString } from '../db/dbUtils.ts';
 import type { Game, GameFilters, GamePlayer } from '../model/GameModels.ts';
 import { db } from '../db/dbInit.ts';
 
@@ -7,14 +7,21 @@ export class GameRepository {
 
     private createGameStatement: Statement<{
         eventId: number,
-        modifiedBy: number
+        modifiedBy: number,
+        timestamp: string
     }, void> = db.prepare(
-        `INSERT INTO game (eventId, modifiedBy) 
-         VALUES (:eventId, :modifiedBy)`
+        `INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt) 
+         VALUES (:eventId, :modifiedBy, :timestamp, :timestamp)`
     );
 
-    createGame(eventId: number, modifiedBy: number): number {
-        return Number(this.createGameStatement.run({ eventId, modifiedBy }).lastInsertRowid);
+    createGame(eventId: number, modifiedBy: number, timestamp: Date): number {
+        return Number(
+            this.createGameStatement.run({
+                eventId,
+                modifiedBy,
+                timestamp: dateToSqliteString(timestamp)
+            }).lastInsertRowid
+        );
     }
 
     private addGamePlayerStatement: Statement<{
@@ -32,11 +39,12 @@ export class GameRepository {
         this.addGamePlayerStatement.run({ gameId, userId, points, startPlace, modifiedBy });
     }
 
-    private findGameByIdStatement: Statement<{ id: number }, Game> =
+    private findGameByIdStatement: Statement<{ id: number }, GameDBEntity> =
         db.prepare('SELECT * FROM game WHERE id = :id');
 
     findGameById(gameId: number): Game | undefined {
-        return this.findGameByIdStatement.get({ id: gameId });
+        const gameDBEntity = this.findGameByIdStatement.get({ id: gameId });
+        return gameDBEntity !== undefined ? gameFromDBEntity(gameDBEntity) : undefined;
     }
 
     private findGamePlayersByGameIdStatement: Statement<{ gameId: number }, GamePlayer> = db.prepare(
@@ -84,12 +92,12 @@ export class GameRepository {
 
         if (filters.dateFrom !== undefined) {
             conditions.push('g.createdAt >= ?');
-            params.push(formatDateForSqlite(filters.dateFrom));
+            params.push(dateToSqliteString(filters.dateFrom));
         }
 
         if (filters.dateTo !== undefined) {
             conditions.push('g.createdAt <= ?');
-            params.push(formatDateForSqlite(filters.dateTo));
+            params.push(dateToSqliteString(filters.dateTo));
         }
 
         if (filters.eventId !== undefined) {
@@ -103,8 +111,8 @@ export class GameRepository {
 
         query += ' ORDER BY g.createdAt';
 
-        const statement: Statement<any[], Game> = db.prepare(query);
-        return statement.all(...params);
+        const statement: Statement<any[], GameDBEntity> = db.prepare(query);
+        return statement.all(...params).map(gameFromDBEntity);
     }
 
     private updateGameStatement: Statement<{
@@ -133,5 +141,21 @@ export class GameRepository {
 
     deleteGameById(gameId: number): void {
         this.deleteGameByIdStatement.run({ id: gameId });
+    }
+}
+
+interface GameDBEntity {
+    id: number;
+    eventId: number;
+    createdAt: string;
+    modifiedAt: string;
+    modifiedBy: number;
+}
+
+function gameFromDBEntity(dbEntity: GameDBEntity): Game {
+    return { 
+        ...dbEntity,
+        createdAt: dateFromSqliteString(dbEntity.createdAt),
+        modifiedAt: dateFromSqliteString(dbEntity.modifiedAt)
     }
 }

@@ -5,6 +5,7 @@ import config from '../config/config.ts';
 
 import userRoutes from './routes/UserRoutes.ts';
 import gameRoutes from './routes/GameRoutes.ts';
+import ratingRoutes from './routes/RatingRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
 
 const app = express();
@@ -13,6 +14,7 @@ app.use(cors());
 
 app.use('/api/users', userRoutes);
 app.use('/api/games', gameRoutes);
+app.use('/api', ratingRoutes);
 
 app.use(handleErrors);
 
