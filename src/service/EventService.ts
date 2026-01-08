@@ -1,4 +1,5 @@
-import { EventNotFoundError } from "../error/EventErrors.ts";
+import { EventNotFoundError, GameRulesNotFoundError } from "../error/EventErrors.ts";
+import type { GameRules } from "../model/EventModels.ts";
 import { EventRepository } from "../repository/EventRepository.ts";
 
 export class EventService {
@@ -10,5 +11,13 @@ export class EventService {
         if (!event) {
             throw new EventNotFoundError(eventId);
         }
+    }
+
+    getGameRulesByEventId(eventId: number): GameRules {
+        const gameRules = this.eventRepository.findGameRulesByEventId(eventId);
+        if (!gameRules) {
+            throw new GameRulesNotFoundError(eventId);
+        }
+        return gameRules;
     }
 }

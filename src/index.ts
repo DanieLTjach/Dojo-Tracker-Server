@@ -6,6 +6,7 @@ import config from '../config/config.ts';
 import authRoutes from './routes/AuthRoutes.ts';
 import userRoutes from './routes/UserRoutes.ts';
 import gameRoutes from './routes/GameRoutes.ts';
+import ratingRoutes from './routes/RatingRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/api/auth', authRoutes);
 // Protected routes (will add auth middleware later)
 app.use('/api/users', userRoutes);
 app.use('/api/games', gameRoutes);
+app.use('/api', ratingRoutes);
 
 app.use(handleErrors);
 

@@ -1,13 +1,11 @@
 import { z } from 'zod';
 import { userIdParamSchema, userIdSchema } from './UserSchemas.ts';
+import { eventIdParamSchema, eventIdSchema } from './EventSchemas.ts';
+import { dateSchema } from './CommonSchemas.ts';
 
 export const gameStartPlace = z.enum(['EAST', 'WEST', 'NORTH', 'SOUTH']);
 
 export const gameIdParamSchema = z.coerce.number().int("Game ID must be an integer")
-const eventIdSchema = z.number().int("Event ID must be an integer");
-const eventIdParamSchema = z.coerce.number().int("Event ID must be an integer");
-
-const dateSchema = z.coerce.date("Invalid date format");
 
 const playerDataSchema = z.object({
     userId: userIdSchema,

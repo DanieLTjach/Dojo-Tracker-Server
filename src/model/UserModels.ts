@@ -5,7 +5,12 @@ export interface User {
     telegramId: number | null;
     isAdmin: boolean;
     isActive: boolean;
-    createdAt: string;
-    modifiedAt: string;
+    createdAt: Date;
+    modifiedAt: Date;
     modifiedBy: string;
+}
+
+export interface UserShortDTO {
+    id: number;
+    name: string;
 }

@@ -1,6 +1,6 @@
 import { GameRepository } from '../repository/GameRepository.ts';
 import { UserService } from '../service/UserService.ts';
-import { 
+import {
     GameNotFoundById,
     IncorrectPlayerCountError,
     DuplicatePlayerError,
@@ -8,27 +8,34 @@ import {
 } from '../error/GameErrors.ts';
 import type { GameWithPlayers, PlayerData, GameFilters } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
+import type { GameRules } from '../model/EventModels.ts';
+import { RatingService } from './RatingService.ts';
 
 export class GameService {
 
     private gameRepository: GameRepository = new GameRepository();
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
+    private ratingService: RatingService = new RatingService();
 
-    createGame(
+    addGame(
         eventId: number,
         playersData: PlayerData[],
         createdBy: number
     ): GameWithPlayers {
+        const timestamp = new Date();
         this.userService.validateUserIsActiveById(createdBy);
 
         this.eventService.validateEventExists(eventId);
-        this.validatePlayers(playersData);
+        const gameRules = this.eventService.getGameRulesByEventId(eventId);
+        this.validatePlayers(playersData, gameRules);
 
-        const newGameId = this.gameRepository.createGame(eventId, createdBy);
+        const newGameId = this.gameRepository.createGame(eventId, createdBy, timestamp);
         this.addPlayersToGame(newGameId, playersData, createdBy);
 
-        return this.getGameById(newGameId);
+        const newGame = this.getGameById(newGameId);
+        this.ratingService.addRatingChangesFromGame(newGame, gameRules);
+        return newGame;
     }
 
     getGameById(gameId: number): GameWithPlayers {
@@ -68,21 +75,26 @@ export class GameService {
     ): GameWithPlayers {
         this.userService.validateUserIsAdmin(modifiedBy);
 
-        this.validateGameExists(gameId);
+        const game = this.getGameById(gameId);
         this.eventService.validateEventExists(eventId);
-        this.validatePlayers(playersData);
+        const gameRules = this.eventService.getGameRulesByEventId(eventId);
+        this.validatePlayers(playersData, gameRules);
 
         this.gameRepository.updateGame(gameId, eventId, modifiedBy);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.addPlayersToGame(gameId, playersData, modifiedBy);
-        
-        return this.getGameById(gameId);
+
+        this.ratingService.deleteRatingChangesFromGame(game);
+        const newGame = this.getGameById(gameId);
+        this.ratingService.addRatingChangesFromGame(newGame, gameRules);
+        return newGame;
     }
 
     deleteGame(gameId: number, deletedBy: number): void {
         this.userService.validateUserIsAdmin(deletedBy);
 
-        this.validateGameExists(gameId);
+        const game = this.getGameById(gameId);
+        this.ratingService.deleteRatingChangesFromGame(game);
 
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.gameRepository.deleteGameById(gameId);
@@ -97,20 +109,11 @@ export class GameService {
         }
     }
 
-    private validateGameExists(gameId: number): void {
-        const game = this.gameRepository.findGameById(gameId);
-        if (!game) {
-            throw new GameNotFoundById(gameId);
+    private validatePlayers(playersData: PlayerData[], gameRules: GameRules): void {
+        if (playersData.length !== gameRules.numberOfPlayers) {
+            throw new IncorrectPlayerCountError(gameRules.numberOfPlayers);
         }
-    }
 
-    private validatePlayers(playersData: PlayerData[]): void {
-        // TODO: add validation based on event rules
-        const requiredPlayersCount = 4;
-        if (playersData.length !== requiredPlayersCount) {
-            throw new IncorrectPlayerCountError(requiredPlayersCount);
-        }
-        
         for (const playerData of playersData) {
             this.userService.validateUserIsActiveById(playerData.userId);
         }

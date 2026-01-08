@@ -17,7 +17,7 @@ export class GameController {
         const { body: { eventId, playersData } } = gameCreationSchema.parse(req);
         // createdBy comes from authenticated user
         const createdBy = req.user!.userId;
-        const newGame = this.gameService.createGame(eventId, playersData, createdBy);
+        const newGame = this.gameService.addGame(eventId, playersData, createdBy);
         return res.status(StatusCodes.CREATED).json(newGame);
     }
 
