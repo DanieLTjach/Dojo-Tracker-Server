@@ -1,9 +1,8 @@
-import { EventNotFoundError, GameRulesNotFoundError } from "../error/EventErrors.ts";
-import type { GameRules } from "../model/EventModels.ts";
-import { EventRepository } from "../repository/EventRepository.ts";
+import { EventNotFoundError, GameRulesNotFoundError } from '../error/EventErrors.ts';
+import type { GameRules } from '../model/EventModels.ts';
+import { EventRepository } from '../repository/EventRepository.ts';
 
 export class EventService {
-
     private eventRepository: EventRepository = new EventRepository();
 
     validateEventExists(eventId: number): void {

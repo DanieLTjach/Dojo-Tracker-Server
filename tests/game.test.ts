@@ -39,7 +39,7 @@ describe('Game API Endpoints', () => {
             .send({
                 name,
                 telegramUsername: `@${name.toLowerCase()}`,
-                telegramId
+                telegramId,
             });
 
         return response.body.id;
@@ -72,8 +72,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 35000, startPlace: 'EAST' },
                         { userId: testUser2Id, points: 28000, startPlace: 'SOUTH' },
                         { userId: testUser3Id, points: 22000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, points: 15000, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(201);
@@ -83,7 +83,7 @@ describe('Game API Endpoints', () => {
             expect(response.body.players[0]).toMatchObject({
                 userId: testUser1Id,
                 points: 35000,
-                startPlace: 'EAST'
+                startPlace: 'EAST',
             });
 
             testGameId = response.body.id; // Save for later tests
@@ -99,8 +99,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(201);
@@ -116,8 +116,8 @@ describe('Game API Endpoints', () => {
                     playersData: [
                         { userId: testUser1Id, points: 35000 },
                         { userId: testUser2Id, points: 30000 },
-                        { userId: testUser3Id, points: 25000 }
-                    ]
+                        { userId: testUser3Id, points: 25000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -135,8 +135,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 },
-                        { userId: testUser1Id, points: 30000 }
-                    ]
+                        { userId: testUser1Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -153,8 +153,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 35000 },
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 20000 }
-                    ]
+                        { userId: testUser4Id, points: 20000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -171,8 +171,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 35000, startPlace: 'EAST' },
                         { userId: testUser2Id, points: 30000, startPlace: 'EAST' },
                         { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -189,8 +189,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(404);
@@ -207,8 +207,8 @@ describe('Game API Endpoints', () => {
                         { userId: 99999, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(404);
@@ -225,8 +225,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000.5 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -243,8 +243,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000, startPlace: 'INVALID' },
                         { userId: testUser2Id, points: 30000, startPlace: 'SOUTH' },
                         { userId: testUser3Id, points: 30000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 30000, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, points: 30000, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -253,9 +253,7 @@ describe('Game API Endpoints', () => {
 
     describe('GET /api/games/:gameId - Get Game by ID', () => {
         test('should retrieve a game by ID', async () => {
-            const response = await request(app)
-                .get(`/api/games/${testGameId}`)
-                .set('Authorization', user1AuthHeader);
+            const response = await request(app).get(`/api/games/${testGameId}`).set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
             expect(response.body.id).toBe(testGameId);
@@ -266,18 +264,14 @@ describe('Game API Endpoints', () => {
         });
 
         test('should fail with non-existent game ID', async () => {
-            const response = await request(app)
-                .get('/api/games/99999')
-                .set('Authorization', user1AuthHeader);
+            const response = await request(app).get('/api/games/99999').set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(404);
             expect(response.body.message).toContain('Game');
         });
 
         test('should fail with invalid game ID (non-integer)', async () => {
-            const response = await request(app)
-                .get('/api/games/invalid')
-                .set('Authorization', user1AuthHeader);
+            const response = await request(app).get('/api/games/invalid').set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBe('Invalid request data');
@@ -286,9 +280,7 @@ describe('Game API Endpoints', () => {
 
     describe('GET /api/games - Get Games with Filters', () => {
         test('should retrieve all games without filters', async () => {
-            const response = await request(app)
-                .get('/api/games')
-                .set('Authorization', user1AuthHeader);
+            const response = await request(app).get('/api/games').set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
@@ -369,9 +361,7 @@ describe('Game API Endpoints', () => {
         });
 
         test('should return empty array for non-existent userId filter', async () => {
-            const response = await request(app)
-                .get('/api/games?userId=99999')
-                .set('Authorization', user1AuthHeader);
+            const response = await request(app).get('/api/games?userId=99999').set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(404);
             expect(response.body.message).toContain('User');
@@ -398,8 +388,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
                         { userId: testUser2Id, points: 30000, startPlace: 'SOUTH' },
                         { userId: testUser3Id, points: 20000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 10000, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, points: 10000, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(200);
@@ -417,8 +407,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(403);
@@ -435,8 +425,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(404);
@@ -451,8 +441,8 @@ describe('Game API Endpoints', () => {
                     eventId: TEST_EVENT_ID,
                     playersData: [
                         { userId: testUser1Id, points: 30000 },
-                        { userId: testUser2Id, points: 30000 }
-                    ]
+                        { userId: testUser2Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -469,8 +459,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -492,8 +482,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
             gameToDeleteId = response.body.id;
         });
@@ -523,18 +513,14 @@ describe('Game API Endpoints', () => {
         });
 
         test('should fail to delete non-existent game', async () => {
-            const response = await request(app)
-                .delete('/api/games/99999')
-                .set('Authorization', adminAuthHeader);
+            const response = await request(app).delete('/api/games/99999').set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(404);
             expect(response.body.message).toContain('Game');
         });
 
         test('should fail to delete game with invalid ID', async () => {
-            const response = await request(app)
-                .delete('/api/games/invalid')
-                .set('Authorization', adminAuthHeader);
+            const response = await request(app).delete('/api/games/invalid').set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBe('Invalid request data');

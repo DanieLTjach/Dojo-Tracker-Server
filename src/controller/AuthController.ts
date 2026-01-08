@@ -66,7 +66,7 @@ export class AuthController {
 
         if (!initData || typeof initData !== 'string') {
             return res.status(StatusCodes.BAD_REQUEST).json({
-                error: 'initData is required in Authorization header (format: "tma <initDataRaw>") or request body'
+                error: 'initData is required in Authorization header (format: "tma <initDataRaw>") or request body',
             });
         }
 
@@ -75,7 +75,7 @@ export class AuthController {
 
         if (!validatedData.user) {
             return res.status(StatusCodes.BAD_REQUEST).json({
-                error: 'User data is missing from initData'
+                error: 'User data is missing from initData',
             });
         }
 
@@ -98,9 +98,9 @@ export class AuthController {
                 name: user.name,
                 telegramUsername: user.telegramUsername,
                 isAdmin: !!user.isAdmin,
-                isActive: !!user.isActive
+                isActive: !!user.isActive,
             },
-            isNewUser
+            isNewUser,
         });
     }
 }

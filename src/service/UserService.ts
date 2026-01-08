@@ -6,14 +6,13 @@ import {
     UserWithThisNameAlreadyExists,
     UserWithThisTelegramIdAlreadyExists,
     UserWithThisTelegramUsernameAlreadyExists,
-    UserIsNotActive
+    UserIsNotActive,
 } from '../error/UserErrors.ts';
 import type { User } from '../model/UserModels.ts';
 import type { TelegramUser } from '../model/AuthModels.ts';
 import { SYSTEM_USER_ID } from '../../config/constants.ts';
 
 export class UserService {
-
     private userRepository: UserRepository = new UserRepository();
 
     registerUser(
@@ -86,29 +85,19 @@ export class UserService {
         const userName = telegramUser?.username
             ? `@${telegramUser.username}`
             : telegramUser?.first_name
-            ? `${telegramUser.first_name}${telegramUser.last_name ? ' ' + telegramUser.last_name : ''}`
-            : `TelegramUser${telegramId}`;
+              ? `${telegramUser.first_name}${telegramUser.last_name ? ' ' + telegramUser.last_name : ''}`
+              : `TelegramUser${telegramId}`;
 
         const telegramUsername = telegramUser?.username ? `@${telegramUser.username}` : undefined;
 
         // Create new user (using SYSTEM as creator for auto-registration)
-        const newUserId = this.userRepository.registerUser(
-            userName,
-            telegramUsername,
-            telegramId,
-            SYSTEM_USER_ID
-        );
+        const newUserId = this.userRepository.registerUser(userName, telegramUsername, telegramId, SYSTEM_USER_ID);
 
         const newUser = this.getUserById(newUserId);
         return { user: newUser, isNewUser: true };
     }
 
-    editUser(
-        userId: number,
-        name: string | undefined,
-        telegramUsername: string | undefined,
-        modifiedBy: number
-    ): User {
+    editUser(userId: number, name: string | undefined, telegramUsername: string | undefined, modifiedBy: number): User {
         if (userId !== modifiedBy) {
             this.validateUserIsAdmin(modifiedBy);
         }

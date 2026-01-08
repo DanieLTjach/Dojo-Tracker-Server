@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import Database from 'better-sqlite3'
+import Database from 'better-sqlite3';
 import config from '../../config/config.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -41,7 +41,8 @@ function getMigrationFiles() {
         return [];
     }
 
-    const files = fs.readdirSync(migrationsDir)
+    const files = fs
+        .readdirSync(migrationsDir)
         .filter(file => file.match(/^\d+\.sql$/))
         .sort((a, b) => {
             const numA = parseInt(a.split('.')[0]!);

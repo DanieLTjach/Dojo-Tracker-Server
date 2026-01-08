@@ -8,7 +8,7 @@ import {
     UserNotFoundByName,
     MissingUserInformationError,
     UserIsNotAdmin,
-    UserIsNotActive
+    UserIsNotActive,
 } from '../src/error/UserErrors.ts';
 import { StatusCodes } from 'http-status-codes';
 

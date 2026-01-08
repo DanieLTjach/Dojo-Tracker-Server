@@ -15,10 +15,7 @@ export class HashUtil {
         const keyBuffer = typeof key === 'string' ? Buffer.from(key) : key;
         const dataBuffer = typeof data === 'string' ? Buffer.from(data) : data;
 
-        return crypto
-            .createHmac('sha256', keyBuffer)
-            .update(dataBuffer)
-            .digest();
+        return crypto.createHmac('sha256', keyBuffer).update(dataBuffer).digest();
     }
 
     /**

@@ -1,10 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { TokenService } from '../service/TokenService.ts';
-import {
-    MissingAuthTokenError,
-    InvalidAuthTokenError,
-    InsufficientPermissionsError
-} from '../error/AuthErrors.ts';
+import { MissingAuthTokenError, InvalidAuthTokenError, InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import { UserIsNotActive } from '../error/UserErrors.ts';
 import type { DecodedToken } from '../model/AuthModels.ts';
 

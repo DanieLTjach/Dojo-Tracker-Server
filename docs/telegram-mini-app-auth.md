@@ -29,34 +29,37 @@ Authenticates Telegram Mini App users using initData.
 **Request Options:**
 
 1. **Authorization Header (Recommended):**
-   ```http
-   POST /api/auth/telegram
-   Authorization: tma <initDataRaw>
-   ```
+
+    ```http
+    POST /api/auth/telegram
+    Authorization: tma <initDataRaw>
+    ```
 
 2. **Request Body (Alternative):**
-   ```http
-   POST /api/auth/telegram
-   Content-Type: application/json
 
-   {
-     "initData": "<initDataRaw>"
-   }
-   ```
+    ```http
+    POST /api/auth/telegram
+    Content-Type: application/json
+
+    {
+      "initData": "<initDataRaw>"
+    }
+    ```
 
 **Success Response (200 OK):**
+
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "telegramId": 123456789,
-    "name": "John",
-    "telegramUsername": "@john",
-    "isAdmin": false,
-    "isActive": true
-  },
-  "isNewUser": false
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+        "id": 1,
+        "telegramId": 123456789,
+        "name": "John",
+        "telegramUsername": "@john",
+        "isAdmin": false,
+        "isActive": true
+    },
+    "isNewUser": false
 }
 ```
 
@@ -74,21 +77,27 @@ Authenticates Telegram Mini App users using initData.
 For local testing without a real Telegram bot token:
 
 **Backend Setup:**
+
 ```env
 NODE_ENV=development
 # Leave TELEGRAM_BOT_TOKEN empty or unset
 ```
 
 **Frontend Mock Data:**
+
 ```typescript
-const mockInitData = 'query_id=test&user=' +
-  encodeURIComponent(JSON.stringify({
-    id: 123456789,
-    first_name: "Test",
-    username: "testuser"
-  })) +
-  '&auth_date=' + Math.floor(Date.now() / 1000) +
-  '&hash=dev_mode_hash';  // Special dev mode hash
+const mockInitData =
+    'query_id=test&user=' +
+    encodeURIComponent(
+        JSON.stringify({
+            id: 123456789,
+            first_name: 'Test',
+            username: 'testuser',
+        })
+    ) +
+    '&auth_date=' +
+    Math.floor(Date.now() / 1000) +
+    '&hash=dev_mode_hash'; // Special dev mode hash
 ```
 
 When the backend detects `hash=dev_mode_hash` and `NODE_ENV=development`, it skips cryptographic validation.
@@ -98,6 +107,7 @@ When the backend detects `hash=dev_mode_hash` and `NODE_ENV=development`, it ski
 ## Environment Variables
 
 **Required for Production:**
+
 ```env
 NODE_ENV=production
 TELEGRAM_BOT_TOKEN=your_bot_token_from_botfather
@@ -105,6 +115,7 @@ JWT_SECRET=your_secure_random_secret
 ```
 
 **Optional:**
+
 ```env
 JWT_EXPIRY=24h
 AUTH_INIT_DATA_VALIDITY_SECONDS=86400

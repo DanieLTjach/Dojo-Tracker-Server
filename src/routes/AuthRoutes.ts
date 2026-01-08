@@ -15,7 +15,10 @@ const authController = new AuthController();
  *
  * No authentication required (public endpoint).
  */
-router.post('/telegram', withTransaction((req, res) => authController.authenticateWithTelegram(req, res)));
+router.post(
+    '/telegram',
+    withTransaction((req, res) => authController.authenticateWithTelegram(req, res))
+);
 
 /**
  * POST /api/auth/authenticate (LEGACY)
@@ -26,6 +29,9 @@ router.post('/telegram', withTransaction((req, res) => authController.authentica
  *
  * Note: Use /api/auth/telegram instead (cleaner API)
  */
-router.post('/authenticate', withTransaction((req, res) => authController.authenticate(req, res)));
+router.post(
+    '/authenticate',
+    withTransaction((req, res) => authController.authenticate(req, res))
+);
 
 export default router;

@@ -28,6 +28,7 @@ The Dojo Tracker Server uses JWT (JSON Web Token) authentication to secure API e
 ### Protected Endpoints
 
 All endpoints under `/api/users` and `/api/games` require authentication:
+
 - `GET`, `POST`, `PUT`, `PATCH`, `DELETE` operations
 - Both admin and non-admin users require authentication
 - Admin-only operations are enforced at the endpoint level
@@ -72,6 +73,7 @@ Authenticate a user using their Telegram credentials. If the user doesn't exist,
 **Endpoint:** `POST /api/auth/login`
 
 **Request Body:**
+
 - `telegramId` (number, required): Telegram user ID (integer)
 - `telegramUsername` (string, optional): Telegram username (e.g., "@username")
 
@@ -92,18 +94,18 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInRlbGVncmFtSWQiOjEyMzQ1Njc4OSwiaXNBZG1pbiI6ZmFsc2UsImlzQWN0aXZlIjp0cnVlLCJpYXQiOjE3MDUzMjE4MDAsImV4cCI6MTcwNTQwODIwMH0.signature",
-  "user": {
-    "id": 1,
-    "name": "John Doe",
-    "telegramUsername": "@johndoe",
-    "telegramId": 123456789,
-    "isAdmin": 0,
-    "isActive": 1,
-    "createdAt": "2024-01-15T10:30:00.000Z",
-    "modifiedAt": "2024-01-15T10:30:00.000Z",
-    "modifiedBy": "SYSTEM"
-  }
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInRlbGVncmFtSWQiOjEyMzQ1Njc4OSwiaXNBZG1pbiI6ZmFsc2UsImlzQWN0aXZlIjp0cnVlLCJpYXQiOjE3MDUzMjE4MDAsImV4cCI6MTcwNTQwODIwMH0.signature",
+    "user": {
+        "id": 1,
+        "name": "John Doe",
+        "telegramUsername": "@johndoe",
+        "telegramId": 123456789,
+        "isAdmin": 0,
+        "isActive": 1,
+        "createdAt": "2024-01-15T10:30:00.000Z",
+        "modifiedAt": "2024-01-15T10:30:00.000Z",
+        "modifiedBy": "SYSTEM"
+    }
 }
 ```
 
@@ -111,22 +113,23 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 5,
-    "name": "User_123456789",
-    "telegramUsername": "@johndoe",
-    "telegramId": 123456789,
-    "isAdmin": 0,
-    "isActive": 1,
-    "createdAt": "2024-01-15T14:30:00.000Z",
-    "modifiedAt": "2024-01-15T14:30:00.000Z",
-    "modifiedBy": "SYSTEM"
-  }
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+        "id": 5,
+        "name": "User_123456789",
+        "telegramUsername": "@johndoe",
+        "telegramId": 123456789,
+        "isAdmin": 0,
+        "isActive": 1,
+        "createdAt": "2024-01-15T14:30:00.000Z",
+        "modifiedAt": "2024-01-15T14:30:00.000Z",
+        "modifiedBy": "SYSTEM"
+    }
 }
 ```
 
 **Errors:**
+
 - `400 Bad Request` - If telegramId is missing or invalid
 - `403 Forbidden` - If the user account is deactivated
 - `500 Internal Server Error` - If auto-registration fails
@@ -138,14 +141,15 @@ curl -X POST http://localhost:3000/api/auth/login \
 When a user logs in for the first time (not found in the database), the system automatically creates a new user account:
 
 **Auto-Registration Behavior:**
+
 1. System checks if user with `telegramId` exists
 2. If not found, creates a new user with:
-   - `name`: Auto-generated as `User_{telegramId}`
-   - `telegramUsername`: From login request (if provided)
-   - `telegramId`: From login request
-   - `isAdmin`: `0` (false)
-   - `isActive`: `1` (true)
-   - `createdBy`: System user (ID: 0)
+    - `name`: Auto-generated as `User_{telegramId}`
+    - `telegramUsername`: From login request (if provided)
+    - `telegramId`: From login request
+    - `isAdmin`: `0` (false)
+    - `isActive`: `1` (true)
+    - `createdBy`: System user (ID: 0)
 3. Returns JWT token for the newly created user
 
 **Note:** Auto-registered users can later update their name and username through the `/api/users/:id` PATCH endpoint.
@@ -172,6 +176,7 @@ curl -X GET http://localhost:3000/api/users \
 ### Token Storage
 
 **Best Practices:**
+
 - Store tokens securely (e.g., secure HTTP-only cookies, secure storage)
 - Never expose tokens in URLs or logs
 - Clear tokens on logout
@@ -184,16 +189,17 @@ JWT tokens contain the following claims:
 
 ```json
 {
-  "userId": 1,
-  "telegramId": 123456789,
-  "isAdmin": false,
-  "isActive": true,
-  "iat": 1705321800,
-  "exp": 1705408200
+    "userId": 1,
+    "telegramId": 123456789,
+    "isAdmin": false,
+    "isActive": true,
+    "iat": 1705321800,
+    "exp": 1705408200
 }
 ```
 
 **Claims:**
+
 - `userId` (number): Internal user ID
 - `telegramId` (number): Telegram user ID
 - `isAdmin` (boolean): Whether the user has admin privileges
@@ -213,16 +219,16 @@ Returned when the request is malformed or missing required fields.
 
 ```json
 {
-  "error": "Invalid request data",
-  "details": [
-    {
-      "code": "invalid_type",
-      "expected": "number",
-      "received": "undefined",
-      "path": ["body", "telegramId"],
-      "message": "Required"
-    }
-  ]
+    "error": "Invalid request data",
+    "details": [
+        {
+            "code": "invalid_type",
+            "expected": "number",
+            "received": "undefined",
+            "path": ["body", "telegramId"],
+            "message": "Required"
+        }
+    ]
 }
 ```
 
@@ -232,13 +238,13 @@ Returned when the JWT token is missing, invalid, or expired.
 
 ```json
 {
-  "message": "Authentication required"
+    "message": "Authentication required"
 }
 ```
 
 ```json
 {
-  "message": "Invalid or expired token"
+    "message": "Invalid or expired token"
 }
 ```
 
@@ -248,8 +254,8 @@ Returned when the user account is deactivated.
 
 ```json
 {
-  "errorCode": "userIsNotActive",
-  "message": "User with id {id} is not active"
+    "errorCode": "userIsNotActive",
+    "message": "User with id {id} is not active"
 }
 ```
 
@@ -257,7 +263,7 @@ Returned when trying to perform admin-only operations without admin privileges.
 
 ```json
 {
-  "message": "Insufficient permissions to perform this action"
+    "message": "Insufficient permissions to perform this action"
 }
 ```
 
@@ -267,7 +273,7 @@ Returned when auto-registration or token generation fails.
 
 ```json
 {
-  "message": "Failed to auto-register user"
+    "message": "Failed to auto-register user"
 }
 ```
 

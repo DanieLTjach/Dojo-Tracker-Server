@@ -37,20 +37,17 @@ describe('Rating API Endpoints', () => {
             .send({
                 name,
                 telegramUsername: `@${name.toLowerCase()}`,
-                telegramId
+                telegramId,
             });
         return response.body.id;
     }
 
     // Helper to create a test game
     async function createTestGame(authHeader: string, playersData: any[]): Promise<number> {
-        const response = await request(app)
-            .post('/api/games')
-            .set('Authorization', authHeader)
-            .send({
-                eventId: TEST_EVENT_ID,
-                playersData
-            });
+        const response = await request(app).post('/api/games').set('Authorization', authHeader).send({
+            eventId: TEST_EVENT_ID,
+            playersData,
+        });
         return response.body.id;
     }
 
@@ -68,7 +65,7 @@ describe('Rating API Endpoints', () => {
             { userId: testUser1Id, points: 35000, startPlace: 'EAST' },
             { userId: testUser2Id, points: 28000, startPlace: 'SOUTH' },
             { userId: testUser3Id, points: 22000, startPlace: 'WEST' },
-            { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
+            { userId: testUser4Id, points: 15000, startPlace: 'NORTH' },
         ]);
     });
 
@@ -111,16 +108,13 @@ describe('Rating API Endpoints', () => {
         });
 
         test('should return 404 for non-existent event', async () => {
-            const response = await request(app)
-                .get('/api/events/99999/rating')
-                .set('Authorization', user1AuthHeader);
+            const response = await request(app).get('/api/events/99999/rating').set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(404);
         });
 
         test('should require authentication', async () => {
-            const response = await request(app)
-                .get(`/api/events/${TEST_EVENT_ID}/rating`);
+            const response = await request(app).get(`/api/events/${TEST_EVENT_ID}/rating`);
 
             expect(response.status).toBe(401);
         });
@@ -217,7 +211,7 @@ describe('Rating API Endpoints', () => {
                 { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
                 { userId: testUser2Id, points: 25000, startPlace: 'SOUTH' },
                 { userId: testUser3Id, points: 20000, startPlace: 'WEST' },
-                { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
+                { userId: testUser4Id, points: 15000, startPlace: 'NORTH' },
             ]);
 
             const response = await request(app)
@@ -263,8 +257,7 @@ describe('Rating API Endpoints', () => {
         });
 
         test('should require authentication', async () => {
-            const response = await request(app)
-                .get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/rating/history`);
+            const response = await request(app).get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/rating/history`);
 
             expect(response.status).toBe(401);
         });
@@ -281,7 +274,7 @@ describe('Rating API Endpoints', () => {
                 { userId: freshUserId, points: 40000, startPlace: 'EAST' },
                 { userId: testUser2Id, points: 25000, startPlace: 'SOUTH' },
                 { userId: testUser3Id, points: 20000, startPlace: 'WEST' },
-                { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
+                { userId: testUser4Id, points: 15000, startPlace: 'NORTH' },
             ]);
 
             // Get rating history

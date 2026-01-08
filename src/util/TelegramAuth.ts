@@ -51,7 +51,7 @@ export function validateTelegramInitData(initDataString: string): TelegramInitDa
                 query_id: params.get('query_id') || undefined,
                 user,
                 auth_date: authDate,
-                hash
+                hash,
             };
         }
 
@@ -70,16 +70,10 @@ export function validateTelegramInitData(initDataString: string): TelegramInitDa
             .join('\n');
 
         // Create secret key from bot token
-        const secretKey = crypto
-            .createHmac('sha256', 'WebAppData')
-            .update(config.telegramBotToken)
-            .digest();
+        const secretKey = crypto.createHmac('sha256', 'WebAppData').update(config.telegramBotToken).digest();
 
         // Calculate hash
-        const calculatedHash = crypto
-            .createHmac('sha256', secretKey)
-            .update(dataCheckString)
-            .digest('hex');
+        const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
         // Verify hash
         if (calculatedHash !== hash) {
@@ -107,7 +101,7 @@ export function validateTelegramInitData(initDataString: string): TelegramInitDa
             query_id: params.get('query_id') || undefined,
             user,
             auth_date: authDate,
-            hash
+            hash,
         };
     } catch (error) {
         if (error instanceof Error) {

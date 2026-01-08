@@ -2,10 +2,7 @@ import { HashUtil } from '../util/HashUtil.ts';
 import { UserService } from './UserService.ts';
 import { TokenService } from './TokenService.ts';
 import type { TokenPair, TelegramUser } from '../model/AuthModels.ts';
-import {
-    InvalidInitDataError,
-    ExpiredAuthDataError
-} from '../error/AuthErrors.ts';
+import { InvalidInitDataError, ExpiredAuthDataError } from '../error/AuthErrors.ts';
 import config from '../../config/config.ts';
 
 export class AuthService {
@@ -53,9 +50,9 @@ export class AuthService {
                 name: user.name,
                 telegramUsername: user.telegramUsername,
                 isAdmin: !!user.isAdmin,
-                isActive: !!user.isActive
+                isActive: !!user.isActive,
             },
-            isNewUser
+            isNewUser,
         };
     }
 
@@ -105,7 +102,7 @@ export class AuthService {
 
         const authDateTimestamp = authDate * 1000; // Convert to milliseconds
         const now = Date.now();
-        const expiryTime = authDateTimestamp + (this.initDataValiditySeconds * 1000);
+        const expiryTime = authDateTimestamp + this.initDataValiditySeconds * 1000;
 
         if (now > expiryTime) {
             throw new ExpiredAuthDataError();

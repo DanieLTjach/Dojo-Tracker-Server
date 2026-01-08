@@ -16,12 +16,12 @@ describe('ErrorHandling Middleware', () => {
         mockReq = {
             method: 'GET',
             url: '/test',
-            body: { test: 'data' }
+            body: { test: 'data' },
         };
         mockRes = {
             status: jest.fn().mockReturnThis() as any,
             json: jest.fn().mockReturnThis() as any,
-            headersSent: false
+            headersSent: false,
         };
         mockNext = jest.fn();
         consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
@@ -38,8 +38,8 @@ describe('ErrorHandling Middleware', () => {
                 expected: 'string',
                 received: 'number',
                 path: ['name'],
-                message: 'Expected string, received number'
-            }
+                message: 'Expected string, received number',
+            },
         ]);
 
         handleErrors(zodError, mockReq as Request, mockRes as Response, mockNext);
@@ -47,7 +47,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
         expect(mockRes.json).toHaveBeenCalledWith({
             error: 'Invalid request data',
-            details: zodError.issues
+            details: zodError.issues,
         });
         expect(consoleErrorSpy).toHaveBeenCalledTimes(2);
     });
@@ -60,7 +60,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.INTERNAL_SERVER_ERROR);
         expect(mockRes.json).toHaveBeenCalledWith({
             error: 'Database error',
-            details: sqliteError.message
+            details: sqliteError.message,
         });
     });
 
@@ -72,7 +72,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
         expect(mockRes.json).toHaveBeenCalledWith({
             errorCode: 'invalidInput',
-            message: 'Invalid input'
+            message: 'Invalid input',
         });
     });
 
@@ -84,7 +84,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.NOT_FOUND);
         expect(mockRes.json).toHaveBeenCalledWith({
             errorCode: 'notFound',
-            message: 'Resource not found'
+            message: 'Resource not found',
         });
     });
 
@@ -96,7 +96,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.INTERNAL_SERVER_ERROR);
         expect(mockRes.json).toHaveBeenCalledWith({
             errorCode: undefined,
-            message: 'Something went wrong'
+            message: 'Something went wrong',
         });
     });
 
@@ -109,7 +109,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.INTERNAL_SERVER_ERROR);
         expect(mockRes.json).toHaveBeenCalledWith({
             errorCode: undefined,
-            message: 'Internal Server Error'
+            message: 'Internal Server Error',
         });
     });
 

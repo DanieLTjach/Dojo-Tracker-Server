@@ -26,15 +26,15 @@ export class TokenService {
             userId: user.id,
             telegramId: user.telegramId!,
             isAdmin: !!user.isAdmin, // Convert 0/1 to boolean
-            isActive: !!user.isActive
+            isActive: !!user.isActive,
         };
 
         const accessToken = jwt.sign(payload, this.jwtSecret, {
-            expiresIn: this.jwtExpiry
+            expiresIn: this.jwtExpiry,
         });
 
         return {
-            accessToken
+            accessToken,
             // refreshToken can be added later if needed
         };
     }

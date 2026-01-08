@@ -20,11 +20,11 @@ export function generateTestToken(
         userId,
         telegramId,
         isAdmin,
-        isActive
+        isActive,
     };
 
     return jwt.sign(payload, config.jwtSecret, {
-        expiresIn: config.jwtExpiry
+        expiresIn: config.jwtExpiry,
     });
 }
 

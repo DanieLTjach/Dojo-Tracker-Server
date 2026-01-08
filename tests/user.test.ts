@@ -35,7 +35,7 @@ describe('User API Endpoints', () => {
             const userData = {
                 name: 'Test User',
                 telegramUsername: '@testuser',
-                telegramId: 456456456
+                telegramId: 456456456,
             };
 
             const response = await request(app)
@@ -59,7 +59,7 @@ describe('User API Endpoints', () => {
             const userData = {
                 name: 'Test User 2',
                 telegramUsername: '@testuser2',
-                telegramId: 789789789
+                telegramId: 789789789,
             };
 
             const response = await request(app)
@@ -77,20 +77,17 @@ describe('User API Endpoints', () => {
             const userData = {
                 name: 'Test User 3',
                 telegramUsername: '@testuser3',
-                telegramId: 111222333
+                telegramId: 111222333,
             };
 
-            await request(app)
-                .post('/api/users')
-                .send(userData)
-                .expect(401);
+            await request(app).post('/api/users').send(userData).expect(401);
         });
 
         it('should fail when user is not admin', async () => {
             const userData = {
                 name: 'Test User 4',
                 telegramUsername: '@testuser4',
-                telegramId: 444555666
+                telegramId: 444555666,
             };
 
             await request(app)
@@ -103,63 +100,47 @@ describe('User API Endpoints', () => {
         it('should fail when name is missing', async () => {
             const userData = {
                 telegramUsername: '@testuser3',
-                telegramId: 111222333
+                telegramId: 111222333,
             };
 
-            await request(app)
-                .post('/api/users')
-                .set('Authorization', adminAuthHeader)
-                .send(userData)
-                .expect(400);
+            await request(app).post('/api/users').set('Authorization', adminAuthHeader).send(userData).expect(400);
         });
 
         it('should fail when telegram username does not start with @', async () => {
             const userData = {
                 name: 'Test User 3',
                 telegramUsername: 'testuser3',
-                telegramId: 111222333
+                telegramId: 111222333,
             };
 
-            await request(app)
-                .post('/api/users')
-                .set('Authorization', adminAuthHeader)
-                .send(userData)
-                .expect(400);
+            await request(app).post('/api/users').set('Authorization', adminAuthHeader).send(userData).expect(400);
         });
 
         it('should fail when telegram ID is not a number', async () => {
             const userData = {
                 name: 'Test User 4',
                 telegramUsername: '@testuser4',
-                telegramId: 'not-a-number'
+                telegramId: 'not-a-number',
             };
 
-            await request(app)
-                .post('/api/users')
-                .set('Authorization', adminAuthHeader)
-                .send(userData)
-                .expect(400);
+            await request(app).post('/api/users').set('Authorization', adminAuthHeader).send(userData).expect(400);
         });
 
         it('should fail when registering duplicate telegram username', async () => {
             const userData = {
                 name: 'Unique Name',
                 telegramUsername: '@testuser',
-                telegramId: 999888777
+                telegramId: 999888777,
             };
 
-            await request(app)
-                .post('/api/users')
-                .set('Authorization', adminAuthHeader)
-                .send(userData)
-                .expect(400);
+            await request(app).post('/api/users').set('Authorization', adminAuthHeader).send(userData).expect(400);
         });
     });
 
     describe('POST /api/users/without-telegram', () => {
         it('should register a new user without telegram (admin only)', async () => {
             const userData = {
-                name: 'User Without Telegram'
+                name: 'User Without Telegram',
             };
 
             const response = await request(app)
@@ -187,18 +168,15 @@ describe('User API Endpoints', () => {
 
         it('should fail when no authentication token provided', async () => {
             const userData = {
-                name: 'Another User'
+                name: 'Another User',
             };
 
-            await request(app)
-                .post('/api/users/without-telegram')
-                .send(userData)
-                .expect(401);
+            await request(app).post('/api/users/without-telegram').send(userData).expect(401);
         });
 
         it('should fail when user is not admin', async () => {
             const userData = {
-                name: 'Another User'
+                name: 'Another User',
             };
 
             await request(app)
@@ -211,19 +189,14 @@ describe('User API Endpoints', () => {
 
     describe('GET /api/users', () => {
         it('should return all users (requires auth)', async () => {
-            const response = await request(app)
-                .get('/api/users')
-                .set('Authorization', adminAuthHeader)
-                .expect(200);
+            const response = await request(app).get('/api/users').set('Authorization', adminAuthHeader).expect(200);
 
             expect(Array.isArray(response.body)).toBe(true);
             expect(response.body.length).toBeGreaterThan(0);
         });
 
         it('should fail when no authentication token provided', async () => {
-            await request(app)
-                .get('/api/users')
-                .expect(401);
+            await request(app).get('/api/users').expect(401);
         });
     });
 
@@ -239,23 +212,15 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when user id does not exist', async () => {
-            await request(app)
-                .get('/api/users/99999')
-                .set('Authorization', adminAuthHeader)
-                .expect(404);
+            await request(app).get('/api/users/99999').set('Authorization', adminAuthHeader).expect(404);
         });
 
         it('should fail when user id is not a number', async () => {
-            await request(app)
-                .get('/api/users/invalid')
-                .set('Authorization', adminAuthHeader)
-                .expect(400);
+            await request(app).get('/api/users/invalid').set('Authorization', adminAuthHeader).expect(400);
         });
 
         it('should fail when no authentication token provided', async () => {
-            await request(app)
-                .get(`/api/users/${testUserId}`)
-                .expect(401);
+            await request(app).get(`/api/users/${testUserId}`).expect(401);
         });
     });
 
@@ -285,16 +250,14 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when no authentication token provided', async () => {
-            await request(app)
-                .get('/api/users/by-telegram-id/456456456')
-                .expect(401);
+            await request(app).get('/api/users/by-telegram-id/456456456').expect(401);
         });
     });
 
     describe('PATCH /api/users/:id', () => {
         it('should update user name (requires auth)', async () => {
             const updateData = {
-                name: 'Updated User Name'
+                name: 'Updated User Name',
             };
 
             const response = await request(app)
@@ -309,7 +272,7 @@ describe('User API Endpoints', () => {
 
         it('should update user telegram username', async () => {
             const updateData = {
-                telegramUsername: '@updatedusername'
+                telegramUsername: '@updatedusername',
             };
 
             const response = await request(app)
@@ -324,7 +287,7 @@ describe('User API Endpoints', () => {
         it('should update both name and telegram username', async () => {
             const updateData = {
                 name: 'Another Update',
-                telegramUsername: '@anotherupdate'
+                telegramUsername: '@anotherupdate',
             };
 
             const response = await request(app)
@@ -349,18 +312,15 @@ describe('User API Endpoints', () => {
 
         it('should fail when no authentication token provided', async () => {
             const updateData = {
-                name: 'Test Name'
+                name: 'Test Name',
             };
 
-            await request(app)
-                .patch(`/api/users/${testUserId}`)
-                .send(updateData)
-                .expect(401);
+            await request(app).patch(`/api/users/${testUserId}`).send(updateData).expect(401);
         });
 
         it('should fail when user id does not exist', async () => {
             const updateData = {
-                name: 'Test Name'
+                name: 'Test Name',
             };
 
             await request(app)
@@ -384,10 +344,7 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when no authentication token provided', async () => {
-            await request(app)
-                .post(`/api/users/${testUserId}/activate`)
-                .send({})
-                .expect(401);
+            await request(app).post(`/api/users/${testUserId}/activate`).send({}).expect(401);
         });
 
         it('should fail when user is not admin', async () => {
@@ -420,10 +377,7 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when no authentication token provided', async () => {
-            await request(app)
-                .post(`/api/users/${testUserId}/deactivate`)
-                .send({})
-                .expect(401);
+            await request(app).post(`/api/users/${testUserId}/deactivate`).send({}).expect(401);
         });
 
         it('should fail when user is not admin', async () => {
