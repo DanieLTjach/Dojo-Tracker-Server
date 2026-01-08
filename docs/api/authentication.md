@@ -37,12 +37,12 @@ All endpoints under `/api/users` and `/api/games` require authentication:
 ## Authentication Flow
 
 ```
-┌─────────┐                                    ┌─────────┐
-│ Client  │                                    │ Server  │
-└────┬────┘                                    └────┬────┘
+┌─────────┐                                     ┌─────────┐
+│ Client  │                                     │ Server  │
+└────┬────┘                                     └────┬────┘
      │                                               │
-     │  POST /api/auth/login                        │
-     │  { telegramId, telegramUsername }            │
+     │  POST /api/auth/login                         │
+     │  { telegramId, telegramUsername }             │
      ├──────────────────────────────────────────────>│
      │                                               │
      │                      ┌─────────────────────┐  │
@@ -51,7 +51,7 @@ All endpoints under `/api/users` and `/api/games` require authentication:
      │                      │ Yes → Generate JWT  │  │
      │                      └─────────────────────┘  │
      │                                               │
-     │  { token, user }                             │
+     │  { token, user }                              │
      │<──────────────────────────────────────────────┤
      │                                               │
      │  Subsequent API calls                         │
