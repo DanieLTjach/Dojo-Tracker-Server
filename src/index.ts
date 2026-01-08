@@ -24,7 +24,7 @@ app.use('/api/auth', authRoutes);
 // Protected routes (will add auth middleware later)
 app.use('/api/users', userRoutes);
 app.use('/api/games', gameRoutes);
-app.use('/api', ratingRoutes);
+app.use('/api/events', ratingRoutes);
 
 app.use(handleErrors);
 
