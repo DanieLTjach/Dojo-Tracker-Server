@@ -6,6 +6,7 @@ import {
     InvalidInitDataError,
     ExpiredAuthDataError
 } from '../error/AuthErrors.ts';
+import { UserIsNotActive } from '../error/UserErrors.ts';
 import config from '../../config/config.ts';
 
 export class AuthService {
@@ -17,33 +18,19 @@ export class AuthService {
      * Validates the hash and creates a JWT token.
      *
      * @param params - Query parameters from initData (as key-value object)
-     * @returns TokenPair with JWT access token, user info, and isNewUser flag
+     * @returns TokenPair with JWT access token
      */
-    authenticate(params: Record<string, string>): TokenPair & { user: any; isNewUser: boolean } {
-        // Step 1: Validate initData hash
+    authenticate(params: Record<string, string>): TokenPair {
         this.validateInitData(params);
 
-        // Step 2: Extract Telegram user ID
         const telegramId = this.extractTelegramId(params);
+        const user = this.userService.getUserByTelegramId(telegramId);
 
-        // Step 3: Get or create user
-        const { user, isNewUser } = this.userService.getOrCreateUserByTelegramId(telegramId, params['user']);
+        if (!user.isActive) {
+            throw new UserIsNotActive(user.id);
+        }
 
-        // Step 4: Generate JWT token
-        const tokens = this.tokenService.createTokenPair(user);
-
-        return {
-            ...tokens,
-            user: {
-                id: user.id,
-                telegramId: user.telegramId,
-                name: user.name,
-                telegramUsername: user.telegramUsername,
-                isAdmin: !!user.isAdmin,
-                isActive: !!user.isActive
-            },
-            isNewUser
-        };
+        return this.tokenService.createTokenPair(user);
     }
 
     /**

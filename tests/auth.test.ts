@@ -6,6 +6,8 @@ import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { closeDB } from '../src/db/dbInit.ts';
 import { TEST_DB_PATH, cleanupTestDatabase } from './setup.ts';
 import { HashUtil } from '../src/util/HashUtil.ts';
+import { UserService } from '../src/service/UserService.ts';
+import { UserRepository } from '../src/repository/UserRepository.ts';
 import config from '../config/config.ts';
 
 const app = express();
@@ -17,6 +19,18 @@ describe('Authentication API Endpoints', () => {
     const BOT_TOKEN = config.botToken;
     const TEST_TELEGRAM_ID = 987654321;
     const TEST_USERNAME = 'testuser';
+    const userService = new UserService();
+    const userRepository = new UserRepository();
+
+    beforeAll(() => {
+        // Create test user before running auth tests
+        const userData = JSON.stringify({
+            id: TEST_TELEGRAM_ID,
+            username: TEST_USERNAME,
+            first_name: 'Test'
+        });
+        userService.getOrCreateUserByTelegramId(TEST_TELEGRAM_ID, userData);
+    });
 
     afterAll(() => {
         closeDB();
@@ -108,22 +122,6 @@ describe('Authentication API Endpoints', () => {
     }
 
     describe('POST /api/authenticate', () => {
-        it('should authenticate a new user and auto-create account', async () => {
-            const initData = generateValidInitData(TEST_TELEGRAM_ID, TEST_USERNAME);
-
-            const response = await request(app)
-                .post('/api/authenticate')
-                .query(initData)
-                .expect(200);
-
-            expect(response.body).toHaveProperty('accessToken');
-            expect(response.body).toHaveProperty('user');
-            expect(response.body.user.telegramId).toBe(TEST_TELEGRAM_ID);
-            expect(response.body.user.name).toContain(TEST_USERNAME);
-            expect(response.body.user.isActive).toBe(true);
-            expect(response.body.user.isAdmin).toBe(false);
-        });
-
         it('should authenticate an existing user', async () => {
             const initData = generateValidInitData(TEST_TELEGRAM_ID, TEST_USERNAME);
 
@@ -133,8 +131,18 @@ describe('Authentication API Endpoints', () => {
                 .expect(200);
 
             expect(response.body).toHaveProperty('accessToken');
-            expect(response.body).toHaveProperty('user');
-            expect(response.body.user.telegramId).toBe(TEST_TELEGRAM_ID);
+        });
+
+        it('should reject authentication for non-existent user', async () => {
+            const nonExistentTelegramId = 999888777;
+            const initData = generateValidInitData(nonExistentTelegramId, 'nonexistent');
+
+            const response = await request(app)
+                .post('/api/authenticate')
+                .query(initData)
+                .expect(404);
+
+            expect(response.body).toHaveProperty('errorCode', 'userNotFoundByTelegramId');
         });
 
         it('should reject authentication with invalid hash', async () => {
@@ -198,65 +206,25 @@ describe('Authentication API Endpoints', () => {
             expect(response.body).toHaveProperty('errorCode', 'invalidInitData');
         });
 
-        it('should create user with fallback name when username is missing', async () => {
-            const newTelegramId = 111222333;
-            const authDate = Math.floor(Date.now() / 1000);
-            const user = JSON.stringify({
-                id: newTelegramId,
-                first_name: 'John'
+        it('should reject authentication for inactive user', async () => {
+            const inactiveTelegramId = 777888999;
+            // Create an inactive user
+            const userData = JSON.stringify({
+                id: inactiveTelegramId,
+                username: 'inactiveuser',
+                first_name: 'Inactive'
             });
+            const { user } = userService.getOrCreateUserByTelegramId(inactiveTelegramId, userData);
+            userRepository.updateUserActivationStatus(user.id, false, user.id);
 
-            const params = {
-                auth_date: authDate.toString(),
-                user: user
-            };
-
-            const dataCheckString = Object.entries(params)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([key, value]) => `${key}=${value}`)
-                .join('\n');
-
-            const secretKey = HashUtil.hmac('WebAppData', BOT_TOKEN);
-            const hash = HashUtil.hmacHex(dataCheckString, secretKey);
+            const initData = generateValidInitData(inactiveTelegramId, 'inactiveuser');
 
             const response = await request(app)
                 .post('/api/authenticate')
-                .query({ ...params, hash })
-                .expect(200);
+                .query(initData)
+                .expect(403);
 
-            expect(response.body).toHaveProperty('accessToken');
-            expect(response.body.user.name).toBe('John');
-            expect(response.body.user.telegramId).toBe(newTelegramId);
-        });
-
-        it('should create user with telegram ID fallback when no names provided', async () => {
-            const newTelegramId = 444555666;
-            const authDate = Math.floor(Date.now() / 1000);
-            const user = JSON.stringify({
-                id: newTelegramId
-            });
-
-            const params = {
-                auth_date: authDate.toString(),
-                user: user
-            };
-
-            const dataCheckString = Object.entries(params)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([key, value]) => `${key}=${value}`)
-                .join('\n');
-
-            const secretKey = HashUtil.hmac('WebAppData', BOT_TOKEN);
-            const hash = HashUtil.hmacHex(dataCheckString, secretKey);
-
-            const response = await request(app)
-                .post('/api/authenticate')
-                .query({ ...params, hash })
-                .expect(200);
-
-            expect(response.body).toHaveProperty('accessToken');
-            expect(response.body.user.name).toBe(`TelegramUser${newTelegramId}`);
-            expect(response.body.user.telegramId).toBe(newTelegramId);
+            expect(response.body).toHaveProperty('errorCode', 'userIsNotActive');
         });
     });
 });
