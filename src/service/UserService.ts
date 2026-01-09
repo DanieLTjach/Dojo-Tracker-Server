@@ -20,7 +20,6 @@ export class UserService {
         userTelegramId: number | undefined,
         createdBy: number
     ): User {
-        this.validateUserIsAdmin(createdBy);
         if (this.userExistsByName(userName)) {
             throw new UserWithThisNameAlreadyExists(userName);
         }
@@ -53,7 +52,7 @@ export class UserService {
             throw new UserNotFoundByTelegramId(telegramId);
         }
         return user;
-    }
+    } 
 
     editUser(
         userId: number,
@@ -76,7 +75,6 @@ export class UserService {
     }
 
     updateUserActivationStatus(userId: number, isActive: boolean, modifiedBy: number): User {
-        this.validateUserIsAdmin(modifiedBy);
         this.validateUserExistsById(userId);
 
         this.userRepository.updateUserActivationStatus(userId, isActive, modifiedBy);

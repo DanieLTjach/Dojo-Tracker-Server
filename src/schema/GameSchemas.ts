@@ -25,8 +25,7 @@ const playerListSchema = z.array(playerDataSchema).refine((players) => {
 export const gameCreationSchema = z.object({
     body: z.object({
         eventId: eventIdSchema,
-        playersData: playerListSchema,
-        createdBy: userIdSchema
+        playersData: playerListSchema
     })
 });
 
@@ -51,17 +50,13 @@ export const gameUpdateSchema = z.object({
     }),
     body: z.object({
         eventId: eventIdSchema,
-        playersData: playerListSchema,
-        modifiedBy: userIdSchema
+        playersData: playerListSchema
     })
 });
 
 export const gameDeletionSchema = z.object({
     params: z.object({
         gameId: gameIdParamSchema
-    }),
-    body: z.object({
-        deletedBy: userIdSchema
     })
 });
 

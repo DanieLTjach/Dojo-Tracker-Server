@@ -4,6 +4,7 @@ import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { closeDB } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
+import { createAuthHeader } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -12,8 +13,13 @@ app.use(handleErrors);
 
 describe('User API Endpoints', () => {
     const SYSTEM_USER_ID = 0; // System admin user
+
+    // Create auth headers for admin and regular user
+    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
+
     let testUserId: number;
     let testUser2Id: number;
+    let regularUserAuthHeader: string;
 
     afterAll(() => {
         // Close database connection
@@ -27,8 +33,7 @@ describe('User API Endpoints', () => {
             const userData = {
                 name: 'Test User',
                 telegramUsername: '@testuser',
-                telegramId: 123456789,
-                createdBy: SYSTEM_USER_ID
+                telegramId: 456456456
             };
 
             const response = await request(app)
@@ -37,6 +42,8 @@ describe('User API Endpoints', () => {
                 .expect(201);
 
             testUserId = response.body.id;
+            regularUserAuthHeader = createAuthHeader(testUserId);
+
             expect(response.body).toHaveProperty('id');
             expect(response.body.name).toBe(userData.name);
             expect(response.body.telegramUsername).toBe(userData.telegramUsername);
@@ -45,15 +52,16 @@ describe('User API Endpoints', () => {
             expect(response.body.isAdmin).toBe(false);
         });
 
-        it('should register a new user without createdBy (defaults to SYSTEM)', async () => {
+        it('should register a new user (admin authenticated via JWT)', async () => {
             const userData = {
                 name: 'Test User 2',
                 telegramUsername: '@testuser2',
-                telegramId: 987654321
+                telegramId: 789789789
             };
 
             const response = await request(app)
                 .post('/api/users')
+                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(201);
 
@@ -104,8 +112,7 @@ describe('User API Endpoints', () => {
             const userData = {
                 name: 'Unique Name',
                 telegramUsername: '@testuser',
-                telegramId: 999888777,
-                createdBy: SYSTEM_USER_ID
+                telegramId: 999888777
             };
 
             await request(app)
@@ -118,12 +125,12 @@ describe('User API Endpoints', () => {
     describe('POST /api/users/without-telegram', () => {
         it('should register a new user without telegram', async () => {
             const userData = {
-                name: 'User Without Telegram',
-                createdBy: SYSTEM_USER_ID
+                name: 'User Without Telegram'
             };
 
             const response = await request(app)
                 .post('/api/users/without-telegram')
+                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(201);
 
@@ -135,43 +142,39 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when name is missing', async () => {
-            const userData = {
-                createdBy: SYSTEM_USER_ID
-            };
+            const userData = {};
 
             await request(app)
                 .post('/api/users/without-telegram')
-                .send(userData)
-                .expect(400);
-        });
-
-        it('should fail when createdBy is missing', async () => {
-            const userData = {
-                name: 'Another User'
-            };
-
-            await request(app)
-                .post('/api/users/without-telegram')
+                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(400);
         });
     });
 
     describe('GET /api/users', () => {
-        it('should return all users', async () => {
+        it('should return all users (requires auth)', async () => {
             const response = await request(app)
                 .get('/api/users')
+                .set('Authorization', adminAuthHeader)
                 .expect(200);
 
             expect(Array.isArray(response.body)).toBe(true);
             expect(response.body.length).toBeGreaterThan(0);
         });
+
+        it('should fail when no authentication token provided', async () => {
+            await request(app)
+                .get('/api/users')
+                .expect(401);
+        });
     });
 
     describe('GET /api/users/:id', () => {
-        it('should return a user by id', async () => {
+        it('should return a user by id (requires auth)', async () => {
             const response = await request(app)
                 .get(`/api/users/${testUserId}`)
+                .set('Authorization', adminAuthHeader)
                 .expect(200);
 
             expect(response.body).toHaveProperty('id', testUserId);
@@ -181,48 +184,65 @@ describe('User API Endpoints', () => {
         it('should fail when user id does not exist', async () => {
             await request(app)
                 .get('/api/users/99999')
+                .set('Authorization', adminAuthHeader)
                 .expect(404);
         });
 
         it('should fail when user id is not a number', async () => {
             await request(app)
                 .get('/api/users/invalid')
+                .set('Authorization', adminAuthHeader)
                 .expect(400);
+        });
+
+        it('should fail when no authentication token provided', async () => {
+            await request(app)
+                .get(`/api/users/${testUserId}`)
+                .expect(401);
         });
     });
 
     describe('GET /api/users/by-telegram-id/:telegramId', () => {
-        it('should return a user by telegram id', async () => {
+        it('should return a user by telegram id (requires auth)', async () => {
             const response = await request(app)
-                .get('/api/users/by-telegram-id/123456789')
+                .get('/api/users/by-telegram-id/456456456')
+                .set('Authorization', adminAuthHeader)
                 .expect(200);
 
-            expect(response.body).toHaveProperty('telegramId', 123456789);
+            expect(response.body).toHaveProperty('telegramId', 456456456);
             expect(response.body.name).toBe('Test User');
         });
 
         it('should fail when telegram id does not exist', async () => {
             await request(app)
                 .get('/api/users/by-telegram-id/888888888')
+                .set('Authorization', adminAuthHeader)
                 .expect(404);
         });
 
         it('should fail when telegram id is not a number', async () => {
             await request(app)
                 .get('/api/users/by-telegram-id/invalid')
+                .set('Authorization', adminAuthHeader)
                 .expect(400);
+        });
+
+        it('should fail when no authentication token provided', async () => {
+            await request(app)
+                .get('/api/users/by-telegram-id/456456456')
+                .expect(401);
         });
     });
 
     describe('PATCH /api/users/:id', () => {
-        it('should update user name', async () => {
+        it('should update user name (requires auth)', async () => {
             const updateData = {
-                name: 'Updated User Name',
-                modifiedBy: SYSTEM_USER_ID
+                name: 'Updated User Name'
             };
 
             const response = await request(app)
                 .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
                 .send(updateData)
                 .expect(200);
 
@@ -232,12 +252,12 @@ describe('User API Endpoints', () => {
 
         it('should update user telegram username', async () => {
             const updateData = {
-                telegramUsername: '@updatedusername',
-                modifiedBy: SYSTEM_USER_ID
+                telegramUsername: '@updatedusername'
             };
 
             const response = await request(app)
                 .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
                 .send(updateData)
                 .expect(200);
 
@@ -247,12 +267,12 @@ describe('User API Endpoints', () => {
         it('should update both name and telegram username', async () => {
             const updateData = {
                 name: 'Another Update',
-                telegramUsername: '@anotherupdate',
-                modifiedBy: SYSTEM_USER_ID
+                telegramUsername: '@anotherupdate'
             };
 
             const response = await request(app)
                 .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
                 .send(updateData)
                 .expect(200);
 
@@ -261,17 +281,16 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when neither name nor telegram username is provided', async () => {
-            const updateData = {
-                modifiedBy: SYSTEM_USER_ID
-            };
+            const updateData = {};
 
             await request(app)
                 .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
                 .send(updateData)
                 .expect(400);
         });
 
-        it('should fail when modifiedBy is missing', async () => {
+        it('should fail when no authentication token provided', async () => {
             const updateData = {
                 name: 'Test Name'
             };
@@ -279,70 +298,91 @@ describe('User API Endpoints', () => {
             await request(app)
                 .patch(`/api/users/${testUserId}`)
                 .send(updateData)
-                .expect(400);
+                .expect(401);
         });
 
         it('should fail when user id does not exist', async () => {
             const updateData = {
-                name: 'Test Name',
-                modifiedBy: SYSTEM_USER_ID
+                name: 'Test Name'
             };
 
             await request(app)
                 .patch('/api/users/99999')
+                .set('Authorization', adminAuthHeader)
                 .send(updateData)
                 .expect(404);
         });
     });
 
     describe('POST /api/users/:id/activate', () => {
-        it('should activate a user', async () => {
+        it('should activate a user (admin only)', async () => {
             const response = await request(app)
-                .post(`/api/users/${testUserId}/activate`)
-                .send({ modifiedBy: SYSTEM_USER_ID })
+                .post(`/api/users/${testUser2Id}/activate`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
                 .expect(200);
 
             expect(response.body.isActive).toBe(true);
-            expect(response.body.id).toBe(testUserId);
+            expect(response.body.id).toBe(testUser2Id);
         });
 
-        it('should fail when modifiedBy is missing', async () => {
+        it('should fail when no authentication token provided', async () => {
             await request(app)
                 .post(`/api/users/${testUserId}/activate`)
                 .send({})
-                .expect(400);
+                .expect(401);
+        });
+
+        it('should fail when user is not admin', async () => {
+            console.log('Regular User Auth Header:', regularUserAuthHeader);
+            await request(app)
+                .post(`/api/users/${testUserId}/activate`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({})
+                .expect(403);
         });
 
         it('should fail when user id does not exist', async () => {
             await request(app)
                 .post('/api/users/99999/activate')
-                .send({ modifiedBy: SYSTEM_USER_ID })
+                .set('Authorization', adminAuthHeader)
+                .send({})
                 .expect(404);
         });
     });
 
     describe('POST /api/users/:id/deactivate', () => {
-        it('should deactivate a user', async () => {
+        it('should deactivate a user (admin only)', async () => {
             const response = await request(app)
-                .post(`/api/users/${testUserId}/deactivate`)
-                .send({ modifiedBy: SYSTEM_USER_ID })
+                .post(`/api/users/${testUser2Id}/deactivate`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
                 .expect(200);
 
             expect(response.body.isActive).toBe(false);
-            expect(response.body.id).toBe(testUserId);
+            expect(response.body.id).toBe(testUser2Id);
         });
 
-        it('should fail when modifiedBy is missing', async () => {
+        it('should fail when no authentication token provided', async () => {
             await request(app)
                 .post(`/api/users/${testUserId}/deactivate`)
                 .send({})
-                .expect(400);
+                .expect(401);
+        });
+
+        it('should fail when user is not admin', async () => {
+            await request(app)
+                .post(`/api/users/${testUserId}/deactivate`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({})
+                .expect(403);
         });
 
         it('should fail when user id does not exist', async () => {
             await request(app)
                 .post('/api/users/99999/deactivate')
-                .send({ modifiedBy: SYSTEM_USER_ID })
+                .set('Authorization', adminAuthHeader)
+                .send({})
                 .expect(404);
         });
     });
