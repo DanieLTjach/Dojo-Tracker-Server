@@ -32,7 +32,7 @@ export function validateTelegramInitData(initDataString: string): TelegramInitDa
         }
 
         // Development mode: Skip cryptographic validation for mock data
-        const isDevelopment = process.env.NODE_ENV === 'development' || !config.telegramBotToken;
+        const isDevelopment = process.env.NODE_ENV === 'development' || !config.botToken;
         const isDevHash = hash === 'dev_mode_hash';
 
         if (isDevelopment && isDevHash) {
@@ -56,8 +56,8 @@ export function validateTelegramInitData(initDataString: string): TelegramInitDa
         }
 
         // Production mode: Validate cryptographic signature
-        if (!config.telegramBotToken) {
-            throw new Error('TELEGRAM_BOT_TOKEN is not configured. Cannot validate initData.');
+        if (!config.botToken) {
+            throw new Error('BOT_TOKEN is not configured. Cannot validate initData.');
         }
 
         // Remove hash from params for validation
@@ -72,7 +72,7 @@ export function validateTelegramInitData(initDataString: string): TelegramInitDa
         // Create secret key from bot token
         const secretKey = crypto
             .createHmac('sha256', 'WebAppData')
-            .update(config.telegramBotToken)
+            .update(config.botToken)
             .digest();
 
         // Calculate hash
