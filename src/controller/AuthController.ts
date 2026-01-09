@@ -6,15 +6,9 @@ import { TokenService } from '../service/TokenService.ts';
 import { validateTelegramInitData } from '../util/TelegramAuth.ts';
 
 export class AuthController {
-    private authService: AuthService;
-    private userService: UserService;
-    private tokenService: TokenService;
-
-    constructor() {
-        this.authService = new AuthService();
-        this.userService = new UserService();
-        this.tokenService = new TokenService();
-    }
+    private authService: AuthService = new AuthService();
+    private userService: UserService = new UserService();
+    private tokenService: TokenService = new TokenService();
 
     /**
      * Authenticates a user using Telegram Mini App initData (legacy query param version).
