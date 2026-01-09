@@ -20,14 +20,4 @@ export class HashUtil {
             .update(dataBuffer)
             .digest();
     }
-
-    /**
-     * Creates an HMAC-SHA256 hash and returns it as a hex string.
-     * @param data - The data to hash
-     * @param key - The key to use for hashing
-     * @returns Hex string representation of the hash
-     */
-    static hmacHex(data: string | Buffer, key: string | Buffer): string {
-        return HashUtil.hmac(data, key).toString('hex');
-    }
 }

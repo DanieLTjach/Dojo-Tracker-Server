@@ -59,7 +59,7 @@ export class AuthService {
         const secretKey = HashUtil.hmac('WebAppData', config.botToken);
 
         // Calculate hash: HMAC-SHA256(data_check_string, secret_key)
-        const calculatedHash = HashUtil.hmacHex(dataCheckString, secretKey);
+        const calculatedHash = HashUtil.hmac(dataCheckString, secretKey).toString('hex');
 
         // Compare hashes
         if (calculatedHash !== receivedHash) {
