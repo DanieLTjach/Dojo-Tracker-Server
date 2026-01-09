@@ -4,17 +4,6 @@ import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
 
 export class TokenService {
-    private jwtSecret: string;
-    private jwtExpiry: string;
-
-    constructor() {
-        this.jwtSecret = config.jwtSecret;
-        this.jwtExpiry = config.jwtExpiry;
-
-        if (!this.jwtSecret) {
-            console.warn('⚠️  WARNING: JWT_SECRET is not set in environment variables!');
-        }
-    }
 
     /**
      * Creates a JWT token pair for a user.
@@ -29,8 +18,8 @@ export class TokenService {
             isActive: !!user.isActive
         };
 
-        const accessToken = jwt.sign(payload, this.jwtSecret, {
-            expiresIn: this.jwtExpiry
+        const accessToken = jwt.sign(payload, config.jwtSecret, {
+            expiresIn: config.jwtExpiry
         });
 
         return {
@@ -47,7 +36,7 @@ export class TokenService {
      */
     verifyToken(token: string): DecodedToken {
         try {
-            const decoded = jwt.verify(token, this.jwtSecret) as DecodedToken;
+            const decoded = jwt.verify(token, config.jwtSecret) as DecodedToken;
             return decoded;
         } catch (error) {
             if (error instanceof jwt.TokenExpiredError) {

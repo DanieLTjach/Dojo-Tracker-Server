@@ -9,21 +9,8 @@ import {
 import config from '../../config/config.ts';
 
 export class AuthService {
-    private botToken: string;
-    private initDataValiditySeconds: number;
-    private userService: UserService;
-    private tokenService: TokenService;
-
-    constructor() {
-        this.botToken = config.botToken;
-        this.initDataValiditySeconds = config.authInitDataValiditySeconds;
-        this.userService = new UserService();
-        this.tokenService = new TokenService();
-
-        if (!this.botToken) {
-            console.warn('⚠️  WARNING: BOT_TOKEN is not set in environment variables!');
-        }
-    }
+    private userService: UserService = new UserService();
+    private tokenService: TokenService = new TokenService();
 
     /**
      * Authenticates a user using Telegram Mini App initData.
@@ -82,7 +69,7 @@ export class AuthService {
             .join('\n');
 
         // Calculate secret key: HMAC-SHA256(bot_token, "WebAppData")
-        const secretKey = HashUtil.hmac('WebAppData', this.botToken);
+        const secretKey = HashUtil.hmac('WebAppData', config.botToken);
 
         // Calculate hash: HMAC-SHA256(data_check_string, secret_key)
         const calculatedHash = HashUtil.hmacHex(dataCheckString, secretKey);
@@ -105,7 +92,7 @@ export class AuthService {
 
         const authDateTimestamp = authDate * 1000; // Convert to milliseconds
         const now = Date.now();
-        const expiryTime = authDateTimestamp + (this.initDataValiditySeconds * 1000);
+        const expiryTime = authDateTimestamp + (config.authInitDataValiditySeconds * 1000);
 
         if (now > expiryTime) {
             throw new ExpiredAuthDataError();
