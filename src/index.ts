@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
 });
 
 // Authentication routes (no auth required)
-app.use('/api/auth', authRoutes);
+app.use('/api', authRoutes);
 
 // Protected routes (will add auth middleware later)
 app.use('/api/users', userRoutes);
