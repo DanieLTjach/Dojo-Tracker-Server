@@ -1,7 +1,19 @@
 import { TokenService } from '../src/service/TokenService.ts';
 import type { User } from '../src/model/UserModels.ts';
+import type { DecodedToken } from '../src/model/AuthModels.ts';
 import jwt from 'jsonwebtoken';
 import { jest } from '@jest/globals';
+
+/**
+ * Helper function to decode a token without verification (for testing).
+ */
+function decodeToken(token: string): DecodedToken | null {
+    try {
+        return jwt.decode(token) as DecodedToken;
+    } catch {
+        return null;
+    }
+}
 
 describe('TokenService', () => {
     let tokenService: TokenService;
@@ -152,7 +164,7 @@ describe('TokenService', () => {
             };
 
             const tokenPair = tokenService.createTokenPair(user);
-            const decoded = tokenService.decodeToken(tokenPair.accessToken);
+            const decoded = decodeToken(tokenPair.accessToken);
 
             expect(decoded).toBeDefined();
             expect(decoded!.userId).toBe(user.id);
@@ -165,20 +177,20 @@ describe('TokenService', () => {
                 { expiresIn: '1h' }
             );
 
-            const decoded = tokenService.decodeToken(invalidToken);
+            const decoded = decodeToken(invalidToken);
 
             expect(decoded).toBeDefined();
             expect(decoded!.userId).toBe(9);
         });
 
         it('should return null for malformed token', () => {
-            const decoded = tokenService.decodeToken('not-a-valid-token');
+            const decoded = decodeToken('not-a-valid-token');
 
             expect(decoded).toBeNull();
         });
 
         it('should return null for empty string', () => {
-            const decoded = tokenService.decodeToken('');
+            const decoded = decodeToken('');
 
             expect(decoded).toBeNull();
         });
@@ -190,7 +202,7 @@ describe('TokenService', () => {
                 { expiresIn: '-1h' }
             );
 
-            const decoded = tokenService.decodeToken(expiredToken);
+            const decoded = decodeToken(expiredToken);
 
             expect(decoded).toBeDefined();
             expect(decoded!.userId).toBe(10);

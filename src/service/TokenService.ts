@@ -37,18 +37,4 @@ export class TokenService {
             throw error;
         }
     }
-
-    /**
-     * Decodes a token without verification (for testing/debugging).
-     * WARNING: Do not use for authentication!
-     * @param token - The token to decode
-     * @returns Decoded token payload or null if invalid
-     */
-    decodeToken(token: string): DecodedToken | null {
-        try {
-            return jwt.decode(token) as DecodedToken;
-        } catch {
-            return null;
-        }
-    }
 }
