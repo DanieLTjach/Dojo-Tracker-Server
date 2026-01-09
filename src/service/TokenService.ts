@@ -11,14 +11,10 @@ export class TokenService {
      * @returns TokenPair with accessToken
      */
     createTokenPair(user: User): TokenPair {
-        const payload: Omit<DecodedToken, 'iat' | 'exp'> = {
-            userId: user.id
-        };
-
+        const payload: DecodedToken = { userId: user.id };
         const accessToken = jwt.sign(payload, config.jwtSecret, {
             expiresIn: config.jwtExpiry
         });
-
         return { accessToken };
     }
 
@@ -30,8 +26,7 @@ export class TokenService {
      */
     verifyToken(token: string): DecodedToken {
         try {
-            const decoded = jwt.verify(token, config.jwtSecret) as DecodedToken;
-            return decoded;
+            return jwt.verify(token, config.jwtSecret) as DecodedToken;
         } catch (error) {
             if (error instanceof jwt.TokenExpiredError) {
                 throw new Error('Token has expired');
