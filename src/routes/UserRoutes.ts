@@ -6,9 +6,9 @@ import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
 const router = Router();
 const userController = new UserController();
 
-// Admin only - create users
-router.post('/', requireAuth, requireAdmin, withTransaction((req, res) => userController.registerUser(req, res)));
-router.post('/without-telegram', requireAuth, requireAdmin, withTransaction((req, res) => userController.registerUserWithoutTelegram(req, res)));
+// Public - user registration
+router.post('/', withTransaction((req, res) => userController.registerUser(req, res)));
+router.post('/without-telegram', withTransaction((req, res) => userController.registerUserWithoutTelegram(req, res)));
 
 // Authenticated users - read operations
 router.get('/', requireAuth, withTransaction((req, res) => userController.getAllUsers(req, res)));

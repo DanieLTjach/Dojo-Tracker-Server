@@ -31,7 +31,7 @@ describe('User API Endpoints', () => {
     });
 
     describe('POST /api/users', () => {
-        it('should register a new user with telegram (admin only)', async () => {
+        it('should register a new user with telegram', async () => {
             const userData = {
                 name: 'Test User',
                 telegramUsername: '@testuser',
@@ -40,7 +40,6 @@ describe('User API Endpoints', () => {
 
             const response = await request(app)
                 .post('/api/users')
-                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(201);
 
@@ -73,33 +72,6 @@ describe('User API Endpoints', () => {
             expect(response.body.name).toBe(userData.name);
         });
 
-        it('should fail when no authentication token is provided', async () => {
-            const userData = {
-                name: 'Test User 3',
-                telegramUsername: '@testuser3',
-                telegramId: 111222333
-            };
-
-            await request(app)
-                .post('/api/users')
-                .send(userData)
-                .expect(401);
-        });
-
-        it('should fail when user is not admin', async () => {
-            const userData = {
-                name: 'Test User 4',
-                telegramUsername: '@testuser4',
-                telegramId: 444555666
-            };
-
-            await request(app)
-                .post('/api/users')
-                .set('Authorization', regularUserAuthHeader)
-                .send(userData)
-                .expect(403);
-        });
-
         it('should fail when name is missing', async () => {
             const userData = {
                 telegramUsername: '@testuser3',
@@ -108,7 +80,6 @@ describe('User API Endpoints', () => {
 
             await request(app)
                 .post('/api/users')
-                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(400);
         });
@@ -122,7 +93,6 @@ describe('User API Endpoints', () => {
 
             await request(app)
                 .post('/api/users')
-                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(400);
         });
@@ -136,7 +106,6 @@ describe('User API Endpoints', () => {
 
             await request(app)
                 .post('/api/users')
-                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(400);
         });
@@ -150,21 +119,19 @@ describe('User API Endpoints', () => {
 
             await request(app)
                 .post('/api/users')
-                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(400);
         });
     });
 
     describe('POST /api/users/without-telegram', () => {
-        it('should register a new user without telegram (admin only)', async () => {
+        it('should register a new user without telegram', async () => {
             const userData = {
                 name: 'User Without Telegram'
             };
 
             const response = await request(app)
                 .post('/api/users/without-telegram')
-                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(201);
 
@@ -180,32 +147,8 @@ describe('User API Endpoints', () => {
 
             await request(app)
                 .post('/api/users/without-telegram')
-                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(400);
-        });
-
-        it('should fail when no authentication token provided', async () => {
-            const userData = {
-                name: 'Another User'
-            };
-
-            await request(app)
-                .post('/api/users/without-telegram')
-                .send(userData)
-                .expect(401);
-        });
-
-        it('should fail when user is not admin', async () => {
-            const userData = {
-                name: 'Another User'
-            };
-
-            await request(app)
-                .post('/api/users/without-telegram')
-                .set('Authorization', regularUserAuthHeader)
-                .send(userData)
-                .expect(403);
         });
     });
 

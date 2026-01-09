@@ -22,7 +22,6 @@ export class UserService {
         userTelegramId: number | undefined,
         createdBy: number
     ): User {
-        this.validateUserIsAdmin(createdBy);
         if (this.userExistsByName(userName)) {
             throw new UserWithThisNameAlreadyExists(userName);
         }
