@@ -99,7 +99,7 @@ export class AuthService {
             throw new InvalidInitDataError('Missing user parameter');
         }
 
-        const telegramUser = this.parseJson<TelegramUser>(userParam);
+        const telegramUser = this.parseJsonForInitData<TelegramUser>(userParam, 'Failed to parse user parameter');
         const telegramId = telegramUser.id;
 
         if (!telegramId || !Number.isInteger(telegramId)) {
@@ -109,11 +109,11 @@ export class AuthService {
         return telegramId;
     }
 
-    private parseJson<T>(json: string): T {
+    private parseJsonForInitData<T>(json: string, errorMessage: string): T {
         try {
             return JSON.parse(json);
         } catch {
-            throw new InvalidInitDataError('Failed to parse user parameter');
+            throw new InvalidInitDataError(errorMessage);
         }
     }
 }

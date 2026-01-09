@@ -22,12 +22,7 @@ describe('AuthMiddleware', () => {
     beforeAll(() => {
         userService = new UserService();
         // Create test user
-        const { user } = userService.getOrCreateUserByTelegramId(123456789, JSON.stringify({
-            id: 123456789,
-            username: 'testuser',
-            first_name: 'Test'
-        }));
-        testUser = user;
+        testUser = userService.registerUser("test_name", 'testuser', 123456789, 0);
     });
 
     afterAll(() => {
@@ -95,7 +90,7 @@ describe('AuthMiddleware', () => {
             requireAuth(mockReq as Request, mockRes as Response, mockNext);
 
             expect(mockNext).toHaveBeenCalled();
-            const error = (mockNext as jest.Mock).mock.calls[0][0];
+            const error = (mockNext as jest.Mock).mock.calls[0]![0];
             expect(error).toBeDefined();
         });
     });

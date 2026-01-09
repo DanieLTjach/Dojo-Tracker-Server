@@ -8,9 +8,7 @@ import config from '../config/config.ts';
  * @returns JWT token string
  */
 export function generateTestToken(userId: number): string {
-    const payload: Omit<DecodedToken, 'iat' | 'exp'> = {
-        userId
-    };
+    const payload: DecodedToken = { userId };
 
     return jwt.sign(payload, config.jwtSecret, {
         expiresIn: config.jwtExpiry

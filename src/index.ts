@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(cors());
 
 // Health check endpoint
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
     res.json({ status: 'ok', message: 'Dojo Tracker Server is running' });
 });
 

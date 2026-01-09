@@ -12,7 +12,7 @@ import type { DecodedToken } from '../model/AuthModels.ts';
 declare global {
     namespace Express {
         interface Request {
-            user?: DecodedToken;
+            user?: DecodedToken | undefined;
         }
     }
 }
@@ -27,7 +27,7 @@ const userService = new UserService();
  *
  * Usage: router.get('/protected', requireAuth, handler)
  */
-export const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
+export const requireAuth = (req: Request, _res: Response, next: NextFunction): void => {
     try {
         const authHeader = req.headers.authorization;
 
@@ -41,13 +41,19 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction): vo
             throw new InvalidAuthTokenError('Invalid authorization header format. Expected: Bearer <token>');
         }
 
-        const token = parts[1];
+        const token = parts[1]!;
 
         // Verify and decode token
-        const decoded = tokenService.verifyToken(token);
+        const decodedToken = tokenService.verifyToken(token);
+
+        // User could have been deactivated since token was issued
+        const user = userService.getUserById(decodedToken.userId);
+        if (!user.isActive) {
+            throw new InvalidAuthTokenError('User is not active');
+        }
 
         // Attach user to request
-        req.user = decoded;
+        req.user = decodedToken;
 
         next();
     } catch (error) {
@@ -61,7 +67,7 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction): vo
  *
  * Usage: router.delete('/admin-only', requireAuth, requireAdmin, handler)
  */
-export const requireAdmin = (req: Request, res: Response, next: NextFunction): void => {
+export const requireAdmin = (req: Request, _res: Response, next: NextFunction): void => {
     try {
         if (!req.user) {
             throw new MissingAuthTokenError();

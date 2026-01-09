@@ -1,10 +1,9 @@
 import request from 'supertest';
 import express from 'express';
-import crypto from 'crypto';
 import authRoutes from '../src/routes/AuthRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { closeDB } from '../src/db/dbInit.ts';
-import { TEST_DB_PATH, cleanupTestDatabase } from './setup.ts';
+import { cleanupTestDatabase } from './setup.ts';
 import { HashUtil } from '../src/util/HashUtil.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
@@ -24,12 +23,7 @@ describe('Authentication API Endpoints', () => {
 
     beforeAll(() => {
         // Create test user before running auth tests
-        const userData = JSON.stringify({
-            id: TEST_TELEGRAM_ID,
-            username: TEST_USERNAME,
-            first_name: 'Test'
-        });
-        userService.getOrCreateUserByTelegramId(TEST_TELEGRAM_ID, userData);
+        userService.registerUser("name", TEST_USERNAME, TEST_TELEGRAM_ID, 0);
     });
 
     afterAll(() => {
@@ -209,13 +203,8 @@ describe('Authentication API Endpoints', () => {
         it('should reject authentication for inactive user', async () => {
             const inactiveTelegramId = 777888999;
             // Create an inactive user
-            const userData = JSON.stringify({
-                id: inactiveTelegramId,
-                username: 'inactiveuser',
-                first_name: 'Inactive'
-            });
-            const { user } = userService.getOrCreateUserByTelegramId(inactiveTelegramId, userData);
-            userRepository.updateUserActivationStatus(user.id, false, user.id);
+            const user = userService.registerUser("inactive_name", 'inactiveuser', inactiveTelegramId, 0);
+            userRepository.updateUserActivationStatus(user.id, false, 0);
 
             const initData = generateValidInitData(inactiveTelegramId, 'inactiveuser');
 

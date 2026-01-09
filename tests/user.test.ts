@@ -13,8 +13,6 @@ app.use(handleErrors);
 
 describe('User API Endpoints', () => {
     const SYSTEM_USER_ID = 0; // System admin user
-    const ADMIN_TELEGRAM_ID = 123456789;
-    const USER_TELEGRAM_ID = 987654321;
 
     // Create auth headers for admin and regular user
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
@@ -132,6 +130,7 @@ describe('User API Endpoints', () => {
 
             const response = await request(app)
                 .post('/api/users/without-telegram')
+                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(201);
 
@@ -147,6 +146,7 @@ describe('User API Endpoints', () => {
 
             await request(app)
                 .post('/api/users/without-telegram')
+                .set('Authorization', adminAuthHeader)
                 .send(userData)
                 .expect(400);
         });
@@ -317,13 +317,13 @@ describe('User API Endpoints', () => {
     describe('POST /api/users/:id/activate', () => {
         it('should activate a user (admin only)', async () => {
             const response = await request(app)
-                .post(`/api/users/${testUserId}/activate`)
+                .post(`/api/users/${testUser2Id}/activate`)
                 .set('Authorization', adminAuthHeader)
                 .send({})
                 .expect(200);
 
             expect(response.body.isActive).toBe(true);
-            expect(response.body.id).toBe(testUserId);
+            expect(response.body.id).toBe(testUser2Id);
         });
 
         it('should fail when no authentication token provided', async () => {
@@ -334,6 +334,7 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when user is not admin', async () => {
+            console.log('Regular User Auth Header:', regularUserAuthHeader);
             await request(app)
                 .post(`/api/users/${testUserId}/activate`)
                 .set('Authorization', regularUserAuthHeader)
@@ -353,13 +354,13 @@ describe('User API Endpoints', () => {
     describe('POST /api/users/:id/deactivate', () => {
         it('should deactivate a user (admin only)', async () => {
             const response = await request(app)
-                .post(`/api/users/${testUserId}/deactivate`)
+                .post(`/api/users/${testUser2Id}/deactivate`)
                 .set('Authorization', adminAuthHeader)
                 .send({})
                 .expect(200);
 
             expect(response.body.isActive).toBe(false);
-            expect(response.body.id).toBe(testUserId);
+            expect(response.body.id).toBe(testUser2Id);
         });
 
         it('should fail when no authentication token provided', async () => {

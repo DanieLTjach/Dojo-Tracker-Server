@@ -24,7 +24,6 @@ export class GameService {
         createdBy: number
     ): GameWithPlayers {
         const timestamp = new Date();
-        this.userService.validateUserIsActiveById(createdBy);
 
         this.eventService.validateEventExists(eventId);
         const gameRules = this.eventService.getGameRulesByEventId(eventId);
@@ -73,8 +72,6 @@ export class GameService {
         playersData: PlayerData[],
         modifiedBy: number
     ): GameWithPlayers {
-        this.userService.validateUserIsAdmin(modifiedBy);
-
         const game = this.getGameById(gameId);
         this.eventService.validateEventExists(eventId);
         const gameRules = this.eventService.getGameRulesByEventId(eventId);
@@ -90,9 +87,7 @@ export class GameService {
         return newGame;
     }
 
-    deleteGame(gameId: number, deletedBy: number): void {
-        this.userService.validateUserIsAdmin(deletedBy);
-
+    deleteGame(gameId: number): void {
         const game = this.getGameById(gameId);
         this.ratingService.deleteRatingChangesFromGame(game);
 

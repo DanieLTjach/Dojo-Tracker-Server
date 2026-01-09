@@ -13,7 +13,6 @@ app.use(handleErrors);
 
 describe('Game API Endpoints', () => {
     const SYSTEM_USER_ID = 0; // System admin user
-    const ADMIN_TELEGRAM_ID = 123456789;
     const TEST_EVENT_ID = 1; // Test Event from migrations
     let testUser1Id: number;
     let testUser2Id: number;
@@ -22,7 +21,7 @@ describe('Game API Endpoints', () => {
     let testGameId: number;
 
     // Auth headers
-    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID, ADMIN_TELEGRAM_ID, true, true);
+    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
     let user1AuthHeader: string;
 
     // Helper function to create test users
@@ -53,7 +52,7 @@ describe('Game API Endpoints', () => {
         testUser4Id = await createTestUser('Player4', 444444444);
 
         // Create auth header for regular user
-        user1AuthHeader = createAuthHeader(testUser1Id, 111111111, false, true);
+        user1AuthHeader = createAuthHeader(testUser1Id);
     });
 
     afterAll(() => {
