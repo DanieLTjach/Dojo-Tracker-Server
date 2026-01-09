@@ -17,7 +17,7 @@ describe('User API Endpoints', () => {
     const USER_TELEGRAM_ID = 987654321;
 
     // Create auth headers for admin and regular user
-    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID, ADMIN_TELEGRAM_ID, true, true);
+    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
 
     let testUserId: number;
     let testUser2Id: number;
@@ -45,7 +45,7 @@ describe('User API Endpoints', () => {
                 .expect(201);
 
             testUserId = response.body.id;
-            regularUserAuthHeader = createAuthHeader(testUserId, userData.telegramId, false, true);
+            regularUserAuthHeader = createAuthHeader(testUserId);
 
             expect(response.body).toHaveProperty('id');
             expect(response.body.name).toBe(userData.name);

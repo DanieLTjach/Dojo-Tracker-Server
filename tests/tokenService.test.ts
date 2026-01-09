@@ -48,51 +48,8 @@ describe('TokenService', () => {
             const decoded = tokenService.verifyToken(tokenPair.accessToken);
 
             expect(decoded.userId).toBe(user.id);
-            expect(decoded.telegramId).toBe(user.telegramId);
-            expect(decoded.isAdmin).toBe(true);
-            expect(decoded.isActive).toBe(true);
             expect(decoded).toHaveProperty('iat');
             expect(decoded).toHaveProperty('exp');
-        });
-
-        it('should convert isAdmin from 0/1 to boolean', () => {
-            const user: User = {
-                id: 3,
-                name: 'Regular User',
-                telegramId: 111111111,
-                telegramUsername: '@regular',
-                isAdmin: 0,
-                isActive: 1,
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
-                modifiedBy: 'SYSTEM'
-            };
-
-            const tokenPair = tokenService.createTokenPair(user);
-            const decoded = tokenService.verifyToken(tokenPair.accessToken);
-
-            expect(decoded.isAdmin).toBe(false);
-            expect(typeof decoded.isAdmin).toBe('boolean');
-        });
-
-        it('should convert isActive from 0/1 to boolean', () => {
-            const user: User = {
-                id: 4,
-                name: 'Inactive User',
-                telegramId: 222222222,
-                telegramUsername: '@inactive',
-                isAdmin: 0,
-                isActive: 0,
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
-                modifiedBy: 'SYSTEM'
-            };
-
-            const tokenPair = tokenService.createTokenPair(user);
-            const decoded = tokenService.verifyToken(tokenPair.accessToken);
-
-            expect(decoded.isActive).toBe(false);
-            expect(typeof decoded.isActive).toBe('boolean');
         });
     });
 
@@ -199,9 +156,6 @@ describe('TokenService', () => {
 
             expect(decoded).toBeDefined();
             expect(decoded!.userId).toBe(user.id);
-            expect(decoded!.telegramId).toBe(user.telegramId);
-            expect(decoded!.isAdmin).toBe(true);
-            expect(decoded!.isActive).toBe(true);
         });
 
         it('should decode token with wrong signature without throwing error', () => {

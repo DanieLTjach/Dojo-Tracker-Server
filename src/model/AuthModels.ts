@@ -11,9 +11,6 @@ export interface TokenPair {
  */
 export interface DecodedToken {
     userId: number;
-    telegramId: number;
-    isAdmin: boolean;
-    isActive: boolean;
     iat?: number; // Issued at
     exp?: number; // Expiration
 }

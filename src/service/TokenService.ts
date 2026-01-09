@@ -12,20 +12,14 @@ export class TokenService {
      */
     createTokenPair(user: User): TokenPair {
         const payload: Omit<DecodedToken, 'iat' | 'exp'> = {
-            userId: user.id,
-            telegramId: user.telegramId!,
-            isAdmin: !!user.isAdmin, // Convert 0/1 to boolean
-            isActive: !!user.isActive
+            userId: user.id
         };
 
         const accessToken = jwt.sign(payload, config.jwtSecret, {
             expiresIn: config.jwtExpiry
         });
 
-        return {
-            accessToken
-            // refreshToken can be added later if needed
-        };
+        return { accessToken };
     }
 
     /**

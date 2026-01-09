@@ -1,11 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import { TokenService } from '../service/TokenService.ts';
+import { UserService } from '../service/UserService.ts';
 import {
     MissingAuthTokenError,
     InvalidAuthTokenError,
     InsufficientPermissionsError
 } from '../error/AuthErrors.ts';
-import { UserIsNotActive } from '../error/UserErrors.ts';
 import type { DecodedToken } from '../model/AuthModels.ts';
 
 // Extend Express Request type to include user
@@ -18,6 +18,7 @@ declare global {
 }
 
 const tokenService = new TokenService();
+const userService = new UserService();
 
 /**
  * Middleware to require authentication.
@@ -45,11 +46,6 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction): vo
         // Verify and decode token
         const decoded = tokenService.verifyToken(token);
 
-        // Check if user is active
-        if (!decoded.isActive) {
-            throw new UserIsNotActive(decoded.userId);
-        }
-
         // Attach user to request
         req.user = decoded;
 
@@ -71,46 +67,13 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction): v
             throw new MissingAuthTokenError();
         }
 
-        if (!req.user.isAdmin) {
+        const user = userService.getUserById(req.user.userId);
+        if (!user.isAdmin) {
             throw new InsufficientPermissionsError('perform this action');
         }
 
         next();
     } catch (error) {
         next(error);
-    }
-};
-
-/**
- * Middleware for optional authentication.
- * If token is present and valid, attaches user to req.user.
- * If no token or invalid token, continues without error.
- *
- * Usage: router.get('/maybe-protected', optionalAuth, handler)
- */
-export const optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
-    try {
-        const authHeader = req.headers.authorization;
-
-        if (!authHeader) {
-            return next();
-        }
-
-        const parts = authHeader.split(' ');
-        if (parts.length !== 2 || parts[0] !== 'Bearer') {
-            return next();
-        }
-
-        const token = parts[1];
-        const decoded = tokenService.verifyToken(token);
-
-        if (decoded.isActive) {
-            req.user = decoded;
-        }
-
-        next();
-    } catch {
-        // Silently continue without authentication
-        next();
     }
 };
