@@ -11,6 +11,7 @@ export interface GameRules {
 export interface Event {
     id: number;
     name: string | null;
+    description: string | null;
     type: string;
     gameRules: number;
     dateFrom: Date | null;
