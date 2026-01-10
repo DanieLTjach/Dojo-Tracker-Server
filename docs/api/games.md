@@ -585,7 +585,7 @@ Returned for unexpected server errors.
 
 3. **Points**: Player points must be integers. The API does not validate that points sum to zero or match game rules - this is the responsibility of the client.
 
-4. **Authentication**: All game endpoints require JWT authentication. Obtain a token via `/api/auth/login` before making requests.
+4. **Authentication**: All game endpoints require JWT authentication. Obtain a token via `POST /api/authenticate` with Telegram initData.
 
 5. **Admin Operations**: Any authenticated user can create games and view games. However, updating and deleting games requires admin privileges.
 
