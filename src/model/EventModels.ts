@@ -1,4 +1,3 @@
-
 export interface GameRules {
     id: number;
     name: string;

@@ -1,4 +1,4 @@
-import { InternalServerError, NotFoundError } from "./BaseErrors.ts";
+import { InternalServerError, NotFoundError } from './BaseErrors.ts';
 
 export class EventNotFoundError extends NotFoundError {
     constructor(eventId: number) {

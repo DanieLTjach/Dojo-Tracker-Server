@@ -11,11 +11,7 @@ const TEST_DB_PATH = './db/data/test.db';
  * Clean up any existing test database files from previous runs
  */
 function cleanupTestDatabase() {
-    const filesToClean = [
-        TEST_DB_PATH,
-        `${TEST_DB_PATH}-wal`,
-        `${TEST_DB_PATH}-shm`
-    ];
+    const filesToClean = [TEST_DB_PATH, `${TEST_DB_PATH}-wal`, `${TEST_DB_PATH}-shm`];
 
     filesToClean.forEach(file => {
         if (existsSync(file)) {

@@ -4,7 +4,7 @@ import {
     GameNotFoundById,
     IncorrectPlayerCountError,
     DuplicatePlayerError,
-    TooManyGamesFoundError
+    TooManyGamesFoundError,
 } from '../error/GameErrors.ts';
 import type { GameWithPlayers, PlayerData, GameFilters } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
@@ -12,17 +12,12 @@ import type { GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
 
 export class GameService {
-
     private gameRepository: GameRepository = new GameRepository();
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
 
-    addGame(
-        eventId: number,
-        playersData: PlayerData[],
-        createdBy: number
-    ): GameWithPlayers {
+    addGame(eventId: number, playersData: PlayerData[], createdBy: number): GameWithPlayers {
         const timestamp = new Date();
 
         this.eventService.validateEventExists(eventId);
@@ -45,7 +40,7 @@ export class GameService {
 
         return {
             ...game,
-            players: this.gameRepository.findGamePlayersByGameId(gameId)
+            players: this.gameRepository.findGamePlayersByGameId(gameId),
         };
     }
 
@@ -62,16 +57,11 @@ export class GameService {
 
         return games.map(game => ({
             ...game,
-            players: gamePlayers.filter(gp => gp.gameId === game.id)
+            players: gamePlayers.filter(gp => gp.gameId === game.id),
         }));
     }
 
-    updateGame(
-        gameId: number,
-        eventId: number,
-        playersData: PlayerData[],
-        modifiedBy: number
-    ): GameWithPlayers {
+    updateGame(gameId: number, eventId: number, playersData: PlayerData[], modifiedBy: number): GameWithPlayers {
         const game = this.getGameById(gameId);
         this.eventService.validateEventExists(eventId);
         const gameRules = this.eventService.getGameRulesByEventId(eventId);
@@ -118,13 +108,7 @@ export class GameService {
 
     private addPlayersToGame(gameId: number, players: PlayerData[], modifiedBy: number): void {
         for (const player of players) {
-            this.gameRepository.addGamePlayer(
-                gameId,
-                player.userId,
-                player.points,
-                player.startPlace,
-                modifiedBy
-            );
+            this.gameRepository.addGamePlayer(gameId, player.userId, player.points, player.startPlace, modifiedBy);
         }
     }
 

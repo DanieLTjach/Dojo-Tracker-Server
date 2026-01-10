@@ -1,4 +1,3 @@
-
 export interface Game {
     id: number;
     eventId: number;

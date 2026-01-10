@@ -1,37 +1,53 @@
-import type { Statement } from "better-sqlite3";
-import { db } from "../db/dbInit.ts";
-import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO } from "../model/RatingModels.ts";
-import { dateFromSqliteString, dateToSqliteString } from "../db/dbUtils.ts";
+import type { Statement } from 'better-sqlite3';
+import { db } from '../db/dbInit.ts';
+import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO } from '../model/RatingModels.ts';
+import { dateFromSqliteString, dateToSqliteString } from '../db/dbUtils.ts';
 
 export class RatingRepository {
-
-    private findUserRatingChangeInGameStatement: Statement<{
-        userId: number,
-        gameId: number
-    }, UserRatingChangeDBEntity> = db.prepare(
+    private findUserRatingChangeInGameStatement: Statement<
+        {
+            userId: number;
+            gameId: number;
+        },
+        UserRatingChangeDBEntity
+    > = db.prepare(
         `SELECT * FROM userRatingChange
          WHERE userId = :userId AND gameId = :gameId`
     );
 
     findUserRatingChangeInGame(userId: number, gameId: number): UserRatingChange | undefined {
         const userRatingChangeDBEntity = this.findUserRatingChangeInGameStatement.get({ userId, gameId });
-        return userRatingChangeDBEntity !== undefined ? userRatingChangeFromDBEntity(userRatingChangeDBEntity) : undefined;
+        return userRatingChangeDBEntity !== undefined
+            ? userRatingChangeFromDBEntity(userRatingChangeDBEntity)
+            : undefined;
     }
 
-    private findUserLatestRatingChangeBeforeDateStatement: Statement<{
-        userId: number,
-        eventId: number,
-        beforeDate: string
-    }, UserRatingChangeDBEntity> = db.prepare(
+    private findUserLatestRatingChangeBeforeDateStatement: Statement<
+        {
+            userId: number;
+            eventId: number;
+            beforeDate: string;
+        },
+        UserRatingChangeDBEntity
+    > = db.prepare(
         `SELECT * FROM userRatingChange
          WHERE userId = :userId AND eventId = :eventId AND timestamp < :beforeDate
          ORDER BY timestamp DESC LIMIT 1`
     );
 
-    findUserLatestRatingChangeBeforeDate(userId: number, eventId: number, beforeDate: Date): UserRatingChange | undefined {
-        const userRatingChangeDBEntity = this.findUserLatestRatingChangeBeforeDateStatement
-            .get({ userId, eventId, beforeDate: dateToSqliteString(beforeDate) });
-        return userRatingChangeDBEntity !== undefined ? userRatingChangeFromDBEntity(userRatingChangeDBEntity) : undefined;
+    findUserLatestRatingChangeBeforeDate(
+        userId: number,
+        eventId: number,
+        beforeDate: Date
+    ): UserRatingChange | undefined {
+        const userRatingChangeDBEntity = this.findUserLatestRatingChangeBeforeDateStatement.get({
+            userId,
+            eventId,
+            beforeDate: dateToSqliteString(beforeDate),
+        });
+        return userRatingChangeDBEntity !== undefined
+            ? userRatingChangeFromDBEntity(userRatingChangeDBEntity)
+            : undefined;
     }
 
     private findAllUsersCurrentRatingStatement: Statement<{ eventId: number }, UserRatingDBEntity> = db.prepare(
@@ -51,11 +67,14 @@ export class RatingRepository {
         return this.findAllUsersCurrentRatingStatement.all({ eventId }).map(userRatingFromDBEntity);
     }
 
-    private getAllUsersTotalRatingChangeDuringPeriodStatement: Statement<{
-        eventId: number,
-        dateFrom: string,
-        dateTo: string
-    }, UserRatingChangeShortDTODBEntity> = db.prepare(
+    private getAllUsersTotalRatingChangeDuringPeriodStatement: Statement<
+        {
+            eventId: number;
+            dateFrom: string;
+            dateTo: string;
+        },
+        UserRatingChangeShortDTODBEntity
+    > = db.prepare(
         `SELECT u.id as userId, u.name as userName, SUM(urc.ratingChange) as ratingChange
          FROM userRatingChange urc
          JOIN user u ON urc.userId = u.id
@@ -72,15 +91,18 @@ export class RatingRepository {
             .all({
                 eventId,
                 dateFrom: dateToSqliteString(dateFrom),
-                dateTo: dateToSqliteString(dateTo)
+                dateTo: dateToSqliteString(dateTo),
             })
             .map(userRatingChangeShortDTOFromDBEntity);
     }
 
-    private getUserRatingHistoryStatement: Statement<{
-        userId: number,
-        eventId: number
-    }, RatingSnapshotDBEntity> = db.prepare(
+    private getUserRatingHistoryStatement: Statement<
+        {
+            userId: number;
+            eventId: number;
+        },
+        RatingSnapshotDBEntity
+    > = db.prepare(
         `SELECT timestamp, rating
          FROM userRatingChange
          WHERE userId = :userId AND eventId = :eventId
@@ -109,30 +131,23 @@ export class RatingRepository {
     }
 
     private updateUserRatingChangesAfterDateStatement: Statement<{
-        userId: number,
-        eventId: number,
-        ratingDelta: number,
-        afterDate: string
+        userId: number;
+        eventId: number;
+        ratingDelta: number;
+        afterDate: string;
     }> = db.prepare(
         `UPDATE userRatingChange
          SET rating = rating + :ratingDelta
          WHERE userId = :userId and eventId = :eventId and timestamp > :afterDate`
     );
 
-    updateUserRatingChangesAfterDate(
-        userId: number,
-        eventId: number,
-        ratingDelta: number,
-        afterDate: Date
-    ): void {
-        this.updateUserRatingChangesAfterDateStatement.run(
-            {
-                userId,
-                eventId,
-                ratingDelta,
-                afterDate: dateToSqliteString(afterDate)
-            }
-        );
+    updateUserRatingChangesAfterDate(userId: number, eventId: number, ratingDelta: number, afterDate: Date): void {
+        this.updateUserRatingChangesAfterDateStatement.run({
+            userId,
+            eventId,
+            ratingDelta,
+            afterDate: dateToSqliteString(afterDate),
+        });
     }
 }
 
@@ -162,7 +177,7 @@ interface UserRatingDBEntity {
 function userRatingFromDBEntity(dbEntity: UserRatingDBEntity): UserRating {
     return {
         user: { id: dbEntity.userId, name: dbEntity.userName },
-        rating: dbEntity.rating
+        rating: dbEntity.rating,
     };
 }
 
@@ -175,7 +190,7 @@ interface UserRatingChangeShortDTODBEntity {
 function userRatingChangeShortDTOFromDBEntity(dbEntity: UserRatingChangeShortDTODBEntity): UserRatingChangeShortDTO {
     return {
         user: { id: dbEntity.userId, name: dbEntity.userName },
-        ratingChange: dbEntity.ratingChange
+        ratingChange: dbEntity.ratingChange,
     };
 }
 
@@ -187,6 +202,6 @@ interface RatingSnapshotDBEntity {
 function ratingSnapshotFromDBEntity(dbEntity: RatingSnapshotDBEntity): RatingSnapshot {
     return {
         timestamp: dateFromSqliteString(dbEntity.timestamp),
-        rating: dbEntity.rating
+        rating: dbEntity.rating,
     };
 }

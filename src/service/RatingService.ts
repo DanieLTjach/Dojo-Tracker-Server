@@ -1,21 +1,19 @@
-import { UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
-import type { GameRules } from "../model/EventModels.ts";
-import type { GameWithPlayers } from "../model/GameModels.ts";
-import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO } from "../model/RatingModels.ts";
-import { RatingRepository } from "../repository/RatingRepository.ts";
-import { EventService } from "./EventService.ts";
-import { UserService } from "./UserService.ts";
+import { UserRatingChangeInGameNotFound } from '../error/RatingErrors.ts';
+import type { GameRules } from '../model/EventModels.ts';
+import type { GameWithPlayers } from '../model/GameModels.ts';
+import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO } from '../model/RatingModels.ts';
+import { RatingRepository } from '../repository/RatingRepository.ts';
+import { EventService } from './EventService.ts';
+import { UserService } from './UserService.ts';
 
 export class RatingService {
-
     private ratingRepository: RatingRepository = new RatingRepository();
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
 
     getAllUsersCurrentRating(eventId: number): UserRating[] {
         this.eventService.validateEventExists(eventId);
-        return this.ratingRepository.findAllUsersCurrentRating(eventId)
-            .map(normalizeUserRating);
+        return this.ratingRepository.findAllUsersCurrentRating(eventId).map(normalizeUserRating);
     }
 
     getAllUsersTotalRatingChangeDuringPeriod(
@@ -24,31 +22,30 @@ export class RatingService {
         dateTo: Date
     ): UserRatingChangeShortDTO[] {
         this.eventService.validateEventExists(eventId);
-        return this.ratingRepository.getAllUsersTotalRatingChangeDuringPeriod(eventId, dateFrom, dateTo)
+        return this.ratingRepository
+            .getAllUsersTotalRatingChangeDuringPeriod(eventId, dateFrom, dateTo)
             .map(normalizeUserRatingChange);
     }
 
-    getUserRatingHistory(
-        userId: number,
-        eventId: number
-    ): RatingSnapshot[] {
+    getUserRatingHistory(userId: number, eventId: number): RatingSnapshot[] {
         this.userService.validateUserExistsById(userId);
         this.eventService.validateEventExists(eventId);
-        return this.ratingRepository.getUserRatingHistory(userId, eventId)
-            .map(normalizeRatingSnapshot);
+        return this.ratingRepository.getUserRatingHistory(userId, eventId).map(normalizeRatingSnapshot);
     }
 
-    addRatingChangesFromGame(
-        game: GameWithPlayers,
-        gameRules: GameRules
-    ): void {
+    addRatingChangesFromGame(game: GameWithPlayers, gameRules: GameRules): void {
         const players = [...game.players];
         players.sort((a, b) => b.points - a.points);
-        const umaWithTieBreaking = this.calculateUmaWithAveraging(players.map(p => p.points), gameRules.uma);
+        const umaWithTieBreaking = this.calculateUmaWithAveraging(
+            players.map(p => p.points),
+            gameRules.uma
+        );
 
         for (const [index, playerData] of players.entries()) {
             const latestRatingChange = this.ratingRepository.findUserLatestRatingChangeBeforeDate(
-                playerData.userId, game.eventId, game.createdAt
+                playerData.userId,
+                game.eventId,
+                game.createdAt
             );
             const currentRating = latestRatingChange?.rating ?? gameRules.startingRating * RATING_TO_POINTS_COEFFICIENT;
 
@@ -62,7 +59,7 @@ export class RatingService {
                 gameId: game.id,
                 ratingChange,
                 rating: newRating,
-                timestamp: game.createdAt
+                timestamp: game.createdAt,
             });
             this.ratingRepository.updateUserRatingChangesAfterDate(
                 playerData.userId,
@@ -104,7 +101,7 @@ export class RatingService {
             }
         }
 
-        const newUma = []
+        const newUma = [];
         for (const indicesWithTheSamePoints of pointsToIndices.values()) {
             let sum = 0;
             for (const index of indicesWithTheSamePoints) {
@@ -118,7 +115,6 @@ export class RatingService {
 
         return newUma;
     }
-
 }
 
 const RATING_TO_POINTS_COEFFICIENT: number = 1000;

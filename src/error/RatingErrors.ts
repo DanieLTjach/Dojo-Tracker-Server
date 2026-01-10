@@ -1,4 +1,4 @@
-import { InternalServerError } from "./BaseErrors.ts";
+import { InternalServerError } from './BaseErrors.ts';
 
 export class UserRatingChangeInGameNotFound extends InternalServerError {
     constructor(userId: number, gameId: number) {

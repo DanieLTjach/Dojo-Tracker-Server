@@ -12,6 +12,9 @@ const authController = new AuthController();
  *
  * Example: POST /api/authenticate?query_id=...&user=...&auth_date=...&hash=...
  */
-router.post('/authenticate', withTransaction((req, res) => authController.authenticate(req, res)));
+router.post(
+    '/authenticate',
+    withTransaction((req, res) => authController.authenticate(req, res))
+);
 
 export default router;

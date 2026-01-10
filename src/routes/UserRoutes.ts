@@ -7,7 +7,10 @@ const router = Router();
 const userController = new UserController();
 
 // Public - user registration
-router.post('/', withTransaction((req, res) => userController.registerUser(req, res)));
+router.post(
+    '/',
+    withTransaction((req, res) => userController.registerUser(req, res))
+);
 // Admin only - register user without Telegram
 router.post(
     '/without-telegram',
@@ -17,8 +20,16 @@ router.post(
 );
 
 // Authenticated users - read operations
-router.get('/', requireAuth, withTransaction((req, res) => userController.getAllUsers(req, res)));
-router.get('/:id', requireAuth, withTransaction((req, res) => userController.getUserById(req, res)));
+router.get(
+    '/',
+    requireAuth,
+    withTransaction((req, res) => userController.getAllUsers(req, res))
+);
+router.get(
+    '/:id',
+    requireAuth,
+    withTransaction((req, res) => userController.getUserById(req, res))
+);
 router.get(
     '/by-telegram-id/:telegramId',
     requireAuth,
@@ -26,7 +37,11 @@ router.get(
 );
 
 // Authenticated users - edit own profile or admin can edit any
-router.patch('/:id', requireAuth, withTransaction((req, res) => userController.editUser(req, res)));
+router.patch(
+    '/:id',
+    requireAuth,
+    withTransaction((req, res) => userController.editUser(req, res))
+);
 
 // Admin only - activation/deactivation
 router.post(

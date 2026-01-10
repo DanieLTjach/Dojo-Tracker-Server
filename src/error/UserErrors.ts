@@ -1,4 +1,4 @@
-import { BadRequestError, ForbiddenError, NotFoundError } from "./BaseErrors.ts";
+import { BadRequestError, ForbiddenError, NotFoundError } from './BaseErrors.ts';
 
 export class UserWithThisNameAlreadyExists extends BadRequestError {
     constructor(name: string) {
@@ -8,7 +8,10 @@ export class UserWithThisNameAlreadyExists extends BadRequestError {
 
 export class UserWithThisTelegramUsernameAlreadyExists extends BadRequestError {
     constructor(telegramUsername: string) {
-        super(`User with telegram username ${telegramUsername} already exists`, 'userWithThisTelegramUsernameAlreadyExists');
+        super(
+            `User with telegram username ${telegramUsername} already exists`,
+            'userWithThisTelegramUsernameAlreadyExists'
+        );
     }
 }
 

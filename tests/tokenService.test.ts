@@ -33,7 +33,7 @@ describe('TokenService', () => {
                 isActive: 1,
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -53,7 +53,7 @@ describe('TokenService', () => {
                 isActive: 1,
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -76,7 +76,7 @@ describe('TokenService', () => {
                 isActive: 1,
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -96,7 +96,7 @@ describe('TokenService', () => {
                 isActive: 1,
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
             };
 
             // Create an expired token (expired 1 hour ago)
@@ -121,7 +121,7 @@ describe('TokenService', () => {
                 isActive: 1,
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
             };
 
             // Create a token with wrong secret
@@ -160,7 +160,7 @@ describe('TokenService', () => {
                 isActive: 1,
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -208,5 +208,4 @@ describe('TokenService', () => {
             expect(decoded!.userId).toBe(10);
         });
     });
-
 });

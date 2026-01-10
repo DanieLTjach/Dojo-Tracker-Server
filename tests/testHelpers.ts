@@ -11,7 +11,7 @@ export function generateTestToken(userId: number): string {
     const payload: DecodedToken = { userId };
 
     return jwt.sign(payload, config.jwtSecret, {
-        expiresIn: config.jwtExpiry
+        expiresIn: config.jwtExpiry,
     });
 }
 
