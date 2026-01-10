@@ -2,16 +2,17 @@
 
 A backend server for tracking mahjong games and user statistics. Built with Node.js, Express, and SQLite.
 
-## 🚀 Tech Stack
+## Tech Stack
 
 - **Runtime:** Node.js
 - **Language:** TypeScript
 - **Framework:** Express.js
 - **Database:** SQLite (via `better-sqlite3`)
 - **Validation:** Zod
+- **Authentication:** JWT with Telegram Mini App initData validation
 - **Development:** Nodemon, ts-node
 
-## 🛠️ Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -55,52 +56,59 @@ A backend server for tracking mahjong games and user statistics. Built with Node
   npm start
   ```
 
-## 📡 API Reference
+## API Reference
 
-All endpoints are prefixed with `/api` and require JWT authentication (except `/api/auth/login`).
+All endpoints are prefixed with `/api`. Most endpoints require JWT authentication.
 
 For detailed API documentation with curl examples, see:
-- **[Authentication](docs/api/authentication.md)** - JWT authentication and login
+- **[Authentication](docs/api/authentication.md)** - JWT authentication with Telegram initData
+- **[Telegram Mini App Auth](docs/telegram-mini-app-auth.md)** - Integration guide for Telegram Mini Apps
 - **[User Endpoints](docs/api/users.md)** - Complete documentation for `/api/users`
 - **[Game Endpoints](docs/api/games.md)** - Complete documentation for `/api/games`
 
 ### Authentication
 
-The API uses JWT (JSON Web Token) authentication. To access protected endpoints:
+The API uses JWT (JSON Web Token) authentication with Telegram Mini App initData validation.
 
-1. **Login** via `/api/auth/login` with your Telegram credentials
-2. **Receive** a JWT token in the response
-3. **Include** the token in subsequent requests using the `Authorization` header:
+**Authentication Flow:**
+
+1. **Register** a new user via `POST /api/users` (public endpoint)
+2. **Authenticate** via `POST /api/authenticate` with Telegram initData as query params
+3. **Receive** a JWT accessToken in the response
+4. **Include** the token in subsequent requests using the `Authorization` header:
    ```bash
-   Authorization: Bearer <your-jwt-token>
+   Authorization: Bearer <your-access-token>
    ```
 
 **Quick Example:**
 ```bash
-# Login
-curl -X POST http://localhost:3000/api/auth/login \
+# Register a new user (public endpoint)
+curl -X POST http://localhost:3000/api/users \
   -H "Content-Type: application/json" \
-  -d '{"telegramId": 123456789, "telegramUsername": "@johndoe"}'
+  -d '{"name": "John Doe", "telegramUsername": "@johndoe", "telegramId": 123456789}'
 
-# Use the returned token for authenticated requests
+# Authenticate with Telegram initData (from Telegram WebApp)
+curl -X POST "http://localhost:3000/api/authenticate?query_id=...&user=%7B%22id%22%3A123456789%7D&auth_date=...&hash=..."
+
+# Use the returned accessToken for authenticated requests
 curl -X GET http://localhost:3000/api/users \
-  -H "Authorization: Bearer <token-from-login>"
+  -H "Authorization: Bearer <accessToken-from-authenticate>"
 ```
 
 See the [Authentication documentation](docs/api/authentication.md) for complete details.
 
-### Auth (`/api/auth`)
+### Auth (`/api`)
 
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/login` | Login with Telegram (auto-registers new users) | No |
+| `POST` | `/authenticate` | Authenticate with Telegram initData (query params) | No |
 
 ### Users (`/api/users`)
 
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/` | Register a new user | Yes (Admin) |
-| `POST` | `/without-telegram` | Register a new user without Telegram | Yes (Admin) |
+| `POST` | `/` | Register a new user | No |
+| `POST` | `/without-telegram` | Register a user without Telegram | Yes (Admin) |
 | `GET` | `/` | Get all users | Yes |
 | `GET` | `/:id` | Get user by ID | Yes |
 | `GET` | `/by-telegram-id/:telegramId` | Get user by Telegram ID | Yes |
@@ -124,12 +132,13 @@ See the [Authentication documentation](docs/api/authentication.md) for complete 
 - `userId`: Filter by user ID
 - `eventId`: Filter by event ID
 
-## 📂 Project Structure
+## Project Structure
 
 - `src/routes`: Express route definitions.
 - `src/schema`: Zod validation schemas.
 - `src/controller`: Request handlers.
 - `src/service`: Service layer.
 - `src/repository`: Data access layer.
+- `src/middleware`: Authentication and error handling middleware.
 - `src/db`: Database initialization and migration logic.
 - `db/migrations`: SQL migration files.

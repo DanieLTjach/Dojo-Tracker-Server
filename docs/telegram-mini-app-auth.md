@@ -9,74 +9,104 @@ User opens Telegram Mini App
   ↓
 Telegram provides initData with cryptographic hash
   ↓
-Frontend sends initData to backend
+User registers via POST /api/users (if new)
+  ↓
+Frontend sends initData as query params to backend
   ↓
 Backend validates hash using TELEGRAM_BOT_TOKEN
   ↓
-Backend auto-creates user if new, returns JWT + user info
+Backend returns JWT accessToken
   ↓
 Frontend uses JWT for all subsequent API requests
 ```
 
 ## Endpoint
 
-### POST /api/auth/telegram
+### POST /api/authenticate
 
-Authenticates Telegram Mini App users using initData.
+Authenticates Telegram Mini App users using initData passed as query parameters.
 
 **Authentication Required:** No (public endpoint)
 
-**Request Options:**
+**Request Format:**
 
-1. **Authorization Header (Recommended):**
-   ```http
-   POST /api/auth/telegram
-   Authorization: tma <initDataRaw>
-   ```
+The initData from Telegram is passed directly as query parameters:
 
-2. **Request Body (Alternative):**
-   ```http
-   POST /api/auth/telegram
-   Content-Type: application/json
+```http
+POST /api/authenticate?query_id=AAHdF...&user=%7B%22id%22%3A123456789%7D&auth_date=1234567890&hash=abc123...
+```
 
-   {
-     "initData": "<initDataRaw>"
-   }
-   ```
+**Query Parameters:**
+- `query_id` (string): Query identifier from Telegram
+- `user` (string, required): URL-encoded JSON containing at least `{ "id": <telegram_user_id> }`
+- `auth_date` (number, required): Unix timestamp when initData was created
+- `hash` (string, required): HMAC-SHA256 hash for validation
 
 **Success Response (200 OK):**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "telegramId": 123456789,
-    "name": "John",
-    "telegramUsername": "@john",
-    "isAdmin": false,
-    "isActive": true
-  },
-  "isNewUser": false
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
-
-- `isNewUser`: `true` if user was just created, `false` if already existed
-- Use this flag for onboarding flows
 
 **Error Responses:**
 
 - **400 Bad Request:** Missing or invalid initData
+  ```json
+  { "errorCode": "invalidInitData", "message": "Missing hash parameter" }
+  ```
 - **400 Bad Request:** Invalid hash (tampered data)
+  ```json
+  { "errorCode": "invalidInitData", "message": "Hash mismatch" }
+  ```
 - **400 Bad Request:** Expired initData (older than 24 hours)
+  ```json
+  { "errorCode": "expiredAuthData", "message": "Authentication data has expired" }
+  ```
+- **403 Forbidden:** User account is deactivated
+- **404 Not Found:** User with Telegram ID not found (register first via POST /api/users)
+
+## Frontend Integration
+
+### Getting initData from Telegram WebApp
+
+```typescript
+// Access Telegram WebApp
+const tg = window.Telegram.WebApp;
+
+// Get the raw initData string
+const initData = tg.initData;
+
+// Send to backend as query string
+const response = await fetch(`${API_URL}/api/authenticate?${initData}`, {
+  method: 'POST'
+});
+
+const { accessToken } = await response.json();
+```
+
+### Using the Token
+
+```typescript
+// Store the token
+localStorage.setItem('token', accessToken);
+
+// Use for authenticated requests
+const headers = {
+  'Authorization': `Bearer ${accessToken}`,
+  'Content-Type': 'application/json'
+};
+```
 
 ## Development Mode
 
-For local testing without a real Telegram bot token:
+For local testing without a real Telegram bot token, the hash validation is bypassed when `NODE_ENV=development` and no `TELEGRAM_BOT_TOKEN` is set.
 
-**Backend Setup:**
+**Backend Setup (.env.development):**
 ```env
 NODE_ENV=development
 # Leave TELEGRAM_BOT_TOKEN empty or unset
+JWT_SECRET=dev-secret-key
 ```
 
 **Frontend Mock Data:**
@@ -88,12 +118,15 @@ const mockInitData = 'query_id=test&user=' +
     username: "testuser"
   })) +
   '&auth_date=' + Math.floor(Date.now() / 1000) +
-  '&hash=dev_mode_hash';  // Special dev mode hash
+  '&hash=dev_mode_hash';
+
+// Use in development
+const response = await fetch(`${API_URL}/api/authenticate?${mockInitData}`, {
+  method: 'POST'
+});
 ```
 
-When the backend detects `hash=dev_mode_hash` and `NODE_ENV=development`, it skips cryptographic validation.
-
-⚠️ **Production:** Set `TELEGRAM_BOT_TOKEN` to enable real signature validation.
+**Warning:** In production, always set `TELEGRAM_BOT_TOKEN` to enable real signature validation.
 
 ## Environment Variables
 
@@ -106,19 +139,37 @@ JWT_SECRET=your_secure_random_secret
 
 **Optional:**
 ```env
-JWT_EXPIRY=24h
+JWT_EXPIRES_IN=24h
 AUTH_INIT_DATA_VALIDITY_SECONDS=86400
 ```
 
 ## Security Features
 
-- ✅ HMAC-SHA256 cryptographic validation
-- ✅ 24-hour initData expiration check
-- ✅ Automatic user registration
-- ✅ Stateless JWT authentication
-- ✅ Dev mode for testing (disabled in production)
+- HMAC-SHA256 cryptographic validation of initData
+- 24-hour initData expiration check
+- Stateless JWT authentication
+- User must be pre-registered before authentication
+- Dev mode for testing (disabled in production)
+
+## User Registration
+
+Before a user can authenticate, they must be registered:
+
+```bash
+# Register a new user
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "telegramUsername": "@johndoe",
+    "telegramId": 123456789
+  }'
+```
+
+The user registration endpoint is public and does not require authentication.
 
 ## Related Documentation
 
+- [Authentication API](api/authentication.md) - Complete authentication documentation
+- [User API](api/users.md) - User registration and management
 - [Telegram Mini Apps Documentation](https://core.telegram.org/bots/webapps)
-- API endpoint documentation (see other docs in this folder)
