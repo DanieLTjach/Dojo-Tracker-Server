@@ -4,7 +4,6 @@ import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
 
 export class TokenService {
-
     /**
      * Creates a JWT token pair for a user.
      * @param user - The user to create tokens for
@@ -13,7 +12,7 @@ export class TokenService {
     createTokenPair(user: User): TokenPair {
         const payload: DecodedToken = { userId: user.id };
         const accessToken = jwt.sign(payload, config.jwtSecret, {
-            expiresIn: config.jwtExpiry
+            expiresIn: config.jwtExpiry,
         });
         return { accessToken };
     }

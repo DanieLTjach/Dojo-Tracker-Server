@@ -6,12 +6,11 @@ import {
     UserWithThisNameAlreadyExists,
     UserWithThisTelegramIdAlreadyExists,
     UserWithThisTelegramUsernameAlreadyExists,
-    UserIsNotActive
+    UserIsNotActive,
 } from '../error/UserErrors.ts';
 import type { User } from '../model/UserModels.ts';
 
 export class UserService {
-
     private userRepository: UserRepository = new UserRepository();
 
     registerUser(
@@ -52,14 +51,9 @@ export class UserService {
             throw new UserNotFoundByTelegramId(telegramId);
         }
         return user;
-    } 
+    }
 
-    editUser(
-        userId: number,
-        name: string | undefined,
-        telegramUsername: string | undefined,
-        modifiedBy: number
-    ): User {
+    editUser(userId: number, name: string | undefined, telegramUsername: string | undefined, modifiedBy: number): User {
         if (userId !== modifiedBy) {
             this.validateUserIsAdmin(modifiedBy);
         }

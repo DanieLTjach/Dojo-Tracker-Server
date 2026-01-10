@@ -7,12 +7,11 @@ import {
     getUserByTelegramIdSchema,
     userRegistrationSchema,
     getUserByIdSchema,
-    userRegistrationWithoutTelegramSchema
+    userRegistrationWithoutTelegramSchema,
 } from '../schema/UserSchemas.ts';
 import { SYSTEM_USER_ID } from '../../config/constants.ts';
 
 export class UserController {
-
     private userService: UserService = new UserService();
 
     registerUser(req: Request, res: Response) {
@@ -49,7 +48,7 @@ export class UserController {
     editUser(req: Request, res: Response) {
         const {
             params: { id },
-            body: { name, telegramUsername }
+            body: { name, telegramUsername },
         } = userEditSchema.parse(req);
 
         const modifiedBy = req.user!.userId; // Non-null assertion safe because requireAuth ensures user exists
@@ -58,7 +57,9 @@ export class UserController {
     }
 
     updateUserActivationStatus(req: Request, res: Response, isActive: boolean) {
-        const { params: { id } } = userActivationSchema.parse(req);
+        const {
+            params: { id },
+        } = userActivationSchema.parse(req);
         const modifiedBy = req.user!.userId;
         const activatedUser = this.userService.updateUserActivationStatus(id, isActive, modifiedBy);
         return res.status(StatusCodes.OK).json(activatedUser);

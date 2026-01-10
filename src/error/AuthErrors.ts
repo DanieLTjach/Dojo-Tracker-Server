@@ -1,4 +1,4 @@
-import { UnauthorizedError, ForbiddenError } from "./BaseErrors.ts";
+import { UnauthorizedError, ForbiddenError } from './BaseErrors.ts';
 
 export class InvalidInitDataError extends UnauthorizedError {
     constructor(reason: string) {

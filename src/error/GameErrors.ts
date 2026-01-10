@@ -1,4 +1,4 @@
-import { BadRequestError, NotFoundError } from "./BaseErrors.ts";
+import { BadRequestError, NotFoundError } from './BaseErrors.ts';
 
 export class GameNotFoundById extends NotFoundError {
     constructor(id: number) {

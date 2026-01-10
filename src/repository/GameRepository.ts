@@ -4,12 +4,14 @@ import type { Game, GameFilters, GamePlayer } from '../model/GameModels.ts';
 import { db } from '../db/dbInit.ts';
 
 export class GameRepository {
-
-    private createGameStatement: Statement<{
-        eventId: number,
-        modifiedBy: number,
-        timestamp: string
-    }, void> = db.prepare(
+    private createGameStatement: Statement<
+        {
+            eventId: number;
+            modifiedBy: number;
+            timestamp: string;
+        },
+        void
+    > = db.prepare(
         `INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt) 
          VALUES (:eventId, :modifiedBy, :timestamp, :timestamp)`
     );
@@ -19,28 +21,38 @@ export class GameRepository {
             this.createGameStatement.run({
                 eventId,
                 modifiedBy,
-                timestamp: dateToSqliteString(timestamp)
+                timestamp: dateToSqliteString(timestamp),
             }).lastInsertRowid
         );
     }
 
-    private addGamePlayerStatement: Statement<{
+    private addGamePlayerStatement: Statement<
+        {
+            gameId: number;
+            userId: number;
+            points: number;
+            startPlace: string | undefined;
+            modifiedBy: number;
+        },
+        void
+    > = db.prepare(
+        `INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy)
+         VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy)`
+    );
+
+    addGamePlayer(
         gameId: number,
         userId: number,
         points: number,
         startPlace: string | undefined,
         modifiedBy: number
-    }, void> = db.prepare(
-        `INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy)
-         VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy)`
-    );
-
-    addGamePlayer(gameId: number, userId: number, points: number, startPlace: string | undefined, modifiedBy: number): void {
+    ): void {
         this.addGamePlayerStatement.run({ gameId, userId, points, startPlace, modifiedBy });
     }
 
-    private findGameByIdStatement: Statement<{ id: number }, GameDBEntity> =
-        db.prepare('SELECT * FROM game WHERE id = :id');
+    private findGameByIdStatement: Statement<{ id: number }, GameDBEntity> = db.prepare(
+        'SELECT * FROM game WHERE id = :id'
+    );
 
     findGameById(gameId: number): Game | undefined {
         const gameDBEntity = this.findGameByIdStatement.get({ id: gameId });
@@ -115,11 +127,14 @@ export class GameRepository {
         return statement.all(...params).map(gameFromDBEntity);
     }
 
-    private updateGameStatement: Statement<{
-        eventId: number,
-        modifiedBy: number,
-        id: number
-    }, void> = db.prepare(
+    private updateGameStatement: Statement<
+        {
+            eventId: number;
+            modifiedBy: number;
+            id: number;
+        },
+        void
+    > = db.prepare(
         `UPDATE game
          SET eventId = :eventId, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
          WHERE id = :id`
@@ -129,15 +144,15 @@ export class GameRepository {
         this.updateGameStatement.run({ eventId, modifiedBy, id: gameId });
     }
 
-    private deleteGamePlayersByGameIdStatement: Statement<{ gameId: number }, void> =
-        db.prepare('DELETE FROM userToGame WHERE gameId = :gameId');
+    private deleteGamePlayersByGameIdStatement: Statement<{ gameId: number }, void> = db.prepare(
+        'DELETE FROM userToGame WHERE gameId = :gameId'
+    );
 
     deleteGamePlayersByGameId(gameId: number): void {
         this.deleteGamePlayersByGameIdStatement.run({ gameId });
     }
 
-    private deleteGameByIdStatement: Statement<{ id: number }, void> =
-        db.prepare('DELETE FROM game WHERE id = :id');
+    private deleteGameByIdStatement: Statement<{ id: number }, void> = db.prepare('DELETE FROM game WHERE id = :id');
 
     deleteGameById(gameId: number): void {
         this.deleteGameByIdStatement.run({ id: gameId });
@@ -153,9 +168,9 @@ interface GameDBEntity {
 }
 
 function gameFromDBEntity(dbEntity: GameDBEntity): Game {
-    return { 
+    return {
         ...dbEntity,
         createdAt: dateFromSqliteString(dbEntity.createdAt),
-        modifiedAt: dateFromSqliteString(dbEntity.modifiedAt)
-    }
+        modifiedAt: dateFromSqliteString(dbEntity.modifiedAt),
+    };
 }

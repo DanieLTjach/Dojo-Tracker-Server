@@ -1,20 +1,21 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { GameService } from '../service/GameService.ts';
-import { 
-    gameCreationSchema, 
-    gameGetByIdSchema, 
-    gameGetListSchema, 
-    gameUpdateSchema, 
-    gameDeletionSchema 
+import {
+    gameCreationSchema,
+    gameGetByIdSchema,
+    gameGetListSchema,
+    gameUpdateSchema,
+    gameDeletionSchema,
 } from '../schema/GameSchemas.ts';
 
 export class GameController {
-
     private gameService: GameService = new GameService();
 
     addGame(req: Request, res: Response) {
-        const { body: { eventId, playersData } } = gameCreationSchema.parse(req);
+        const {
+            body: { eventId, playersData },
+        } = gameCreationSchema.parse(req);
         const createdBy = req.user!.userId;
         const newGame = this.gameService.addGame(eventId, playersData, createdBy);
         return res.status(StatusCodes.CREATED).json(newGame);
@@ -27,7 +28,9 @@ export class GameController {
     }
 
     getGameById(req: Request, res: Response) {
-        const { params: { gameId } } = gameGetByIdSchema.parse(req);
+        const {
+            params: { gameId },
+        } = gameGetByIdSchema.parse(req);
         const game = this.gameService.getGameById(gameId);
         return res.status(StatusCodes.OK).json(game);
     }
@@ -35,21 +38,18 @@ export class GameController {
     editGame(req: Request, res: Response) {
         const {
             params: { gameId },
-            body: { playersData, eventId }
+            body: { playersData, eventId },
         } = gameUpdateSchema.parse(req);
 
         const modifiedBy = req.user!.userId; // Non-null assertion safe because requireAdmin ensures user exists
-        const updatedGame = this.gameService.updateGame(
-            gameId,
-            eventId,
-            playersData,
-            modifiedBy
-        );
+        const updatedGame = this.gameService.updateGame(gameId, eventId, playersData, modifiedBy);
         return res.status(StatusCodes.OK).json(updatedGame);
     }
 
     deleteGame(req: Request, res: Response) {
-        const { params: { gameId } } = gameDeletionSchema.parse(req);
+        const {
+            params: { gameId },
+        } = gameDeletionSchema.parse(req);
 
         const deletedBy = req.user!.userId;
         this.gameService.deleteGame(gameId, deletedBy);

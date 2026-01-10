@@ -23,7 +23,7 @@ describe('Authentication API Endpoints', () => {
 
     beforeAll(() => {
         // Create test user before running auth tests
-        userService.registerUser("name", TEST_USERNAME, TEST_TELEGRAM_ID, 0);
+        userService.registerUser('name', TEST_USERNAME, TEST_TELEGRAM_ID, 0);
     });
 
     afterAll(() => {
@@ -42,13 +42,13 @@ describe('Authentication API Endpoints', () => {
             first_name: 'Test',
             last_name: 'User',
             username: username,
-            language_code: 'en'
+            language_code: 'en',
         });
 
         // Create data-check-string (sorted params except hash)
         const params = {
             auth_date: authDate.toString(),
-            user: user
+            user: user,
         };
 
         const dataCheckString = Object.entries(params)
@@ -62,7 +62,7 @@ describe('Authentication API Endpoints', () => {
 
         return {
             ...params,
-            hash
+            hash,
         };
     }
 
@@ -74,13 +74,13 @@ describe('Authentication API Endpoints', () => {
         const user = JSON.stringify({
             id: TEST_TELEGRAM_ID,
             first_name: 'Test',
-            username: TEST_USERNAME
+            username: TEST_USERNAME,
         });
 
         return {
             auth_date: authDate.toString(),
             user: user,
-            hash: 'invalid_hash_value'
+            hash: 'invalid_hash_value',
         };
     }
 
@@ -89,16 +89,16 @@ describe('Authentication API Endpoints', () => {
      */
     function generateExpiredInitData(): Record<string, string> {
         // Set auth_date to 2 hours ago (beyond default 1 hour validity)
-        const authDate = Math.floor(Date.now() / 1000) - (2 * 60 * 60);
+        const authDate = Math.floor(Date.now() / 1000) - 2 * 60 * 60;
         const user = JSON.stringify({
             id: TEST_TELEGRAM_ID,
             first_name: 'Test',
-            username: TEST_USERNAME
+            username: TEST_USERNAME,
         });
 
         const params = {
             auth_date: authDate.toString(),
-            user: user
+            user: user,
         };
 
         const dataCheckString = Object.entries(params)
@@ -111,7 +111,7 @@ describe('Authentication API Endpoints', () => {
 
         return {
             ...params,
-            hash
+            hash,
         };
     }
 
@@ -119,10 +119,7 @@ describe('Authentication API Endpoints', () => {
         it('should authenticate an existing user', async () => {
             const initData = generateValidInitData(TEST_TELEGRAM_ID, TEST_USERNAME);
 
-            const response = await request(app)
-                .post('/api/authenticate')
-                .query(initData)
-                .expect(200);
+            const response = await request(app).post('/api/authenticate').query(initData).expect(200);
 
             expect(response.body).toHaveProperty('accessToken');
         });
@@ -131,10 +128,7 @@ describe('Authentication API Endpoints', () => {
             const nonExistentTelegramId = 999888777;
             const initData = generateValidInitData(nonExistentTelegramId, 'nonexistent');
 
-            const response = await request(app)
-                .post('/api/authenticate')
-                .query(initData)
-                .expect(404);
+            const response = await request(app).post('/api/authenticate').query(initData).expect(404);
 
             expect(response.body).toHaveProperty('errorCode', 'userNotFoundByTelegramId');
         });
@@ -142,10 +136,7 @@ describe('Authentication API Endpoints', () => {
         it('should reject authentication with invalid hash', async () => {
             const initData = generateInvalidInitData();
 
-            const response = await request(app)
-                .post('/api/authenticate')
-                .query(initData)
-                .expect(401);
+            const response = await request(app).post('/api/authenticate').query(initData).expect(401);
 
             expect(response.body).toHaveProperty('errorCode', 'invalidInitData');
             expect(response.body.message).toContain('Invalid Telegram authentication data');
@@ -154,10 +145,7 @@ describe('Authentication API Endpoints', () => {
         it('should reject authentication with expired auth_date', async () => {
             const initData = generateExpiredInitData();
 
-            const response = await request(app)
-                .post('/api/authenticate')
-                .query(initData)
-                .expect(401);
+            const response = await request(app).post('/api/authenticate').query(initData).expect(401);
 
             expect(response.body).toHaveProperty('errorCode', 'expiredAuthData');
             expect(response.body.message).toContain('expired');
@@ -167,14 +155,14 @@ describe('Authentication API Endpoints', () => {
             const authDate = Math.floor(Date.now() / 1000);
             const user = JSON.stringify({
                 id: TEST_TELEGRAM_ID,
-                username: TEST_USERNAME
+                username: TEST_USERNAME,
             });
 
             const response = await request(app)
                 .post('/api/authenticate')
                 .query({
                     auth_date: authDate.toString(),
-                    user: user
+                    user: user,
                     // hash is missing
                 })
                 .expect(401);
@@ -185,14 +173,14 @@ describe('Authentication API Endpoints', () => {
         it('should reject authentication with missing auth_date', async () => {
             const user = JSON.stringify({
                 id: TEST_TELEGRAM_ID,
-                username: TEST_USERNAME
+                username: TEST_USERNAME,
             });
 
             const response = await request(app)
                 .post('/api/authenticate')
                 .query({
                     user: user,
-                    hash: 'some_hash'
+                    hash: 'some_hash',
                     // auth_date is missing
                 })
                 .expect(401);
@@ -203,15 +191,12 @@ describe('Authentication API Endpoints', () => {
         it('should reject authentication for inactive user', async () => {
             const inactiveTelegramId = 777888999;
             // Create an inactive user
-            const user = userService.registerUser("inactive_name", 'inactiveuser', inactiveTelegramId, 0);
+            const user = userService.registerUser('inactive_name', 'inactiveuser', inactiveTelegramId, 0);
             userRepository.updateUserActivationStatus(user.id, false, 0);
 
             const initData = generateValidInitData(inactiveTelegramId, 'inactiveuser');
 
-            const response = await request(app)
-                .post('/api/authenticate')
-                .query(initData)
-                .expect(403);
+            const response = await request(app).post('/api/authenticate').query(initData).expect(403);
 
             expect(response.body).toHaveProperty('errorCode', 'userIsNotActive');
         });
