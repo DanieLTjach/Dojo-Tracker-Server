@@ -48,6 +48,16 @@ describe('Event API Endpoints', () => {
             expect(event).toHaveProperty('createdAt');
             expect(event).toHaveProperty('modifiedAt');
             expect(event).toHaveProperty('modifiedBy');
+
+            // Verify gameRules is an object with the correct structure
+            expect(typeof event.gameRules).toBe('object');
+            expect(event.gameRules).toHaveProperty('id');
+            expect(event.gameRules).toHaveProperty('name');
+            expect(event.gameRules).toHaveProperty('numberOfPlayers');
+            expect(event.gameRules).toHaveProperty('uma');
+            expect(Array.isArray(event.gameRules.uma)).toBe(true);
+            expect(event.gameRules).toHaveProperty('startingPoints');
+            expect(event.gameRules).toHaveProperty('startingRating');
         });
 
         test('should return events ordered by createdAt DESC', async () => {
@@ -96,12 +106,49 @@ describe('Event API Endpoints', () => {
             expect(response.body.name === null || typeof response.body.name === 'string').toBe(true);
             expect(response.body.description === null || typeof response.body.description === 'string').toBe(true);
             expect(typeof response.body.type).toBe('string');
-            expect(typeof response.body.gameRules).toBe('number');
+            expect(typeof response.body.gameRules).toBe('object');
             expect(response.body.dateFrom === null || typeof response.body.dateFrom === 'string').toBe(true);
             expect(response.body.dateTo === null || typeof response.body.dateTo === 'string').toBe(true);
             expect(typeof response.body.createdAt).toBe('string');
             expect(typeof response.body.modifiedAt).toBe('string');
             expect(typeof response.body.modifiedBy).toBe('number');
+        });
+
+        test('should include game rules in event response', async () => {
+            const response = await request(app)
+                .get(`/api/events/${TEST_EVENT_ID}`)
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(200);
+
+            const gameRules = response.body.gameRules;
+            expect(gameRules).toHaveProperty('id');
+            expect(gameRules).toHaveProperty('name');
+            expect(gameRules).toHaveProperty('numberOfPlayers');
+            expect(gameRules).toHaveProperty('uma');
+            expect(gameRules).toHaveProperty('startingPoints');
+            expect(gameRules).toHaveProperty('startingRating');
+
+            expect(typeof gameRules.id).toBe('number');
+            expect(typeof gameRules.name).toBe('string');
+            expect(typeof gameRules.numberOfPlayers).toBe('number');
+            expect(Array.isArray(gameRules.uma)).toBe(true);
+            expect(typeof gameRules.startingPoints).toBe('number');
+            expect(typeof gameRules.startingRating).toBe('number');
+        });
+
+        test('should parse uma as array of numbers in game rules', async () => {
+            const response = await request(app)
+                .get(`/api/events/${TEST_EVENT_ID}`)
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(200);
+            const uma = response.body.gameRules.uma;
+            expect(Array.isArray(uma)).toBe(true);
+            expect(uma.length).toBe(4);
+            uma.forEach((value: any) => {
+                expect(typeof value).toBe('number');
+            });
         });
 
         test('should return 404 for non-existent event', async () => {
@@ -117,63 +164,13 @@ describe('Event API Endpoints', () => {
 
             expect(response.status).toBe(401);
         });
-    });
 
-    describe('GET /api/events/:eventId/game-rules - Get Game Rules by Event ID', () => {
-        test('should return game rules for event', async () => {
-            const response = await request(app)
-                .get(`/api/events/${TEST_EVENT_ID}/game-rules`)
-                .set('Authorization', adminAuthHeader);
+        test('should return 400 for invalid eventId', async () => {
+            const response = await request(app).get('/api/events/invalid').set('Authorization', adminAuthHeader);
 
-            expect(response.status).toBe(200);
-            expect(response.body).toHaveProperty('id');
-            expect(response.body).toHaveProperty('name');
-            expect(response.body).toHaveProperty('numberOfPlayers');
-            expect(response.body).toHaveProperty('uma');
-            expect(response.body).toHaveProperty('startingPoints');
-            expect(response.body).toHaveProperty('startingRating');
-        });
-
-        test('should return game rules with correct types', async () => {
-            const response = await request(app)
-                .get(`/api/events/${TEST_EVENT_ID}/game-rules`)
-                .set('Authorization', adminAuthHeader);
-
-            expect(response.status).toBe(200);
-
-            expect(typeof response.body.id).toBe('number');
-            expect(typeof response.body.name).toBe('string');
-            expect(typeof response.body.numberOfPlayers).toBe('number');
-            expect(Array.isArray(response.body.uma)).toBe(true);
-            expect(typeof response.body.startingPoints).toBe('number');
-            expect(typeof response.body.startingRating).toBe('number');
-        });
-
-        test('should parse uma as array of numbers', async () => {
-            const response = await request(app)
-                .get(`/api/events/${TEST_EVENT_ID}/game-rules`)
-                .set('Authorization', adminAuthHeader);
-
-            expect(response.status).toBe(200);
-            expect(Array.isArray(response.body.uma)).toBe(true);
-            expect(response.body.uma.length).toBe(4);
-            response.body.uma.forEach((value: any) => {
-                expect(typeof value).toBe('number');
-            });
-        });
-
-        test('should return 500 for event with no game rules', async () => {
-            const response = await request(app).get('/api/events/99999/game-rules').set('Authorization', adminAuthHeader);
-
-            expect(response.status).toBe(500);
-            expect(response.body).toHaveProperty('message');
-            expect(response.body).toHaveProperty('errorCode');
-        });
-
-        test('should require authentication', async () => {
-            const response = await request(app).get(`/api/events/${TEST_EVENT_ID}/game-rules`);
-
-            expect(response.status).toBe(401);
+            expect(response.status).toBe(400);
+            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('details');
         });
     });
 });
