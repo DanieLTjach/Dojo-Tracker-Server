@@ -46,14 +46,14 @@ export class AuthService {
             return;
         }
 
-        this.validateLegacyHash(params, receivedHash);
+        this.validateHash(params, receivedHash);
         this.validateAuthDate(params);
     }
 
     /**
-     * Validates HMAC-SHA256 hash for legacy Bot API
+     * Validates HMAC-SHA256 hash using Telegram's validation algorithm
      */
-    private validateLegacyHash(params: Record<string, string>, receivedHash: string): void {
+    private validateHash(params: Record<string, string>, receivedHash: string): void {
         const dataCheckString = Object.entries(params)
             .filter(([key]) => key !== 'hash')
             .sort(([a], [b]) => a.localeCompare(b))
