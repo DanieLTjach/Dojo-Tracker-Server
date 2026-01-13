@@ -7,11 +7,11 @@ import crypto from 'crypto';
 export class HashUtil {
     /**
      * Creates an HMAC-SHA256 hash.
-     * @param data - The data to hash (string or Buffer)
      * @param key - The key to use for hashing (string or Buffer)
+     * @param data - The data to hash (string or Buffer)
      * @returns Buffer containing the hash
      */
-    static hmac(data: string | Buffer, key: string | Buffer): Buffer {
+    static hmac(key: string | Buffer, data: string | Buffer): Buffer {
         const keyBuffer = typeof key === 'string' ? Buffer.from(key) : key;
         const dataBuffer = typeof data === 'string' ? Buffer.from(data) : data;
 

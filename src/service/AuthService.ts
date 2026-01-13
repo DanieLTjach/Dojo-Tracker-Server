@@ -62,7 +62,7 @@ export class AuthService {
             .join('\n');
 
         const secretKey = HashUtil.hmac('WebAppData', config.botToken);
-        const calculatedHash = HashUtil.hmac(dataCheckString, secretKey).toString('hex');
+        const calculatedHash = HashUtil.hmac(secretKey, dataCheckString).toString('hex');
 
         if (calculatedHash !== receivedHash) {
             throw new InvalidInitDataError('Hash mismatch');

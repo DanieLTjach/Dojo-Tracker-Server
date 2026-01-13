@@ -58,7 +58,7 @@ describe('Authentication API Endpoints', () => {
 
         // Calculate hash using bot token
         const secretKey = HashUtil.hmac('WebAppData', BOT_TOKEN);
-        const hash = HashUtil.hmac(dataCheckString, secretKey).toString('hex');
+        const hash = HashUtil.hmac(secretKey, dataCheckString).toString('hex');
 
         return {
             ...params,
@@ -107,7 +107,7 @@ describe('Authentication API Endpoints', () => {
             .join('\n');
 
         const secretKey = HashUtil.hmac('WebAppData', BOT_TOKEN);
-        const hash = HashUtil.hmac(dataCheckString, secretKey).toString('hex');
+        const hash = HashUtil.hmac(secretKey, dataCheckString).toString('hex');
 
         return {
             ...params,
