@@ -13,7 +13,7 @@ export interface Event {
     name: string | null;
     description: string | null;
     type: string;
-    gameRules: number;
+    gameRules: GameRules;
     dateFrom: Date | null;
     dateTo: Date | null;
     createdAt: Date;

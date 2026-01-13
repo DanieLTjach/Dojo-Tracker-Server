@@ -16,22 +16,10 @@ router.get('/', requireAuth, withTransaction((req, res) => eventController.getAl
 
 /**
  * GET /api/events/:eventId
- * Get event by ID
+ * Get event by ID (includes game rules)
  *
  * Authentication: Required
  */
 router.get('/:eventId', requireAuth, withTransaction((req, res) => eventController.getEventById(req, res)));
-
-/**
- * GET /api/events/:eventId/game-rules
- * Get game rules for a specific event
- *
- * Authentication: Required
- */
-router.get(
-    '/:eventId/game-rules',
-    requireAuth,
-    withTransaction((req, res) => eventController.getGameRulesByEventId(req, res))
-);
 
 export default router;
