@@ -56,7 +56,7 @@ export class AuthService {
      */
     private validateLegacyHash(params: Record<string, string>, receivedHash: string): void {
         const dataCheckString = Object.entries(params)
-            .filter(([key]) => key !== 'hash' && key !== 'signature')
+            .filter(([key]) => key !== 'hash')
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([key, value]) => `${key}=${value}`)
             .join('\n');
