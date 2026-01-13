@@ -47,64 +47,8 @@ export class AuthService {
             return;
         }
 
-        // Bot API 8.0+ uses Ed25519 signature, legacy uses HMAC hash
-        if (params['signature']) {
-            this.validateSignature(params);
-        } else {
-            this.validateLegacyHash(params, receivedHash);
-        }
-
+        this.validateLegacyHash(params, receivedHash);
         this.validateAuthDate(params);
-    }
-
-    /**
-     * Validates Ed25519 signature for Bot API 8.0+
-     */
-    private validateSignature(params: Record<string, string>): void {
-        const signature = params['signature'];
-        if (!signature) {
-            throw new InvalidInitDataError('Missing signature parameter');
-        }
-
-        try {
-            const botId = config.botToken.split(':')[0];
-            if (!botId) {
-                throw new InvalidInitDataError('Invalid bot token format');
-            }
-
-            const sortedPairs = Object.entries(params)
-                .filter(([key]) => key !== 'signature' && key !== 'hash')
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([key, value]) => `${key}=${value}`)
-                .join('\n');
-
-            const dataCheckString = `${botId}:WebAppData\n${sortedPairs}`;
-
-            // Decode signature from base64url
-            const base64 = signature.replace(/-/g, '+').replace(/_/g, '/');
-            const paddedBase64 = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-            const signatureBytes = Buffer.from(paddedBase64, 'base64');
-
-            // Telegram production public key
-            const publicKeyHex = 'e7bf03a2fa4602af4580703d88dda5bb59f32ed8b02a56c187fe7d34caed242d';
-            const publicKey = Buffer.from(publicKeyHex, 'hex');
-
-            const dataBytes = Buffer.from(dataCheckString, 'utf8');
-            const isValid = nacl.sign.detached.verify(
-                dataBytes,
-                signatureBytes,
-                publicKey
-            );
-
-            if (!isValid) {
-                throw new InvalidInitDataError('Invalid signature');
-            }
-        } catch (error) {
-            if (error instanceof InvalidInitDataError) {
-                throw error;
-            }
-            throw new InvalidInitDataError(`Failed to validate signature: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
     }
 
     /**
