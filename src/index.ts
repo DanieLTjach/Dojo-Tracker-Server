@@ -6,6 +6,7 @@ import config from '../config/config.ts';
 import authRoutes from './routes/AuthRoutes.ts';
 import userRoutes from './routes/UserRoutes.ts';
 import gameRoutes from './routes/GameRoutes.ts';
+import eventRoutes from './routes/EventRoutes.ts';
 import ratingRoutes from './routes/RatingRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
 
@@ -24,6 +25,7 @@ app.use('/api', authRoutes);
 // Protected routes (will add auth middleware later)
 app.use('/api/users', userRoutes);
 app.use('/api/games', gameRoutes);
+app.use('/api/events', eventRoutes);
 app.use('/api', ratingRoutes);
 
 app.use(handleErrors);
