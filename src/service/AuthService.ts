@@ -1,4 +1,3 @@
-import nacl from 'tweetnacl';
 import { HashUtil } from '../util/HashUtil.ts';
 import { UserService } from './UserService.ts';
 import { TokenService } from './TokenService.ts';
