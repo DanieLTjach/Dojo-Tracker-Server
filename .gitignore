@@ -7,9 +7,10 @@ coverage
 .DS_Store
 
 # Environment files
-# Keep .env.example, .env.development, .env.test in repo
+# Keep .env.example, .env.test in repo
 # Ignore local overrides and sensitive production configs
 .env
 .env.local
 .env.production
+.env.development
 .env.*.local

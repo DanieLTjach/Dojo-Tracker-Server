@@ -4,9 +4,9 @@ Base URL: `http://localhost:3000/api/users`
 
 All endpoints use JSON format for request and response bodies.
 
-## Authentication Required
+## Authentication
 
-All user endpoints require JWT authentication. Include your JWT token in the `Authorization` header:
+Most user endpoints require JWT authentication. Include your JWT token in the `Authorization` header:
 
 ```bash
 Authorization: Bearer <your-jwt-token>
@@ -34,14 +34,14 @@ Register a new user with Telegram information.
 
 **Endpoint:** `POST /api/users`
 
-**Authorization:** Requires valid JWT token with admin privileges
+**Authorization:** None (public endpoint)
 
 **Request Body:**
 - `name` (string, required): User's name (cannot be empty)
 - `telegramUsername` (string, required): Telegram username (must start with '@')
 - `telegramId` (number, required): Telegram user ID (integer)
 
-**Note:** The `createdBy` field is automatically set from the JWT token and should not be included in the request body.
+**Note:** This is a public endpoint for self-registration.
 
 **Success Response:** `201 Created`
 
@@ -49,7 +49,6 @@ Register a new user with Telegram information.
 
 ```bash
 curl -X POST http://localhost:3000/api/users \
-  -H "Authorization: Bearer <your-jwt-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "John Doe",
@@ -80,8 +79,6 @@ curl -X POST http://localhost:3000/api/users \
 - `400 Bad Request` - If telegramId is not an integer
 
 **Business Logic Errors:**
-- `401 Unauthorized` - If JWT token is missing, invalid, or expired
-- `403 Forbidden` - If the authenticated user is not an admin
 - `409 Conflict` - If user with this name already exists
 - `409 Conflict` - If user with this telegram ID already exists
 - `409 Conflict` - If user with this telegram username already exists
@@ -528,7 +525,7 @@ Returned for unexpected server errors.
 
 3. **Timestamps**: All timestamps are in ISO 8601 format (UTC).
 
-4. **Authentication**: All user endpoints require JWT authentication. Obtain a token via `/api/auth/login` before making requests.
+4. **Authentication**: Most user endpoints require JWT authentication. User registration (`POST /api/users`) is public. Obtain a token via `POST /api/authenticate` with Telegram initData.
 
 5. **Authorization**: Most modification endpoints require the requesting user to be an admin, except when users are editing their own information.
 

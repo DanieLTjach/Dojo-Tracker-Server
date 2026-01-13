@@ -6,6 +6,7 @@
   "scripts": {
     "start": "npx ts-node src/index.ts",
     "dev": "dotenv -e .env.development -- nodemon --ext \"js,ts,json\" src/index.ts",
+    "debug": "dotenv -e .env.development -- node --inspect=0.0.0.0:9229 --require ts-node/register src/index.ts",
     "test": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --no-cache --runInBand",
     "test:watch": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch",
     "test:coverage": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --coverage --no-cache --runInBand"

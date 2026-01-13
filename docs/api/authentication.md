@@ -1,15 +1,14 @@
 # Authentication API
 
-Base URL: `http://localhost:3000/api/auth`
+Base URL: `http://localhost:3000/api`
 
-The Dojo Tracker Server uses JWT (JSON Web Token) authentication to secure API endpoints. All API requests (except authentication endpoints) require a valid JWT token in the `Authorization` header.
+The Dojo Tracker Server uses JWT (JSON Web Token) authentication to secure API endpoints. All API requests (except authentication and user registration endpoints) require a valid JWT token in the `Authorization` header.
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Authentication Flow](#authentication-flow)
-- [Login with Telegram](#login-with-telegram)
-- [Auto-Registration](#auto-registration)
+- [Authenticate with Telegram initData](#authenticate-with-telegram-initdata)
 - [Using JWT Tokens](#using-jwt-tokens)
 - [Token Structure](#token-structure)
 - [Error Responses](#error-responses)
@@ -20,17 +19,22 @@ The Dojo Tracker Server uses JWT (JSON Web Token) authentication to secure API e
 
 ### Authentication Model
 
-- All API endpoints require JWT authentication
-- Tokens are issued upon successful login
-- Tokens contain user ID, Telegram ID, admin status, and active status
+- All API endpoints require JWT authentication (except `/api/authenticate` and `POST /api/users`)
+- Tokens are issued upon successful authentication via Telegram Mini App initData
+- Tokens contain the user ID
 - Tokens must be included in the `Authorization` header as `Bearer <token>`
 
 ### Protected Endpoints
 
-All endpoints under `/api/users` and `/api/games` require authentication:
+All endpoints under `/api/users` (except registration) and `/api/games` require authentication:
 - `GET`, `POST`, `PUT`, `PATCH`, `DELETE` operations
 - Both admin and non-admin users require authentication
 - Admin-only operations are enforced at the endpoint level
+
+### Public Endpoints
+
+- `POST /api/authenticate` - Telegram Mini App authentication
+- `POST /api/users` - User registration
 
 ---
 
@@ -41,17 +45,18 @@ All endpoints under `/api/users` and `/api/games` require authentication:
 │ Client  │                                     │ Server  │
 └────┬────┘                                     └────┬────┘
      │                                               │
-     │  POST /api/auth/login                         │
-     │  { telegramId, telegramUsername }             │
+     │  POST /api/authenticate?query_id=...         │
+     │  &user=...&auth_date=...&hash=...            │
      ├──────────────────────────────────────────────>│
      │                                               │
      │                      ┌─────────────────────┐  │
-     │                      │ User exists?        │  │
-     │                      │ No → Auto-register  │  │
-     │                      │ Yes → Generate JWT  │  │
+     │                      │ Validate hash       │  │
+     │                      │ Check auth_date     │  │
+     │                      │ Lookup user         │  │
+     │                      │ Generate JWT        │  │
      │                      └─────────────────────┘  │
      │                                               │
-     │  { token, user }                              │
+     │  { accessToken }                              │
      │<──────────────────────────────────────────────┤
      │                                               │
      │  Subsequent API calls                         │
@@ -65,90 +70,45 @@ All endpoints under `/api/users` and `/api/games` require authentication:
 
 ---
 
-## Login with Telegram
+## Authenticate with Telegram initData
 
-Authenticate a user using their Telegram credentials. If the user doesn't exist, they will be automatically registered.
+Authenticate a user using Telegram Mini App initData. The initData is passed as query parameters (raw from Telegram).
 
-**Endpoint:** `POST /api/auth/login`
+**Endpoint:** `POST /api/authenticate`
 
-**Request Body:**
-- `telegramId` (number, required): Telegram user ID (integer)
-- `telegramUsername` (string, optional): Telegram username (e.g., "@username")
+**Authentication Required:** No (public endpoint)
+
+**Query Parameters:**
+- `query_id` (string): Query identifier from Telegram
+- `user` (string, required): URL-encoded JSON with user data (must contain `id` field)
+- `auth_date` (number, required): Unix timestamp when initData was created
+- `hash` (string, required): HMAC-SHA256 hash for validation
+
+**Note:** The user must already exist in the system. Use `POST /api/users` to register new users first.
 
 **Success Response:** `200 OK`
 
 **Example Request:**
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "telegramId": 123456789,
-    "telegramUsername": "@johndoe"
-  }'
+# The initData from Telegram is passed directly as query parameters
+curl -X POST "http://localhost:3000/api/authenticate?query_id=AAHdF...&user=%7B%22id%22%3A123456789%2C%22first_name%22%3A%22John%22%7D&auth_date=1234567890&hash=abc123..."
 ```
 
-**Example Response (Existing User):**
+**Example Response:**
 
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInRlbGVncmFtSWQiOjEyMzQ1Njc4OSwiaXNBZG1pbiI6ZmFsc2UsImlzQWN0aXZlIjp0cnVlLCJpYXQiOjE3MDUzMjE4MDAsImV4cCI6MTcwNTQwODIwMH0.signature",
-  "user": {
-    "id": 1,
-    "name": "John Doe",
-    "telegramUsername": "@johndoe",
-    "telegramId": 123456789,
-    "isAdmin": 0,
-    "isActive": 1,
-    "createdAt": "2024-01-15T10:30:00.000Z",
-    "modifiedAt": "2024-01-15T10:30:00.000Z",
-    "modifiedBy": "SYSTEM"
-  }
-}
-```
-
-**Example Response (Auto-Registered User):**
-
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 5,
-    "name": "User_123456789",
-    "telegramUsername": "@johndoe",
-    "telegramId": 123456789,
-    "isAdmin": 0,
-    "isActive": 1,
-    "createdAt": "2024-01-15T14:30:00.000Z",
-    "modifiedAt": "2024-01-15T14:30:00.000Z",
-    "modifiedBy": "SYSTEM"
-  }
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlhdCI6MTcwNTMyMTgwMCwiZXhwIjoxNzA1NDA4MjAwfQ.signature"
 }
 ```
 
 **Errors:**
-- `400 Bad Request` - If telegramId is missing or invalid
+- `400 Bad Request` - If hash is missing or invalid
+- `400 Bad Request` - If user parameter is missing or malformed
+- `400 Bad Request` - If auth_date is missing, invalid, or expired (>24 hours old)
 - `403 Forbidden` - If the user account is deactivated
-- `500 Internal Server Error` - If auto-registration fails
-
----
-
-## Auto-Registration
-
-When a user logs in for the first time (not found in the database), the system automatically creates a new user account:
-
-**Auto-Registration Behavior:**
-1. System checks if user with `telegramId` exists
-2. If not found, creates a new user with:
-   - `name`: Auto-generated as `User_{telegramId}`
-   - `telegramUsername`: From login request (if provided)
-   - `telegramId`: From login request
-   - `isAdmin`: `0` (false)
-   - `isActive`: `1` (true)
-   - `createdBy`: System user (ID: 0)
-3. Returns JWT token for the newly created user
-
-**Note:** Auto-registered users can later update their name and username through the `/api/users/:id` PATCH endpoint.
+- `404 Not Found` - If no user exists with the Telegram ID from initData
 
 ---
 
@@ -165,8 +125,8 @@ curl -X GET http://localhost:3000/api/users \
 
 ### Token Expiration
 
-- Tokens are valid for **24 hours** from issuance
-- After expiration, users must login again to obtain a new token
+- Tokens are valid for **24 hours** from issuance (configurable via `JWT_EXPIRES_IN`)
+- After expiration, users must authenticate again to obtain a new token
 - The expiration time is included in the token payload as the `exp` claim
 
 ### Token Storage
@@ -185,9 +145,6 @@ JWT tokens contain the following claims:
 ```json
 {
   "userId": 1,
-  "telegramId": 123456789,
-  "isAdmin": false,
-  "isActive": true,
   "iat": 1705321800,
   "exp": 1705408200
 }
@@ -195,9 +152,6 @@ JWT tokens contain the following claims:
 
 **Claims:**
 - `userId` (number): Internal user ID
-- `telegramId` (number): Telegram user ID
-- `isAdmin` (boolean): Whether the user has admin privileges
-- `isActive` (boolean): Whether the user account is active
 - `iat` (number): Issued at timestamp (Unix time)
 - `exp` (number): Expiration timestamp (Unix time)
 
@@ -209,20 +163,26 @@ JWT tokens contain the following claims:
 
 ### 400 Bad Request
 
-Returned when the request is malformed or missing required fields.
+Returned when initData validation fails.
 
 ```json
 {
-  "error": "Invalid request data",
-  "details": [
-    {
-      "code": "invalid_type",
-      "expected": "number",
-      "received": "undefined",
-      "path": ["body", "telegramId"],
-      "message": "Required"
-    }
-  ]
+  "errorCode": "invalidInitData",
+  "message": "Missing hash parameter"
+}
+```
+
+```json
+{
+  "errorCode": "invalidInitData",
+  "message": "Hash mismatch"
+}
+```
+
+```json
+{
+  "errorCode": "expiredAuthData",
+  "message": "Authentication data has expired"
 }
 ```
 
@@ -261,13 +221,14 @@ Returned when trying to perform admin-only operations without admin privileges.
 }
 ```
 
-### 500 Internal Server Error
+### 404 Not Found
 
-Returned when auto-registration or token generation fails.
+Returned when user with the Telegram ID from initData does not exist.
 
 ```json
 {
-  "message": "Failed to auto-register user"
+  "errorCode": "userNotFoundByTelegramId",
+  "message": "User with telegram id {telegramId} not found"
 }
 ```
 
@@ -278,18 +239,23 @@ Returned when auto-registration or token generation fails.
 ### Complete Authentication Flow
 
 ```bash
-# Step 1: Login (or auto-register)
-LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/auth/login \
+# Step 1: Register user (if new)
+curl -X POST http://localhost:3000/api/users \
   -H "Content-Type: application/json" \
   -d '{
-    "telegramId": 123456789,
-    "telegramUsername": "@johndoe"
-  }')
+    "name": "John Doe",
+    "telegramUsername": "@johndoe",
+    "telegramId": 123456789
+  }'
 
-# Step 2: Extract token
-TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.token')
+# Step 2: Authenticate using Telegram initData (query params from Telegram)
+# In real usage, the frontend passes initData directly from Telegram WebApp
+RESPONSE=$(curl -s -X POST "http://localhost:3000/api/authenticate?query_id=test&user=%7B%22id%22%3A123456789%7D&auth_date=1234567890&hash=...")
 
-# Step 3: Use token for authenticated requests
+# Step 3: Extract token
+TOKEN=$(echo $RESPONSE | jq -r '.accessToken')
+
+# Step 4: Use token for authenticated requests
 curl -X GET http://localhost:3000/api/users \
   -H "Authorization: Bearer $TOKEN"
 
@@ -314,8 +280,9 @@ curl -X POST http://localhost:3000/api/games \
 1. **HTTPS Only**: In production, always use HTTPS to prevent token interception
 2. **Token Secret**: The JWT secret is configured via environment variable `JWT_SECRET`
 3. **Token Rotation**: Tokens expire after 24 hours; implement token refresh if needed
-4. **Rate Limiting**: Consider implementing rate limiting on the login endpoint
-5. **Inactive Users**: Deactivated users cannot authenticate even with valid credentials
+4. **Rate Limiting**: Consider implementing rate limiting on the authentication endpoint
+5. **Inactive Users**: Deactivated users cannot authenticate even with valid initData
+6. **Hash Validation**: The server validates initData using HMAC-SHA256 with the bot token
 
 ---
 
@@ -328,8 +295,11 @@ Required environment variables for authentication:
 JWT_SECRET=your-secret-key-here
 JWT_EXPIRES_IN=24h
 
-# Telegram Bot Token (for future integration)
+# Telegram Bot Token (required for hash validation in production)
 TELEGRAM_BOT_TOKEN=your-bot-token-here
+
+# Optional: initData validity period (default: 86400 seconds = 24 hours)
+AUTH_INIT_DATA_VALIDITY_SECONDS=86400
 ```
 
 See the main README for complete environment setup instructions.
