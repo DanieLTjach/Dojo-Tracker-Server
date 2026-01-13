@@ -20,6 +20,7 @@
     "express": "^5.2.1",
     "http-status-codes": "^2.3.0",
     "jsonwebtoken": "^9.0.3",
+    "tweetnacl": "^1.0.3",
     "zod": "^4.1.13"
   },
   "devDependencies": {
