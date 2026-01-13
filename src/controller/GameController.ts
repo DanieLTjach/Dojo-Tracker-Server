@@ -51,8 +51,7 @@ export class GameController {
     deleteGame(req: Request, res: Response) {
         const { params: { gameId } } = gameDeletionSchema.parse(req);
 
-        const deletedBy = req.user!.userId;
-        this.gameService.deleteGame(gameId, deletedBy);
+        this.gameService.deleteGame(gameId);
         return res.status(StatusCodes.NO_CONTENT).send();
     }
 }

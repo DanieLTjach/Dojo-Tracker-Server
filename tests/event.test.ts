@@ -13,10 +13,9 @@ app.use(handleErrors);
 
 describe('Event API Endpoints', () => {
     const SYSTEM_USER_ID = 0;
-    const ADMIN_TELEGRAM_ID = 123456789;
     const TEST_EVENT_ID = 1; // Test Event from migrations
 
-    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID, ADMIN_TELEGRAM_ID, true, true);
+    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
 
     afterAll(() => {
         closeDB();
