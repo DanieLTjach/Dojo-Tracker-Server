@@ -2,7 +2,7 @@ import { TokenService } from '../src/service/TokenService.ts';
 import type { User } from '../src/model/UserModels.ts';
 import type { DecodedToken } from '../src/model/AuthModels.ts';
 import jwt from 'jsonwebtoken';
-import { jest } from '@jest/globals';
+import config from '../config/config.ts';
 
 /**
  * Helper function to decode a token without verification (for testing).
@@ -29,10 +29,10 @@ describe('TokenService', () => {
                 name: 'Test User',
                 telegramId: 123456789,
                 telegramUsername: '@testuser',
-                isAdmin: 0,
-                isActive: 1,
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
+                isAdmin: false,
+                isActive: true,
+                createdAt: new Date(),
+                modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
             };
 
@@ -49,10 +49,10 @@ describe('TokenService', () => {
                 name: 'Admin User',
                 telegramId: 987654321,
                 telegramUsername: '@admin',
-                isAdmin: 1,
-                isActive: 1,
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
+                isAdmin: true,
+                isActive: true,
+                createdAt: new Date(),
+                modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
             };
 
@@ -72,10 +72,10 @@ describe('TokenService', () => {
                 name: 'Test User',
                 telegramId: 333333333,
                 telegramUsername: '@test',
-                isAdmin: 1,
-                isActive: 1,
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
+                isAdmin: true,
+                isActive: true,
+                createdAt: new Date(),
+                modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
             };
 
@@ -92,17 +92,17 @@ describe('TokenService', () => {
                 name: 'Test User',
                 telegramId: 444444444,
                 telegramUsername: '@test',
-                isAdmin: 0,
-                isActive: 1,
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
+                isAdmin: false,
+                isActive: true,
+                createdAt: new Date(),
+                modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
             };
 
             // Create an expired token (expired 1 hour ago)
             const expiredToken = jwt.sign(
                 { userId: user.id, telegramId: user.telegramId, isAdmin: false, isActive: true },
-                process.env.JWT_SECRET || 'test-secret',
+                config.jwtSecret,
                 { expiresIn: '-1h' }
             );
 
@@ -117,10 +117,10 @@ describe('TokenService', () => {
                 name: 'Test User',
                 telegramId: 555555555,
                 telegramUsername: '@test',
-                isAdmin: 0,
-                isActive: 1,
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
+                isAdmin: false,
+                isActive: true,
+                createdAt: new Date(),
+                modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
             };
 
@@ -156,10 +156,10 @@ describe('TokenService', () => {
                 name: 'Test User',
                 telegramId: 666666666,
                 telegramUsername: '@test',
-                isAdmin: 1,
-                isActive: 1,
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
+                isAdmin: true,
+                isActive: true,
+                createdAt: new Date(),
+                modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
             };
 
@@ -198,7 +198,7 @@ describe('TokenService', () => {
         it('should decode expired token without throwing error', () => {
             const expiredToken = jwt.sign(
                 { userId: 10, telegramId: 888888888, isAdmin: false, isActive: true },
-                process.env.JWT_SECRET || 'test-secret',
+                config.jwtSecret,
                 { expiresIn: '-1h' }
             );
 

@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { StatusCodes } from 'http-status-codes';
-import { ResponseStatusError, BadRequestError, NotFoundError } from '../src/error/BaseErrors.ts';
+import { BadRequestError, NotFoundError } from '../src/error/BaseErrors.ts';
 import { ZodError } from 'zod';
 import { SqliteError } from 'better-sqlite3';
 import { jest } from '@jest/globals';
@@ -24,7 +24,7 @@ describe('ErrorHandling Middleware', () => {
             headersSent: false
         };
         mockNext = jest.fn();
-        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+        consoleErrorSpy = jest.spyOn(console, 'error');
     });
 
     afterEach(() => {
@@ -36,7 +36,6 @@ describe('ErrorHandling Middleware', () => {
             {
                 code: 'invalid_type',
                 expected: 'string',
-                received: 'number',
                 path: ['name'],
                 message: 'Expected string, received number'
             }

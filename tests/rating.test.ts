@@ -17,16 +17,14 @@ app.use(handleErrors);
 
 describe('Rating API Endpoints', () => {
     const SYSTEM_USER_ID = 0;
-    const ADMIN_TELEGRAM_ID = 123456789;
     const TEST_EVENT_ID = 1; // Test Event from migrations
 
     let testUser1Id: number;
     let testUser2Id: number;
     let testUser3Id: number;
     let testUser4Id: number;
-    let testGameId: number;
 
-    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID, ADMIN_TELEGRAM_ID, true, true);
+    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
     let user1AuthHeader: string;
 
     // Helper to create test users
@@ -61,10 +59,10 @@ describe('Rating API Endpoints', () => {
         testUser3Id = await createTestUser('RatingPlayer3', 233333333);
         testUser4Id = await createTestUser('RatingPlayer4', 244444444);
 
-        user1AuthHeader = createAuthHeader(testUser1Id, 211111111, false, true);
+        user1AuthHeader = createAuthHeader(testUser1Id);
 
         // Create a test game to generate rating changes
-        testGameId = await createTestGame(user1AuthHeader, [
+        await createTestGame(user1AuthHeader, [
             { userId: testUser1Id, points: 35000, startPlace: 'EAST' },
             { userId: testUser2Id, points: 28000, startPlace: 'SOUTH' },
             { userId: testUser3Id, points: 22000, startPlace: 'WEST' },
@@ -252,7 +250,7 @@ describe('Rating API Endpoints', () => {
         test('should calculate correct rating changes based on UMA', async () => {
             // Create a fresh user to test rating calculation
             const freshUserId = await createTestUser('FreshRatingUser', 288888888);
-            const freshAuthHeader = createAuthHeader(freshUserId, 288888888, false, true);
+            const freshAuthHeader = createAuthHeader(freshUserId);
 
             // Create a game where this user finishes first
             await createTestGame(freshAuthHeader, [

@@ -1,6 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { db } from '../db/dbInit.ts';
-import type { Event, GameRules } from '../model/EventModels.ts';
+import type { Event } from '../model/EventModels.ts';
 import { dateFromSqliteString } from '../db/dbUtils.ts';
 
 export class EventRepository {
