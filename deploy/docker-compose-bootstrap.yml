@@ -1,0 +1,21 @@
+services:
+  nginx:
+    image: nginx:latest
+    restart: unless-stopped
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx/bootstrap.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./letsencrypt:/etc/letsencrypt:ro
+      - ./certbot:/var/www/certbot
+  certbot:
+    container_name: certbot
+    image: certbot/certbot:latest
+    depends_on:
+      - nginx
+    command: >-
+      certonly --reinstall --webroot --webroot-path=/var/www/certbot
+      --non-interactive --agree-tos -d dojo-tracker.japan-dojo.com
+    volumes:
+      - ./letsencrypt:/etc/letsencrypt
+      - ./certbot:/var/www/certbot
