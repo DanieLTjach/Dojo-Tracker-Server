@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import type { SignOptions } from 'jsonwebtoken';
 import type { TokenPair, DecodedToken } from '../model/AuthModels.ts';
 import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
@@ -14,7 +15,7 @@ export class TokenService {
         const payload: DecodedToken = { userId: user.id };
         const accessToken = jwt.sign(payload, config.jwtSecret, {
             expiresIn: config.jwtExpiry
-        });
+        } as SignOptions);
         return { accessToken };
     }
 

@@ -25,15 +25,14 @@ export class GameService {
     ): GameWithPlayers {
         const timestamp = new Date();
 
-        this.eventService.validateEventExists(eventId);
-        const gameRules = this.eventService.getGameRulesByEventId(eventId);
-        this.validatePlayers(playersData, gameRules);
+        const event = this.eventService.getEventById(eventId);
+        this.validatePlayers(playersData, event.gameRules);
 
         const newGameId = this.gameRepository.createGame(eventId, createdBy, timestamp);
         this.addPlayersToGame(newGameId, playersData, createdBy);
 
         const newGame = this.getGameById(newGameId);
-        this.ratingService.addRatingChangesFromGame(newGame, gameRules);
+        this.ratingService.addRatingChangesFromGame(newGame, event.gameRules);
         return newGame;
     }
 
@@ -73,9 +72,8 @@ export class GameService {
         modifiedBy: number
     ): GameWithPlayers {
         const game = this.getGameById(gameId);
-        this.eventService.validateEventExists(eventId);
-        const gameRules = this.eventService.getGameRulesByEventId(eventId);
-        this.validatePlayers(playersData, gameRules);
+        const event = this.eventService.getEventById(eventId);
+        this.validatePlayers(playersData, event.gameRules);
 
         this.gameRepository.updateGame(gameId, eventId, modifiedBy);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
@@ -83,7 +81,7 @@ export class GameService {
 
         this.ratingService.deleteRatingChangesFromGame(game);
         const newGame = this.getGameById(gameId);
-        this.ratingService.addRatingChangesFromGame(newGame, gameRules);
+        this.ratingService.addRatingChangesFromGame(newGame, event.gameRules);
         return newGame;
     }
 

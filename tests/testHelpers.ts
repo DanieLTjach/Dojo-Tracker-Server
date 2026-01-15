@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import type { SignOptions } from 'jsonwebtoken';
 import type { DecodedToken } from '../src/model/AuthModels.ts';
 import config from '../config/config.ts';
 
@@ -12,7 +13,7 @@ export function generateTestToken(userId: number): string {
 
     return jwt.sign(payload, config.jwtSecret, {
         expiresIn: config.jwtExpiry
-    });
+    } as SignOptions);
 }
 
 /**

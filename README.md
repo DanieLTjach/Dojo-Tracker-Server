@@ -10,8 +10,7 @@ A backend server for tracking mahjong games and user statistics. Built with Node
 - **Database:** SQLite (via `better-sqlite3`)
 - **Validation:** Zod
 - **Authentication:** JWT with Telegram Mini App initData validation
-- **Development:** Nodemon, ts-node
-
+- **Development:** Nodemon
 ## Getting Started
 
 ### Prerequisites

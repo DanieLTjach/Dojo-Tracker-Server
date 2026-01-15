@@ -26,6 +26,7 @@ CREATE TABLE gameRules (
 CREATE TABLE event (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
+    description TEXT,
     type INTEGER REFERENCES eventType(type),
     gameRules INTEGER NOT NULL REFERENCES gameRules(id),
     dateFrom TIMESTAMP,
