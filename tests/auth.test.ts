@@ -215,5 +215,131 @@ describe('Authentication API Endpoints', () => {
 
             expect(response.body).toHaveProperty('errorCode', 'userIsNotActive');
         });
+
+        describe('Telegram ID auto-linking for migrated users', () => {
+            it('should authenticate and link telegram ID for user without telegram ID but matching username', async () => {
+                const migratedUserTelegramId = 111222333;
+                const migratedUsername = 'migrateduser';
+
+                const migratedUser = userService.registerUser(
+                    "Migrated User",
+                    `@${migratedUsername}`,
+                    undefined,
+                    0
+                );
+
+                const userBefore = userService.getUserById(migratedUser.id);
+                expect(userBefore.telegramId).toBeNull();
+
+                const initData = generateValidInitData(migratedUserTelegramId, migratedUsername);
+
+                const response = await request(app)
+                    .post('/api/authenticate')
+                    .query(initData)
+                    .expect(200);
+
+                expect(response.body).toHaveProperty('accessToken');
+
+                const userAfter = userService.getUserById(migratedUser.id);
+                expect(userAfter.telegramId).toBe(migratedUserTelegramId);
+            });
+
+            it('should reject authentication when user has no telegram ID and username does not match', async () => {
+                const unknownTelegramId = 444555666;
+                const unknownUsername = 'unknownuser';
+
+                const initData = generateValidInitData(unknownTelegramId, unknownUsername);
+
+                const response = await request(app)
+                    .post('/api/authenticate')
+                    .query(initData)
+                    .expect(404);
+
+                expect(response.body).toHaveProperty('errorCode', 'userNotFoundByTelegramId');
+            });
+
+            it('should authenticate using telegram ID after it has been linked', async () => {
+                const linkedTelegramId = 222333444;
+                const linkedUsername = 'linkeduser';
+
+                const user = userService.registerUser(
+                    "Linked User",
+                    `@${linkedUsername}`,
+                    undefined,
+                    0
+                );
+
+                // First auth links telegram ID
+                const initData1 = generateValidInitData(linkedTelegramId, linkedUsername);
+                await request(app)
+                    .post('/api/authenticate')
+                    .query(initData1)
+                    .expect(200);
+
+                const userAfterLink = userService.getUserById(user.id);
+                expect(userAfterLink.telegramId).toBe(linkedTelegramId);
+
+                // Second auth finds user by telegram ID
+                const initData2 = generateValidInitData(linkedTelegramId, linkedUsername);
+                const response = await request(app)
+                    .post('/api/authenticate')
+                    .query(initData2)
+                    .expect(200);
+
+                expect(response.body).toHaveProperty('accessToken');
+            });
+
+            it('should reject linking telegram ID to inactive user', async () => {
+                const inactiveMigratedTelegramId = 555666777;
+                const inactiveMigratedUsername = 'inactivemigrated';
+
+                const user = userService.registerUser(
+                    "Inactive Migrated User",
+                    `@${inactiveMigratedUsername}`,
+                    undefined,
+                    0
+                );
+                userRepository.updateUserActivationStatus(user.id, false, 0);
+
+                const initData = generateValidInitData(inactiveMigratedTelegramId, inactiveMigratedUsername);
+
+                const response = await request(app)
+                    .post('/api/authenticate')
+                    .query(initData)
+                    .expect(403);
+
+                expect(response.body).toHaveProperty('errorCode', 'userIsNotActive');
+            });
+
+            it('should not link telegram ID when user parameter has no username', async () => {
+                const noUsernameTelegramId = 666777888;
+
+                const authDate = Math.floor(Date.now() / 1000);
+                const user = JSON.stringify({
+                    id: noUsernameTelegramId,
+                    first_name: 'NoUsername',
+                });
+
+                const params = {
+                    auth_date: authDate.toString(),
+                    user: user
+                };
+
+                const dataCheckString = Object.entries(params)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([key, value]) => `${key}=${value}`)
+                    .join('\n');
+
+                const secretKey = HashUtil.hmac(BOT_TOKEN, 'WebAppData');
+                const hash = HashUtil.hmac(dataCheckString, secretKey).toString('hex');
+
+                const response = await request(app)
+                    .post('/api/authenticate')
+                    .query({ ...params, hash })
+                    .expect(404);
+
+                expect(response.body).toHaveProperty('errorCode', 'userNotFoundByTelegramId');
+            });
+        });
     });
 });

@@ -20,4 +20,5 @@ export interface DecodedToken {
  */
 export interface TelegramUser {
     id: number;
+    username?: string;
 }

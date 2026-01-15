@@ -98,6 +98,20 @@ export class UserRepository {
     updateUserActivationStatus(userId: number, newStatus: boolean, modifiedBy: number) {
         this.updateUserActivationStatusStatement.run({ isActive: booleanToInteger(newStatus), modifiedBy, id: userId });
     }
+
+    private updateUserTelegramIdStatement: Statement<{
+        telegramId: number,
+        modifiedBy: number,
+        id: number
+    }, void> = db.prepare(
+        `UPDATE user
+         SET telegramId = :telegramId, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
+         WHERE id = :id`
+    );
+
+    updateUserTelegramId(userId: number, telegramId: number, modifiedBy: number) {
+        this.updateUserTelegramIdStatement.run({ telegramId, modifiedBy, id: userId });
+    }
 }
 
 interface UserDBEntity {
