@@ -13,6 +13,13 @@ export class AuthService {
     private userService: UserService = new UserService();
     private tokenService: TokenService = new TokenService();
 
+    /**
+     * Authenticates a user using Telegram Mini App initData.
+     * Validates the hash and creates a JWT token.
+     *
+     * @param params - Query parameters from initData (as key-value object)
+     * @returns TokenPair with JWT access token
+     */
     authenticate(params: Record<string, string>): TokenPair {
         this.validateInitData(params);
 
