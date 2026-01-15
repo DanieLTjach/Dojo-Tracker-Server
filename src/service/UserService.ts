@@ -52,7 +52,20 @@ export class UserService {
             throw new UserNotFoundByTelegramId(telegramId);
         }
         return user;
-    } 
+    }
+
+    findUserByTelegramId(telegramId: number): User | undefined {
+        return this.userRepository.findUserByTelegramId(telegramId);
+    }
+
+    findUserByTelegramUsername(telegramUsername: string): User | undefined {
+        return this.userRepository.findUserByTelegramUsername(telegramUsername);
+    }
+
+    linkTelegramIdToUser(userId: number, telegramId: number): User {
+        this.userRepository.updateUserTelegramId(userId, telegramId, 0);
+        return this.getUserById(userId);
+    }
 
     editUser(
         userId: number,

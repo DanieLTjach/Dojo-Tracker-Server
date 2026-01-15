@@ -6,25 +6,33 @@ import {
     InvalidInitDataError,
     ExpiredAuthDataError
 } from '../error/AuthErrors.ts';
-import { UserIsNotActive } from '../error/UserErrors.ts';
+import { UserIsNotActive, UserNotFoundByTelegramId } from '../error/UserErrors.ts';
 import config from '../../config/config.ts';
 
 export class AuthService {
     private userService: UserService = new UserService();
     private tokenService: TokenService = new TokenService();
 
-    /**
-     * Authenticates a user using Telegram Mini App initData.
-     * Validates the hash and creates a JWT token.
-     *
-     * @param params - Query parameters from initData (as key-value object)
-     * @returns TokenPair with JWT access token
-     */
     authenticate(params: Record<string, string>): TokenPair {
         this.validateInitData(params);
 
-        const telegramId = this.extractTelegramId(params);
-        const user = this.userService.getUserByTelegramId(telegramId);
+        const telegramUser = this.extractTelegramUser(params);
+        let user = this.userService.findUserByTelegramId(telegramUser.id);
+
+        // Fallback: find by username and link telegram ID (for migrated users)
+        if (!user && telegramUser.username) {
+            const username = `@${telegramUser.username}`;
+            const userByUsername = this.userService.findUserByTelegramUsername(username);
+
+            if (userByUsername) {
+                user = this.userService.linkTelegramIdToUser(userByUsername.id, telegramUser.id);
+                console.log(`Linked telegram ID ${telegramUser.id} to existing user ${user.id} (${username})`);
+            }
+        }
+
+        if (!user) {
+            throw new UserNotFoundByTelegramId(telegramUser.id);
+        }
 
         if (!user.isActive) {
             throw new UserIsNotActive(user.id);
@@ -87,26 +95,25 @@ export class AuthService {
     }
 
     /**
-     * Extracts Telegram user ID from the 'user' parameter in initData.
+     * Extracts Telegram user from the 'user' parameter in initData.
      *
      * @param params - Query parameters from initData
-     * @returns Telegram user ID
-     * @throws InvalidInitDataError if user ID is missing or invalid
+     * @returns TelegramUser object
+     * @throws InvalidInitDataError if user data is missing or invalid
      */
-    private extractTelegramId(params: Record<string, string>): number {
+    private extractTelegramUser(params: Record<string, string>): TelegramUser {
         const userParam = params['user'];
         if (!userParam) {
             throw new InvalidInitDataError('Missing user parameter');
         }
 
         const telegramUser = this.parseJsonForInitData<TelegramUser>(userParam, 'Failed to parse user parameter');
-        const telegramId = telegramUser.id;
 
-        if (!telegramId || !Number.isInteger(telegramId)) {
+        if (!telegramUser.id || !Number.isInteger(telegramUser.id)) {
             throw new InvalidInitDataError('Invalid user ID in user parameter');
         }
 
-        return telegramId;
+        return telegramUser;
     }
 
     private parseJsonForInitData<T>(json: string, errorMessage: string): T {
