@@ -47,7 +47,7 @@ export class GameRepository {
         return gameDBEntity !== undefined ? gameFromDBEntity(gameDBEntity) : undefined;
     }
 
-    private findGamePlayersByGameIdStatement: Statement<{ gameId: number }, GamePlayer> = db.prepare(
+    private findGamePlayersByGameIdStatement: Statement<{ gameId: number }, GamePlayerDBEntity> = db.prepare(
         `SELECT utg.*, u.name, u.telegramUsername
          FROM userToGame utg
          JOIN user u ON utg.userId = u.id
@@ -56,7 +56,7 @@ export class GameRepository {
     );
 
     findGamePlayersByGameId(gameId: number): GamePlayer[] {
-        return this.findGamePlayersByGameIdStatement.all({ gameId });
+        return this.findGamePlayersByGameIdStatement.all({ gameId }).map(gamePlayerFromDBEntity);
     }
 
     findGamePlayersByGameIds(gameIds: number[]): GamePlayer[] {
@@ -72,8 +72,8 @@ export class GameRepository {
             WHERE utg.gameId IN (${placeholders})
         `;
 
-        const statement: Statement<number[], GamePlayer> = db.prepare(query);
-        return statement.all(...gameIds);
+        const statement: Statement<number[], GamePlayerDBEntity> = db.prepare(query);
+        return statement.all(...gameIds).map(gamePlayerFromDBEntity);
     }
 
     findGames(filters: GameFilters): Game[] {
@@ -153,9 +153,35 @@ interface GameDBEntity {
 }
 
 function gameFromDBEntity(dbEntity: GameDBEntity): Game {
-    return { 
+    return {
         ...dbEntity,
         createdAt: dateFromSqliteString(dbEntity.createdAt),
         modifiedAt: dateFromSqliteString(dbEntity.modifiedAt)
     }
+}
+
+interface GamePlayerDBEntity {
+    gameId: number;
+    userId: number;
+    name: string;
+    telegramUsername: string | null;
+    points: number;
+    startPlace: string;
+    createdAt: string;
+    modifiedAt: string;
+    modifiedBy: number;
+}
+
+function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
+    return {
+        gameId: dbEntity.gameId,
+        userId: dbEntity.userId,
+        name: dbEntity.name,
+        telegramUsername: dbEntity.telegramUsername,
+        points: dbEntity.points,
+        startPlace: dbEntity.startPlace,
+        createdAt: dateFromSqliteString(dbEntity.createdAt),
+        modifiedAt: dateFromSqliteString(dbEntity.modifiedAt),
+        modifiedBy: dbEntity.modifiedBy
+    };
 }

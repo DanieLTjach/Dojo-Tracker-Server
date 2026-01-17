@@ -14,6 +14,9 @@ export interface GamePlayer {
     telegramUsername: string | null;
     points: number;
     startPlace: string;
+    createdAt: Date;
+    modifiedAt: Date;
+    modifiedBy: number;
 }
 
 export interface GameWithPlayers extends Game {
