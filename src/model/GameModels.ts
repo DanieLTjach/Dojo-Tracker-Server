@@ -35,4 +35,6 @@ export interface GameFilters {
     userId?: number | undefined;
     eventId?: number | undefined;
     sortOrder?: 'asc' | 'desc' | undefined;
+    limit?: number | undefined;
+    offset?: number | undefined;
 }

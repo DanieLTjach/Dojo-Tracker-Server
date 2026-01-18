@@ -112,6 +112,16 @@ export class GameRepository {
         const sortOrder = filters.sortOrder?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
         query += ` ORDER BY g.createdAt ${sortOrder}`;
 
+        if (filters.limit !== undefined) {
+            query += ` LIMIT ?`;
+            params.push(filters.limit);
+        }
+
+        if (filters.offset !== undefined) {
+            query += ` OFFSET ?`;
+            params.push(filters.offset);
+        }
+
         const statement: Statement<any[], GameDBEntity> = db.prepare(query);
         return statement.all(...params).map(gameFromDBEntity);
     }

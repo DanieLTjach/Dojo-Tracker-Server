@@ -41,7 +41,9 @@ export const gameGetListSchema = z.object({
         dateTo: dateSchema.optional(),
         userId: userIdParamSchema.optional(),
         eventId: eventIdParamSchema.optional(),
-        sortOrder: z.enum(['asc', 'desc']).optional()
+        sortOrder: z.enum(['asc', 'desc']).optional(),
+        limit: z.coerce.number().int().positive().optional(),
+        offset: z.coerce.number().int().nonnegative().optional()
     }).optional()
 });
 
