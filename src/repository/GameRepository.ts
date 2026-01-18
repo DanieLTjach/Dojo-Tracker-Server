@@ -29,14 +29,22 @@ export class GameRepository {
         userId: number,
         points: number,
         startPlace: string | undefined,
-        modifiedBy: number
+        modifiedBy: number,
+        timestamp: string
     }, void> = db.prepare(
-        `INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy)
-         VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy)`
+        `INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy, createdAt, modifiedAt)
+         VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy, :timestamp, :timestamp)`
     );
 
-    addGamePlayer(gameId: number, userId: number, points: number, startPlace: string | undefined, modifiedBy: number): void {
-        this.addGamePlayerStatement.run({ gameId, userId, points, startPlace, modifiedBy });
+    addGamePlayer(gameId: number, userId: number, points: number, startPlace: string | undefined, modifiedBy: number, timestamp: Date): void {
+        this.addGamePlayerStatement.run({
+            gameId,
+            userId,
+            points,
+            startPlace,
+            modifiedBy,
+            timestamp: dateToSqliteString(timestamp)
+        });
     }
 
     private findGameByIdStatement: Statement<{ id: number }, GameDBEntity> =
@@ -48,9 +56,10 @@ export class GameRepository {
     }
 
     private findGamePlayersByGameIdStatement: Statement<{ gameId: number }, GamePlayerDBEntity> = db.prepare(
-        `SELECT utg.*, u.name, u.telegramUsername
+        `SELECT utg.*, u.name, u.telegramUsername, urc.ratingChange
          FROM userToGame utg
          JOIN user u ON utg.userId = u.id
+         LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
          WHERE utg.gameId = :gameId
          ORDER BY points DESC, userId`
     );
@@ -66,9 +75,10 @@ export class GameRepository {
 
         const placeholders = gameIds.map(() => '?').join(',');
         const query = `
-            SELECT utg.*, u.name, u.telegramUsername
+            SELECT utg.*, u.name, u.telegramUsername, urc.ratingChange
             FROM userToGame utg
             JOIN user u ON utg.userId = u.id
+            LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
             WHERE utg.gameId IN (${placeholders})
         `;
 
@@ -189,6 +199,7 @@ interface GamePlayerDBEntity {
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
+    ratingChange: number | null;
 }
 
 function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
@@ -201,6 +212,7 @@ function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
         startPlace: dbEntity.startPlace,
         createdAt: dateFromSqliteString(dbEntity.createdAt),
         modifiedAt: dateFromSqliteString(dbEntity.modifiedAt),
-        modifiedBy: dbEntity.modifiedBy
+        modifiedBy: dbEntity.modifiedBy,
+        ratingChange: dbEntity.ratingChange
     };
 }

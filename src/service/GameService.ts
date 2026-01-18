@@ -29,7 +29,7 @@ export class GameService {
         this.validatePlayers(playersData, event.gameRules);
 
         const newGameId = this.gameRepository.createGame(eventId, createdBy, timestamp);
-        this.addPlayersToGame(newGameId, playersData, createdBy);
+        this.addPlayersToGame(newGameId, playersData, createdBy, timestamp);
 
         const newGame = this.getGameById(newGameId);
         this.ratingService.addRatingChangesFromGame(newGame, event.gameRules);
@@ -77,7 +77,7 @@ export class GameService {
 
         this.gameRepository.updateGame(gameId, eventId, modifiedBy);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
-        this.addPlayersToGame(gameId, playersData, modifiedBy);
+        this.addPlayersToGame(gameId, playersData, modifiedBy, game.createdAt);
 
         this.ratingService.deleteRatingChangesFromGame(game);
         const newGame = this.getGameById(gameId);
@@ -114,14 +114,15 @@ export class GameService {
         this.validateNoDuplicatePlayers(playersData);
     }
 
-    private addPlayersToGame(gameId: number, players: PlayerData[], modifiedBy: number): void {
+    private addPlayersToGame(gameId: number, players: PlayerData[], modifiedBy: number, timestamp: Date): void {
         for (const player of players) {
             this.gameRepository.addGamePlayer(
                 gameId,
                 player.userId,
                 player.points,
                 player.startPlace,
-                modifiedBy
+                modifiedBy,
+                timestamp
             );
         }
     }

@@ -17,6 +17,7 @@ export interface GamePlayer {
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;
+    ratingChange: number | null;
 }
 
 export interface GameWithPlayers extends Game {
