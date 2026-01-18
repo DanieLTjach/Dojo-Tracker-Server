@@ -29,8 +29,7 @@ export class UserStatsService {
         const userRank = this.userStatsRepository.getUserRankInEvent(userId, eventId);
 
         // Get starting rating from game rules
-        const gameRules = this.eventRepository.findGameRulesByEventId(eventId);
-        const startingRating = gameRules?.startingRating || 1000;
+        const startingRating = event.gameRules.startingRating;
 
         // Calculate all stats
         return this.calculateStats(userId, eventId, gameStats, currentRating, startingRating, totalGamesInEvent, userRank);
