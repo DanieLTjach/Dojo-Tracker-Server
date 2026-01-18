@@ -34,4 +34,5 @@ export interface GameFilters {
     dateTo?: Date | undefined;
     userId?: number | undefined;
     eventId?: number | undefined;
+    sortOrder?: 'asc' | 'desc' | undefined;
 }

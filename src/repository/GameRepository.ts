@@ -109,7 +109,8 @@ export class GameRepository {
             query += ' WHERE ' + conditions.join(' AND ');
         }
 
-        query += ' ORDER BY g.createdAt';
+        const sortOrder = filters.sortOrder?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+        query += ` ORDER BY g.createdAt ${sortOrder}`;
 
         const statement: Statement<any[], GameDBEntity> = db.prepare(query);
         return statement.all(...params).map(gameFromDBEntity);
