@@ -2,8 +2,11 @@ import type { Statement } from 'better-sqlite3';
 import { db } from '../db/dbInit.ts';
 import type { Event } from '../model/EventModels.ts';
 import { dateFromSqliteString } from '../db/dbUtils.ts';
+import { GameRepository } from './GameRepository.ts';
 
 export class EventRepository {
+    private gameRepository: GameRepository = new GameRepository();
+
     private findAllEventsStatement: Statement<[], EventWithGameRulesDBEntity> = db.prepare(
         `SELECT
             e.*,
@@ -19,7 +22,11 @@ export class EventRepository {
     );
 
     findAllEvents(): Event[] {
-        return this.findAllEventsStatement.all().map(eventWithGameRulesFromDBEntity);
+        const events = this.findAllEventsStatement.all().map(eventWithGameRulesFromDBEntity);
+        return events.map(event => ({
+            ...event,
+            gameCount: this.gameRepository.countGamesByEventId(event.id)
+        }));
     }
 
     private findEventByIdStatement: Statement<{ id: number }, EventWithGameRulesDBEntity> = db.prepare(
@@ -38,7 +45,14 @@ export class EventRepository {
 
     findEventById(eventId: number): Event | undefined {
         const eventDBEntity = this.findEventByIdStatement.get({ id: eventId });
-        return eventDBEntity !== undefined ? eventWithGameRulesFromDBEntity(eventDBEntity) : undefined;
+        if (eventDBEntity === undefined) {
+            return undefined;
+        }
+        const event = eventWithGameRulesFromDBEntity(eventDBEntity);
+        return {
+            ...event,
+            gameCount: this.gameRepository.countGamesByEventId(event.id)
+        };
     }
 }
 
@@ -77,6 +91,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         },
         dateFrom: dbEntity.dateFrom !== null ? dateFromSqliteString(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? dateFromSqliteString(dbEntity.dateTo) : null,
+        gameCount: 0, // Will be set by repository methods
         createdAt: dateFromSqliteString(dbEntity.createdAt),
         modifiedAt: dateFromSqliteString(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy

@@ -142,6 +142,14 @@ export class GameRepository {
     deleteGameById(gameId: number): void {
         this.deleteGameByIdStatement.run({ id: gameId });
     }
+
+    private countGamesByEventIdStatement: Statement<{ eventId: number }, { count: number }> =
+        db.prepare('SELECT COUNT(*) as count FROM game WHERE eventId = :eventId');
+
+    countGamesByEventId(eventId: number): number {
+        const result = this.countGamesByEventIdStatement.get({ eventId });
+        return result?.count ?? 0;
+    }
 }
 
 interface GameDBEntity {
