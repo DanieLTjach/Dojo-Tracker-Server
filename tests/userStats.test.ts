@@ -17,7 +17,6 @@ app.use(handleErrors);
 
 describe('User Stats API Endpoints', () => {
     const SYSTEM_USER_ID = 0;
-    const ADMIN_TELEGRAM_ID = 123456789;
     const TEST_EVENT_ID = 1; // Test Event from migrations
 
     let testUser1Id: number;
@@ -26,7 +25,7 @@ describe('User Stats API Endpoints', () => {
     let testUser4Id: number;
     let testUser5Id: number; // User who hasn't played any games
 
-    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID, ADMIN_TELEGRAM_ID, true, true);
+    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
     let user1AuthHeader: string;
 
     // Helper to create test users
@@ -59,7 +58,7 @@ describe('User Stats API Endpoints', () => {
         testUser4Id = await createTestUser('StatsPlayer4', 344444444);
         testUser5Id = await createTestUser('StatsPlayer5', 355555555);
 
-        user1AuthHeader = createAuthHeader(testUser1Id, 311111111, false, true);
+        user1AuthHeader = createAuthHeader(testUser1Id);
 
         // Create multiple test games with varied results for comprehensive stats
         // Game 1: User1 wins with high points
