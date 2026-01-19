@@ -5,7 +5,7 @@ import { UserService } from '../src/service/UserService.ts';
 import { MissingAuthTokenError, InvalidAuthTokenError, InsufficientPermissionsError } from '../src/error/AuthErrors.ts';
 import type { User } from '../src/model/UserModels.ts';
 import { jest } from '@jest/globals';
-import { closeDB } from '../src/db/dbInit.ts';
+import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 
 describe('AuthMiddleware', () => {
@@ -26,7 +26,7 @@ describe('AuthMiddleware', () => {
     });
 
     afterAll(() => {
-        closeDB();
+        dbManager.closeDB();
         cleanupTestDatabase();
     });
 

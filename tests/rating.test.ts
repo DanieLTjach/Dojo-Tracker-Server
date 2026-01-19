@@ -4,7 +4,7 @@ import ratingRoutes from '../src/routes/RatingRoutes.ts';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
-import { closeDB } from '../src/db/dbInit.ts';
+import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader } from './testHelpers.ts';
 
@@ -16,16 +16,21 @@ app.use('/api/users', userRoutes);
 app.use(handleErrors);
 
 describe('Rating API Endpoints', () => {
+
+    beforeEach(() => {
+        dbManager.closeDB();
+        cleanupTestDatabase();
+        dbManager.reinitDB();
+    });
+
+    afterAll(() => {
+        dbManager.closeDB();
+        cleanupTestDatabase();
+    });
+
     const SYSTEM_USER_ID = 0;
     const TEST_EVENT_ID = 1; // Test Event from migrations
-
-    let testUser1Id: number;
-    let testUser2Id: number;
-    let testUser3Id: number;
-    let testUser4Id: number;
-
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
-    let user1AuthHeader: string;
 
     // Helper to create test users
     async function createTestUser(name: string, telegramId: number): Promise<number> {
@@ -37,6 +42,7 @@ describe('Rating API Endpoints', () => {
                 telegramUsername: `@${name.toLowerCase()}`,
                 telegramId
             });
+        expect(response.status).toBe(201);
         return response.body.id;
     }
 
@@ -49,34 +55,37 @@ describe('Rating API Endpoints', () => {
                 eventId: TEST_EVENT_ID,
                 playersData
             });
+        expect(response.status).toBe(201);
         return response.body.id;
     }
 
-    beforeAll(async () => {
-        // Create test users
-        testUser1Id = await createTestUser('RatingPlayer1', 211111111);
-        testUser2Id = await createTestUser('RatingPlayer2', 222222222);
-        testUser3Id = await createTestUser('RatingPlayer3', 233333333);
-        testUser4Id = await createTestUser('RatingPlayer4', 244444444);
+    async function createGameSetup() {
+        return await createGameSetupWithPoints([40000, 35000, 25000, 20000]);
+    }
 
-        user1AuthHeader = createAuthHeader(testUser1Id);
+    // Helper to create a complete game setup with 4 players
+    async function createGameSetupWithPoints(points: number[]) {
+        const user1Id = await createTestUser('Player1', 1);
+        const user2Id = await createTestUser('Player2', 2);
+        const user3Id = await createTestUser('Player3', 3);
+        const user4Id = await createTestUser('Player4', 4);
 
-        // Create a test game to generate rating changes
-        await createTestGame(user1AuthHeader, [
-            { userId: testUser1Id, points: 35000, startPlace: 'EAST' },
-            { userId: testUser2Id, points: 28000, startPlace: 'SOUTH' },
-            { userId: testUser3Id, points: 22000, startPlace: 'WEST' },
-            { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
+        const user1AuthHeader = createAuthHeader(user1Id);
+
+        const gameId = await createTestGame(user1AuthHeader, [
+            { userId: user1Id, points: points[0], startPlace: 'EAST' },
+            { userId: user2Id, points: points[1], startPlace: 'SOUTH' },
+            { userId: user3Id, points: points[2], startPlace: 'WEST' },
+            { userId: user4Id, points: points[3], startPlace: 'NORTH' }
         ]);
-    });
 
-    afterAll(() => {
-        closeDB();
-        cleanupTestDatabase();
-    });
+        return { user1Id, user2Id, user3Id, user4Id, user1AuthHeader, gameId };
+    }
 
     describe('GET /api/events/:eventId/rating - Get All Users Current Rating', () => {
         test('should return current ratings for all users in event', async () => {
+            const { user1AuthHeader } = await createGameSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/rating`)
                 .set('Authorization', user1AuthHeader);
@@ -96,6 +105,8 @@ describe('Rating API Endpoints', () => {
         });
 
         test('should return ratings in descending order', async () => {
+            const { user1AuthHeader } = await createGameSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/rating`)
                 .set('Authorization', user1AuthHeader);
@@ -109,9 +120,12 @@ describe('Rating API Endpoints', () => {
         });
 
         test('should return 404 for non-existent event', async () => {
+            const userId = await createTestUser('TestUser', 1);
+            const authHeader = createAuthHeader(userId);
+
             const response = await request(app)
                 .get('/api/events/99999/rating')
-                .set('Authorization', user1AuthHeader);
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(404);
         });
@@ -120,6 +134,8 @@ describe('Rating API Endpoints', () => {
 
     describe('GET /api/events/:eventId/rating/change - Get Rating Changes During Period', () => {
         test('should return rating changes for all users in period', async () => {
+            const { user1AuthHeader } = await createGameSetup();
+
             const dateFrom = new Date(Date.now() - 86400000).toISOString(); // 1 day ago
             const dateTo = new Date(Date.now() + 86400000).toISOString(); // 1 day from now
 
@@ -143,32 +159,41 @@ describe('Rating API Endpoints', () => {
         });
 
         test('should return empty array for period with no games', async () => {
+            const userId = await createTestUser('TestUser', 1);
+            const authHeader = createAuthHeader(userId);
+
             const dateFrom = new Date('2020-01-01').toISOString();
             const dateTo = new Date('2020-01-02').toISOString();
 
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/rating/change`)
                 .query({ dateFrom, dateTo })
-                .set('Authorization', user1AuthHeader);
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(200);
             expect(response.body).toEqual([]);
         });
 
         test('should return 400 for invalid date format', async () => {
+            const userId = await createTestUser('TestUser', 1);
+            const authHeader = createAuthHeader(userId);
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/rating/change`)
                 .query({ dateFrom: 'invalid-date', dateTo: new Date().toISOString() })
-                .set('Authorization', user1AuthHeader);
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(400);
         });
 
         test('should require both dateFrom and dateTo', async () => {
+            const userId = await createTestUser('TestUser', 1);
+            const authHeader = createAuthHeader(userId);
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/rating/change`)
                 .query({ dateFrom: new Date().toISOString() })
-                .set('Authorization', user1AuthHeader);
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(400);
         });
@@ -177,8 +202,10 @@ describe('Rating API Endpoints', () => {
 
     describe('GET /api/events/:eventId/users/:userId/rating/history - Get User Rating History', () => {
         test('should return rating history for specific user', async () => {
+            const { user1Id, user1AuthHeader } = await createGameSetup();
+
             const response = await request(app)
-                .get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/rating/history`)
+                .get(`/api/events/${TEST_EVENT_ID}/users/${user1Id}/rating/history`)
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
@@ -194,16 +221,19 @@ describe('Rating API Endpoints', () => {
         });
 
         test('should return history in chronological order', async () => {
+            // Create a game setup with one game
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetup();
+
             // Create another game to have multiple history entries
             await createTestGame(user1AuthHeader, [
-                { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
-                { userId: testUser2Id, points: 25000, startPlace: 'SOUTH' },
-                { userId: testUser3Id, points: 20000, startPlace: 'WEST' },
-                { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
+                { userId: user1Id, points: 40000, startPlace: 'EAST' },
+                { userId: user2Id, points: 25000, startPlace: 'SOUTH' },
+                { userId: user3Id, points: 20000, startPlace: 'WEST' },
+                { userId: user4Id, points: 15000, startPlace: 'NORTH' }
             ]);
 
             const response = await request(app)
-                .get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/rating/history`)
+                .get(`/api/events/${TEST_EVENT_ID}/users/${user1Id}/rating/history`)
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
@@ -218,27 +248,33 @@ describe('Rating API Endpoints', () => {
         });
 
         test('should return empty array for user with no games', async () => {
-            const newUserId = await createTestUser('NoGamesUser', 299999999);
+            const newUserId = await createTestUser('NoGamesUser', 1);
+            const authHeader = createAuthHeader(newUserId);
 
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/${newUserId}/rating/history`)
-                .set('Authorization', user1AuthHeader);
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(200);
             expect(response.body).toEqual([]);
         });
 
         test('should return 404 for non-existent user', async () => {
+            const userId = await createTestUser('TestUser', 1);
+            const authHeader = createAuthHeader(userId);
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/99999/rating/history`)
-                .set('Authorization', user1AuthHeader);
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(404);
         });
 
         test('should return 404 for non-existent event', async () => {
+            const { user1Id, user1AuthHeader } = await createGameSetup();
+
             const response = await request(app)
-                .get(`/api/events/99999/users/${testUser1Id}/rating/history`)
+                .get(`/api/events/99999/users/${user1Id}/rating/history`)
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(404);
@@ -247,32 +283,144 @@ describe('Rating API Endpoints', () => {
     });
 
     describe('Rating Calculation Accuracy', () => {
-        test('should calculate correct rating changes based on UMA', async () => {
-            // Create a fresh user to test rating calculation
-            const freshUserId = await createTestUser('FreshRatingUser', 288888888);
-            const freshAuthHeader = createAuthHeader(freshUserId);
+        test('All players have zero score', async () => {
+            const { gameId, user1AuthHeader } = await createGameSetupWithPoints([30000, 30000, 30000, 30000]);
 
-            // Create a game where this user finishes first
-            await createTestGame(freshAuthHeader, [
-                { userId: freshUserId, points: 40000, startPlace: 'EAST' },
-                { userId: testUser2Id, points: 25000, startPlace: 'SOUTH' },
-                { userId: testUser3Id, points: 20000, startPlace: 'WEST' },
-                { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
-            ]);
-
-            // Get rating history
             const response = await request(app)
-                .get(`/api/events/${TEST_EVENT_ID}/users/${freshUserId}/rating/history`)
-                .set('Authorization', freshAuthHeader);
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
-            expect(response.body.length).toBe(1);
+            expect(response.body).toHaveProperty('players');
 
-            // First place UMA for standard yonma is +15
-            // Starting rating is 1000
-            // RatingSnapshot only has timestamp and rating
-            // Rating should be greater than starting rating (1000)
-            expect(response.body[0].rating).toBeGreaterThan(1000);
+            const expectedRatingChange: Record<number, number> = {
+                1: 0,
+                2: 0,
+                3: 0,
+                4: 0
+            };
+
+            const players = response.body.players;
+            for (const player of players) {
+                expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
+            }
+        });
+
+        test('One player has positive score', async () => {
+            const { gameId, user1AuthHeader } = await createGameSetupWithPoints([36000, 29000, 28000, 27000]);
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('players');
+
+            const expectedRatingChange: Record<number, number> = {
+                1: 30, // 6 + 24
+                2: -3, // -1 - 2
+                3: -8, // -2 - 6
+                4: -19 // -3 - 16
+            };
+
+            const players = response.body.players;
+            for (const player of players) {
+                expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
+            }
+        });
+
+        test('Two players have positive score', async () => {
+            const { gameId, user1AuthHeader } = await createGameSetupWithPoints([40000, 35000, 25000, 20000]);
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('players');
+
+            const expectedRatingChange: Record<number, number> = {
+                1: 26, // 10 + 16
+                2: 13, // 5 + 8
+                3: -13, // -5 - 8
+                4: -26 // -10 - 16
+            };
+
+            const players = response.body.players;
+            for (const player of players) {
+                expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
+            }
+        });
+
+        test('Three players have positive score', async () => {
+            const { gameId, user1AuthHeader } = await createGameSetupWithPoints([33000, 32000, 31000, 24000]);
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('players');
+
+            const expectedRatingChange: Record<number, number> = {
+                1: 19, // 3 + 16
+                2: 8, // 2 + 6
+                3: 3, // 1 + 2
+                4: -30 // -6 - 24
+            };
+
+            const players = response.body.players;
+            for (const player of players) {
+                expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
+            }
+        });
+
+        test('Two players have the same score', async () => {
+            const { gameId, user1AuthHeader } = await createGameSetupWithPoints([34000, 34000, 28000, 24000]);
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('players');
+
+            // uma [16, 8, -8, -16] -> averaged to [12, 12, -8, -16]
+            const expectedRatingChange: Record<number, number> = {
+                1: 16, // 4 + 12
+                2: 16, // 4 + 12
+                3: -10, // -2 - 8
+                4: -22 // -6 - 16
+            };
+
+            const players = response.body.players;
+            for (const player of players) {
+                expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
+            }
+        });
+
+        test('Three players have the same score', async () => {
+            const { gameId, user1AuthHeader } = await createGameSetupWithPoints([32000, 32000, 32000, 24000]);
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('players');
+
+            // uma [16, 6, 2, -24] -> averaged to [8, 8, 8, -24]
+            const expectedRatingChange: Record<number, number> = {
+                1: 10, // 2 + 8
+                2: 10, // 2 + 8
+                3: 10, // 2 + 8
+                4: -30 // -6 - 24
+            };
+
+            const players = response.body.players;
+            for (const player of players) {
+                expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
+            }
         });
     });
 });
