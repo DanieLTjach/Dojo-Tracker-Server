@@ -2,7 +2,7 @@ import request from 'supertest';
 import express from 'express';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
-import { closeDB } from '../src/db/dbInit.ts';
+import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader } from './testHelpers.ts';
 
@@ -56,7 +56,7 @@ describe('Game API Endpoints', () => {
     });
 
     afterAll(() => {
-        closeDB();
+        dbManager.closeDB();
         cleanupTestDatabase();
     });
 
