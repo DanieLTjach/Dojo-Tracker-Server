@@ -2,7 +2,7 @@ import request from 'supertest';
 import express from 'express';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
-import { closeDB } from '../src/db/dbInit.ts';
+import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader } from './testHelpers.ts';
 
@@ -18,7 +18,7 @@ describe('Event API Endpoints', () => {
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
 
     afterAll(() => {
-        closeDB();
+        dbManager.closeDB();
         cleanupTestDatabase();
     });
 
@@ -138,7 +138,7 @@ describe('Event API Endpoints', () => {
             expect(typeof gameRules.startingRating).toBe('number');
         });
 
-        test('should parse uma as array of numbers in game rules', async () => {
+        test('should parse uma as 2D array of numbers in game rules', async () => {
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}`)
                 .set('Authorization', adminAuthHeader);
@@ -146,9 +146,12 @@ describe('Event API Endpoints', () => {
             expect(response.status).toBe(200);
             const uma = response.body.gameRules.uma;
             expect(Array.isArray(uma)).toBe(true);
-            expect(uma.length).toBe(4);
+            expect(uma.length).toBe(3);
             uma.forEach((value: any) => {
-                expect(typeof value).toBe('number');
+                expect(Array.isArray(value)).toBe(true);
+                value.forEach((num: any) => {
+                    expect(typeof num).toBe('number');
+                });
             });
         });
 

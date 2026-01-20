@@ -3,7 +3,7 @@ export interface GameRules {
     id: number;
     name: string;
     numberOfPlayers: number;
-    uma: number[];
+    uma: number[] | number[][];
     startingPoints: number;
     startingRating: number;
 }

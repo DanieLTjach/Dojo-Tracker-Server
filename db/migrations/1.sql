@@ -118,7 +118,7 @@ CREATE TABLE winTypeDict (
 
 -- Insert initial data
 INSERT INTO gameRules(id, name, numberOfPlayers, uma, startingPoints, startingRating) VALUES
-    (1, 'Standard yonma', 4, '15,5,-5,-15', 30000, 1000),
+    (1, 'Standard yonma', 4, '24,-2,-6,-16;16,8,-8,-16;16,6,2,-24', 30000, 1000),
     (2, 'Standard sanma', 3, '15,0,-15', 35000, 1000);
 
 INSERT INTO eventType(type) VALUES ('SEASON'), ('TOURNAMENT');

@@ -13,6 +13,7 @@ export interface GamePlayer {
     name: string;
     telegramUsername: string | null;
     points: number;
+    ratingChange: number;
     startPlace: string;
     createdAt: Date;
     modifiedAt: Date;

@@ -1,5 +1,5 @@
 import type { Statement } from 'better-sqlite3';
-import { db } from '../db/dbInit.ts';
+import { dbManager } from '../db/dbInit.ts';
 import type { Event } from '../model/EventModels.ts';
 import { dateFromSqliteString } from '../db/dbUtils.ts';
 import { GameRepository } from './GameRepository.ts';
@@ -7,44 +7,48 @@ import { GameRepository } from './GameRepository.ts';
 export class EventRepository {
     private gameRepository: GameRepository = new GameRepository();
 
-    private findAllEventsStatement: Statement<[], EventWithGameRulesDBEntity> = db.prepare(
-        `SELECT
-            e.*,
-            gr.id as gr_id,
-            gr.name as gr_name,
-            gr.numberOfPlayers as gr_numberOfPlayers,
-            gr.uma as gr_uma,
-            gr.startingPoints as gr_startingPoints,
-            gr.startingRating as gr_startingRating
-         FROM event e
-         JOIN gameRules gr ON e.gameRules = gr.id
-         ORDER BY e.createdAt DESC`
-    );
+    private findAllEventsStatement(): Statement<[], EventWithGameRulesDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT
+                    e.*,
+                    gr.id as gr_id,
+                    gr.name as gr_name,
+                    gr.numberOfPlayers as gr_numberOfPlayers,
+                gr.uma as gr_uma,
+                gr.startingPoints as gr_startingPoints,
+                gr.startingRating as gr_startingRating
+            FROM event e
+            JOIN gameRules gr ON e.gameRules = gr.id
+            ORDER BY e.createdAt DESC`
+        );
+    }
 
     findAllEvents(): Event[] {
-        const events = this.findAllEventsStatement.all().map(eventWithGameRulesFromDBEntity);
+        const events = this.findAllEventsStatement().all().map(eventWithGameRulesFromDBEntity);
         return events.map(event => ({
             ...event,
             gameCount: this.gameRepository.countGamesByEventId(event.id)
         }));
     }
 
-    private findEventByIdStatement: Statement<{ id: number }, EventWithGameRulesDBEntity> = db.prepare(
-        `SELECT
-            e.*,
-            gr.id as gr_id,
-            gr.name as gr_name,
-            gr.numberOfPlayers as gr_numberOfPlayers,
-            gr.uma as gr_uma,
-            gr.startingPoints as gr_startingPoints,
-            gr.startingRating as gr_startingRating
-         FROM event e
-         JOIN gameRules gr ON e.gameRules = gr.id
-         WHERE e.id = :id`
-    );
+    private findEventByIdStatement(): Statement<{ id: number }, EventWithGameRulesDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT
+                    e.*,
+                    gr.id as gr_id,
+                    gr.name as gr_name,
+                    gr.numberOfPlayers as gr_numberOfPlayers,
+                gr.uma as gr_uma,
+                gr.startingPoints as gr_startingPoints,
+                gr.startingRating as gr_startingRating
+            FROM event e
+            JOIN gameRules gr ON e.gameRules = gr.id
+            WHERE e.id = :id`
+        );
+    }
 
     findEventById(eventId: number): Event | undefined {
-        const eventDBEntity = this.findEventByIdStatement.get({ id: eventId });
+        const eventDBEntity = this.findEventByIdStatement().get({ id: eventId });
         if (eventDBEntity === undefined) {
             return undefined;
         }
@@ -85,7 +89,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             id: dbEntity.gr_id,
             name: dbEntity.gr_name,
             numberOfPlayers: dbEntity.gr_numberOfPlayers,
-            uma: dbEntity.gr_uma.split(',').map(Number),
+            uma: parseUma(dbEntity.gr_uma),
             startingPoints: dbEntity.gr_startingPoints,
             startingRating: dbEntity.gr_startingRating
         },
@@ -96,4 +100,13 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         modifiedAt: dateFromSqliteString(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy
     };
+}
+
+function parseUma(umaString: string): number[] | number[][] {
+    const parsedUma = umaString.split(';').map(part => part.split(',').map(Number));
+    if (parsedUma.length === 1) {
+        return parsedUma[0]!;
+    } else {
+        return parsedUma;
+    }
 }

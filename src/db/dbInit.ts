@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import Database from 'better-sqlite3'
+import Database from 'better-sqlite3';
+import type { Database as BetterSqlite3Database } from 'better-sqlite3';
 import config from '../../config/config.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -12,26 +13,88 @@ if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
 }
 
-export const db = new Database(config.dbPath);
+class DBManager {
+    db: BetterSqlite3Database = new Database(config.dbPath);;
 
-function getCurrentDBVersion(): number {
-    const result = db.pragma('user_version', { simple: true });
-    if (typeof result !== 'number') {
-        throw new Error('Failed to get database version');
+    constructor() {
+        this.initDB();
     }
-    return result;
-}
 
-function setDBVersion(version: number) {
-    db.pragma(`user_version = ${version}`);
-}
+    initDB() {
+        try {
+            this.db.pragma('journal_mode = WAL');
+            this.db.pragma('foreign_keys = ON');
+            this.runMigrations();
+        } catch (error) {
+            console.error('Failed to initialize database:', error);
+            process.exit(1);
+        }
+    }
 
-function runSqlFile(filePath: string) {
-    const sql = fs.readFileSync(filePath, 'utf8');
+    reinitDB() {
+        this.db = new Database(config.dbPath);
+        this.initDB();
+    }
 
-    db.transaction(() => {
-        db.exec(sql);
-    })();
+    closeDB() {
+        this.db.close();
+    }
+
+    runMigrations() {
+        const currentVersion = this.getCurrentDBVersion();
+        const migrationFiles = getMigrationFiles();
+        const migrationsDir = path.join(__dirname, '../../db/migrations');
+
+        console.log(`Database version: ${currentVersion}`);
+
+        let migrationsRun = 0;
+
+        for (const file of migrationFiles) {
+            const migrationNumber = parseInt(file.split('.')[0]!);
+
+            if (migrationNumber > currentVersion) {
+                const filePath = path.join(migrationsDir, file);
+                console.log(`Running migration: ${file}`);
+
+                try {
+                    this.runSqlFile(filePath);
+                    this.setDBVersion(migrationNumber);
+                    console.log(`✓ Migration ${file} completed`);
+                    migrationsRun++;
+                } catch (error) {
+                    console.error(`✗ Migration ${file} failed: `, error);
+                    throw error;
+                }
+            }
+        }
+
+        if (migrationsRun > 0) {
+            const finalVersion = this.getCurrentDBVersion();
+            console.log(`Database updated to version: ${finalVersion}`);
+        } else {
+            console.log('Database is up to date');
+        }
+    }
+
+    private getCurrentDBVersion(): number {
+        const result = this.db.pragma('user_version', { simple: true });
+        if (typeof result !== 'number') {
+            throw new Error('Failed to get database version');
+        }
+        return result;
+    }
+
+    setDBVersion(version: number) {
+        this.db.pragma(`user_version = ${version}`);
+    }
+
+    runSqlFile(filePath: string) {
+        const sql = fs.readFileSync(filePath, 'utf8');
+
+        this.db.transaction(() => {
+            this.db.exec(sql);
+        })();
+    }
 }
 
 function getMigrationFiles() {
@@ -52,56 +115,4 @@ function getMigrationFiles() {
     return files;
 }
 
-function runMigrations() {
-    const currentVersion = getCurrentDBVersion();
-    const migrationFiles = getMigrationFiles();
-    const migrationsDir = path.join(__dirname, '../../db/migrations');
-
-    console.log(`Database version: ${currentVersion}`);
-
-    let migrationsRun = 0;
-
-    for (const file of migrationFiles) {
-        const migrationNumber = parseInt(file.split('.')[0]!);
-
-        if (migrationNumber > currentVersion) {
-            const filePath = path.join(migrationsDir, file);
-            console.log(`Running migration: ${file}`);
-
-            try {
-                runSqlFile(filePath);
-                setDBVersion(migrationNumber);
-                console.log(`✓ Migration ${file} completed`);
-                migrationsRun++;
-            } catch (error) {
-                console.error(`✗ Migration ${file} failed: `, error);
-                throw error;
-            }
-        }
-    }
-
-    if (migrationsRun > 0) {
-        const finalVersion = getCurrentDBVersion();
-        console.log(`Database updated to version: ${finalVersion}`);
-    } else {
-        console.log('Database is up to date');
-    }
-}
-
-function initDB() {
-    try {
-        db.pragma('journal_mode = WAL');
-        db.pragma('foreign_keys = ON');
-        runMigrations();
-    } catch (error) {
-        console.error('Failed to initialize database:', error);
-        process.exit(1);
-    }
-}
-
-// Export function to close database connection (useful for tests)
-export function closeDB() {
-    db.close();
-}
-
-initDB();
+export const dbManager = new DBManager();

@@ -30,10 +30,9 @@ export class GameService {
 
         const newGameId = this.gameRepository.createGame(eventId, createdBy, timestamp);
         this.addPlayersToGame(newGameId, playersData, createdBy, timestamp);
+        this.ratingService.addRatingChangesFromGame(newGameId, timestamp, playersData, eventId, event.gameRules);
 
-        const newGame = this.getGameById(newGameId);
-        this.ratingService.addRatingChangesFromGame(newGame, event.gameRules);
-        return newGame;
+        return this.getGameById(newGameId);
     }
 
     getGameById(gameId: number): GameWithPlayers {
@@ -80,9 +79,9 @@ export class GameService {
         this.addPlayersToGame(gameId, playersData, modifiedBy, game.createdAt);
 
         this.ratingService.deleteRatingChangesFromGame(game);
-        const newGame = this.getGameById(gameId);
-        this.ratingService.addRatingChangesFromGame(newGame, event.gameRules);
-        return newGame;
+        this.ratingService.addRatingChangesFromGame(gameId, game.createdAt, playersData, eventId, event.gameRules);
+
+        return this.getGameById(gameId);
     }
 
     deleteGame(gameId: number): void {

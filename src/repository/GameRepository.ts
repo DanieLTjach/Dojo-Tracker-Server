@@ -1,22 +1,25 @@
 import type { Statement } from 'better-sqlite3';
 import { dateFromSqliteString, dateToSqliteString } from '../db/dbUtils.ts';
 import type { Game, GameFilters, GamePlayer } from '../model/GameModels.ts';
-import { db } from '../db/dbInit.ts';
+import { dbManager } from '../db/dbInit.ts';
+import { normalizeRatingChange } from '../service/RatingService.ts';
 
 export class GameRepository {
 
-    private createGameStatement: Statement<{
+    private createGameStatement(): Statement<{
         eventId: number,
         modifiedBy: number,
         timestamp: string
-    }, void> = db.prepare(
-        `INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt) 
-         VALUES (:eventId, :modifiedBy, :timestamp, :timestamp)`
-    );
+    }, void> {
+        return dbManager.db.prepare(`
+            INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt)
+            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp)`
+        );
+    }
 
     createGame(eventId: number, modifiedBy: number, timestamp: Date): number {
         return Number(
-            this.createGameStatement.run({
+            this.createGameStatement().run({
                 eventId,
                 modifiedBy,
                 timestamp: dateToSqliteString(timestamp)
@@ -24,20 +27,22 @@ export class GameRepository {
         );
     }
 
-    private addGamePlayerStatement: Statement<{
+    private addGamePlayerStatement(): Statement<{
         gameId: number,
         userId: number,
         points: number,
         startPlace: string | undefined,
         modifiedBy: number,
         timestamp: string
-    }, void> = db.prepare(
-        `INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy, createdAt, modifiedAt)
-         VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy, :timestamp, :timestamp)`
-    );
+    }, void> {
+        return dbManager.db.prepare(`
+            INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy, createdAt, modifiedAt)
+            VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy, :timestamp, :timestamp)`
+        );
+    }
 
     addGamePlayer(gameId: number, userId: number, points: number, startPlace: string | undefined, modifiedBy: number, timestamp: Date): void {
-        this.addGamePlayerStatement.run({
+        this.addGamePlayerStatement().run({
             gameId,
             userId,
             points,
@@ -47,25 +52,28 @@ export class GameRepository {
         });
     }
 
-    private findGameByIdStatement: Statement<{ id: number }, GameDBEntity> =
-        db.prepare('SELECT * FROM game WHERE id = :id');
+    private findGameByIdStatement(): Statement<{ id: number }, GameDBEntity> {
+        return dbManager.db.prepare('SELECT * FROM game WHERE id = :id');
+    }
 
     findGameById(gameId: number): Game | undefined {
-        const gameDBEntity = this.findGameByIdStatement.get({ id: gameId });
+        const gameDBEntity = this.findGameByIdStatement().get({ id: gameId });
         return gameDBEntity !== undefined ? gameFromDBEntity(gameDBEntity) : undefined;
     }
 
-    private findGamePlayersByGameIdStatement: Statement<{ gameId: number }, GamePlayerDBEntity> = db.prepare(
-        `SELECT utg.*, u.name, u.telegramUsername, urc.ratingChange
-         FROM userToGame utg
-         JOIN user u ON utg.userId = u.id
-         LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
-         WHERE utg.gameId = :gameId
-         ORDER BY points DESC, userId`
-    );
+    private findGamePlayersByGameIdStatement(): Statement<{ gameId: number }, GamePlayer> {
+        return dbManager.db.prepare(`
+            SELECT u.name, u.telegramUsername, utg.*, urc.ratingChange
+            FROM userToGame utg
+            JOIN user u ON utg.userId = u.id
+            LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
+            WHERE utg.gameId = :gameId
+            ORDER BY points DESC, userId`
+        );
+    }
 
     findGamePlayersByGameId(gameId: number): GamePlayer[] {
-        return this.findGamePlayersByGameIdStatement.all({ gameId }).map(gamePlayerFromDBEntity);
+        return this.findGamePlayersByGameIdStatement().all({ gameId }).map(normalizeRatingChange);
     }
 
     findGamePlayersByGameIds(gameIds: number[]): GamePlayer[] {
@@ -75,15 +83,15 @@ export class GameRepository {
 
         const placeholders = gameIds.map(() => '?').join(',');
         const query = `
-            SELECT utg.*, u.name, u.telegramUsername, urc.ratingChange
+            SELECT u.name, u.telegramUsername, utg.*, urc.ratingChange
             FROM userToGame utg
             JOIN user u ON utg.userId = u.id
             LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
             WHERE utg.gameId IN (${placeholders})
         `;
 
-        const statement: Statement<number[], GamePlayerDBEntity> = db.prepare(query);
-        return statement.all(...gameIds).map(gamePlayerFromDBEntity);
+        const statement: Statement<number[], GamePlayer> = dbManager.db.prepare(query);
+        return statement.all(...gameIds).map(normalizeRatingChange);
     }
 
     findGames(filters: GameFilters): Game[] {
@@ -132,43 +140,48 @@ export class GameRepository {
             params.push(filters.offset);
         }
 
-        const statement: Statement<any[], GameDBEntity> = db.prepare(query);
+        const statement: Statement<any[], GameDBEntity> = dbManager.db.prepare(query);
         return statement.all(...params).map(gameFromDBEntity);
     }
 
-    private updateGameStatement: Statement<{
+    private updateGameStatement(): Statement<{
         eventId: number,
         modifiedBy: number,
         id: number
-    }, void> = db.prepare(
-        `UPDATE game
-         SET eventId = :eventId, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
-         WHERE id = :id`
-    );
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE game
+            SET eventId = :eventId, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
+            WHERE id = :id`
+        );
+    }
 
     updateGame(gameId: number, eventId: number, modifiedBy: number): void {
-        this.updateGameStatement.run({ eventId, modifiedBy, id: gameId });
+        this.updateGameStatement().run({ eventId, modifiedBy, id: gameId });
     }
 
-    private deleteGamePlayersByGameIdStatement: Statement<{ gameId: number }, void> =
-        db.prepare('DELETE FROM userToGame WHERE gameId = :gameId');
+    private deleteGamePlayersByGameIdStatement(): Statement<{ gameId: number }, void> {
+        return dbManager.db.prepare('DELETE FROM userToGame WHERE gameId = :gameId');
+    }
 
     deleteGamePlayersByGameId(gameId: number): void {
-        this.deleteGamePlayersByGameIdStatement.run({ gameId });
+        this.deleteGamePlayersByGameIdStatement().run({ gameId });
     }
 
-    private deleteGameByIdStatement: Statement<{ id: number }, void> =
-        db.prepare('DELETE FROM game WHERE id = :id');
+    private deleteGameByIdStatement(): Statement<{ id: number }, void> {
+        return dbManager.db.prepare('DELETE FROM game WHERE id = :id');
+    }
 
     deleteGameById(gameId: number): void {
-        this.deleteGameByIdStatement.run({ id: gameId });
+        this.deleteGameByIdStatement().run({ id: gameId });
     }
 
-    private countGamesByEventIdStatement: Statement<{ eventId: number }, { count: number }> =
-        db.prepare('SELECT COUNT(*) as count FROM game WHERE eventId = :eventId');
+    private countGamesByEventIdStatement(): Statement<{ eventId: number }, { count: number }> {
+        return dbManager.db.prepare('SELECT COUNT(*) as count FROM game WHERE eventId = :eventId');
+    }
 
     countGamesByEventId(eventId: number): number {
-        const result = this.countGamesByEventIdStatement.get({ eventId });
+        const result = this.countGamesByEventIdStatement().get({ eventId });
         return result?.count ?? 0;
     }
 }
@@ -187,32 +200,4 @@ function gameFromDBEntity(dbEntity: GameDBEntity): Game {
         createdAt: dateFromSqliteString(dbEntity.createdAt),
         modifiedAt: dateFromSqliteString(dbEntity.modifiedAt)
     }
-}
-
-interface GamePlayerDBEntity {
-    gameId: number;
-    userId: number;
-    name: string;
-    telegramUsername: string | null;
-    points: number;
-    startPlace: string;
-    createdAt: string;
-    modifiedAt: string;
-    modifiedBy: number;
-    ratingChange: number | null;
-}
-
-function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
-    return {
-        gameId: dbEntity.gameId,
-        userId: dbEntity.userId,
-        name: dbEntity.name,
-        telegramUsername: dbEntity.telegramUsername,
-        points: dbEntity.points,
-        startPlace: dbEntity.startPlace,
-        createdAt: dateFromSqliteString(dbEntity.createdAt),
-        modifiedAt: dateFromSqliteString(dbEntity.modifiedAt),
-        modifiedBy: dbEntity.modifiedBy,
-        ratingChange: dbEntity.ratingChange
-    };
 }

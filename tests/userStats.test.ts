@@ -4,7 +4,7 @@ import userStatsRoutes from '../src/routes/UserStatsRoutes.ts';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
-import { closeDB } from '../src/db/dbInit.ts';
+import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader } from './testHelpers.ts';
 
@@ -95,7 +95,7 @@ describe('User Stats API Endpoints', () => {
     });
 
     afterAll(() => {
-        closeDB();
+        dbManager.closeDB();
         cleanupTestDatabase();
     });
 

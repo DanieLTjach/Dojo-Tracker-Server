@@ -1,6 +1,6 @@
 import { UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
 import type { GameRules } from "../model/EventModels.ts";
-import type { GameWithPlayers } from "../model/GameModels.ts";
+import type { GamePlayer, GameWithPlayers, PlayerData } from "../model/GameModels.ts";
 import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO } from "../model/RatingModels.ts";
 import { RatingRepository } from "../repository/RatingRepository.ts";
 import { EventService } from "./EventService.ts";
@@ -39,16 +39,19 @@ export class RatingService {
     }
 
     addRatingChangesFromGame(
-        game: GameWithPlayers,
+        gameId: number,
+        gameTimestamp: Date,
+        playersData: PlayerData[],
+        eventId: number,
         gameRules: GameRules
     ): void {
-        const players = [...game.players];
+        const players = [...playersData];
         players.sort((a, b) => b.points - a.points);
-        const umaWithTieBreaking = this.calculateUmaWithAveraging(players.map(p => p.points), gameRules.uma);
+        const umaWithTieBreaking = this.calculateUmaWithAveraging(players.map(p => p.points), gameRules);
 
         for (const [index, playerData] of players.entries()) {
             const latestRatingChange = this.ratingRepository.findUserLatestRatingChangeBeforeDate(
-                playerData.userId, game.eventId, game.createdAt
+                playerData.userId, eventId, gameTimestamp
             );
             const currentRating = latestRatingChange?.rating ?? gameRules.startingRating * RATING_TO_POINTS_COEFFICIENT;
 
@@ -58,17 +61,17 @@ export class RatingService {
 
             this.ratingRepository.addUserRatingChange({
                 userId: playerData.userId,
-                eventId: game.eventId,
-                gameId: game.id,
+                eventId: eventId,
+                gameId: gameId,
                 ratingChange,
                 rating: newRating,
-                timestamp: game.createdAt
+                timestamp: gameTimestamp
             });
             this.ratingRepository.updateUserRatingChangesAfterDate(
                 playerData.userId,
-                game.eventId,
+                eventId,
                 ratingChange,
-                game.createdAt
+                gameTimestamp
             );
         }
     }
@@ -94,7 +97,9 @@ export class RatingService {
         return userRatingChange;
     }
 
-    private calculateUmaWithAveraging(playerPoints: number[], uma: number[]): number[] {
+    private calculateUmaWithAveraging(playerPoints: number[], gameRules: GameRules): number[] {
+        const uma = this.resolveDynamicUma(playerPoints, gameRules);
+
         const pointsToIndices = new Map();
         for (const [index, points] of playerPoints.entries()) {
             if (!pointsToIndices.has(points)) {
@@ -104,7 +109,7 @@ export class RatingService {
             }
         }
 
-        const newUma = []
+        const newUma = new Array(gameRules.numberOfPlayers);
         for (const indicesWithTheSamePoints of pointsToIndices.values()) {
             let sum = 0;
             for (const index of indicesWithTheSamePoints) {
@@ -119,6 +124,19 @@ export class RatingService {
         return newUma;
     }
 
+    private resolveDynamicUma(playerPoints: number[], gameRules: GameRules): number[] {
+        if (!Array.isArray(gameRules.uma[0])) {
+            return gameRules.uma as number[];
+        }
+
+        const nonNegativePointsCount = playerPoints.filter(points => points >= gameRules.startingPoints).length;
+
+        if (nonNegativePointsCount === gameRules.numberOfPlayers) {
+            return new Array(gameRules.numberOfPlayers).fill(0);
+        }
+
+        return (gameRules.uma as number[][])[nonNegativePointsCount - 1]!;
+    }
 }
 
 const RATING_TO_POINTS_COEFFICIENT: number = 1000;
@@ -133,4 +151,11 @@ function normalizeUserRatingChange(userRatingChange: UserRatingChangeShortDTO): 
 
 function normalizeRatingSnapshot(ratingSnapshot: RatingSnapshot): RatingSnapshot {
     return { ...ratingSnapshot, rating: ratingSnapshot.rating / RATING_TO_POINTS_COEFFICIENT };
+}
+
+export function normalizeRatingChange(gamePlayer: GamePlayer): GamePlayer {
+    return {
+        ...gamePlayer,
+        ratingChange: gamePlayer.ratingChange / RATING_TO_POINTS_COEFFICIENT
+    };
 }
