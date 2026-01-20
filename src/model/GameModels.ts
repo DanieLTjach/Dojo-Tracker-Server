@@ -15,10 +15,6 @@ export interface GamePlayer {
     points: number;
     ratingChange: number;
     startPlace: string;
-    createdAt: Date;
-    modifiedAt: Date;
-    modifiedBy: number;
-    ratingChange: number | null;
 }
 
 export interface GameWithPlayers extends Game {
