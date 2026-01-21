@@ -126,7 +126,7 @@ INSERT INTO eventType(type) VALUES ('SEASON'), ('TOURNAMENT');
 INSERT INTO gameStartPlace(startPlace) VALUES ('EAST'), ('SOUTH'), ('WEST'), ('NORTH');
 
 INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, createdAt, modifiedAt) 
-VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, '2024-01-01 00:00:00', '2024-01-01 00:00:00');
+VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');
 
 INSERT INTO event (id, name, type, gameRules, modifiedBy, createdAt, modifiedAt) 
-VALUES (1, 'Test Event', 'SEASON', 1, 0, '2024-01-01 00:00:00', '2024-01-01 00:00:00');
+VALUES (1, 'Test Event', 'SEASON', 1, 0, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');

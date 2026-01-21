@@ -1,7 +1,7 @@
 import type { Statement } from 'better-sqlite3';
 import type { User } from '../model/UserModels.ts';
 import { dbManager } from '../db/dbInit.ts';
-import { booleanToInteger, dateFromSqliteString, dateToSqliteString } from '../db/dbUtils.ts';
+import { booleanToInteger } from '../db/dbUtils.ts';
 
 export class UserRepository {
 
@@ -69,7 +69,7 @@ export class UserRepository {
                 telegramUsername,
                 telegramId,
                 modifiedBy: createdBy,
-                timestamp: dateToSqliteString(new Date())
+                timestamp: new Date().toISOString()
             }
         ).lastInsertRowid);
     }
@@ -88,7 +88,7 @@ export class UserRepository {
     }
 
     updateUserName(userId: number, name: string, modifiedBy: number) {
-        this.updateUserNameStatement().run({ name, modifiedBy, id: userId, timestamp: dateToSqliteString(new Date()) });
+        this.updateUserNameStatement().run({ name, modifiedBy, id: userId, timestamp: new Date().toISOString() });
     }
 
     private updateUserTelegramUsernameStatement(): Statement<{
@@ -105,7 +105,7 @@ export class UserRepository {
     }
 
     updateUserTelegramUsername(userId: number, telegramUsername: string, modifiedBy: number) {
-        this.updateUserTelegramUsernameStatement().run({ telegramUsername, modifiedBy, id: userId, timestamp: dateToSqliteString(new Date()) });
+        this.updateUserTelegramUsernameStatement().run({ telegramUsername, modifiedBy, id: userId, timestamp: new Date().toISOString() });
     }
 
     private updateUserActivationStatusStatement(): Statement<{
@@ -122,7 +122,7 @@ export class UserRepository {
     }
 
     updateUserActivationStatus(userId: number, newStatus: boolean, modifiedBy: number) {
-        this.updateUserActivationStatusStatement().run({ isActive: booleanToInteger(newStatus), modifiedBy, id: userId, timestamp: dateToSqliteString(new Date()) });
+        this.updateUserActivationStatusStatement().run({ isActive: booleanToInteger(newStatus), modifiedBy, id: userId, timestamp: new Date().toISOString() });
     }
 }
 
@@ -143,7 +143,7 @@ function userFromDBEntity(dbEntity: UserDBEntity): User {
         ...dbEntity,
         isAdmin: Boolean(dbEntity.isAdmin),
         isActive: Boolean(dbEntity.isActive),
-        createdAt: dateFromSqliteString(dbEntity.createdAt),
-        modifiedAt: dateFromSqliteString(dbEntity.modifiedAt)
+        createdAt: new Date(dbEntity.createdAt),
+        modifiedAt: new Date(dbEntity.modifiedAt)
     };
 }
