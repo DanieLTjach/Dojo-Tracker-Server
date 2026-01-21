@@ -53,16 +53,23 @@ export class UserRepository {
         name: string,
         telegramUsername: string | undefined,
         telegramId: number | undefined,
-        modifiedBy: number
+        modifiedBy: number,
+        isActive: number
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy) 
-            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy)`
+            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy, isActive)
+            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :isActive)`
         );
     }
 
     registerUser(name: string, telegramUsername: string | undefined, telegramId: number | undefined, createdBy: number): number {
-        return Number(this.registerUserStatement().run({ name, telegramUsername, telegramId, modifiedBy: createdBy }).lastInsertRowid);
+        return Number(this.registerUserStatement().run({
+            name,
+            telegramUsername,
+            telegramId,
+            modifiedBy: createdBy,
+            isActive: booleanToInteger(false)
+        }).lastInsertRowid);
     }
 
     private updateUserNameStatement(): Statement<{

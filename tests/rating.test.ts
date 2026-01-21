@@ -43,7 +43,14 @@ describe('Rating API Endpoints', () => {
                 telegramId
             });
         expect(response.status).toBe(201);
-        return response.body.id;
+        const userId = response.body.id;
+
+        // Activate the user
+        await request(app)
+            .post(`/api/users/${userId}/activate`)
+            .set('Authorization', adminAuthHeader);
+
+        return userId;
     }
 
     // Helper to create a test game

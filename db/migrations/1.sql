@@ -6,7 +6,7 @@ CREATE TABLE user (
     createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     modifiedBy INTEGER NOT NULL REFERENCES user(id),
-    isActive BOOL NOT NULL DEFAULT true,
+    isActive BOOL NOT NULL DEFAULT false,
     isAdmin BOOL NOT NULL DEFAULT false
 );
 
@@ -125,6 +125,6 @@ INSERT INTO eventType(type) VALUES ('SEASON'), ('TOURNAMENT');
 
 INSERT INTO gameStartPlace(startPlace) VALUES ('EAST'), ('SOUTH'), ('WEST'), ('NORTH');
 
-INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin) VALUES (0, 'SYSTEM', NULL, NULL, 0, 1);
+INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive) VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, 1);
 
 INSERT INTO event (id, name, type, gameRules, modifiedBy) VALUES (1, 'Test Event', 'SEASON', 1, 0);

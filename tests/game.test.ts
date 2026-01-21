@@ -41,7 +41,14 @@ describe('Game API Endpoints', () => {
                 telegramId
             });
 
-        return response.body.id;
+        const userId = response.body.id;
+
+        // Activate the user
+        await request(userApp)
+            .post(`/api/users/${userId}/activate`)
+            .set('Authorization', adminAuthHeader);
+
+        return userId;
     }
 
     beforeAll(async () => {
