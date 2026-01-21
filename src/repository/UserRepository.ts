@@ -6,7 +6,7 @@ import { booleanToInteger, dateFromSqliteString } from '../db/dbUtils.ts';
 export class UserRepository {
 
     private findAllUsersStatement(): Statement<unknown[], UserDBEntity> {
-        return dbManager.db.prepare('SELECT * FROM user ORDER BY id');
+        return dbManager.db.prepare('SELECT * FROM user WHERE id != 0 ORDER BY id');
     }
 
     findAllUsers(): User[] {

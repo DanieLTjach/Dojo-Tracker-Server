@@ -49,7 +49,7 @@ export class RatingRepository {
                 WHERE eventId = :eventId
             ) urc
             JOIN user u ON urc.userId = u.id
-            WHERE urc.rn = 1`
+            WHERE urc.rn = 1 AND u.id != 0`
         );
     }
 
@@ -66,7 +66,7 @@ export class RatingRepository {
             SELECT u.id as userId, u.name as userName, SUM(urc.ratingChange) as ratingChange
             FROM userRatingChange urc
             JOIN user u ON urc.userId = u.id
-            WHERE urc.eventId = :eventId AND urc.timestamp >= :dateFrom AND urc.timestamp <= :dateTo
+            WHERE urc.eventId = :eventId AND urc.timestamp >= :dateFrom AND urc.timestamp <= :dateTo AND u.id != 0
             GROUP BY urc.userId`
         );
     }
