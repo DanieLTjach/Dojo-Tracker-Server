@@ -13,7 +13,7 @@ app.use(handleErrors);
 
 describe('Game API Endpoints', () => {
     const SYSTEM_USER_ID = 0; // System admin user
-    const TEST_EVENT_ID = 1; // Test Event created in beforeAll
+    const TEST_EVENT_ID = 1000; // Test Event created in beforeAll
     let testUser1Id: number;
     let testUser2Id: number;
     let testUser3Id: number;

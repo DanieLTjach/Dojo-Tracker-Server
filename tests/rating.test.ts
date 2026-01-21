@@ -31,7 +31,7 @@ describe('Rating API Endpoints', () => {
     });
 
     const SYSTEM_USER_ID = 0;
-    const TEST_EVENT_ID = 1; // Test Event created in beforeEach
+    const TEST_EVENT_ID = 1000; // Test Event created in beforeEach
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
 
     // Helper to create test users

@@ -128,3 +128,9 @@ INSERT INTO gameStartPlace(startPlace) VALUES ('EAST'), ('SOUTH'), ('WEST'), ('N
 
 INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, createdAt, modifiedAt) 
 VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');
+
+INSERT INTO event(id, name, description, type, gameRules, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy) VALUES
+    (1, 'Season 3', '2024 Autumn season', 'SEASON', 1, '2024-06-30T21:00:00.000Z', '2024-12-31T21:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0),
+    (2, 'Season 4', '2025 Spring season', 'SEASON', 1, '2024-12-31T22:00:00.000Z', '2025-06-30T20:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0),
+    (3, 'Season 5', '2025 Autumn season', 'SEASON', 1, '2025-07-31T21:00:00.000Z', '2025-12-31T21:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0),
+    (4, 'Season 6', '2026 Spring season', 'SEASON', 2, '2026-01-31T22:00:00.000Z', '2026-06-30T20:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0);

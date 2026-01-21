@@ -13,7 +13,7 @@ app.use(handleErrors);
 
 describe('Event API Endpoints', () => {
     const SYSTEM_USER_ID = 0;
-    const TEST_EVENT_ID = 1; // Test Event created in beforeAll
+    const TEST_EVENT_ID = 1000; // Test Event created in beforeAll
 
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
 

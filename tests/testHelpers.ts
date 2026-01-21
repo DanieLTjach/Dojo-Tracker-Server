@@ -37,5 +37,5 @@ export async function createTestEvent(): Promise<void> {
     dbManager.db.prepare(
         `INSERT INTO event (id, name, type, gameRules, modifiedBy, createdAt, modifiedAt) 
          VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(1, 'Test Event', 'SEASON', 2, 0, timestamp, timestamp);
+    ).run(1000, 'Test Event', 'SEASON', 2, 0, timestamp, timestamp);
 }
