@@ -1,7 +1,7 @@
 import type { Statement } from 'better-sqlite3';
 import type { User } from '../model/UserModels.ts';
 import { dbManager } from '../db/dbInit.ts';
-import { booleanToInteger, dateFromSqliteString } from '../db/dbUtils.ts';
+import { booleanToInteger, dateFromSqliteString, dateToSqliteString } from '../db/dbUtils.ts';
 
 export class UserRepository {
 
@@ -53,64 +53,76 @@ export class UserRepository {
         name: string,
         telegramUsername: string | undefined,
         telegramId: number | undefined,
-        modifiedBy: number
+        modifiedBy: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy) 
-            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy)`
+            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy, createdAt, modifiedAt) 
+            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :timestamp, :timestamp)`
         );
     }
 
     registerUser(name: string, telegramUsername: string | undefined, telegramId: number | undefined, createdBy: number): number {
-        return Number(this.registerUserStatement().run({ name, telegramUsername, telegramId, modifiedBy: createdBy }).lastInsertRowid);
+        return Number(this.registerUserStatement().run(
+            {
+                name,
+                telegramUsername,
+                telegramId,
+                modifiedBy: createdBy,
+                timestamp: dateToSqliteString(new Date())
+            }
+        ).lastInsertRowid);
     }
 
     private updateUserNameStatement(): Statement<{
         name: string,
         modifiedBy: number,
-        id: number
+        id: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
             UPDATE user
-            SET name = :name, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
+            SET name = :name, modifiedBy = :modifiedBy, modifiedAt = :timestamp
             WHERE id = :id`
         );
     }
 
     updateUserName(userId: number, name: string, modifiedBy: number) {
-        this.updateUserNameStatement().run({ name, modifiedBy, id: userId });
+        this.updateUserNameStatement().run({ name, modifiedBy, id: userId, timestamp: dateToSqliteString(new Date()) });
     }
 
     private updateUserTelegramUsernameStatement(): Statement<{
         telegramUsername: string,
         modifiedBy: number,
-        id: number
+        id: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
             UPDATE user
-            SET telegramUsername = :telegramUsername, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
+            SET telegramUsername = :telegramUsername, modifiedBy = :modifiedBy, modifiedAt = :timestamp
             WHERE id = :id`
         );
     }
 
     updateUserTelegramUsername(userId: number, telegramUsername: string, modifiedBy: number) {
-        this.updateUserTelegramUsernameStatement().run({ telegramUsername, modifiedBy, id: userId });
+        this.updateUserTelegramUsernameStatement().run({ telegramUsername, modifiedBy, id: userId, timestamp: dateToSqliteString(new Date()) });
     }
 
     private updateUserActivationStatusStatement(): Statement<{
         isActive: number,
         modifiedBy: number,
-        id: number
+        id: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
             UPDATE user
-            SET isActive = :isActive, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
+            SET isActive = :isActive, modifiedBy = :modifiedBy, modifiedAt = :timestamp
             WHERE id = :id`
         );
     }
 
     updateUserActivationStatus(userId: number, newStatus: boolean, modifiedBy: number) {
-        this.updateUserActivationStatusStatement().run({ isActive: booleanToInteger(newStatus), modifiedBy, id: userId });
+        this.updateUserActivationStatusStatement().run({ isActive: booleanToInteger(newStatus), modifiedBy, id: userId, timestamp: dateToSqliteString(new Date()) });
     }
 }
 

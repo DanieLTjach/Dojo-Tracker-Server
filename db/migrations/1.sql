@@ -3,8 +3,8 @@ CREATE TABLE user (
     telegramUsername TEXT UNIQUE,
     telegramId INTEGER UNIQUE,
     name TEXT NOT NULL UNIQUE,
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id),
     isActive BOOL NOT NULL DEFAULT true,
     isAdmin BOOL NOT NULL DEFAULT false
@@ -31,8 +31,8 @@ CREATE TABLE event (
     gameRules INTEGER NOT NULL REFERENCES gameRules(id),
     dateFrom TIMESTAMP,
     dateTo TIMESTAMP,
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
 
@@ -53,8 +53,8 @@ CREATE TABLE userToGame (
     gameId INTEGER NOT NULL REFERENCES game(id),
     startPlace TEXT REFERENCES gameStartPlace(startPlace),
     points INTEGER NOT NULL,
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id),
     PRIMARY KEY (userId, gameId)
 );
@@ -83,8 +83,8 @@ CREATE TABLE standartHanchanHands (
     riichiSouth BOOL,
     riichiWest BOOL,
     riichiNorth BOOL,
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
 
@@ -92,8 +92,8 @@ CREATE TABLE achievements (
     achievementId INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT NOT NULL,
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
 
@@ -101,8 +101,8 @@ CREATE TABLE userToAchievements (
     recordId INTEGER PRIMARY KEY AUTOINCREMENT,
     userId INTEGER NOT NULL REFERENCES user(id),
     achievementId INTEGER NOT NULL REFERENCES achievements(achievementId),
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
 
@@ -125,6 +125,8 @@ INSERT INTO eventType(type) VALUES ('SEASON'), ('TOURNAMENT');
 
 INSERT INTO gameStartPlace(startPlace) VALUES ('EAST'), ('SOUTH'), ('WEST'), ('NORTH');
 
-INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin) VALUES (0, 'SYSTEM', NULL, NULL, 0, 1);
+INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, createdAt, modifiedAt) 
+VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, '2024-01-01 00:00:00', '2024-01-01 00:00:00');
 
-INSERT INTO event (id, name, type, gameRules, modifiedBy) VALUES (1, 'Test Event', 'SEASON', 1, 0);
+INSERT INTO event (id, name, type, gameRules, modifiedBy, createdAt, modifiedAt) 
+VALUES (1, 'Test Event', 'SEASON', 1, 0, '2024-01-01 00:00:00', '2024-01-01 00:00:00');

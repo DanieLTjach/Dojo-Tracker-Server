@@ -32,16 +32,17 @@ export class GameRepository {
         userId: number,
         points: number,
         startPlace: string | undefined,
-        modifiedBy: number
+        modifiedBy: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy)
-            VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy)`
+            INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy, createdAt, modifiedAt)
+            VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy, :timestamp, :timestamp)`
         );
     }
 
     addGamePlayer(gameId: number, userId: number, points: number, startPlace: string | undefined, modifiedBy: number): void {
-        this.addGamePlayerStatement().run({ gameId, userId, points, startPlace, modifiedBy });
+        this.addGamePlayerStatement().run({ gameId, userId, points, startPlace, modifiedBy, timestamp: dateToSqliteString(new Date()) });
     }
 
     private findGameByIdStatement(): Statement<{ id: number }, GameDBEntity> {
@@ -128,17 +129,18 @@ export class GameRepository {
     private updateGameStatement(): Statement<{
         eventId: number,
         modifiedBy: number,
-        id: number
+        id: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
             UPDATE game
-            SET eventId = :eventId, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
+            SET eventId = :eventId, modifiedBy = :modifiedBy, modifiedAt = :timestamp
             WHERE id = :id`
         );
     }
 
     updateGame(gameId: number, eventId: number, modifiedBy: number): void {
-        this.updateGameStatement().run({ eventId, modifiedBy, id: gameId });
+        this.updateGameStatement().run({ eventId, modifiedBy, id: gameId, timestamp: dateToSqliteString(new Date()) });
     }
 
     private deleteGamePlayersByGameIdStatement(): Statement<{ gameId: number }, void> {
