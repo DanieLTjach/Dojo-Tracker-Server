@@ -6,7 +6,7 @@ import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -17,10 +17,12 @@ app.use(handleErrors);
 
 describe('Rating API Endpoints', () => {
 
-    beforeEach(() => {
+    beforeEach(async () => {
         dbManager.closeDB();
         cleanupTestDatabase();
         dbManager.reinitDB();
+        // Create test event for each test
+        await createTestEvent();
     });
 
     afterAll(() => {
@@ -29,7 +31,7 @@ describe('Rating API Endpoints', () => {
     });
 
     const SYSTEM_USER_ID = 0;
-    const TEST_EVENT_ID = 1; // Test Event from migrations
+    const TEST_EVENT_ID = 1; // Test Event created in beforeEach
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
 
     // Helper to create test users
