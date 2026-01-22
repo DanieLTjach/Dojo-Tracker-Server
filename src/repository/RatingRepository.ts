@@ -39,7 +39,7 @@ export class RatingRepository {
 
     private findAllUsersCurrentRatingStatement(): Statement<{ eventId: number }, UserRatingDBEntity> {
         return dbManager.db.prepare(`
-            SELECT u.id as userId, u.name as userName, urc.rating as rating
+            SELECT u.id as userId, u.name as userName, urc.rating as rating, COALESCE(gc.gamesPlayed, 0) as gamesPlayed
             FROM (
                 SELECT userId,
                         rating,
@@ -48,6 +48,13 @@ export class RatingRepository {
                 WHERE eventId = :eventId
             ) urc
             JOIN user u ON urc.userId = u.id
+            LEFT JOIN (
+                SELECT utg.userId, COUNT(DISTINCT utg.gameId) as gamesPlayed
+                FROM userToGame utg
+                JOIN game g ON utg.gameId = g.id
+                WHERE g.eventId = :eventId
+                GROUP BY utg.userId
+            ) gc ON u.id = gc.userId
             WHERE urc.rn = 1 AND u.id != 0`
         );
     }
@@ -172,12 +179,14 @@ interface UserRatingDBEntity {
     userId: number;
     userName: string;
     rating: number;
+    gamesPlayed: number;
 }
 
 function userRatingFromDBEntity(dbEntity: UserRatingDBEntity): UserRating {
     return {
         user: { id: dbEntity.userId, name: dbEntity.userName },
-        rating: dbEntity.rating
+        rating: dbEntity.rating,
+        gamesPlayed: dbEntity.gamesPlayed
     };
 }
 
