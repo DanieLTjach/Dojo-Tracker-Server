@@ -1,5 +1,4 @@
 import type { Statement } from 'better-sqlite3';
-import { dateFromSqliteString, dateToSqliteString } from '../db/dbUtils.ts';
 import type { Game, GameFilters, GamePlayer } from '../model/GameModels.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { normalizeRatingChange } from '../service/RatingService.ts';
@@ -22,7 +21,7 @@ export class GameRepository {
             this.createGameStatement().run({
                 eventId,
                 modifiedBy,
-                timestamp: dateToSqliteString(timestamp)
+                timestamp: timestamp.toISOString()
             }).lastInsertRowid
         );
     }
@@ -32,16 +31,17 @@ export class GameRepository {
         userId: number,
         points: number,
         startPlace: string | undefined,
-        modifiedBy: number
+        modifiedBy: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy)
-            VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy)`
+            INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy, createdAt, modifiedAt)
+            VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy, :timestamp, :timestamp)`
         );
     }
 
     addGamePlayer(gameId: number, userId: number, points: number, startPlace: string | undefined, modifiedBy: number): void {
-        this.addGamePlayerStatement().run({ gameId, userId, points, startPlace, modifiedBy });
+        this.addGamePlayerStatement().run({ gameId, userId, points, startPlace, modifiedBy, timestamp: new Date().toISOString() });
     }
 
     private findGameByIdStatement(): Statement<{ id: number }, GameDBEntity> {
@@ -102,12 +102,12 @@ export class GameRepository {
 
         if (filters.dateFrom !== undefined) {
             conditions.push('g.createdAt >= ?');
-            params.push(dateToSqliteString(filters.dateFrom));
+            params.push(filters.dateFrom.toISOString());
         }
 
         if (filters.dateTo !== undefined) {
             conditions.push('g.createdAt <= ?');
-            params.push(dateToSqliteString(filters.dateTo));
+            params.push(filters.dateTo.toISOString());
         }
 
         if (filters.eventId !== undefined) {
@@ -128,17 +128,18 @@ export class GameRepository {
     private updateGameStatement(): Statement<{
         eventId: number,
         modifiedBy: number,
-        id: number
+        id: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
             UPDATE game
-            SET eventId = :eventId, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
+            SET eventId = :eventId, modifiedBy = :modifiedBy, modifiedAt = :timestamp
             WHERE id = :id`
         );
     }
 
     updateGame(gameId: number, eventId: number, modifiedBy: number): void {
-        this.updateGameStatement().run({ eventId, modifiedBy, id: gameId });
+        this.updateGameStatement().run({ eventId, modifiedBy, id: gameId, timestamp: new Date().toISOString() });
     }
 
     private deleteGamePlayersByGameIdStatement(): Statement<{ gameId: number }, void> {
@@ -169,7 +170,7 @@ interface GameDBEntity {
 function gameFromDBEntity(dbEntity: GameDBEntity): Game {
     return {
         ...dbEntity,
-        createdAt: dateFromSqliteString(dbEntity.createdAt),
-        modifiedAt: dateFromSqliteString(dbEntity.modifiedAt)
+        createdAt: new Date(dbEntity.createdAt),
+        modifiedAt: new Date(dbEntity.modifiedAt)
     }
 }

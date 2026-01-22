@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import type { SignOptions } from 'jsonwebtoken';
 import type { DecodedToken } from '../src/model/AuthModels.ts';
 import config from '../config/config.ts';
+import { dbManager } from '../src/db/dbInit.ts';
 
 /**
  * Generates a JWT token for testing purposes.
@@ -24,4 +25,17 @@ export function generateTestToken(userId: number): string {
 export function createAuthHeader(userId: number): string {
     const token = generateTestToken(userId);
     return `Bearer ${token}`;
+}
+
+/**
+ * Creates the test event with ID 1 for testing purposes.
+ * This event is used across multiple test files.
+ */
+export async function createTestEvent(): Promise<void> {
+    const timestamp = '2024-01-01T00:00:00.000Z';
+    
+    dbManager.db.prepare(
+        `INSERT INTO event (id, name, type, gameRules, modifiedBy, createdAt, modifiedAt) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(1000, 'Test Event', 'SEASON', 2, 0, timestamp, timestamp);
 }

@@ -4,7 +4,7 @@ import eventRoutes from '../src/routes/EventRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -13,9 +13,14 @@ app.use(handleErrors);
 
 describe('Event API Endpoints', () => {
     const SYSTEM_USER_ID = 0;
-    const TEST_EVENT_ID = 1; // Test Event from migrations
+    const TEST_EVENT_ID = 1000; // Test Event created in beforeAll
 
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
+
+    beforeAll(async () => {
+        // Create test event
+        await createTestEvent();
+    });
 
     afterAll(() => {
         dbManager.closeDB();
