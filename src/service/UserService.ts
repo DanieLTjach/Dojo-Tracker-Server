@@ -1,14 +1,15 @@
 import { UserRepository } from '../repository/UserRepository.ts';
 import {
-    UserIsNotAdmin,
     UserNotFoundById,
     UserNotFoundByTelegramId,
     UserWithThisTelegramIdAlreadyExists,
     UserIsNotActive,
     NameAlreadyTakenByAnotherUser,
-    TelegramUsernameAlreadyTakenByAnotherUser
+    TelegramUsernameAlreadyTakenByAnotherUser,
+    YouHaveToBeAdminToEditAnotherUser
 } from '../error/UserErrors.ts';
 import type { User } from '../model/UserModels.ts';
+import { ResponseStatusError } from '../error/BaseErrors.ts';
 
 export class UserService {
 
@@ -61,7 +62,7 @@ export class UserService {
         modifiedBy: number
     ): User {
         if (userId !== modifiedBy) {
-            this.validateUserIsAdmin(modifiedBy);
+            this.validateUserIsAdmin(modifiedBy, () => new YouHaveToBeAdminToEditAnotherUser());
         }
         this.validateUserIsActiveById(userId);
 
@@ -83,10 +84,10 @@ export class UserService {
         return this.getUserById(userId);
     }
 
-    validateUserIsAdmin(id: number): void {
+    validateUserIsAdmin(id: number, insufficientPermissionsError: () => ResponseStatusError): void {
         const user = this.getUserById(id);
         if (!user.isAdmin) {
-            throw new UserIsNotAdmin(id);
+            throw insufficientPermissionsError();
         }
         if (!user.isActive) {
             throw new UserIsNotActive(id);

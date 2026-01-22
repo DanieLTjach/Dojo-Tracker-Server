@@ -25,7 +25,7 @@ CREATE TABLE gameRules (
 
 CREATE TABLE event (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
+    name TEXT NOT NULL,
     description TEXT,
     type INTEGER REFERENCES eventType(type),
     gameRules INTEGER NOT NULL REFERENCES gameRules(id),
@@ -119,19 +119,19 @@ CREATE TABLE winTypeDict (
 
 -- Insert initial data
 INSERT INTO gameRules(id, name, numberOfPlayers, uma, startingPoints, startingRating) VALUES
-    (1, 'Season 3-5 yonma', 4, '15,5,-5,-15', 30000, 1000),
-    (2, 'Season 6 yonma', 4, '24,-2,-6,-16;16,8,-8,-16;16,6,2,-24', 30000, 0),
-    (3, 'Season 6 sanma', 3, '15,0,-15', 35000, 1000);
+    (1, 'Сезон 3-5 йонма', 4, '15,5,-5,-15', 30000, 1000),
+    (2, 'Сезон 6 йонма', 4, '24,-2,-6,-16;16,8,-8,-16;16,6,2,-24', 30000, 0),
+    (3, 'Сезон 6 санма', 3, '15,0,-15', 35000, 1000);
 
 INSERT INTO eventType(type) VALUES ('SEASON'), ('TOURNAMENT');
 
 INSERT INTO gameStartPlace(startPlace) VALUES ('EAST'), ('SOUTH'), ('WEST'), ('NORTH');
 
 INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, createdAt, modifiedAt) 
-VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');
+VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
 
 INSERT INTO event(id, name, description, type, gameRules, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy) VALUES
-    (1, 'Season 3', '2024 Autumn season', 'SEASON', 1, '2024-06-30T21:00:00.000Z', '2024-12-31T21:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0),
-    (2, 'Season 4', '2025 Spring season', 'SEASON', 1, '2024-12-31T22:00:00.000Z', '2025-06-30T20:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0),
-    (3, 'Season 5', '2025 Autumn season', 'SEASON', 1, '2025-07-31T21:00:00.000Z', '2025-12-31T21:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0),
-    (4, 'Season 6', '2026 Spring season', 'SEASON', 2, '2026-01-31T22:00:00.000Z', '2026-06-30T20:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0);
+    (1, 'Сезон 3', '2024 осінній сезон', 'SEASON', 1, '2024-06-30T21:00:00.000Z', '2025-12-31T22:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+    (2, 'Сезон 4', '2025 весняний сезон', 'SEASON', 1, '2024-12-31T22:00:00.000Z', '2025-06-30T21:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+    (3, 'Сезон 5', '2025 осінній сезон', 'SEASON', 1, '2025-07-31T21:00:00.000Z', '2025-12-31T22:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+    (4, 'Сезон 6', '2026 весняний сезон', 'SEASON', 2, '2026-01-31T22:00:00.000Z', '2026-06-30T21:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0);

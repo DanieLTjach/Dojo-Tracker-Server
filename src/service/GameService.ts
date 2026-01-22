@@ -12,7 +12,7 @@ import {
 } from '../error/GameErrors.ts';
 import type { GameWithPlayers, PlayerData, GameFilters } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
-import type { GameRules } from '../model/EventModels.ts';
+import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
 
 export class GameService {
@@ -27,16 +27,16 @@ export class GameService {
         playersData: PlayerData[],
         createdBy: number
     ): GameWithPlayers {
-        const timestamp = new Date();
+        const gameTimestamp = new Date();
 
         const event = this.eventService.getEventById(eventId);
         this.validatePlayers(playersData, event.gameRules);
-        this.validateGameWithinEventDates(timestamp, event.dateFrom, event.dateTo);
-        this.validateNoDuplicateGameTimestamp(eventId, timestamp);
+        this.validateGameWithinEventDates(event, gameTimestamp);
+        this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
 
-        const newGameId = this.gameRepository.createGame(eventId, createdBy, timestamp);
+        const newGameId = this.gameRepository.createGame(eventId, createdBy, gameTimestamp);
         this.addPlayersToGame(newGameId, playersData, createdBy);
-        this.ratingService.addRatingChangesFromGame(newGameId, timestamp, playersData, eventId, event.gameRules);
+        this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules);
 
         return this.getGameById(newGameId);
     }
@@ -156,12 +156,12 @@ export class GameService {
         }
     }
 
-    private validateGameWithinEventDates(timestamp: Date, dateFrom: Date | null, dateTo: Date | null): void {
-        if (dateFrom !== null && timestamp < dateFrom) {
-            throw new EventHasntStartedError();
+    private validateGameWithinEventDates(event: Event, gameTimestamp: Date): void {
+        if (event.dateFrom !== null && gameTimestamp < event.dateFrom) {
+            throw new EventHasntStartedError(event.name);
         }
-        if (dateTo !== null && timestamp > dateTo) {
-            throw new EventHasEndedError();
+        if (event.dateTo !== null && gameTimestamp > event.dateTo) {
+            throw new EventHasEndedError(event.name);
         }
     }
 

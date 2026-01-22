@@ -75,7 +75,7 @@ export const requireAdmin = (req: Request, _res: Response, next: NextFunction): 
 
         const user = userService.getUserById(req.user.userId);
         if (!user.isAdmin) {
-            throw new InsufficientPermissionsError('perform this action');
+            throw new InsufficientPermissionsError(); 
         }
 
         next();
