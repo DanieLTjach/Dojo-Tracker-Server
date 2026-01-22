@@ -1,14 +1,20 @@
 import { BadRequestError, ForbiddenError, NotFoundError } from "./BaseErrors.ts";
 
-export class UserWithThisNameAlreadyExists extends BadRequestError {
+export class NameAlreadyTakenByAnotherUser extends BadRequestError {
     constructor(name: string) {
-        super(`User with name ${name} already exists`, 'userWithThisNameAlreadyExists');
+        super(`Name '${name}' is already taken by another user`, 'nameAlreadyTakenByAnotherUser');
     }
 }
 
 export class UserWithThisTelegramUsernameAlreadyExists extends BadRequestError {
     constructor(telegramUsername: string) {
         super(`User with telegram username ${telegramUsername} already exists`, 'userWithThisTelegramUsernameAlreadyExists');
+    }
+}
+
+export class TelegramUsernameAlreadyTakenByAnotherUser extends BadRequestError {
+    constructor(telegramUsername: string) {
+        super(`Telegram username '${telegramUsername}' is already taken by another user`, 'telegramUsernameAlreadyTakenByAnotherUser');
     }
 }
 
