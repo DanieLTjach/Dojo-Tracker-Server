@@ -1,7 +1,6 @@
 import type { Statement } from "better-sqlite3";
 import { dbManager } from "../db/dbInit.ts";
 import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO } from "../model/RatingModels.ts";
-import { dateFromSqliteString, dateToSqliteString } from "../db/dbUtils.ts";
 
 export class RatingRepository {
 
@@ -34,7 +33,7 @@ export class RatingRepository {
 
     findUserLatestRatingChangeBeforeDate(userId: number, eventId: number, beforeDate: Date): UserRatingChange | undefined {
         const userRatingChangeDBEntity = this.findUserLatestRatingChangeBeforeDateStatement()
-            .get({ userId, eventId, beforeDate: dateToSqliteString(beforeDate) });
+            .get({ userId, eventId, beforeDate: beforeDate.toISOString() });
         return userRatingChangeDBEntity !== undefined ? userRatingChangeFromDBEntity(userRatingChangeDBEntity) : undefined;
     }
 
@@ -79,8 +78,8 @@ export class RatingRepository {
         return this.getAllUsersTotalRatingChangeDuringPeriodStatement()
             .all({
                 eventId,
-                dateFrom: dateToSqliteString(dateFrom),
-                dateTo: dateToSqliteString(dateTo)
+                dateFrom: dateFrom.toISOString(),
+                dateTo: dateTo.toISOString()
             })
             .map(userRatingChangeShortDTOFromDBEntity);
     }
@@ -146,7 +145,7 @@ export class RatingRepository {
                 userId,
                 eventId,
                 ratingDelta,
-                afterDate: dateToSqliteString(afterDate)
+                afterDate: afterDate.toISOString()
             }
         );
     }
@@ -162,11 +161,11 @@ interface UserRatingChangeDBEntity {
 }
 
 function userRatingChangeToDBEntity(userRatingChange: UserRatingChange): UserRatingChangeDBEntity {
-    return { ...userRatingChange, timestamp: dateToSqliteString(userRatingChange.timestamp) };
+    return { ...userRatingChange, timestamp: userRatingChange.timestamp.toISOString() };
 }
 
 function userRatingChangeFromDBEntity(dbEntity: UserRatingChangeDBEntity): UserRatingChange {
-    return { ...dbEntity, timestamp: dateFromSqliteString(dbEntity.timestamp) };
+    return { ...dbEntity, timestamp: new Date(dbEntity.timestamp) };
 }
 
 interface UserRatingDBEntity {
@@ -202,7 +201,7 @@ interface RatingSnapshotDBEntity {
 
 function ratingSnapshotFromDBEntity(dbEntity: RatingSnapshotDBEntity): RatingSnapshot {
     return {
-        timestamp: dateFromSqliteString(dbEntity.timestamp),
+        timestamp: new Date(dbEntity.timestamp),
         rating: dbEntity.rating
     };
 }

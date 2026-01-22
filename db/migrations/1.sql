@@ -3,8 +3,8 @@ CREATE TABLE user (
     telegramUsername TEXT UNIQUE,
     telegramId INTEGER UNIQUE,
     name TEXT NOT NULL UNIQUE,
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id),
     isActive BOOL NOT NULL DEFAULT false,
     isAdmin BOOL NOT NULL DEFAULT false
@@ -31,8 +31,8 @@ CREATE TABLE event (
     gameRules INTEGER NOT NULL REFERENCES gameRules(id),
     dateFrom TIMESTAMP,
     dateTo TIMESTAMP,
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
 
@@ -53,8 +53,8 @@ CREATE TABLE userToGame (
     gameId INTEGER NOT NULL REFERENCES game(id),
     startPlace TEXT REFERENCES gameStartPlace(startPlace),
     points INTEGER NOT NULL,
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id),
     PRIMARY KEY (userId, gameId)
 );
@@ -83,8 +83,8 @@ CREATE TABLE standartHanchanHands (
     riichiSouth BOOL,
     riichiWest BOOL,
     riichiNorth BOOL,
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
 
@@ -92,8 +92,8 @@ CREATE TABLE achievements (
     achievementId INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT NOT NULL,
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
 
@@ -101,8 +101,8 @@ CREATE TABLE userToAchievements (
     recordId INTEGER PRIMARY KEY AUTOINCREMENT,
     userId INTEGER NOT NULL REFERENCES user(id),
     achievementId INTEGER NOT NULL REFERENCES achievements(achievementId),
-    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modifiedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
 
@@ -118,13 +118,19 @@ CREATE TABLE winTypeDict (
 
 -- Insert initial data
 INSERT INTO gameRules(id, name, numberOfPlayers, uma, startingPoints, startingRating) VALUES
-    (1, 'Standard yonma', 4, '24,-2,-6,-16;16,8,-8,-16;16,6,2,-24', 30000, 1000),
-    (2, 'Standard sanma', 3, '15,0,-15', 35000, 1000);
+    (1, 'Season 3-5 yonma', 4, '15,5,-5,-15', 30000, 1000),
+    (2, 'Season 6 yonma', 4, '24,-2,-6,-16;16,8,-8,-16;16,6,2,-24', 30000, 0),
+    (3, 'Season 6 sanma', 3, '15,0,-15', 35000, 1000);
 
 INSERT INTO eventType(type) VALUES ('SEASON'), ('TOURNAMENT');
 
 INSERT INTO gameStartPlace(startPlace) VALUES ('EAST'), ('SOUTH'), ('WEST'), ('NORTH');
 
-INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive) VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, 1);
+INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, createdAt, modifiedAt)
+VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');
 
-INSERT INTO event (id, name, type, gameRules, modifiedBy) VALUES (1, 'Test Event', 'SEASON', 1, 0);
+INSERT INTO event(id, name, description, type, gameRules, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy) VALUES
+    (1, 'Season 3', '2024 Autumn season', 'SEASON', 1, '2024-06-30T21:00:00.000Z', '2024-12-31T21:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0),
+    (2, 'Season 4', '2025 Spring season', 'SEASON', 1, '2024-12-31T22:00:00.000Z', '2025-06-30T20:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0),
+    (3, 'Season 5', '2025 Autumn season', 'SEASON', 1, '2025-07-31T21:00:00.000Z', '2025-12-31T21:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0),
+    (4, 'Season 6', '2026 Spring season', 'SEASON', 2, '2026-01-31T22:00:00.000Z', '2026-06-30T20:59:59.999Z', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z', 0);

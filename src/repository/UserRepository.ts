@@ -1,7 +1,7 @@
 import type { Statement } from 'better-sqlite3';
 import type { User } from '../model/UserModels.ts';
 import { dbManager } from '../db/dbInit.ts';
-import { booleanToInteger, dateFromSqliteString } from '../db/dbUtils.ts';
+import { booleanToInteger } from '../db/dbUtils.ts';
 
 export class UserRepository {
 
@@ -54,11 +54,12 @@ export class UserRepository {
         telegramUsername: string | undefined,
         telegramId: number | undefined,
         modifiedBy: number,
-        isActive: number
+        isActive: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy, isActive)
-            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :isActive)`
+            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy, isActive, createdAt, modifiedAt)
+            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :isActive, :timestamp, :timestamp)`
         );
     }
 
@@ -68,56 +69,60 @@ export class UserRepository {
             telegramUsername,
             telegramId,
             modifiedBy: createdBy,
-            isActive: booleanToInteger(false)
+            isActive: booleanToInteger(false),
+            timestamp: new Date().toISOString()
         }).lastInsertRowid);
     }
 
     private updateUserNameStatement(): Statement<{
         name: string,
         modifiedBy: number,
-        id: number
+        id: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
             UPDATE user
-            SET name = :name, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
+            SET name = :name, modifiedBy = :modifiedBy, modifiedAt = :timestamp
             WHERE id = :id`
         );
     }
 
     updateUserName(userId: number, name: string, modifiedBy: number) {
-        this.updateUserNameStatement().run({ name, modifiedBy, id: userId });
+        this.updateUserNameStatement().run({ name, modifiedBy, id: userId, timestamp: new Date().toISOString() });
     }
 
     private updateUserTelegramUsernameStatement(): Statement<{
         telegramUsername: string,
         modifiedBy: number,
-        id: number
+        id: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
             UPDATE user
-            SET telegramUsername = :telegramUsername, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
+            SET telegramUsername = :telegramUsername, modifiedBy = :modifiedBy, modifiedAt = :timestamp
             WHERE id = :id`
         );
     }
 
     updateUserTelegramUsername(userId: number, telegramUsername: string, modifiedBy: number) {
-        this.updateUserTelegramUsernameStatement().run({ telegramUsername, modifiedBy, id: userId });
+        this.updateUserTelegramUsernameStatement().run({ telegramUsername, modifiedBy, id: userId, timestamp: new Date().toISOString() });
     }
 
     private updateUserActivationStatusStatement(): Statement<{
         isActive: number,
         modifiedBy: number,
-        id: number
+        id: number,
+        timestamp: string
     }, void> {
         return dbManager.db.prepare(`
             UPDATE user
-            SET isActive = :isActive, modifiedBy = :modifiedBy, modifiedAt = CURRENT_TIMESTAMP
+            SET isActive = :isActive, modifiedBy = :modifiedBy, modifiedAt = :timestamp
             WHERE id = :id`
         );
     }
 
     updateUserActivationStatus(userId: number, newStatus: boolean, modifiedBy: number) {
-        this.updateUserActivationStatusStatement().run({ isActive: booleanToInteger(newStatus), modifiedBy, id: userId });
+        this.updateUserActivationStatusStatement().run({ isActive: booleanToInteger(newStatus), modifiedBy, id: userId, timestamp: new Date().toISOString() });
     }
 }
 
@@ -138,7 +143,7 @@ function userFromDBEntity(dbEntity: UserDBEntity): User {
         ...dbEntity,
         isAdmin: Boolean(dbEntity.isAdmin),
         isActive: Boolean(dbEntity.isActive),
-        createdAt: dateFromSqliteString(dbEntity.createdAt),
-        modifiedAt: dateFromSqliteString(dbEntity.modifiedAt)
+        createdAt: new Date(dbEntity.createdAt),
+        modifiedAt: new Date(dbEntity.modifiedAt)
     };
 }

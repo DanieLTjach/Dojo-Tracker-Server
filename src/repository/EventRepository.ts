@@ -1,7 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { Event } from '../model/EventModels.ts';
-import { dateFromSqliteString } from '../db/dbUtils.ts';
 import { GameRepository } from './GameRepository.ts';
 
 export class EventRepository {
@@ -93,11 +92,11 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             startingPoints: dbEntity.gr_startingPoints,
             startingRating: dbEntity.gr_startingRating
         },
-        dateFrom: dbEntity.dateFrom !== null ? dateFromSqliteString(dbEntity.dateFrom) : null,
-        dateTo: dbEntity.dateTo !== null ? dateFromSqliteString(dbEntity.dateTo) : null,
+        dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
+        dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
         gameCount: 0, // Will be set by repository methods
-        createdAt: dateFromSqliteString(dbEntity.createdAt),
-        modifiedAt: dateFromSqliteString(dbEntity.modifiedAt),
+        createdAt: new Date(dbEntity.createdAt),
+        modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy
     };
 }

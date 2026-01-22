@@ -4,7 +4,7 @@ import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -13,7 +13,7 @@ app.use(handleErrors);
 
 describe('Game API Endpoints', () => {
     const SYSTEM_USER_ID = 0; // System admin user
-    const TEST_EVENT_ID = 1; // Test Event from migrations
+    const TEST_EVENT_ID = 1000; // Test Event created in beforeAll
     let testUser1Id: number;
     let testUser2Id: number;
     let testUser3Id: number;
@@ -52,6 +52,9 @@ describe('Game API Endpoints', () => {
     }
 
     beforeAll(async () => {
+        // Create test event
+        await createTestEvent();
+        
         // Create test users for games
         testUser1Id = await createTestUser('Player1', 111111111);
         testUser2Id = await createTestUser('Player2', 222222222);
