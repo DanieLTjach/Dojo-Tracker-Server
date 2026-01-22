@@ -2,66 +2,42 @@ import { BadRequestError, ForbiddenError, NotFoundError } from "./BaseErrors.ts"
 
 export class NameAlreadyTakenByAnotherUser extends BadRequestError {
     constructor(name: string) {
-        super(`Name '${name}' is already taken by another user`, 'nameAlreadyTakenByAnotherUser');
-    }
-}
-
-export class UserWithThisTelegramUsernameAlreadyExists extends BadRequestError {
-    constructor(telegramUsername: string) {
-        super(`User with telegram username ${telegramUsername} already exists`, 'userWithThisTelegramUsernameAlreadyExists');
+        super(`Ім'я '${name}' вже зайняте іншим користувачем`, 'nameAlreadyTakenByAnotherUser');
     }
 }
 
 export class TelegramUsernameAlreadyTakenByAnotherUser extends BadRequestError {
     constructor(telegramUsername: string) {
-        super(`Telegram username '${telegramUsername}' is already taken by another user`, 'telegramUsernameAlreadyTakenByAnotherUser');
+        super(`Telegram юзернейм '${telegramUsername}' вже зайнятий іншим користувачем`, 'telegramUsernameAlreadyTakenByAnotherUser');
     }
 }
 
 export class UserWithThisTelegramIdAlreadyExists extends BadRequestError {
     constructor(telegramId: number) {
-        super(`User with telegram id ${telegramId} already exists`, 'userWithThisTelegramIdAlreadyExists');
+        super(`Користувач з Telegram id ${telegramId} вже існує`, 'userWithThisTelegramIdAlreadyExists');
     }
 }
 
 export class UserNotFoundById extends NotFoundError {
     constructor(id: number) {
-        super(`User with id ${id} not found`, 'userNotFoundById');
+        super(`Користувача з id ${id} не знайдено`, 'userNotFoundById');
     }
 }
 
 export class UserNotFoundByTelegramId extends NotFoundError {
     constructor(telegramId: number) {
-        super(`User with telegram id ${telegramId} not found`, 'userNotFoundByTelegramId');
+        super(`Користувача з Telegram id ${telegramId} не знайдено`, 'userNotFoundByTelegramId');
     }
 }
 
-export class UserNotFoundByTelegramUsername extends NotFoundError {
-    constructor(telegramUsername: string) {
-        super(`User not found with telegram username: ${telegramUsername}`, 'userNotFoundByTelegramUsername');
-    }
-}
-
-export class UserNotFoundByName extends NotFoundError {
-    constructor(name: string) {
-        super(`User not found with name: ${name}`, 'userNotFoundByName');
-    }
-}
-
-export class MissingUserInformationError extends BadRequestError {
+export class YouHaveToBeAdminToEditAnotherUser extends ForbiddenError {
     constructor() {
-        super('User information must contain either telegramUsername or name', 'missingUserInformation');
-    }
-}
-
-export class UserIsNotAdmin extends ForbiddenError {
-    constructor(id: number) {
-        super(`User with id ${id} is not an admin`, 'userIsNotAdmin');
+        super('Щоб редагувати іншого користувача, ви повинні бути адміністратором', 'youHaveToBeAdminToEditAnotherUser');
     }
 }
 
 export class UserIsNotActive extends ForbiddenError {
     constructor(id: number) {
-        super(`User with id ${id} is not active`, 'userIsNotActive');
+        super(`Користувач з id ${id} не активний`, 'userIsNotActive');
     }
 }

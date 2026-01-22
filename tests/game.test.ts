@@ -123,7 +123,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toContain('4 players');
+            expect(response.body.message).toBe('Для гри потрібно 4 гравців');
         });
 
         test('should fail with incorrect number of players (5 players)', async () => {
@@ -142,7 +142,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toContain('4 players');
+            expect(response.body.message).toBe('Для гри потрібно 4 гравців');
         });
 
         test('should fail with duplicate players', async () => {
@@ -160,7 +160,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toContain('present more than once');
+            expect(response.body.message).toBe(`Гравець з ID ${testUser1Id} присутній більше одного разу в цій грі`);
         });
 
         test('should fail with duplicate start places', async () => {
@@ -196,7 +196,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toContain('Event');
+            expect(response.body.message).toBe('Подію з id 99999 не знайдено');
         });
 
         test('should fail with non-existent user', async () => {
@@ -214,7 +214,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toContain('User');
+            expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
         });
 
         test('should fail with invalid points (non-integer)', async () => {
@@ -267,7 +267,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe('Total points must equal 120000, but got 110000');
+            expect(response.body.message).toBe('Сума очок повинна дорівнювати 120000, у вас 110000');
         });
 
         test('should fail with incorrect total points (too high)', async () => {
@@ -285,7 +285,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe('Total points must equal 120000, but got 130000');
+            expect(response.body.message).toBe('Сума очок повинна дорівнювати 120000, у вас 130000');
         });
 
         test('should fail when event has not started yet', async () => {
@@ -293,7 +293,7 @@ describe('Game API Endpoints', () => {
             const futureEventId = 9001;
             createCustomEvent(
                 futureEventId,
-                'Future Event',
+                'Майбутній сезон',
                 '2100-01-01T00:00:00.000Z',
                 '2100-12-31T23:59:59.999Z'
             );
@@ -312,7 +312,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe('Event has not started yet');
+            expect(response.body.message).toBe('Майбутній сезон ще не розпочався');
         });
 
         test('should fail when event has already ended', async () => {
@@ -320,7 +320,7 @@ describe('Game API Endpoints', () => {
             const pastEventId = 9002;
             createCustomEvent(
                 pastEventId,
-                'Past Event',
+                'Минулий сезон',
                 '2000-01-01T00:00:00.000Z',
                 '2000-12-31T23:59:59.999Z'
             );
@@ -339,7 +339,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe('Event has ended');
+            expect(response.body.message).toBe('Минулий сезон вже закінчився');
         });
     });
 
@@ -363,7 +363,7 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe('Game with id 99999 not found');
+            expect(response.body.message).toBe('Гру з id 99999 не знайдено');
         });
 
         test('should fail with invalid game ID (non-integer)', async () => {
@@ -466,7 +466,7 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toContain('User');
+            expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
         });
 
         test('should fail with invalid dateFrom format', async () => {
@@ -514,7 +514,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toContain('Insufficient permissions');
+            expect(response.body.message).toBe('Недостатньо прав для виконання цієї дії');
         });
 
         test('should fail to update non-existent game', async () => {
@@ -532,7 +532,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toContain('Game');
+            expect(response.body.message).toBe('Гру з id 99999 не знайдено');
         });
 
         test('should fail to update game with incorrect player count', async () => {
@@ -548,7 +548,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toContain('4 players');
+            expect(response.body.message).toBe('Для гри потрібно 4 гравців');
         });
 
         test('should fail to update game with duplicate players', async () => {
@@ -566,7 +566,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toContain('present more than once');
+            expect(response.body.message).toBe(`Гравець з ID ${testUser1Id} присутній більше одного разу в цій грі`);
         });
     });
 
@@ -611,7 +611,7 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toContain('Insufficient permissions');
+            expect(response.body.message).toBe('Недостатньо прав для виконання цієї дії');
         });
 
         test('should fail to delete non-existent game', async () => {
@@ -620,7 +620,7 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toContain('Game');
+            expect(response.body.message).toBe('Гру з id 99999 не знайдено');
         });
 
         test('should fail to delete game with invalid ID', async () => {

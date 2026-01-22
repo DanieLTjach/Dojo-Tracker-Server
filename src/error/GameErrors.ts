@@ -2,48 +2,48 @@ import { BadRequestError, NotFoundError } from "./BaseErrors.ts";
 
 export class GameNotFoundById extends NotFoundError {
     constructor(id: number) {
-        super(`Game with id ${id} not found`, 'gameNotFoundById');
+        super(`Гру з id ${id} не знайдено`, 'gameNotFoundById');
     }
 }
 
 export class TooManyGamesFoundError extends BadRequestError {
     constructor() {
-        super(`Too many games found. Please narrow down your search criteria.`, 'tooManyGamesFound');
+        super(`Знайдено забагато ігор. Будь ласка, звузьте критерії пошуку.`, 'tooManyGamesFound');
     }
 }
 
 export class IncorrectPlayerCountError extends BadRequestError {
     constructor(requiredPlayers: number) {
-        super(`${requiredPlayers} players are required for a game`, 'incorrectPlayerCount');
+        super(`Для гри потрібно ${requiredPlayers} гравців`, 'incorrectPlayerCount');
     }
 }
 
 export class DuplicatePlayerError extends BadRequestError {
     constructor(userId: number) {
-        super(`Player with ID ${userId} is present more than once in this game`, 'duplicatePlayer');
+        super(`Гравець з ID ${userId} присутній більше одного разу в цій грі`, 'duplicatePlayer');
     }
 }
 
 export class DuplicateGameTimestampInEventError extends BadRequestError {
     constructor() {
-        super('Someone is trying to add a game simultaneously with you. Please try again', 'duplicateGameTimestampInEvent');
+        super('Хтось намагається додати гру одночасно з вами. Будь ласка, спробуйте ще раз', 'duplicateGameTimestampInEvent');
     }
 }
 
 export class IncorrectTotalPointsError extends BadRequestError {
     constructor(expectedTotal: number, actualTotal: number) {
-        super(`Total points must equal ${expectedTotal}, but got ${actualTotal}`, 'incorrectTotalPoints');
+        super(`Сума очок повинна дорівнювати ${expectedTotal}, у вас ${actualTotal}`, 'incorrectTotalPoints');
     }
 }
 
 export class EventHasntStartedError extends BadRequestError {
-    constructor() {
-        super('Event has not started yet', 'eventHasntStarted');
+    constructor(eventName: string) {
+        super(`${eventName} ще не розпочався`, 'eventHasntStarted');
     }
 }
 
 export class EventHasEndedError extends BadRequestError {
-    constructor() {
-        super('Event has ended', 'eventHasEnded');
+    constructor(eventName: string) {
+        super(`${eventName} вже закінчився`, 'eventHasEnded');
     }
 }
