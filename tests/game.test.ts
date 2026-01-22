@@ -4,7 +4,7 @@ import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent, createCustomEvent } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -46,7 +46,7 @@ describe('Game API Endpoints', () => {
 
     beforeAll(async () => {
         // Create test event
-        await createTestEvent();
+        createTestEvent();
         
         // Create test users for games
         testUser1Id = await createTestUser('Player1', 111111111);
@@ -71,10 +71,10 @@ describe('Game API Endpoints', () => {
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
-                        { userId: testUser1Id, points: 35000, startPlace: 'EAST' },
-                        { userId: testUser2Id, points: 28000, startPlace: 'SOUTH' },
-                        { userId: testUser3Id, points: 22000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
+                        { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
+                        { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
+                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
                     ]
                 });
 
@@ -84,7 +84,7 @@ describe('Game API Endpoints', () => {
             expect(response.body.players).toHaveLength(4);
             expect(response.body.players[0]).toMatchObject({
                 userId: testUser1Id,
-                points: 35000,
+                points: 40000,
                 startPlace: 'EAST'
             });
 
@@ -152,8 +152,8 @@ describe('Game API Endpoints', () => {
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
+                        { userId: testUser1Id, points: 40000 },
                         { userId: testUser1Id, points: 35000 },
-                        { userId: testUser1Id, points: 30000 },
                         { userId: testUser3Id, points: 25000 },
                         { userId: testUser4Id, points: 20000 }
                     ]
@@ -170,8 +170,8 @@ describe('Game API Endpoints', () => {
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
-                        { userId: testUser1Id, points: 35000, startPlace: 'EAST' },
-                        { userId: testUser2Id, points: 30000, startPlace: 'EAST' },
+                        { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
+                        { userId: testUser2Id, points: 35000, startPlace: 'EAST' },
                         { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
                         { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
                     ]
@@ -251,6 +251,96 @@ describe('Game API Endpoints', () => {
 
             expect(response.status).toBe(400);
         });
+
+        test('should fail with incorrect total points (too low)', async () => {
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 35000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 20000 }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe('Total points must equal 120000, but got 110000');
+        });
+
+        test('should fail with incorrect total points (too high)', async () => {
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000 },
+                        { userId: testUser2Id, points: 40000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 20000 }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe('Total points must equal 120000, but got 130000');
+        });
+
+        test('should fail when event has not started yet', async () => {
+            // Create an event that starts in the future
+            const futureEventId = 9001;
+            createCustomEvent(
+                futureEventId,
+                'Future Event',
+                '2100-01-01T00:00:00.000Z',
+                '2100-12-31T23:59:59.999Z'
+            );
+
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: futureEventId,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000 },
+                        { userId: testUser2Id, points: 35000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 20000 }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe('Event has not started yet');
+        });
+
+        test('should fail when event has already ended', async () => {
+            // Create an event that ended in the past
+            const pastEventId = 9002;
+            createCustomEvent(
+                pastEventId,
+                'Past Event',
+                '2000-01-01T00:00:00.000Z',
+                '2000-12-31T23:59:59.999Z'
+            );
+
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: pastEventId,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000 },
+                        { userId: testUser2Id, points: 35000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 20000 }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe('Event has ended');
+        });
     });
 
     describe('GET /api/games/:gameId - Get Game by ID', () => {
@@ -273,7 +363,7 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toContain('Game');
+            expect(response.body.message).toBe('Game with id 99999 not found');
         });
 
         test('should fail with invalid game ID (non-integer)', async () => {
@@ -397,16 +487,16 @@ describe('Game API Endpoints', () => {
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
-                        { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
-                        { userId: testUser2Id, points: 30000, startPlace: 'SOUTH' },
-                        { userId: testUser3Id, points: 20000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 10000, startPlace: 'NORTH' }
+                        { userId: testUser1Id, points: 45000, startPlace: 'EAST' },
+                        { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
+                        { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
                     ]
                 });
 
             expect(response.status).toBe(200);
             expect(response.body.id).toBe(testGameId);
-            expect(response.body.players[0].points).toBe(40000);
+            expect(response.body.players[0].points).toBe(45000);
         });
 
         test('should fail to update game without admin privileges', async () => {

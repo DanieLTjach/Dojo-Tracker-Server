@@ -3,10 +3,10 @@ import {
     UserIsNotAdmin,
     UserNotFoundById,
     UserNotFoundByTelegramId,
-    UserWithThisNameAlreadyExists,
     UserWithThisTelegramIdAlreadyExists,
-    UserWithThisTelegramUsernameAlreadyExists,
-    UserIsNotActive
+    UserIsNotActive,
+    NameAlreadyTakenByAnotherUser,
+    TelegramUsernameAlreadyTakenByAnotherUser
 } from '../error/UserErrors.ts';
 import type { User } from '../model/UserModels.ts';
 
@@ -21,13 +21,13 @@ export class UserService {
         createdBy: number
     ): User {
         if (this.userExistsByName(userName)) {
-            throw new UserWithThisNameAlreadyExists(userName);
+            throw new NameAlreadyTakenByAnotherUser(userName);
         }
         if (userTelegramId !== undefined && this.userExistsByTelegramId(userTelegramId)) {
             throw new UserWithThisTelegramIdAlreadyExists(userTelegramId);
         }
         if (userTelegramUsername !== undefined && this.userExistsByTelegramUsername(userTelegramUsername)) {
-            throw new UserWithThisTelegramUsernameAlreadyExists(userTelegramUsername);
+            throw new TelegramUsernameAlreadyTakenByAnotherUser(userTelegramUsername);
         }
 
         const newUserId = this.userRepository.registerUser(userName, userTelegramUsername, userTelegramId, createdBy);
@@ -66,9 +66,11 @@ export class UserService {
         this.validateUserIsActiveById(userId);
 
         if (name !== undefined) {
+            this.validateNameNotTakenByAnotherUser(name, userId);
             this.userRepository.updateUserName(userId, name, modifiedBy);
         }
         if (telegramUsername !== undefined) {
+            this.validateTelegramUsernameNotTakenByAnotherUser(telegramUsername, userId);
             this.userRepository.updateUserTelegramUsername(userId, telegramUsername, modifiedBy);
         }
         return this.getUserById(userId);
@@ -123,5 +125,19 @@ export class UserService {
     private userExistsByTelegramId(telegramId: number): boolean {
         const user = this.userRepository.findUserByTelegramId(telegramId);
         return !!user;
+    }
+
+    private validateNameNotTakenByAnotherUser(name: string, userId: number): void {
+        const existingUser = this.userRepository.findUserByName(name);
+        if (existingUser !== undefined && existingUser.id !== userId) {
+            throw new NameAlreadyTakenByAnotherUser(name);
+        }
+    }
+
+    private validateTelegramUsernameNotTakenByAnotherUser(telegramUsername: string, userId: number): void {
+        const existingUser = this.userRepository.findUserByTelegramUsername(telegramUsername);
+        if (existingUser !== undefined && existingUser.id !== userId) {
+            throw new TelegramUsernameAlreadyTakenByAnotherUser(telegramUsername);
+        }
     }
 }

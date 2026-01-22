@@ -41,7 +41,8 @@ CREATE TABLE game (
     eventId INTEGER NOT NULL REFERENCES event(id),
     createdAt TIMESTAMP NOT NULL,
     modifiedAt TIMESTAMP NOT NULL,
-    modifiedBy INTEGER NOT NULL REFERENCES user(id)
+    modifiedBy INTEGER NOT NULL REFERENCES user(id),
+    UNIQUE (eventId, createdAt)
 );
 
 CREATE TABLE gameStartPlace (

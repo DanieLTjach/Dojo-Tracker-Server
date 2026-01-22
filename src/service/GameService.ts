@@ -4,7 +4,11 @@ import {
     GameNotFoundById,
     IncorrectPlayerCountError,
     DuplicatePlayerError,
-    TooManyGamesFoundError
+    TooManyGamesFoundError,
+    IncorrectTotalPointsError,
+    EventHasntStartedError,
+    EventHasEndedError,
+    DuplicateGameTimestampInEventError
 } from '../error/GameErrors.ts';
 import type { GameWithPlayers, PlayerData, GameFilters } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
@@ -27,6 +31,8 @@ export class GameService {
 
         const event = this.eventService.getEventById(eventId);
         this.validatePlayers(playersData, event.gameRules);
+        this.validateGameWithinEventDates(timestamp, event.dateFrom, event.dateTo);
+        this.validateNoDuplicateGameTimestamp(eventId, timestamp);
 
         const newGameId = this.gameRepository.createGame(eventId, createdBy, timestamp);
         this.addPlayersToGame(newGameId, playersData, createdBy);
@@ -111,6 +117,7 @@ export class GameService {
         }
 
         this.validateNoDuplicatePlayers(playersData);
+        this.validateTotalPoints(playersData, gameRules);
     }
 
     private addPlayersToGame(gameId: number, players: PlayerData[], modifiedBy: number): void {
@@ -137,6 +144,32 @@ export class GameService {
                 }
                 seen.add(player.userId);
             }
+        }
+    }
+
+    private validateTotalPoints(playersData: PlayerData[], gameRules: GameRules): void {
+        const totalPoints = playersData.reduce((sum, player) => sum + player.points, 0);
+        const expectedTotal = gameRules.numberOfPlayers * gameRules.startingPoints;
+        
+        if (totalPoints !== expectedTotal) {
+            throw new IncorrectTotalPointsError(expectedTotal, totalPoints);
+        }
+    }
+
+    private validateGameWithinEventDates(timestamp: Date, dateFrom: Date | null, dateTo: Date | null): void {
+        if (dateFrom !== null && timestamp < dateFrom) {
+            throw new EventHasntStartedError();
+        }
+        if (dateTo !== null && timestamp > dateTo) {
+            throw new EventHasEndedError();
+        }
+    }
+
+    // rating calculation relies on unique game timestamps within an event
+    private validateNoDuplicateGameTimestamp(eventId: number, timestamp: Date): void {
+        const existingGame = this.gameRepository.findGameByEventAndTimestamp(eventId, timestamp);
+        if (existingGame !== undefined) {
+            throw new DuplicateGameTimestampInEventError();
         }
     }
 }
