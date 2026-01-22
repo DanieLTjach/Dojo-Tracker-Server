@@ -8,7 +8,8 @@ import {
     IncorrectTotalPointsError,
     EventHasntStartedError,
     EventHasEndedError,
-    DuplicateGameTimestampInEventError
+    DuplicateGameTimestampInEventError,
+    YouHaveToBeAdminToCreateGameWithCustomTime
 } from '../error/GameErrors.ts';
 import type { GameWithPlayers, PlayerData, GameFilters } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
@@ -25,9 +26,13 @@ export class GameService {
     addGame(
         eventId: number,
         playersData: PlayerData[],
-        createdBy: number
+        createdBy: number,
+        createdAt: Date | undefined
     ): GameWithPlayers {
-        const gameTimestamp = new Date();
+        const gameTimestamp = createdAt ?? new Date();
+        if (createdAt !== undefined) {
+            this.userService.validateUserIsAdmin(createdBy, () => new YouHaveToBeAdminToCreateGameWithCustomTime());
+        }
 
         const event = this.eventService.getEventById(eventId);
         this.validatePlayers(playersData, event.gameRules);
@@ -74,18 +79,21 @@ export class GameService {
         gameId: number,
         eventId: number,
         playersData: PlayerData[],
-        modifiedBy: number
+        modifiedBy: number,
+        createdAt: Date | undefined
     ): GameWithPlayers {
         const game = this.getGameById(gameId);
         const event = this.eventService.getEventById(eventId);
         this.validatePlayers(playersData, event.gameRules);
 
-        this.gameRepository.updateGame(gameId, eventId, modifiedBy);
+        const newGameTimestamp = createdAt ?? game.createdAt;
+
+        this.gameRepository.updateGame(gameId, eventId, modifiedBy, newGameTimestamp);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.addPlayersToGame(gameId, playersData, modifiedBy);
 
         this.ratingService.deleteRatingChangesFromGame(game);
-        this.ratingService.addRatingChangesFromGame(gameId, game.createdAt, playersData, eventId, event.gameRules);
+        this.ratingService.addRatingChangesFromGame(gameId, newGameTimestamp, playersData, eventId, event.gameRules);
 
         return this.getGameById(gameId);
     }
@@ -126,7 +134,7 @@ export class GameService {
                 gameId,
                 player.userId,
                 player.points,
-                player.startPlace,
+                player.startPlace ?? undefined,
                 modifiedBy
             );
         }
