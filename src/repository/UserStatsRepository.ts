@@ -6,7 +6,7 @@ export class UserStatsRepository {
     // Get all game data for a user in an event (points, placement, rating changes)
     private getUserGameStatsStatement(): Statement<
         { userId: number; eventId: number },
-        GameStatsDataDBEntity
+        GameStatsData
     > {
         return dbManager.db.prepare(`
             SELECT
@@ -18,17 +18,17 @@ export class UserStatsRepository {
                     FROM userToGame utg2
                     WHERE utg2.gameId = g.id AND utg2.points > utg.points
                 ) + 1 as placement,
-                COALESCE(urc.ratingChange, 0) as ratingChange
+                urc.ratingChange
              FROM game g
              JOIN userToGame utg ON g.id = utg.gameId
-             LEFT JOIN userRatingChange urc ON urc.gameId = g.id AND urc.userId = utg.userId
+             JOIN userRatingChange urc ON urc.gameId = g.id AND urc.userId = utg.userId
              WHERE g.eventId = :eventId AND utg.userId = :userId
              ORDER BY g.createdAt`
         );
     }
 
     getUserGameStats(userId: number, eventId: number): GameStatsData[] {
-        return this.getUserGameStatsStatement().all({ userId, eventId }).map(gameStatsDataFromDBEntity);
+        return this.getUserGameStatsStatement().all({ userId, eventId });
     }
 
     // Get current rating for a user in an event
@@ -60,8 +60,7 @@ export class UserStatsRepository {
     }
 
     getTotalGamesInEvent(eventId: number): number {
-        const result = this.getTotalGamesInEventStatement().get({ eventId });
-        return result?.totalGames || 0;
+        return this.getTotalGamesInEventStatement().get({ eventId })!.totalGames;
     }
 
     // Get user's rank/place in the event based on current rating
@@ -90,25 +89,6 @@ export class UserStatsRepository {
     }
 
     getUserRankInEvent(userId: number, eventId: number): number {
-        const result = this.getUserRankInEventStatement().get({ userId, eventId });
-        return result?.place || 1;
+        return this.getUserRankInEventStatement().get({ userId, eventId })!.place;
     }
-}
-
-interface GameStatsDataDBEntity {
-    gameId: number;
-    userId: number;
-    points: number;
-    placement: number;
-    ratingChange: number;
-}
-
-function gameStatsDataFromDBEntity(dbEntity: GameStatsDataDBEntity): GameStatsData {
-    return {
-        gameId: dbEntity.gameId,
-        userId: dbEntity.userId,
-        points: dbEntity.points,
-        placement: dbEntity.placement,
-        ratingChange: dbEntity.ratingChange,
-    };
 }

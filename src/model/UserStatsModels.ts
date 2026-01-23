@@ -10,10 +10,9 @@ export interface UserEventStats {
     percentageSecondPlace: number;
     percentageThirdPlace: number;
     percentageFourthPlace: number;
-    percentageOfNegativeRank: number;
+    percentageOfNegativePoints: number;
     percentageOfGamesPlayedFromAll: number;
     sumOfPoints: number;
-    amountOfRatingEarned: number;
     maxPoints: number;
     minPoints: number;
     averagePoints: number;

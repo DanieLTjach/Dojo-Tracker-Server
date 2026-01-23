@@ -35,7 +35,7 @@ export class GameService {
         this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
 
         const newGameId = this.gameRepository.createGame(eventId, createdBy, gameTimestamp);
-        this.addPlayersToGame(newGameId, playersData, createdBy, gameTimestamp);
+        this.addPlayersToGame(newGameId, playersData, createdBy);
         this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules);
 
         return this.getGameById(newGameId);
@@ -82,7 +82,7 @@ export class GameService {
 
         this.gameRepository.updateGame(gameId, eventId, modifiedBy);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
-        this.addPlayersToGame(gameId, playersData, modifiedBy, game.createdAt);
+        this.addPlayersToGame(gameId, playersData, modifiedBy);
 
         this.ratingService.deleteRatingChangesFromGame(game);
         this.ratingService.addRatingChangesFromGame(gameId, game.createdAt, playersData, eventId, event.gameRules);
@@ -120,15 +120,14 @@ export class GameService {
         this.validateTotalPoints(playersData, gameRules);
     }
 
-    private addPlayersToGame(gameId: number, players: PlayerData[], modifiedBy: number, timestamp: Date): void {
+    private addPlayersToGame(gameId: number, players: PlayerData[], modifiedBy: number): void {
         for (const player of players) {
             this.gameRepository.addGamePlayer(
                 gameId,
                 player.userId,
                 player.points,
                 player.startPlace,
-                modifiedBy,
-                timestamp
+                modifiedBy
             );
         }
     }

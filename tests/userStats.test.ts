@@ -152,12 +152,11 @@ describe('User Stats API Endpoints', () => {
 
             // Rating stats
             expect(response.body).toHaveProperty('averageIncrement');
-            expect(response.body).toHaveProperty('amountOfRatingEarned');
             expect(response.body).toHaveProperty('averagePlace');
 
             // Negative rank percentage
-            expect(response.body).toHaveProperty('percentageOfNegativeRank');
-            expect(response.body.percentageOfNegativeRank).toBe(25); // 1 out of 4 games
+            expect(response.body).toHaveProperty('percentageOfNegativePoints');
+            expect(response.body.percentageOfNegativePoints).toBe(25); // 1 out of 4 games
 
             // Participation percentage
             expect(response.body).toHaveProperty('percentageOfGamesPlayedFromAll');
@@ -197,24 +196,15 @@ describe('User Stats API Endpoints', () => {
             expect(response.body.averagePoints).toBe(26250);
         });
 
-        test('should return default stats for user with no games', async () => {
+        test('should return 204 No Content for user with no games', async () => {
             const { testUser5Id, user1AuthHeader } = await createFullTestSetup();
 
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/${testUser5Id}/stats`)
                 .set('Authorization', user1AuthHeader);
 
-            expect(response.status).toBe(200);
-            expect(response.body.userId).toBe(testUser5Id);
-            expect(response.body.gamesPlayed).toBe(0);
-            expect(response.body.playerRating).toBe(0); // Starting rating for gameRules 2
-            expect(response.body.sumOfPoints).toBe(0);
-            expect(response.body.maxPoints).toBe(0);
-            expect(response.body.minPoints).toBe(0);
-            expect(response.body.averagePoints).toBe(0);
-            expect(response.body.averageIncrement).toBe(0);
-            expect(response.body.percentageFirstPlace).toBe(0);
-            expect(response.body.percentageOfNegativeRank).toBe(0);
+            expect(response.status).toBe(204);
+            expect(response.body).toEqual({});
         });
 
         test('should return 400 for invalid userId', async () => {
@@ -267,20 +257,6 @@ describe('User Stats API Endpoints', () => {
             const response = await request(app).get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/stats`);
 
             expect(response.status).toBe(401);
-        });
-
-        test('should verify rating calculations are consistent', async () => {
-            const { testUser1Id, user1AuthHeader } = await createFullTestSetup();
-
-            const response = await request(app)
-                .get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/stats`)
-                .set('Authorization', user1AuthHeader);
-
-            expect(response.status).toBe(200);
-
-            // Average increment * games played should approximately equal total rating earned
-            const expectedTotal = response.body.averageIncrement * response.body.gamesPlayed;
-            expect(response.body.amountOfRatingEarned).toBeCloseTo(expectedTotal, 1);
         });
 
         test('should calculate participation percentage correctly', async () => {

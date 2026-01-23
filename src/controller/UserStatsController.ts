@@ -11,6 +11,9 @@ export class UserStatsController {
             params: { userId, eventId },
         } = getUserEventStatsSchema.parse(req);
         const stats = this.userStatsService.getUserEventStats(userId, eventId);
+        if (stats === null) {
+            return res.status(StatusCodes.NO_CONTENT).send();
+        }
         return res.status(StatusCodes.OK).json(stats);
     }
 }

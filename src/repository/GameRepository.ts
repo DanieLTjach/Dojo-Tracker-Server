@@ -40,14 +40,14 @@ export class GameRepository {
         );
     }
 
-    addGamePlayer(gameId: number, userId: number, points: number, startPlace: string | undefined, modifiedBy: number, timestamp: Date): void {
+    addGamePlayer(gameId: number, userId: number, points: number, startPlace: string | undefined, modifiedBy: number): void {
         this.addGamePlayerStatement().run({
             gameId,
             userId,
             points,
             startPlace,
             modifiedBy,
-            timestamp: timestamp.toISOString()
+            timestamp: new Date().toISOString()
         });
     }
 
@@ -65,7 +65,7 @@ export class GameRepository {
             SELECT u.name, u.telegramUsername, utg.*, urc.ratingChange
             FROM userToGame utg
             JOIN user u ON utg.userId = u.id
-            LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
+            JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
             WHERE utg.gameId = :gameId
             ORDER BY points DESC, userId`
         );
@@ -85,7 +85,7 @@ export class GameRepository {
             SELECT u.name, u.telegramUsername, utg.*, urc.ratingChange
             FROM userToGame utg
             JOIN user u ON utg.userId = u.id
-            LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
+            JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
             WHERE utg.gameId IN (${placeholders})
         `;
 
@@ -174,15 +174,6 @@ export class GameRepository {
 
     deleteGameById(gameId: number): void {
         this.deleteGameByIdStatement().run({ id: gameId });
-    }
-
-    private countGamesByEventIdStatement(): Statement<{ eventId: number }, { count: number }> {
-        return dbManager.db.prepare('SELECT COUNT(*) as count FROM game WHERE eventId = :eventId');
-    }
-
-    countGamesByEventId(eventId: number): number {
-        const result = this.countGamesByEventIdStatement().get({ eventId });
-        return result?.count ?? 0;
     }
 
     private findGameByEventAndTimestampStatement(): Statement<{ eventId: number, timestamp: string }, GameDBEntity> {

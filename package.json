@@ -6,8 +6,8 @@
   "scripts": {
     "typecheck": "npx tsc",
     "start": "node src/index.ts",
-    "dev": "dotenv -e .env.development -- nodemon --ext \"js,ts,json\" --exec \"node --experimental-strip-types\" src/index.ts",
-    "debug": "dotenv -e .env.development -- node --experimental-strip-types --inspect=0.0.0.0:9229 src/index.ts",
+    "dev": "dotenv -e .env.development -- nodemon --ext \"js,ts,json\" src/index.ts",
+    "debug": "dotenv -e .env.development -- node --inspect=0.0.0.0:9229 src/index.ts",
     "test": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --no-cache --runInBand",
     "test:watch": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch",
     "test:coverage": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --coverage --no-cache --runInBand"
