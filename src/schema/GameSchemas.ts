@@ -10,7 +10,7 @@ export const gameIdParamSchema = z.coerce.number().int("Game ID must be an integ
 const playerDataSchema = z.object({
     userId: userIdSchema,
     points: z.number().int("Points must be an integer"),
-    startPlace: gameStartPlace.optional()
+    startPlace: gameStartPlace.nullish()
 });
 
 const playerListSchema = z.array(playerDataSchema).refine((players) => {
@@ -25,7 +25,8 @@ const playerListSchema = z.array(playerDataSchema).refine((players) => {
 export const gameCreationSchema = z.object({
     body: z.object({
         eventId: eventIdSchema,
-        playersData: playerListSchema
+        playersData: playerListSchema,
+        createdAt: dateSchema.nullish()
     })
 });
 
@@ -53,7 +54,8 @@ export const gameUpdateSchema = z.object({
     }),
     body: z.object({
         eventId: eventIdSchema,
-        playersData: playerListSchema
+        playersData: playerListSchema,
+        createdAt: dateSchema.nullish()
     })
 });
 

@@ -147,17 +147,18 @@ export class GameRepository {
         eventId: number,
         modifiedBy: number,
         id: number,
-        timestamp: string
+        createdAt: string,
+        modifiedAt: string
     }, void> {
         return dbManager.db.prepare(`
             UPDATE game
-            SET eventId = :eventId, modifiedBy = :modifiedBy, modifiedAt = :timestamp
+            SET eventId = :eventId, modifiedBy = :modifiedBy, createdAt = :createdAt, modifiedAt = :modifiedAt
             WHERE id = :id`
         );
     }
 
-    updateGame(gameId: number, eventId: number, modifiedBy: number): void {
-        this.updateGameStatement().run({ eventId, modifiedBy, id: gameId, timestamp: new Date().toISOString() });
+    updateGame(gameId: number, eventId: number, modifiedBy: number, createdAt: Date): void {
+        this.updateGameStatement().run({ eventId, modifiedBy, id: gameId, createdAt: createdAt.toISOString(), modifiedAt: new Date().toISOString() });
     }
 
     private deleteGamePlayersByGameIdStatement(): Statement<{ gameId: number }, void> {

@@ -24,7 +24,7 @@ export interface GameWithPlayers extends Game {
 export interface PlayerData {
     userId: number;
     points: number;
-    startPlace?: string | undefined;
+    startPlace?: string | undefined | null;
 }
 
 export interface GameFilters {

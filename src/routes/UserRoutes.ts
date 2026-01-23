@@ -8,13 +8,6 @@ const userController = new UserController();
 
 // Public - user registration
 router.post('/', withTransaction((req, res) => userController.registerUser(req, res)));
-// Admin only - register user without Telegram
-router.post(
-    '/without-telegram',
-    requireAuth,
-    requireAdmin,
-    withTransaction((req, res) => userController.registerUserWithoutTelegram(req, res))
-);
 
 // Authenticated users - read operations
 router.get('/', requireAuth, withTransaction((req, res) => userController.getAllUsers(req, res)));

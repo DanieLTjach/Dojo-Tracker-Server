@@ -6,8 +6,7 @@ import {
     userEditSchema,
     getUserByTelegramIdSchema,
     userRegistrationSchema,
-    getUserByIdSchema,
-    userRegistrationWithoutTelegramSchema
+    getUserByIdSchema
 } from '../schema/UserSchemas.ts';
 import { SYSTEM_USER_ID } from '../../config/constants.ts';
 
@@ -18,14 +17,7 @@ export class UserController {
     registerUser(req: Request, res: Response) {
         const { name, telegramUsername, telegramId } = userRegistrationSchema.parse(req).body;
         const createdBy = req.user?.userId ?? SYSTEM_USER_ID;
-        const newUser = this.userService.registerUser(name, telegramUsername, telegramId, createdBy);
-        return res.status(StatusCodes.CREATED).json(newUser);
-    }
-
-    registerUserWithoutTelegram(req: Request, res: Response) {
-        const { name } = userRegistrationWithoutTelegramSchema.parse(req).body;
-        const createdBy = req.user?.userId ?? SYSTEM_USER_ID;
-        const newUser = this.userService.registerUser(name, undefined, undefined, createdBy);
+        const newUser = this.userService.registerUser(name, telegramUsername ?? undefined, telegramId, createdBy);
         return res.status(StatusCodes.CREATED).json(newUser);
     }
 
@@ -53,7 +45,7 @@ export class UserController {
         } = userEditSchema.parse(req);
 
         const modifiedBy = req.user!.userId; // Non-null assertion safe because requireAuth ensures user exists
-        const editedUser = this.userService.editUser(id, name, telegramUsername, modifiedBy);
+        const editedUser = this.userService.editUser(id, name ?? undefined, telegramUsername ?? undefined, modifiedBy);
         return res.status(StatusCodes.OK).json(editedUser);
     }
 
