@@ -632,4 +632,139 @@ describe('Game API Endpoints', () => {
             expect(response.body.error).toBe('Invalid request data');
         });
     });
+
+    describe('Custom createdAt field - Admin privileges', () => {
+        describe('POST /api/games - Create Game with custom createdAt', () => {
+            test('should allow admin to create a game with custom createdAt', async () => {
+                const customDate = new Date('2024-06-15T14:30:00.000Z');
+                const response = await request(app)
+                    .post('/api/games')
+                    .set('Authorization', adminAuthHeader)
+                    .send({
+                        eventId: TEST_EVENT_ID,
+                        playersData: [
+                            { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
+                            { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
+                            { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
+                            { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
+                        ],
+                        createdAt: customDate.toISOString()
+                    });
+
+                expect(response.status).toBe(201);
+                expect(response.body).toHaveProperty('id');
+                expect(response.body.eventId).toBe(TEST_EVENT_ID);
+                expect(response.body.players).toHaveLength(4);
+                expect(new Date(response.body.createdAt).getTime()).toBe(customDate.getTime());
+            });
+
+            test('should prevent non-admin from creating a game with custom createdAt', async () => {
+                const customDate = new Date('2024-06-15T15:30:00.000Z');
+                const response = await request(app)
+                    .post('/api/games')
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        eventId: TEST_EVENT_ID,
+                        playersData: [
+                            { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
+                            { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
+                            { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
+                            { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
+                        ],
+                        createdAt: customDate.toISOString()
+                    });
+
+                expect(response.status).toBe(403);
+                expect(response.body.message).toBe('Щоб створити гру з заданим часом, ви повинні бути адміністратором');
+            });
+
+            test('should allow non-admin to create a game without createdAt field', async () => {
+                const response = await request(app)
+                    .post('/api/games')
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        eventId: TEST_EVENT_ID,
+                        playersData: [
+                            { userId: testUser1Id, points: 40000 },
+                            { userId: testUser2Id, points: 35000 },
+                            { userId: testUser3Id, points: 25000 },
+                            { userId: testUser4Id, points: 20000 }
+                        ]
+                    });
+
+                expect(response.status).toBe(201);
+                expect(response.body).toHaveProperty('id');
+                expect(response.body).toHaveProperty('createdAt');
+                // Verify createdAt is automatically set to current time (approximately)
+                const createdAtTime = new Date(response.body.createdAt).getTime();
+                const now = Date.now();
+                expect(Math.abs(createdAtTime - now)).toBeLessThan(5000); // Within 5 seconds
+            });
+        });
+
+        describe('PUT /api/games/:gameId - Update Game with custom createdAt', () => {
+            let gameToUpdateId: number;
+            const originalDate = new Date('2024-06-10T10:00:00.000Z');
+
+            beforeAll(async () => {
+                // Create a game with a custom date as admin
+                const response = await request(app)
+                    .post('/api/games')
+                    .set('Authorization', adminAuthHeader)
+                    .send({
+                        eventId: TEST_EVENT_ID,
+                        playersData: [
+                            { userId: testUser1Id, points: 30000 },
+                            { userId: testUser2Id, points: 30000 },
+                            { userId: testUser3Id, points: 30000 },
+                            { userId: testUser4Id, points: 30000 }
+                        ],
+                        createdAt: originalDate.toISOString()
+                    });
+                gameToUpdateId = response.body.id;
+            });
+
+            test('should allow admin to update game with new createdAt', async () => {
+                const newDate = new Date('2024-06-11T12:00:00.000Z');
+                const response = await request(app)
+                    .put(`/api/games/${gameToUpdateId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({
+                        eventId: TEST_EVENT_ID,
+                        playersData: [
+                            { userId: testUser1Id, points: 40000 },
+                            { userId: testUser2Id, points: 35000 },
+                            { userId: testUser3Id, points: 25000 },
+                            { userId: testUser4Id, points: 20000 }
+                        ],
+                        createdAt: newDate.toISOString()
+                    });
+
+                expect(response.status).toBe(200);
+                expect(response.body.id).toBe(gameToUpdateId);
+                expect(new Date(response.body.createdAt).getTime()).toBe(newDate.getTime());
+            });
+
+            test('should allow admin to update game without changing createdAt', async () => {
+                const response = await request(app)
+                    .put(`/api/games/${gameToUpdateId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({
+                        eventId: TEST_EVENT_ID,
+                        playersData: [
+                            { userId: testUser1Id, points: 35000 },
+                            { userId: testUser2Id, points: 35000 },
+                            { userId: testUser3Id, points: 30000 },
+                            { userId: testUser4Id, points: 20000 }
+                        ]
+                    });
+
+                expect(response.status).toBe(200);
+                expect(response.body.id).toBe(gameToUpdateId);
+                // createdAt should remain unchanged from the previous update
+                const newDate = new Date('2024-06-11T12:00:00.000Z');
+                expect(new Date(response.body.createdAt).getTime()).toBe(newDate.getTime());
+            });
+        });
+    });
 });

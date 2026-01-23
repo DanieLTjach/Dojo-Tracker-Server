@@ -18,13 +18,13 @@ export class UserService {
     registerUser(
         userName: string,
         userTelegramUsername: string | undefined,
-        userTelegramId: number | undefined,
+        userTelegramId: number,
         createdBy: number
     ): User {
         if (this.userExistsByName(userName)) {
             throw new NameAlreadyTakenByAnotherUser(userName);
         }
-        if (userTelegramId !== undefined && this.userExistsByTelegramId(userTelegramId)) {
+        if (this.userExistsByTelegramId(userTelegramId)) {
             throw new UserWithThisTelegramIdAlreadyExists(userTelegramId);
         }
         if (userTelegramUsername !== undefined && this.userExistsByTelegramUsername(userTelegramUsername)) {

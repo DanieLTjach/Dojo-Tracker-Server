@@ -3,6 +3,7 @@ import type { SignOptions } from 'jsonwebtoken';
 import type { TokenPair, DecodedToken } from '../model/AuthModels.ts';
 import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
+import { InvalidTokenError, TokenExpiredError } from '../error/AuthErrors.ts';
 
 export class TokenService {
 
@@ -30,10 +31,10 @@ export class TokenService {
             return jwt.verify(token, config.jwtSecret) as DecodedToken;
         } catch (error) {
             if (error instanceof jwt.TokenExpiredError) {
-                throw new Error('Token has expired');
+                throw new TokenExpiredError();
             }
             if (error instanceof jwt.JsonWebTokenError) {
-                throw new Error('Invalid token');
+                throw new InvalidTokenError();
             }
             throw error;
         }
