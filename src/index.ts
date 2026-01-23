@@ -15,7 +15,9 @@ import LogService from './service/LogService.ts';
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: config.frontendUrl
+}));
 
 // Health check endpoint
 app.get('/', (_req, res) => {

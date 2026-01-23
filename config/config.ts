@@ -5,6 +5,7 @@ interface Config {
     jwtSecret: string;
     jwtExpiry: string;
     authInitDataValiditySeconds: number;
+    frontendUrl: string;
     botToken: string;
     adminChatId?: number | undefined;
     ratingChatId?: number | undefined;
@@ -57,6 +58,7 @@ const config: Config = {
     jwtSecret: getRequiredStringEnvVariable("JWT_SECRET"),
     jwtExpiry: process.env["JWT_EXPIRY"] || '7d',
     authInitDataValiditySeconds: tryParseIntEnvVariable("AUTH_INIT_DATA_VALIDITY_SECONDS") || 3600,
+    frontendUrl: getRequiredStringEnvVariable("FRONTEND_URL"),
     adminChatId,
     ratingChatId,
     ratingTopicId
