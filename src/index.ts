@@ -11,6 +11,8 @@ import ratingRoutes from './routes/RatingRoutes.ts';
 import userStatsRoutes from './routes/UserStatsRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
 
+import LogService from './service/LogService.ts';
+
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -34,7 +36,7 @@ app.use(handleErrors);
 
 app.listen(config.port, (error?: Error) => {
     if (error) {
-        console.error('Error starting the server:', error);
+        LogService.logError('Error starting the server', error);
     } else {
         console.log(`Server is running on port ${config.port}`);
     }
