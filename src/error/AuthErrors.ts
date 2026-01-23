@@ -29,3 +29,15 @@ export class InsufficientPermissionsError extends ForbiddenError {
         super('Недостатньо прав для виконання цієї дії', 'insufficientPermissions');
     }
 }
+
+export class TokenExpiredError extends UnauthorizedError {
+    constructor() {
+        super('Термін дії токена автентифікації минув. Перезайдіть в додаток', 'tokenExpired');
+    }
+}
+
+export class InvalidTokenError extends UnauthorizedError {
+    constructor() {
+        super('Невалідний токен автентифікації. Перезайдіть в додаток', 'invalidToken');
+    }
+}

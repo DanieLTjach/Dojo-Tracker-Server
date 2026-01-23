@@ -68,6 +68,7 @@ JWT_SECRET=$(openssl rand -base64 32)
 
 echo "Creating .env file on the server..."
 ssh $SSH_OPTS $SERVER "cat > app/.env << EOF
+NODE_ENV=production
 TAG=latest
 BOT_TOKEN=$BOT_TOKEN
 JWT_SECRET=$JWT_SECRET

@@ -14,7 +14,7 @@ export interface GamePlayer {
     telegramUsername: string | null;
     points: number;
     ratingChange: number;
-    startPlace: string;
+    startPlace: string | null;
 }
 
 export interface GameWithPlayers extends Game {
@@ -24,7 +24,7 @@ export interface GameWithPlayers extends Game {
 export interface PlayerData {
     userId: number;
     points: number;
-    startPlace?: string | undefined;
+    startPlace?: string | undefined | null;
 }
 
 export interface GameFilters {
@@ -32,4 +32,7 @@ export interface GameFilters {
     dateTo?: Date | undefined;
     userId?: number | undefined;
     eventId?: number | undefined;
+    sortOrder?: 'asc' | 'desc' | undefined;
+    limit?: number | undefined;
+    offset?: number | undefined;
 }

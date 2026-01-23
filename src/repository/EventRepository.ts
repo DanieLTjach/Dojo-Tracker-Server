@@ -6,13 +6,14 @@ export class EventRepository {
     private findAllEventsStatement(): Statement<[], EventWithGameRulesDBEntity> {
         return dbManager.db.prepare(`
             SELECT
-                    e.*,
-                    gr.id as gr_id,
-                    gr.name as gr_name,
-                    gr.numberOfPlayers as gr_numberOfPlayers,
+                e.*,
+                gr.id as gr_id,
+                gr.name as gr_name,
+                gr.numberOfPlayers as gr_numberOfPlayers,
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
-                gr.startingRating as gr_startingRating
+                gr.startingRating as gr_startingRating,
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             ORDER BY e.createdAt DESC`
@@ -26,13 +27,14 @@ export class EventRepository {
     private findEventByIdStatement(): Statement<{ id: number }, EventWithGameRulesDBEntity> {
         return dbManager.db.prepare(`
             SELECT
-                    e.*,
-                    gr.id as gr_id,
-                    gr.name as gr_name,
-                    gr.numberOfPlayers as gr_numberOfPlayers,
+                e.*,
+                gr.id as gr_id,
+                gr.name as gr_name,
+                gr.numberOfPlayers as gr_numberOfPlayers,
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
-                gr.startingRating as gr_startingRating
+                gr.startingRating as gr_startingRating,
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             WHERE e.id = :id`
@@ -62,6 +64,7 @@ interface EventWithGameRulesDBEntity {
     gr_uma: string;
     gr_startingPoints: number;
     gr_startingRating: number;
+    gameCount: number;
 }
 
 function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): Event {
@@ -80,6 +83,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
+        gameCount: dbEntity.gameCount,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy

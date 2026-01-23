@@ -3,6 +3,7 @@ import type { User } from '../src/model/UserModels.ts';
 import type { DecodedToken } from '../src/model/AuthModels.ts';
 import jwt from 'jsonwebtoken';
 import config from '../config/config.ts';
+import { InvalidTokenError, TokenExpiredError } from '../src/error/AuthErrors.ts';
 
 /**
  * Helper function to decode a token without verification (for testing).
@@ -108,7 +109,7 @@ describe('TokenService', () => {
 
             expect(() => {
                 tokenService.verifyToken(expiredToken);
-            }).toThrow('Token has expired');
+            }).toThrow(new TokenExpiredError());
         });
 
         it('should throw error for invalid token signature', () => {
@@ -133,19 +134,19 @@ describe('TokenService', () => {
 
             expect(() => {
                 tokenService.verifyToken(invalidToken);
-            }).toThrow('Invalid token');
+            }).toThrow(new InvalidTokenError());
         });
 
         it('should throw error for malformed token', () => {
             expect(() => {
                 tokenService.verifyToken('not-a-valid-jwt-token');
-            }).toThrow('Invalid token');
+            }).toThrow(new InvalidTokenError());
         });
 
         it('should throw error for empty token', () => {
             expect(() => {
                 tokenService.verifyToken('');
-            }).toThrow('Invalid token');
+            }).toThrow(new InvalidTokenError());
         });
     });
 

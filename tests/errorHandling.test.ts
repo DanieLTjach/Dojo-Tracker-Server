@@ -16,7 +16,8 @@ describe('ErrorHandling Middleware', () => {
         mockReq = {
             method: 'GET',
             url: '/test',
-            body: { test: 'data' }
+            body: { test: 'data' },
+            user: { userId: 123}
         };
         mockRes = {
             status: jest.fn().mockReturnThis() as any,
@@ -48,7 +49,7 @@ describe('ErrorHandling Middleware', () => {
             error: 'Invalid request data',
             details: zodError.issues
         });
-        expect(consoleErrorSpy).toHaveBeenCalledTimes(2);
+        expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should handle SqliteError and return 500 with error details', () => {
@@ -129,8 +130,8 @@ describe('ErrorHandling Middleware', () => {
         handleErrors(error, mockReq as Request, mockRes as Response, mockNext);
 
         expect(consoleErrorSpy).toHaveBeenCalledWith(
-            'Error while processing request GET /test with body {"test":"data"}'
+            'Error while processing request GET /test from user 123 with body {"test":"data"}',
+            error
         );
-        expect(consoleErrorSpy).toHaveBeenCalledWith(error);
     });
 });

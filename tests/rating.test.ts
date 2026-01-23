@@ -45,7 +45,14 @@ describe('Rating API Endpoints', () => {
                 telegramId
             });
         expect(response.status).toBe(201);
-        return response.body.id;
+        const userId = response.body.id;
+
+        // Activate the user
+        await request(app)
+            .post(`/api/users/${userId}/activate`)
+            .set('Authorization', adminAuthHeader);
+
+        return userId;
     }
 
     // Helper to create a test game
@@ -100,10 +107,13 @@ describe('Rating API Endpoints', () => {
             const rating = response.body[0];
             expect(rating).toHaveProperty('user');
             expect(rating).toHaveProperty('rating');
+            expect(rating).toHaveProperty('gamesPlayed');
             expect(rating.user).toHaveProperty('id');
             expect(rating.user).toHaveProperty('name');
             expect(typeof rating.user.id).toBe('number');
             expect(typeof rating.rating).toBe('number');
+            expect(typeof rating.gamesPlayed).toBe('number');
+            expect(rating.gamesPlayed).toBe(1); // Should have 1 game from createGameSetup
         });
 
         test('should return ratings in descending order', async () => {
@@ -130,6 +140,29 @@ describe('Rating API Endpoints', () => {
                 .set('Authorization', authHeader);
 
             expect(response.status).toBe(404);
+        });
+
+        test('should track gamesPlayed correctly for multiple games', async () => {
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetup();
+
+            // Create a second game
+            await createTestGame(user1AuthHeader, [
+                { userId: user1Id, points: 35000, startPlace: 'EAST' },
+                { userId: user2Id, points: 30000, startPlace: 'SOUTH' },
+                { userId: user3Id, points: 30000, startPlace: 'WEST' },
+                { userId: user4Id, points: 25000, startPlace: 'NORTH' }
+            ]);
+
+            const response = await request(app)
+                .get(`/api/events/${TEST_EVENT_ID}/rating`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+
+            // All 4 players should have played 2 games
+            for (const rating of response.body) {
+                expect(rating.gamesPlayed).toBe(2);
+            }
         });
 
     });

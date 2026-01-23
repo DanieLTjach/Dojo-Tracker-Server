@@ -49,6 +49,7 @@ describe('Event API Endpoints', () => {
             expect(event).toHaveProperty('gameRules');
             expect(event).toHaveProperty('dateFrom');
             expect(event).toHaveProperty('dateTo');
+            expect(event).toHaveProperty('gameCount');
             expect(event).toHaveProperty('createdAt');
             expect(event).toHaveProperty('modifiedAt');
             expect(event).toHaveProperty('modifiedBy');
@@ -113,6 +114,7 @@ describe('Event API Endpoints', () => {
             expect(typeof response.body.gameRules).toBe('object');
             expect(response.body.dateFrom === null || typeof response.body.dateFrom === 'string').toBe(true);
             expect(response.body.dateTo === null || typeof response.body.dateTo === 'string').toBe(true);
+            expect(typeof response.body.gameCount).toBe('number');
             expect(typeof response.body.createdAt).toBe('string');
             expect(typeof response.body.modifiedAt).toBe('string');
             expect(typeof response.body.modifiedBy).toBe('number');
@@ -156,6 +158,17 @@ describe('Event API Endpoints', () => {
                     expect(typeof num).toBe('number');
                 });
             });
+        });
+
+        test('should return gameCount field with correct value', async () => {
+            const response = await request(app)
+                .get(`/api/events/${TEST_EVENT_ID}`)
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('gameCount');
+            expect(typeof response.body.gameCount).toBe('number');
+            expect(response.body.gameCount).toBeGreaterThanOrEqual(0);
         });
 
         test('should return 404 for non-existent event', async () => {

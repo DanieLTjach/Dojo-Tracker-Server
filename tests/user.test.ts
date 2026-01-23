@@ -29,7 +29,7 @@ describe('User API Endpoints', () => {
     });
 
     describe('POST /api/users', () => {
-        it('should register a new user with telegram', async () => {
+        it('should register a new user', async () => {
             const userData = {
                 name: 'Test User',
                 telegramUsername: '@testuser',
@@ -42,14 +42,80 @@ describe('User API Endpoints', () => {
                 .expect(201);
 
             testUserId = response.body.id;
-            regularUserAuthHeader = createAuthHeader(testUserId);
 
             expect(response.body).toHaveProperty('id');
             expect(response.body.name).toBe(userData.name);
             expect(response.body.telegramUsername).toBe(userData.telegramUsername);
             expect(response.body.telegramId).toBe(userData.telegramId);
-            expect(response.body.isActive).toBe(true);
+            expect(response.body.isActive).toBe(false);
             expect(response.body.isAdmin).toBe(false);
+
+            // Activate the user for subsequent tests
+            await request(app)
+                .post(`/api/users/${testUserId}/activate`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            regularUserAuthHeader = createAuthHeader(testUserId);
+        });
+
+        it('should register a new user without telegram username', async () => {
+            const userData = {
+                name: 'Test User without telegram username',
+                telegramId: 456456457
+            };
+
+            const response = await request(app)
+                .post('/api/users')
+                .send(userData)
+                .expect(201);
+
+            testUserId = response.body.id;
+
+            expect(response.body).toHaveProperty('id');
+            expect(response.body.name).toBe(userData.name);
+            expect(response.body.telegramUsername).toBeNull();
+            expect(response.body.telegramId).toBe(userData.telegramId);
+            expect(response.body.isActive).toBe(false);
+            expect(response.body.isAdmin).toBe(false);
+
+            // Activate the user for subsequent tests
+            await request(app)
+                .post(`/api/users/${testUserId}/activate`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            regularUserAuthHeader = createAuthHeader(testUserId);
+        });
+
+        it('should register a new user with null telegram username', async () => {
+            const userData = {
+                name: 'Test User with null telegram username',
+                telegramUsername: null,
+                telegramId: 456456458
+            };
+
+            const response = await request(app)
+                .post('/api/users')
+                .send(userData)
+                .expect(201);
+
+            testUserId = response.body.id;
+
+            expect(response.body).toHaveProperty('id');
+            expect(response.body.name).toBe(userData.name);
+            expect(response.body.telegramUsername).toBeNull();
+            expect(response.body.telegramId).toBe(userData.telegramId);
+            expect(response.body.isActive).toBe(false);
+            expect(response.body.isAdmin).toBe(false);
+
+            // Activate the user for subsequent tests
+            await request(app)
+                .post(`/api/users/${testUserId}/activate`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            regularUserAuthHeader = createAuthHeader(testUserId);
         });
 
         it('should register a new user (admin authenticated via JWT)', async () => {
@@ -157,38 +223,6 @@ describe('User API Endpoints', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe('Користувач з Telegram id 456456456 вже існує');
-        });
-    });
-
-    describe('POST /api/users/without-telegram', () => {
-        it('should register a new user without telegram', async () => {
-            const userData = {
-                name: 'User Without Telegram'
-            };
-
-            const response = await request(app)
-                .post('/api/users/without-telegram')
-                .set('Authorization', adminAuthHeader)
-                .send(userData)
-                .expect(201);
-
-            expect(response.body).toHaveProperty('id');
-            expect(response.body.name).toBe(userData.name);
-            expect(response.body.telegramUsername).toBeNull();
-            expect(response.body.telegramId).toBeNull();
-            expect(response.body.isActive).toBe(true);
-        });
-
-        it('should fail when name is missing', async () => {
-            const userData = {};
-
-            const response = await request(app)
-                .post('/api/users/without-telegram')
-                .set('Authorization', adminAuthHeader)
-                .send(userData);
-
-            expect(response.status).toBe(400);
-            expect(response.body.error).toBe('Invalid request data');
         });
     });
 

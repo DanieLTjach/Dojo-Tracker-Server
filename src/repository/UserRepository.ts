@@ -6,7 +6,7 @@ import { booleanToInteger } from '../db/dbUtils.ts';
 export class UserRepository {
 
     private findAllUsersStatement(): Statement<unknown[], UserDBEntity> {
-        return dbManager.db.prepare('SELECT * FROM user ORDER BY id');
+        return dbManager.db.prepare('SELECT * FROM user WHERE id != 0 ORDER BY id');
     }
 
     findAllUsers(): User[] {
@@ -54,24 +54,24 @@ export class UserRepository {
         telegramUsername: string | undefined,
         telegramId: number | undefined,
         modifiedBy: number,
+        isActive: number,
         timestamp: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy, createdAt, modifiedAt) 
-            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :timestamp, :timestamp)`
+            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy, isActive, createdAt, modifiedAt)
+            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :isActive, :timestamp, :timestamp)`
         );
     }
 
     registerUser(name: string, telegramUsername: string | undefined, telegramId: number | undefined, createdBy: number): number {
-        return Number(this.registerUserStatement().run(
-            {
-                name,
-                telegramUsername,
-                telegramId,
-                modifiedBy: createdBy,
-                timestamp: new Date().toISOString()
-            }
-        ).lastInsertRowid);
+        return Number(this.registerUserStatement().run({
+            name,
+            telegramUsername,
+            telegramId,
+            modifiedBy: createdBy,
+            isActive: booleanToInteger(false),
+            timestamp: new Date().toISOString()
+        }).lastInsertRowid);
     }
 
     private updateUserNameStatement(): Statement<{

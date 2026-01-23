@@ -1,4 +1,4 @@
-import { BadRequestError, NotFoundError } from "./BaseErrors.ts";
+import { BadRequestError, ForbiddenError, NotFoundError } from "./BaseErrors.ts";
 
 export class GameNotFoundById extends NotFoundError {
     constructor(id: number) {
@@ -45,5 +45,11 @@ export class EventHasntStartedError extends BadRequestError {
 export class EventHasEndedError extends BadRequestError {
     constructor(eventName: string) {
         super(`${eventName} вже закінчився`, 'eventHasEnded');
+    }
+}
+
+export class YouHaveToBeAdminToCreateGameWithCustomTime extends ForbiddenError {
+    constructor() {
+        super('Щоб створити гру з заданим часом, ви повинні бути адміністратором', 'youHaveToBeAdminToCreateGameWithCustomTime');
     }
 }

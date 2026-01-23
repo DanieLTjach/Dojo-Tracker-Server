@@ -8,12 +8,15 @@ import {
     IncorrectTotalPointsError,
     EventHasntStartedError,
     EventHasEndedError,
-    DuplicateGameTimestampInEventError
+    DuplicateGameTimestampInEventError,
+    YouHaveToBeAdminToCreateGameWithCustomTime
 } from '../error/GameErrors.ts';
-import type { GameWithPlayers, PlayerData, GameFilters } from '../model/GameModels.ts';
+import type { GameWithPlayers, PlayerData, GameFilters, GamePlayer } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
+import LogService from './LogService.ts';
+import dedent from 'dedent';
 
 export class GameService {
 
@@ -25,20 +28,31 @@ export class GameService {
     addGame(
         eventId: number,
         playersData: PlayerData[],
-        createdBy: number
+        createdBy: number,
+        createdAt: Date | undefined
     ): GameWithPlayers {
-        const gameTimestamp = new Date();
+        const gameTimestamp = createdAt ?? new Date();
+        if (createdAt !== undefined) {
+            this.userService.validateUserIsAdmin(createdBy, () => new YouHaveToBeAdminToCreateGameWithCustomTime());
+        }
 
         const event = this.eventService.getEventById(eventId);
         this.validatePlayers(playersData, event.gameRules);
         this.validateGameWithinEventDates(event, gameTimestamp);
         this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
 
+        const standingsBefore = this.ratingService.calculateStandings(eventId);
+
         const newGameId = this.gameRepository.createGame(eventId, createdBy, gameTimestamp);
         this.addPlayersToGame(newGameId, playersData, createdBy);
         this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules);
 
-        return this.getGameById(newGameId);
+        const standingsAfter = this.ratingService.calculateStandings(eventId);
+
+        const newGame = this.getGameById(newGameId);
+        this.logNewGame(newGame, event);
+        this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter);
+        return newGame;
     }
 
     getGameById(gameId: number): GameWithPlayers {
@@ -74,28 +88,134 @@ export class GameService {
         gameId: number,
         eventId: number,
         playersData: PlayerData[],
-        modifiedBy: number
+        modifiedBy: number,
+        createdAt: Date | undefined
     ): GameWithPlayers {
-        const game = this.getGameById(gameId);
+        const oldGame = this.getGameById(gameId);
         const event = this.eventService.getEventById(eventId);
         this.validatePlayers(playersData, event.gameRules);
 
-        this.gameRepository.updateGame(gameId, eventId, modifiedBy);
+        const newGameTimestamp = createdAt ?? oldGame.createdAt;
+
+        this.gameRepository.updateGame(gameId, eventId, modifiedBy, newGameTimestamp);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.addPlayersToGame(gameId, playersData, modifiedBy);
 
-        this.ratingService.deleteRatingChangesFromGame(game);
-        this.ratingService.addRatingChangesFromGame(gameId, game.createdAt, playersData, eventId, event.gameRules);
+        this.ratingService.deleteRatingChangesFromGame(oldGame);
+        this.ratingService.addRatingChangesFromGame(gameId, newGameTimestamp, playersData, eventId, event.gameRules);
 
-        return this.getGameById(gameId);
+        const updatedGame = this.getGameById(gameId);
+        this.logEditedGame(oldGame, updatedGame, event, modifiedBy);
+        return updatedGame;
     }
 
-    deleteGame(gameId: number): void {
+    deleteGame(gameId: number, deletedBy: number): void {
         const game = this.getGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
         this.ratingService.deleteRatingChangesFromGame(game);
 
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.gameRepository.deleteGameById(gameId);
+
+        this.logDeletedGame(game, event, deletedBy);
+    }
+
+    private logNewGame(game: GameWithPlayers, event: Event): void {
+        this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by'); 
+    }
+
+    private logEditedGame(oldGame: GameWithPlayers, newGame: GameWithPlayers, event: Event, modifiedBy: number): void {
+        const user = this.userService.getUserById(modifiedBy);
+        
+        const oldEvent = this.eventService.getEventById(oldGame.eventId);
+        const message = dedent`
+            <b>✏️ Game Edited</b>
+
+            <b>Game ID:</b> <code>${newGame.id}</code>
+            <b>Event:</b> ${oldEvent.name} <code>(ID: ${oldEvent.id})</code> → ${event.name} <code>(ID: ${event.id})</code>
+            <b>Timestamp:</b> <code>${oldGame.createdAt.toISOString()}</code> → <code>${newGame.createdAt.toISOString()}</code>
+            <b>Edited by:</b> ${user.name}
+
+            <b>Players (Before):</b>\n
+        ` + this.printPlayersLog(oldGame.players) + dedent`
+            \n\n<b>Players (After):</b>\n
+        ` + this.printPlayersLog(newGame.players);
+        LogService.logInfo(message);
+    }
+
+    private logDeletedGame(game: GameWithPlayers, event: Event, deletedBy: number): void {
+        this.logGameAction(game, event, deletedBy, '🗑️ Game Deleted', 'Deleted by');
+    }
+
+    private logGameAction(
+        game: GameWithPlayers,
+        event: Event,
+        userId: number,
+        title: string,
+        userLabel: string
+    ): void {
+        const user = this.userService.getUserById(userId);
+        const message = dedent`
+            <b>${title}</b>
+
+            <b>Game ID:</b> <code>${game.id}</code>
+            <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>Timestamp:</b> <code>${game.createdAt.toISOString()}</code>
+            <b>${userLabel}:</b> ${user.name}
+
+            <b>Players:</b>\n
+        ` + this.printPlayersLog(game.players);
+        LogService.logInfo(message);
+    }
+
+    private printPlayersLog(players: GamePlayer[]): string {
+        return players.map((p, index) => {
+            const user = this.userService.getUserById(p.userId);
+            const ratingSign = p.ratingChange >= 0 ? '+' : '';
+            
+            let userDescription = `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>`;
+            userDescription += `\n   • Points: <b>${p.points}</b>`;
+            if (p.startPlace !== null) {
+                userDescription += `\n   • Start Place: <b>${p.startPlace}</b>`;
+            }
+            userDescription += `\n   • Rating: <b>${ratingSign}${p.ratingChange}</b>`;
+            return userDescription;
+        }).join('\n\n');
+    }
+
+        private logRatingUpdateForGame(
+        game: GameWithPlayers,
+        event: Event,
+        standingsBefore: Map<number, number>,
+        standingsAfter: Map<number, number>
+    ): void {
+        // Sort players by points descending (as they were ranked in the game)
+        const sortedPlayers = [...game.players].sort((a, b) => b.points - a.points);
+
+        const playerLines = sortedPlayers.map((player, index) => {
+            const user = this.userService.getUserById(player.userId);
+            const standingBefore = standingsBefore.get(player.userId) ?? Infinity;
+            const standingAfter = standingsAfter.get(player.userId)!;
+
+            const standingBeforeString = standingBefore === Infinity ? 'N/A' : standingBefore;
+            let standingString;
+
+            if (standingAfter < standingBefore) {
+                standingString = `↗️ (${standingBeforeString} → ${standingAfter})`;
+            } else if (standingAfter > standingBefore) {
+                standingString = `↘️ (${standingBeforeString} → ${standingAfter})`;
+            } else {
+                standingString = `⏺️ (${standingBeforeString})`;
+            }
+
+            const ratingSign = player.ratingChange >= 0 ? '+' : '';
+            
+            return `<b>${index + 1}. ${user.name}</b> ${ratingSign}${player.ratingChange} ${standingString}`;
+        }).join('\n');
+
+        const message = `<b>${event.name}</b>: Додану нову гру\n\n` + playerLines;
+        
+        LogService.logRatingUpdate(message);
     }
 
     private validateGameFilters(filters: GameFilters): void {
@@ -126,7 +246,7 @@ export class GameService {
                 gameId,
                 player.userId,
                 player.points,
-                player.startPlace,
+                player.startPlace ?? undefined,
                 modifiedBy
             );
         }
@@ -150,7 +270,7 @@ export class GameService {
     private validateTotalPoints(playersData: PlayerData[], gameRules: GameRules): void {
         const totalPoints = playersData.reduce((sum, player) => sum + player.points, 0);
         const expectedTotal = gameRules.numberOfPlayers * gameRules.startingPoints;
-        
+
         if (totalPoints !== expectedTotal) {
             throw new IncorrectTotalPointsError(expectedTotal, totalPoints);
         }
