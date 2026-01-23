@@ -1,14 +1,15 @@
 import { UserRepository } from '../repository/UserRepository.ts';
 import {
-    UserIsNotAdmin,
     UserNotFoundById,
     UserNotFoundByTelegramId,
-    UserWithThisNameAlreadyExists,
     UserWithThisTelegramIdAlreadyExists,
-    UserWithThisTelegramUsernameAlreadyExists,
-    UserIsNotActive
+    UserIsNotActive,
+    NameAlreadyTakenByAnotherUser,
+    TelegramUsernameAlreadyTakenByAnotherUser,
+    YouHaveToBeAdminToEditAnotherUser
 } from '../error/UserErrors.ts';
 import type { User } from '../model/UserModels.ts';
+import { ResponseStatusError } from '../error/BaseErrors.ts';
 
 export class UserService {
 
@@ -21,13 +22,13 @@ export class UserService {
         createdBy: number
     ): User {
         if (this.userExistsByName(userName)) {
-            throw new UserWithThisNameAlreadyExists(userName);
+            throw new NameAlreadyTakenByAnotherUser(userName);
         }
         if (userTelegramId !== undefined && this.userExistsByTelegramId(userTelegramId)) {
             throw new UserWithThisTelegramIdAlreadyExists(userTelegramId);
         }
         if (userTelegramUsername !== undefined && this.userExistsByTelegramUsername(userTelegramUsername)) {
-            throw new UserWithThisTelegramUsernameAlreadyExists(userTelegramUsername);
+            throw new TelegramUsernameAlreadyTakenByAnotherUser(userTelegramUsername);
         }
 
         const newUserId = this.userRepository.registerUser(userName, userTelegramUsername, userTelegramId, createdBy);
@@ -61,14 +62,16 @@ export class UserService {
         modifiedBy: number
     ): User {
         if (userId !== modifiedBy) {
-            this.validateUserIsAdmin(modifiedBy);
+            this.validateUserIsAdmin(modifiedBy, () => new YouHaveToBeAdminToEditAnotherUser());
         }
         this.validateUserIsActiveById(userId);
 
         if (name !== undefined) {
+            this.validateNameNotTakenByAnotherUser(name, userId);
             this.userRepository.updateUserName(userId, name, modifiedBy);
         }
         if (telegramUsername !== undefined) {
+            this.validateTelegramUsernameNotTakenByAnotherUser(telegramUsername, userId);
             this.userRepository.updateUserTelegramUsername(userId, telegramUsername, modifiedBy);
         }
         return this.getUserById(userId);
@@ -81,10 +84,10 @@ export class UserService {
         return this.getUserById(userId);
     }
 
-    validateUserIsAdmin(id: number): void {
+    validateUserIsAdmin(id: number, insufficientPermissionsError: () => ResponseStatusError): void {
         const user = this.getUserById(id);
         if (!user.isAdmin) {
-            throw new UserIsNotAdmin(id);
+            throw insufficientPermissionsError();
         }
         if (!user.isActive) {
             throw new UserIsNotActive(id);
@@ -123,5 +126,19 @@ export class UserService {
     private userExistsByTelegramId(telegramId: number): boolean {
         const user = this.userRepository.findUserByTelegramId(telegramId);
         return !!user;
+    }
+
+    private validateNameNotTakenByAnotherUser(name: string, userId: number): void {
+        const existingUser = this.userRepository.findUserByName(name);
+        if (existingUser !== undefined && existingUser.id !== userId) {
+            throw new NameAlreadyTakenByAnotherUser(name);
+        }
+    }
+
+    private validateTelegramUsernameNotTakenByAnotherUser(telegramUsername: string, userId: number): void {
+        const existingUser = this.userRepository.findUserByTelegramUsername(telegramUsername);
+        if (existingUser !== undefined && existingUser.id !== userId) {
+            throw new TelegramUsernameAlreadyTakenByAnotherUser(telegramUsername);
+        }
     }
 }

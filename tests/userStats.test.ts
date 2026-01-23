@@ -6,7 +6,7 @@ import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -17,16 +17,21 @@ app.use(handleErrors);
 
 describe('User Stats API Endpoints', () => {
     const SYSTEM_USER_ID = 0;
-    const TEST_EVENT_ID = 1; // Test Event from migrations
-
-    let testUser1Id: number;
-    let testUser2Id: number;
-    let testUser3Id: number;
-    let testUser4Id: number;
-    let testUser5Id: number; // User who hasn't played any games
+    const TEST_EVENT_ID = 1000; // Test Event from testHelpers
 
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
-    let user1AuthHeader: string;
+
+    beforeEach(async () => {
+        dbManager.closeDB();
+        cleanupTestDatabase();
+        dbManager.reinitDB();
+        createTestEvent();
+    });
+
+    afterAll(() => {
+        dbManager.closeDB();
+        cleanupTestDatabase();
+    });
 
     // Helper to create test users
     async function createTestUser(name: string, telegramId: number): Promise<number> {
@@ -54,60 +59,63 @@ describe('User Stats API Endpoints', () => {
             eventId: TEST_EVENT_ID,
             playersData,
         });
+        if (response.status !== 201) {
+            throw new Error(`Game creation failed with status ${response.status}: ${JSON.stringify(response.body)}`);
+        }
         return response.body.id;
     }
 
-    beforeAll(async () => {
-        // Create test users
-        testUser1Id = await createTestUser('StatsPlayer1', 311111111);
-        testUser2Id = await createTestUser('StatsPlayer2', 322222222);
-        testUser3Id = await createTestUser('StatsPlayer3', 333333333);
-        testUser4Id = await createTestUser('StatsPlayer4', 344444444);
-        testUser5Id = await createTestUser('StatsPlayer5', 355555555);
+    // Helper to create full test setup with 4 users and 4 games
+    async function createFullTestSetup() {
+        const testUser1Id = await createTestUser('StatsPlayer1', 311111111);
+        const testUser2Id = await createTestUser('StatsPlayer2', 322222222);
+        const testUser3Id = await createTestUser('StatsPlayer3', 333333333);
+        const testUser4Id = await createTestUser('StatsPlayer4', 344444444);
+        const testUser5Id = await createTestUser('StatsPlayer5', 355555555);
 
-        user1AuthHeader = createAuthHeader(testUser1Id);
+        const user1AuthHeader = createAuthHeader(testUser1Id);
 
         // Create multiple test games with varied results for comprehensive stats
+        // Total points must equal 120000 (4 players * 30000 starting points)
         // Game 1: User1 wins with high points
         await createTestGame(user1AuthHeader, [
-            { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
-            { userId: testUser2Id, points: 25000, startPlace: 'SOUTH' },
-            { userId: testUser3Id, points: 20000, startPlace: 'WEST' },
+            { userId: testUser1Id, points: 50000, startPlace: 'EAST' },
+            { userId: testUser2Id, points: 30000, startPlace: 'SOUTH' },
+            { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
             { userId: testUser4Id, points: 15000, startPlace: 'NORTH' },
         ]);
 
         // Game 2: User1 gets 2nd place
         await createTestGame(user1AuthHeader, [
-            { userId: testUser2Id, points: 35000, startPlace: 'EAST' },
-            { userId: testUser1Id, points: 30000, startPlace: 'SOUTH' },
-            { userId: testUser3Id, points: 20000, startPlace: 'WEST' },
+            { userId: testUser2Id, points: 45000, startPlace: 'EAST' },
+            { userId: testUser1Id, points: 35000, startPlace: 'SOUTH' },
+            { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
             { userId: testUser4Id, points: 15000, startPlace: 'NORTH' },
         ]);
 
         // Game 3: User1 gets 3rd place
         await createTestGame(user1AuthHeader, [
-            { userId: testUser3Id, points: 40000, startPlace: 'EAST' },
-            { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
-            { userId: testUser1Id, points: 20000, startPlace: 'WEST' },
+            { userId: testUser3Id, points: 50000, startPlace: 'EAST' },
+            { userId: testUser2Id, points: 40000, startPlace: 'SOUTH' },
+            { userId: testUser1Id, points: 25000, startPlace: 'WEST' },
             { userId: testUser4Id, points: 5000, startPlace: 'NORTH' },
         ]);
 
         // Game 4: User1 gets 4th place (last) with negative points
         await createTestGame(user1AuthHeader, [
-            { userId: testUser2Id, points: 40000, startPlace: 'EAST' },
-            { userId: testUser3Id, points: 35000, startPlace: 'SOUTH' },
+            { userId: testUser2Id, points: 50000, startPlace: 'EAST' },
+            { userId: testUser3Id, points: 45000, startPlace: 'SOUTH' },
             { userId: testUser4Id, points: 30000, startPlace: 'WEST' },
             { userId: testUser1Id, points: -5000, startPlace: 'NORTH' },
         ]);
-    });
 
-    afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
-    });
+        return { testUser1Id, testUser2Id, testUser3Id, testUser4Id, testUser5Id, user1AuthHeader };
+    }
 
     describe('GET /api/events/:eventId/users/:userId/stats - Get User Event Stats', () => {
         test('should return comprehensive stats for a user with multiple games', async () => {
+            const { testUser1Id, user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/stats`)
                 .set('Authorization', user1AuthHeader);
@@ -157,6 +165,8 @@ describe('User Stats API Endpoints', () => {
         });
 
         test('should calculate correct placement percentages', async () => {
+            const { testUser1Id, user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/stats`)
                 .set('Authorization', user1AuthHeader);
@@ -172,20 +182,24 @@ describe('User Stats API Endpoints', () => {
         });
 
         test('should calculate correct points statistics', async () => {
+            const { testUser1Id, user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/stats`)
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(200);
 
-            // User1 points: 40000, 30000, 20000, -5000
-            expect(response.body.maxPoints).toBe(40000);
+            // User1 points: 50000, 35000, 25000, -5000 = 105000 total
+            expect(response.body.maxPoints).toBe(50000);
             expect(response.body.minPoints).toBe(-5000);
-            expect(response.body.sumOfPoints).toBe(85000);
-            expect(response.body.averagePoints).toBe(21250);
+            expect(response.body.sumOfPoints).toBe(105000);
+            expect(response.body.averagePoints).toBe(26250);
         });
 
         test('should return default stats for user with no games', async () => {
+            const { testUser5Id, user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/${testUser5Id}/stats`)
                 .set('Authorization', user1AuthHeader);
@@ -193,7 +207,7 @@ describe('User Stats API Endpoints', () => {
             expect(response.status).toBe(200);
             expect(response.body.userId).toBe(testUser5Id);
             expect(response.body.gamesPlayed).toBe(0);
-            expect(response.body.playerRating).toBe(1000); // Starting rating
+            expect(response.body.playerRating).toBe(0); // Starting rating for gameRules 2
             expect(response.body.sumOfPoints).toBe(0);
             expect(response.body.maxPoints).toBe(0);
             expect(response.body.minPoints).toBe(0);
@@ -204,6 +218,8 @@ describe('User Stats API Endpoints', () => {
         });
 
         test('should return 400 for invalid userId', async () => {
+            const { user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/invalid/stats`)
                 .set('Authorization', user1AuthHeader);
@@ -212,6 +228,8 @@ describe('User Stats API Endpoints', () => {
         });
 
         test('should return 400 for invalid eventId', async () => {
+            const { testUser1Id, user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/invalid/users/${testUser1Id}/stats`)
                 .set('Authorization', user1AuthHeader);
@@ -220,6 +238,8 @@ describe('User Stats API Endpoints', () => {
         });
 
         test('should return 404 for non-existent user', async () => {
+            const { user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/99999/stats`)
                 .set('Authorization', user1AuthHeader);
@@ -230,6 +250,8 @@ describe('User Stats API Endpoints', () => {
         });
 
         test('should return 404 for non-existent event', async () => {
+            const { testUser1Id, user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/99999/users/${testUser1Id}/stats`)
                 .set('Authorization', user1AuthHeader);
@@ -240,12 +262,16 @@ describe('User Stats API Endpoints', () => {
         });
 
         test('should require authentication', async () => {
+            const { testUser1Id } = await createFullTestSetup();
+
             const response = await request(app).get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/stats`);
 
             expect(response.status).toBe(401);
         });
 
         test('should verify rating calculations are consistent', async () => {
+            const { testUser1Id, user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/stats`)
                 .set('Authorization', user1AuthHeader);
@@ -258,6 +284,8 @@ describe('User Stats API Endpoints', () => {
         });
 
         test('should calculate participation percentage correctly', async () => {
+            const { testUser1Id, user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/${testUser1Id}/stats`)
                 .set('Authorization', user1AuthHeader);
@@ -269,6 +297,8 @@ describe('User Stats API Endpoints', () => {
         });
 
         test('should return stats for user with partial participation', async () => {
+            const { testUser2Id, user1AuthHeader } = await createFullTestSetup();
+
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}/users/${testUser2Id}/stats`)
                 .set('Authorization', user1AuthHeader);

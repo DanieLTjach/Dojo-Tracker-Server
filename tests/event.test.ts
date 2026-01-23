@@ -19,7 +19,7 @@ describe('Event API Endpoints', () => {
 
     beforeAll(async () => {
         // Create test event
-        await createTestEvent();
+        createTestEvent();
     });
 
     afterAll(() => {

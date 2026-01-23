@@ -184,6 +184,15 @@ export class GameRepository {
         const result = this.countGamesByEventIdStatement().get({ eventId });
         return result?.count ?? 0;
     }
+
+    private findGameByEventAndTimestampStatement(): Statement<{ eventId: number, timestamp: string }, GameDBEntity> {
+        return dbManager.db.prepare('SELECT * FROM game WHERE eventId = :eventId AND createdAt = :timestamp');
+    }
+
+    findGameByEventAndTimestamp(eventId: number, timestamp: Date): Game | undefined {
+        const gameDBEntity = this.findGameByEventAndTimestampStatement().get({ eventId, timestamp: timestamp.toISOString() });
+        return gameDBEntity !== undefined ? gameFromDBEntity(gameDBEntity) : undefined;
+    }
 }
 
 interface GameDBEntity {

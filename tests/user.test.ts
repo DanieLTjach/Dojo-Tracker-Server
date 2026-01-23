@@ -83,10 +83,12 @@ describe('User API Endpoints', () => {
                 telegramId: 111222333
             };
 
-            await request(app)
+            const response = await request(app)
                 .post('/api/users')
-                .send(userData)
-                .expect(400);
+                .send(userData);
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
         });
 
         it('should fail when telegram username does not start with @', async () => {
@@ -96,10 +98,12 @@ describe('User API Endpoints', () => {
                 telegramId: 111222333
             };
 
-            await request(app)
+            const response = await request(app)
                 .post('/api/users')
-                .send(userData)
-                .expect(400);
+                .send(userData);
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
         });
 
         it('should fail when telegram ID is not a number', async () => {
@@ -109,10 +113,12 @@ describe('User API Endpoints', () => {
                 telegramId: 'not-a-number'
             };
 
-            await request(app)
+            const response = await request(app)
                 .post('/api/users')
-                .send(userData)
-                .expect(400);
+                .send(userData);
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
         });
 
         it('should fail when registering duplicate telegram username', async () => {
@@ -122,10 +128,42 @@ describe('User API Endpoints', () => {
                 telegramId: 999888777
             };
 
-            await request(app)
+            const response = await request(app)
                 .post('/api/users')
-                .send(userData)
-                .expect(400);
+                .send(userData);
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe("Telegram юзернейм '@testuser' вже зайнятий іншим користувачем");
+        });
+
+        it('should fail when name already taken', async () => {
+            const userData = {
+                name: 'Test User',
+                telegramUsername: '@newuser',
+                telegramId: 555666777
+            };
+
+            const response = await request(app)
+                .post('/api/users')
+                .send(userData);
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe("Ім'я 'Test User' вже зайняте іншим користувачем");
+        });
+
+        it('should fail when telegram ID already exists', async () => {
+            const userData = {
+                name: 'Different Name',
+                telegramUsername: '@differentuser',
+                telegramId: 456456456
+            };
+
+            const response = await request(app)
+                .post('/api/users')
+                .send(userData);
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe('Користувач з Telegram id 456456456 вже існує');
         });
     });
 
@@ -151,11 +189,13 @@ describe('User API Endpoints', () => {
         it('should fail when name is missing', async () => {
             const userData = {};
 
-            await request(app)
+            const response = await request(app)
                 .post('/api/users/without-telegram')
                 .set('Authorization', adminAuthHeader)
-                .send(userData)
-                .expect(400);
+                .send(userData);
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
         });
     });
 
@@ -171,9 +211,10 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when no authentication token provided', async () => {
-            await request(app)
-                .get('/api/users')
-                .expect(401);
+            const response = await request(app)
+                .get('/api/users');
+
+            expect(response.status).toBe(401);
         });
     });
 
@@ -189,23 +230,28 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when user id does not exist', async () => {
-            await request(app)
+            const response = await request(app)
                 .get('/api/users/99999')
-                .set('Authorization', adminAuthHeader)
-                .expect(404);
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(404);
+            expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
         });
 
         it('should fail when user id is not a number', async () => {
-            await request(app)
+            const response = await request(app)
                 .get('/api/users/invalid')
-                .set('Authorization', adminAuthHeader)
-                .expect(400);
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
         });
 
         it('should fail when no authentication token provided', async () => {
-            await request(app)
-                .get(`/api/users/${testUserId}`)
-                .expect(401);
+            const response = await request(app)
+                .get(`/api/users/${testUserId}`);
+
+            expect(response.status).toBe(401);
         });
     });
 
@@ -221,23 +267,28 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when telegram id does not exist', async () => {
-            await request(app)
+            const response = await request(app)
                 .get('/api/users/by-telegram-id/888888888')
-                .set('Authorization', adminAuthHeader)
-                .expect(404);
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(404);
+            expect(response.body.message).toBe('Користувача з Telegram id 888888888 не знайдено');
         });
 
         it('should fail when telegram id is not a number', async () => {
-            await request(app)
+            const response = await request(app)
                 .get('/api/users/by-telegram-id/invalid')
-                .set('Authorization', adminAuthHeader)
-                .expect(400);
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
         });
 
         it('should fail when no authentication token provided', async () => {
-            await request(app)
-                .get('/api/users/by-telegram-id/456456456')
-                .expect(401);
+            const response = await request(app)
+                .get('/api/users/by-telegram-id/456456456');
+
+            expect(response.status).toBe(401);
         });
     });
 
@@ -290,11 +341,13 @@ describe('User API Endpoints', () => {
         it('should fail when neither name nor telegram username is provided', async () => {
             const updateData = {};
 
-            await request(app)
+            const response = await request(app)
                 .patch(`/api/users/${testUserId}`)
                 .set('Authorization', regularUserAuthHeader)
-                .send(updateData)
-                .expect(400);
+                .send(updateData);
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
         });
 
         it('should fail when no authentication token provided', async () => {
@@ -302,10 +355,11 @@ describe('User API Endpoints', () => {
                 name: 'Test Name'
             };
 
-            await request(app)
+            const response = await request(app)
                 .patch(`/api/users/${testUserId}`)
-                .send(updateData)
-                .expect(401);
+                .send(updateData);
+
+            expect(response.status).toBe(401);
         });
 
         it('should fail when user id does not exist', async () => {
@@ -313,11 +367,41 @@ describe('User API Endpoints', () => {
                 name: 'Test Name'
             };
 
-            await request(app)
+            const response = await request(app)
                 .patch('/api/users/99999')
                 .set('Authorization', adminAuthHeader)
-                .send(updateData)
-                .expect(404);
+                .send(updateData);
+
+            expect(response.status).toBe(404);
+            expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
+        });
+
+        it('should fail when name is already taken by another user', async () => {
+            const updateData = {
+                name: 'Test User 2'
+            };
+
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
+                .send(updateData);
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe("Ім'я 'Test User 2' вже зайняте іншим користувачем");
+        });
+
+        it('should fail when telegram username is already taken by another user', async () => {
+            const updateData = {
+                telegramUsername: '@testuser2'
+            };
+
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
+                .send(updateData);
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe("Telegram юзернейм '@testuser2' вже зайнятий іншим користувачем");
         });
     });
 
@@ -334,27 +418,31 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when no authentication token provided', async () => {
-            await request(app)
+            const response = await request(app)
                 .post(`/api/users/${testUserId}/activate`)
-                .send({})
-                .expect(401);
+                .send({});
+
+            expect(response.status).toBe(401);
         });
 
         it('should fail when user is not admin', async () => {
-            console.log('Regular User Auth Header:', regularUserAuthHeader);
-            await request(app)
+            const response = await request(app)
                 .post(`/api/users/${testUserId}/activate`)
                 .set('Authorization', regularUserAuthHeader)
-                .send({})
-                .expect(403);
+                .send({});
+
+            expect(response.status).toBe(403);
+            expect(response.body.message).toBe('Недостатньо прав для виконання цієї дії');
         });
 
         it('should fail when user id does not exist', async () => {
-            await request(app)
+            const response = await request(app)
                 .post('/api/users/99999/activate')
                 .set('Authorization', adminAuthHeader)
-                .send({})
-                .expect(404);
+                .send({});
+
+            expect(response.status).toBe(404);
+            expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
         });
     });
 
@@ -371,26 +459,31 @@ describe('User API Endpoints', () => {
         });
 
         it('should fail when no authentication token provided', async () => {
-            await request(app)
+            const response = await request(app)
                 .post(`/api/users/${testUserId}/deactivate`)
-                .send({})
-                .expect(401);
+                .send({});
+
+            expect(response.status).toBe(401);
         });
 
         it('should fail when user is not admin', async () => {
-            await request(app)
+            const response = await request(app)
                 .post(`/api/users/${testUserId}/deactivate`)
                 .set('Authorization', regularUserAuthHeader)
-                .send({})
-                .expect(403);
+                .send({});
+
+            expect(response.status).toBe(403);
+            expect(response.body.message).toBe('Недостатньо прав для виконання цієї дії');
         });
 
         it('should fail when user id does not exist', async () => {
-            await request(app)
+            const response = await request(app)
                 .post('/api/users/99999/deactivate')
                 .set('Authorization', adminAuthHeader)
-                .send({})
-                .expect(404);
+                .send({});
+
+            expect(response.status).toBe(404);
+            expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
         });
     });
 });

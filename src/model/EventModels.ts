@@ -10,7 +10,7 @@ export interface GameRules {
 
 export interface Event {
     id: number;
-    name: string | null;
+    name: string;
     description: string | null;
     type: string;
     gameRules: GameRules;

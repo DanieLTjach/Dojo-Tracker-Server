@@ -61,7 +61,7 @@ export class EventRepository {
 
 interface EventWithGameRulesDBEntity {
     id: number;
-    name: string | null;
+    name: string;
     description: string | null;
     type: string;
     gameRules: number;

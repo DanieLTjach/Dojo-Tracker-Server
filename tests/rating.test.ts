@@ -22,7 +22,7 @@ describe('Rating API Endpoints', () => {
         cleanupTestDatabase();
         dbManager.reinitDB();
         // Create test event for each test
-        await createTestEvent();
+        createTestEvent();
     });
 
     afterAll(() => {
@@ -257,12 +257,12 @@ describe('Rating API Endpoints', () => {
 
         test('should return history in chronological order', async () => {
             // Create a game setup with one game
-            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetup();
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetup(); 
 
             // Create another game to have multiple history entries
             await createTestGame(user1AuthHeader, [
-                { userId: user1Id, points: 40000, startPlace: 'EAST' },
-                { userId: user2Id, points: 25000, startPlace: 'SOUTH' },
+                { userId: user1Id, points: 50000, startPlace: 'EAST' },
+                { userId: user2Id, points: 35000, startPlace: 'SOUTH' },
                 { userId: user3Id, points: 20000, startPlace: 'WEST' },
                 { userId: user4Id, points: 15000, startPlace: 'NORTH' }
             ]);

@@ -2,30 +2,30 @@ import { UnauthorizedError, ForbiddenError } from "./BaseErrors.ts";
 
 export class InvalidInitDataError extends UnauthorizedError {
     constructor(reason: string) {
-        super(`Invalid Telegram authentication data: ${reason}`, 'invalidInitData');
+        super(`Невалідні дані автентифікації Telegram: ${reason}`, 'invalidInitData');
     }
 }
 
 export class ExpiredAuthDataError extends UnauthorizedError {
     constructor() {
-        super('Authentication data has expired. Please restart the app.', 'expiredAuthData');
+        super('Термін дії даних автентифікації минув. Будь ласка, перезапустіть додаток.', 'expiredAuthData');
     }
 }
 
 export class MissingAuthTokenError extends UnauthorizedError {
     constructor() {
-        super('Authentication token is required', 'missingAuthToken');
+        super('Необхідний токен автентифікації', 'missingAuthToken');
     }
 }
 
 export class InvalidAuthTokenError extends UnauthorizedError {
     constructor(reason: string) {
-        super(`Invalid authentication token: ${reason}`, 'invalidAuthToken');
+        super(`Невалідний токен автентифікації: ${reason}`, 'invalidAuthToken');
     }
 }
 
 export class InsufficientPermissionsError extends ForbiddenError {
-    constructor(action: string) {
-        super(`Insufficient permissions to ${action}`, 'insufficientPermissions');
+    constructor() {
+        super('Недостатньо прав для виконання цієї дії', 'insufficientPermissions');
     }
 }

@@ -150,7 +150,7 @@ describe('Authentication API Endpoints', () => {
                 .expect(401);
 
             expect(response.body).toHaveProperty('errorCode', 'invalidInitData');
-            expect(response.body.message).toContain('Invalid Telegram authentication data');
+            expect(response.body.message).toBe('Невалідні дані автентифікації Telegram: Hash mismatch');
         });
 
         it('should reject authentication with expired auth_date', async () => {
@@ -162,7 +162,7 @@ describe('Authentication API Endpoints', () => {
                 .expect(401);
 
             expect(response.body).toHaveProperty('errorCode', 'expiredAuthData');
-            expect(response.body.message).toContain('expired');
+            expect(response.body.message).toBe('Термін дії даних автентифікації минув. Будь ласка, перезапустіть додаток.');
         });
 
         it('should reject authentication with missing hash', async () => {

@@ -4,11 +4,15 @@ import {
     GameNotFoundById,
     IncorrectPlayerCountError,
     DuplicatePlayerError,
-    TooManyGamesFoundError
+    TooManyGamesFoundError,
+    IncorrectTotalPointsError,
+    EventHasntStartedError,
+    EventHasEndedError,
+    DuplicateGameTimestampInEventError
 } from '../error/GameErrors.ts';
 import type { GameWithPlayers, PlayerData, GameFilters } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
-import type { GameRules } from '../model/EventModels.ts';
+import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
 
 export class GameService {
@@ -23,14 +27,16 @@ export class GameService {
         playersData: PlayerData[],
         createdBy: number
     ): GameWithPlayers {
-        const timestamp = new Date();
+        const gameTimestamp = new Date();
 
         const event = this.eventService.getEventById(eventId);
         this.validatePlayers(playersData, event.gameRules);
+        this.validateGameWithinEventDates(event, gameTimestamp);
+        this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
 
-        const newGameId = this.gameRepository.createGame(eventId, createdBy, timestamp);
-        this.addPlayersToGame(newGameId, playersData, createdBy, timestamp);
-        this.ratingService.addRatingChangesFromGame(newGameId, timestamp, playersData, eventId, event.gameRules);
+        const newGameId = this.gameRepository.createGame(eventId, createdBy, gameTimestamp);
+        this.addPlayersToGame(newGameId, playersData, createdBy, gameTimestamp);
+        this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules);
 
         return this.getGameById(newGameId);
     }
@@ -111,6 +117,7 @@ export class GameService {
         }
 
         this.validateNoDuplicatePlayers(playersData);
+        this.validateTotalPoints(playersData, gameRules);
     }
 
     private addPlayersToGame(gameId: number, players: PlayerData[], modifiedBy: number, timestamp: Date): void {
@@ -138,6 +145,32 @@ export class GameService {
                 }
                 seen.add(player.userId);
             }
+        }
+    }
+
+    private validateTotalPoints(playersData: PlayerData[], gameRules: GameRules): void {
+        const totalPoints = playersData.reduce((sum, player) => sum + player.points, 0);
+        const expectedTotal = gameRules.numberOfPlayers * gameRules.startingPoints;
+        
+        if (totalPoints !== expectedTotal) {
+            throw new IncorrectTotalPointsError(expectedTotal, totalPoints);
+        }
+    }
+
+    private validateGameWithinEventDates(event: Event, gameTimestamp: Date): void {
+        if (event.dateFrom !== null && gameTimestamp < event.dateFrom) {
+            throw new EventHasntStartedError(event.name);
+        }
+        if (event.dateTo !== null && gameTimestamp > event.dateTo) {
+            throw new EventHasEndedError(event.name);
+        }
+    }
+
+    // rating calculation relies on unique game timestamps within an event
+    private validateNoDuplicateGameTimestamp(eventId: number, timestamp: Date): void {
+        const existingGame = this.gameRepository.findGameByEventAndTimestamp(eventId, timestamp);
+        if (existingGame !== undefined) {
+            throw new DuplicateGameTimestampInEventError();
         }
     }
 }
