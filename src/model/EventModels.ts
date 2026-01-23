@@ -16,6 +16,7 @@ export interface Event {
     gameRules: GameRules;
     dateFrom: Date | null;
     dateTo: Date | null;
+    gameCount: number;
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;

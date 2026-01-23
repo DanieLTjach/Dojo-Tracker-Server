@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { requireAuth, requireAdmin } from '../src/middleware/AuthMiddleware.ts';
 import { TokenService } from '../src/service/TokenService.ts';
 import { UserService } from '../src/service/UserService.ts';
+import { UserRepository } from '../src/repository/UserRepository.ts';
 import { MissingAuthTokenError, InvalidAuthTokenError, InsufficientPermissionsError } from '../src/error/AuthErrors.ts';
 import type { User } from '../src/model/UserModels.ts';
 import { jest } from '@jest/globals';
@@ -21,8 +22,13 @@ describe('AuthMiddleware', () => {
 
     beforeAll(() => {
         userService = new UserService();
+        const userRepository = new UserRepository();
         // Create test user
         testUser = userService.registerUser("test_name", 'testuser', 123456789, 0);
+        // Activate the user for tests
+        userRepository.updateUserActivationStatus(testUser.id, true, 0);
+        // Refresh testUser to get updated isActive status
+        testUser = userService.getUserById(testUser.id);
     });
 
     afterAll(() => {

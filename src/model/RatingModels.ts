@@ -12,6 +12,7 @@ export interface UserRatingChange {
 export interface UserRating {
     user: UserShortDTO;
     rating: number;
+    gamesPlayed: number;
 }
 
 export interface UserRatingChangeShortDTO {

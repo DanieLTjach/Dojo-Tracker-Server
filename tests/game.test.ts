@@ -41,7 +41,14 @@ describe('Game API Endpoints', () => {
                 telegramId
             });
 
-        return response.body.id;
+        const userId = response.body.id;
+
+        // Activate the user
+        await request(userApp)
+            .post(`/api/users/${userId}/activate`)
+            .set('Authorization', adminAuthHeader);
+
+        return userId;
     }
 
     beforeAll(async () => {
@@ -355,6 +362,12 @@ describe('Game API Endpoints', () => {
             expect(response.body.players).toHaveLength(4);
             expect(response.body).toHaveProperty('createdAt');
             expect(response.body).toHaveProperty('modifiedAt');
+
+            // Verify players have ratingChange field
+            response.body.players.forEach((player: any) => {
+                expect(player).toHaveProperty('ratingChange');
+                expect(typeof player.ratingChange === 'number' || player.ratingChange === null).toBe(true);
+            });
         });
 
         test('should fail with non-existent game ID', async () => {

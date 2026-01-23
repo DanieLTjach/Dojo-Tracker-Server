@@ -8,6 +8,7 @@ import userRoutes from './routes/UserRoutes.ts';
 import gameRoutes from './routes/GameRoutes.ts';
 import eventRoutes from './routes/EventRoutes.ts';
 import ratingRoutes from './routes/RatingRoutes.ts';
+import userStatsRoutes from './routes/UserStatsRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
 
 const app = express();
@@ -27,6 +28,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api', ratingRoutes);
+app.use('/api/events', userStatsRoutes);
 
 app.use(handleErrors);
 

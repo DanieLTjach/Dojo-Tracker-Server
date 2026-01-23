@@ -23,7 +23,9 @@ describe('Authentication API Endpoints', () => {
 
     beforeAll(() => {
         // Create test user before running auth tests
-        userService.registerUser("name", TEST_USERNAME, TEST_TELEGRAM_ID, 0);
+        const user = userService.registerUser("name", TEST_USERNAME, TEST_TELEGRAM_ID, 0);
+        // Activate the user for tests
+        userRepository.updateUserActivationStatus(user.id, true, 0);
     });
 
     afterAll(() => {

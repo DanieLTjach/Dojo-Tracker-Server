@@ -6,7 +6,7 @@ CREATE TABLE user (
     createdAt TIMESTAMP NOT NULL,
     modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id),
-    isActive BOOL NOT NULL DEFAULT true,
+    isActive BOOL NOT NULL DEFAULT false,
     isAdmin BOOL NOT NULL DEFAULT false
 );
 
@@ -127,8 +127,8 @@ INSERT INTO eventType(type) VALUES ('SEASON'), ('TOURNAMENT');
 
 INSERT INTO gameStartPlace(startPlace) VALUES ('EAST'), ('SOUTH'), ('WEST'), ('NORTH');
 
-INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, createdAt, modifiedAt) 
-VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
+INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, createdAt, modifiedAt)
+VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
 
 INSERT INTO event(id, name, description, type, gameRules, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy) VALUES
     (1, 'Сезон 3', '2024 осінній сезон', 'SEASON', 1, '2024-06-30T21:00:00.000Z', '2025-12-31T22:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),

@@ -11,7 +11,7 @@ export class GameRepository {
         timestamp: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt) 
+            INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt)
             VALUES (:eventId, :modifiedBy, :timestamp, :timestamp)`
         );
     }
@@ -41,7 +41,14 @@ export class GameRepository {
     }
 
     addGamePlayer(gameId: number, userId: number, points: number, startPlace: string | undefined, modifiedBy: number): void {
-        this.addGamePlayerStatement().run({ gameId, userId, points, startPlace, modifiedBy, timestamp: new Date().toISOString() });
+        this.addGamePlayerStatement().run({
+            gameId,
+            userId,
+            points,
+            startPlace,
+            modifiedBy,
+            timestamp: new Date().toISOString()
+        });
     }
 
     private findGameByIdStatement(): Statement<{ id: number }, GameDBEntity> {
@@ -119,7 +126,18 @@ export class GameRepository {
             query += ' WHERE ' + conditions.join(' AND ');
         }
 
-        query += ' ORDER BY g.createdAt';
+        const sortOrder = filters.sortOrder?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+        query += ` ORDER BY g.createdAt ${sortOrder}`;
+
+        if (filters.limit !== undefined) {
+            query += ` LIMIT ?`;
+            params.push(filters.limit);
+        }
+
+        if (filters.offset !== undefined) {
+            query += ` OFFSET ?`;
+            params.push(filters.offset);
+        }
 
         const statement: Statement<any[], GameDBEntity> = dbManager.db.prepare(query);
         return statement.all(...params).map(gameFromDBEntity);
