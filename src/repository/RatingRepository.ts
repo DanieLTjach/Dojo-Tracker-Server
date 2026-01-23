@@ -39,7 +39,7 @@ export class RatingRepository {
 
     private findAllUsersCurrentRatingStatement(): Statement<{ eventId: number }, UserRatingDBEntity> {
         return dbManager.db.prepare(`
-            SELECT u.id as userId, u.name as userName, urc.rating as rating, COALESCE(gc.gamesPlayed, 0) as gamesPlayed
+            SELECT u.id as userId, u.name as userName, urc.rating as rating, gc.gamesPlayed as gamesPlayed
             FROM (
                 SELECT userId,
                         rating,
@@ -48,7 +48,7 @@ export class RatingRepository {
                 WHERE eventId = :eventId
             ) urc
             JOIN user u ON urc.userId = u.id
-            LEFT JOIN (
+            JOIN (
                 SELECT utg.userId, COUNT(DISTINCT utg.gameId) as gamesPlayed
                 FROM userToGame utg
                 JOIN game g ON utg.gameId = g.id

@@ -2,6 +2,7 @@ import type { UserEventStats, GameStatsData } from '../model/UserStatsModels.ts'
 import { UserStatsRepository } from '../repository/UserStatsRepository.ts';
 import { UserService } from './UserService.ts';
 import { EventService } from './EventService.ts';
+import { UserHasNoRatingDespiteHavingPlayedGames } from '../error/RatingErrors.ts';
 
 export class UserStatsService {
     private userStatsRepository: UserStatsRepository = new UserStatsRepository();
@@ -9,9 +10,8 @@ export class UserStatsService {
     private eventService: EventService = new EventService();
 
     getUserEventStats(userId: number, eventId: number): UserEventStats | null {
-        // Validate user and event exist (services throw if not found)
         this.userService.getUserById(userId);
-        const event = this.eventService.getEventById(eventId);
+        this.eventService.validateEventExists(eventId);
 
         // Get game stats data
         const gameStats = this.userStatsRepository.getUserGameStats(userId, eventId);
@@ -21,23 +21,23 @@ export class UserStatsService {
             return null;
         }
 
-        const currentRating = this.userStatsRepository.getUserCurrentRating(userId, eventId);
+        const playerRating = this.userStatsRepository.getUserCurrentRating(userId, eventId);
+        if (playerRating === undefined) {
+            throw new UserHasNoRatingDespiteHavingPlayedGames(userId, eventId);
+        }
+
         const totalGamesInEvent = this.userStatsRepository.getTotalGamesInEvent(eventId);
         const userRank = this.userStatsRepository.getUserRankInEvent(userId, eventId);
 
-        // Get starting rating from game rules
-        const startingRating = event.gameRules.startingRating;
-
         // Calculate all stats
-        return this.calculateStats(userId, eventId, gameStats, currentRating, startingRating, totalGamesInEvent, userRank);
+        return this.calculateStats(userId, eventId, gameStats, playerRating, totalGamesInEvent, userRank);
     }
 
     private calculateStats(
         userId: number,
         eventId: number,
         gameStats: GameStatsData[],
-        currentRating: number | undefined,
-        startingRating: number,
+        playerRating: number,
         totalGamesInEvent: number,
         userRank: number
     ): UserEventStats {
@@ -68,7 +68,6 @@ export class UserStatsService {
         // Calculate rating stats
         const totalRatingChange = gameStats.reduce((sum, g) => sum + g.ratingChange, 0);
         const averageIncrement = totalRatingChange / gamesPlayed;
-        const finalRating = currentRating || startingRating;
 
         // Calculate percentages
         const percentageFirstPlace = (placementCounts[1] / gamesPlayed) * 100;
@@ -83,7 +82,7 @@ export class UserStatsService {
             userId,
             eventId,
             place: userRank,
-            playerRating: finalRating,
+            playerRating,
             gamesPlayed,
             averageIncrement,
             averagePlace,
