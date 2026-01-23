@@ -1,4 +1,5 @@
 interface Config {
+    env: string;
     port: number;
     dbPath: string;
     jwtSecret: string;
@@ -49,6 +50,7 @@ if (env === 'production') {
 }
 
 const config: Config = {
+    env: getRequiredStringEnvVariable("NODE_ENV"),
     port: tryParseIntEnvVariable("PORT") || 3000,
     dbPath: process.env["DB_PATH"] || './db/data/data.db',
     botToken: getRequiredStringEnvVariable("BOT_TOKEN"),

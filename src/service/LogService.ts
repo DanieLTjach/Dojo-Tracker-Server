@@ -1,3 +1,4 @@
+import config from '../../config/config.ts';
 import TelegramService from './TelegramSevice.ts';
 import escapeHtml from 'escape-html';
 
@@ -8,9 +9,18 @@ interface LogMessage {
 
 class LogService {
     private messageQueue: LogMessage[] = [];
+    private isRunning: boolean = false;
 
     constructor() {
-        this.processQueue();
+        if (config.env !== 'test') {
+            this.isRunning = true;
+            this.processQueue(); 
+        }
+    }
+
+    async shutdown() {
+        this.isRunning = false;
+        await this.flushQueue();
     }
 
     logInfo(message: string) {
@@ -30,21 +40,42 @@ class LogService {
     }
 
     private async processQueue() {
-        while (true) {
+        while (this.isRunning) {
             try {
                 const queuedMessage = this.messageQueue.shift();
                 if (queuedMessage !== undefined) {
-                    if (queuedMessage.chatType === 'admin') {
-                        await TelegramService.sendMessageToAdminChat(queuedMessage.message);
-                    } else if (queuedMessage.chatType === 'rating') {
-                        await TelegramService.sendMessageToRatingTopic(queuedMessage.message);
-                    }
+                    await this.sendMessageToTelegram(queuedMessage);
                 } else {
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
             } catch (error) {
                 console.error('Error processing queued Telegram messages:', error);
             }
+        }
+    }
+
+    private async flushQueue() {
+        const maxWaitTime = 5000; // 5 seconds max
+        const startTime = Date.now();
+        console.log('Flushing LogService message queue');
+
+        while (this.messageQueue.length > 0 && (Date.now() - startTime) < maxWaitTime) {
+            const queuedMessage = this.messageQueue.shift();
+            if (queuedMessage) {
+                try {
+                    await this.sendMessageToTelegram(queuedMessage);
+                } catch (error) {
+                    console.error('Error flushing queued message:', error);
+                }
+            }
+        }
+    }
+
+    private async sendMessageToTelegram(message: LogMessage): Promise<void> {
+        if (message.chatType === 'admin') {
+            await TelegramService.sendMessageToAdminChat(message.message);
+        } else if (message.chatType === 'rating') {
+            await TelegramService.sendMessageToRatingTopic(message.message);
         }
     }
 }
