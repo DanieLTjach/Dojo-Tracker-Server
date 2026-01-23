@@ -50,10 +50,6 @@ if (env === 'production') {
     }
 }
 
-if (!process.env["FRONTEND_URL"]) {
-    throw new Error("FRONTEND_URL environment variable is required");
-}
-
 const config: Config = {
     env: getRequiredStringEnvVariable("NODE_ENV"),
     port: tryParseIntEnvVariable("PORT") || 3000,
@@ -62,7 +58,7 @@ const config: Config = {
     jwtSecret: getRequiredStringEnvVariable("JWT_SECRET"),
     jwtExpiry: process.env["JWT_EXPIRY"] || '7d',
     authInitDataValiditySeconds: tryParseIntEnvVariable("AUTH_INIT_DATA_VALIDITY_SECONDS") || 3600,
-    frontendUrl: process.env["FRONTEND_URL"],
+    frontendUrl: getRequiredStringEnvVariable("FRONTEND_URL"),
     adminChatId,
     ratingChatId,
     ratingTopicId
