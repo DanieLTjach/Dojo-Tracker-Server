@@ -20,9 +20,9 @@ Add to your `.env.development` or use environment variables:
 SSH_HOST=your-server.com
 SSH_USERNAME=user
 SSH_PORT=22
-REMOTE_DB_PATH=~/app/db/data/dojo.db
+REMOTE_DB_PATH=~/app/db/data/data.db
 REMOTE_BACKUP_DIR=~/app/db/backups
-LOCAL_DB_NAME=dojo.db  # Optional: specify exact file for push, or auto-timestamp for pull
+LOCAL_DB_NAME=data.db  # Optional: specify exact file for push, or auto-timestamp for pull
 ```
 
 ## Commands
