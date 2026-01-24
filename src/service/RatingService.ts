@@ -137,6 +137,36 @@ export class RatingService {
 
         return (gameRules.uma as number[][])[nonNegativePointsCount - 1]!;
     }
+
+    /**
+     * Calculate standings for users in an event based on their ratings.
+     * Users with the same rating share the same standing.
+     * @returns Map from userId to standing (1-indexed)
+     */
+    calculateStandings(eventId: number): Map<number, number> {
+        const userRatings = this.ratingRepository.findAllUsersCurrentRating(eventId);
+        
+        // Sort by rating descending
+        userRatings.sort((a, b) => b.rating - a.rating);
+        
+        const standingsMap = new Map<number, number>();
+        let currentStanding = 1;
+        let previousRating: number | null = null;
+        
+        for (let i = 0; i < userRatings.length; i++) {
+            const userRating = userRatings[i]!;
+            
+            // If rating is different from previous, update standing
+            if (previousRating !== null && userRating.rating !== previousRating) {
+                currentStanding = i + 1;
+            }
+            
+            standingsMap.set(userRating.user.id, currentStanding);
+            previousRating = userRating.rating;
+        }
+        
+        return standingsMap;
+    }
 }
 
 const RATING_TO_POINTS_COEFFICIENT: number = 1000;

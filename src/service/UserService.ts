@@ -10,6 +10,8 @@ import {
 } from '../error/UserErrors.ts';
 import type { User } from '../model/UserModels.ts';
 import { ResponseStatusError } from '../error/BaseErrors.ts';
+import LogService from './LogService.ts';
+import dedent from 'dedent';
 
 export class UserService {
 
@@ -32,7 +34,9 @@ export class UserService {
         }
 
         const newUserId = this.userRepository.registerUser(userName, userTelegramUsername, userTelegramId, createdBy);
-        return this.getUserById(newUserId);
+        const newUser = this.getUserById(newUserId);
+        this.logRegisteredUser(newUser, createdBy);
+        return newUser;
     }
 
     getAllUsers(): User[] {
@@ -53,7 +57,7 @@ export class UserService {
             throw new UserNotFoundByTelegramId(telegramId);
         }
         return user;
-    } 
+    }
 
     editUser(
         userId: number,
@@ -66,6 +70,7 @@ export class UserService {
         }
         this.validateUserIsActiveById(userId);
 
+        const oldUser = this.getUserById(userId);
         if (name !== undefined) {
             this.validateNameNotTakenByAnotherUser(name, userId);
             this.userRepository.updateUserName(userId, name, modifiedBy);
@@ -74,14 +79,20 @@ export class UserService {
             this.validateTelegramUsernameNotTakenByAnotherUser(telegramUsername, userId);
             this.userRepository.updateUserTelegramUsername(userId, telegramUsername, modifiedBy);
         }
-        return this.getUserById(userId);
+        const newUser = this.getUserById(userId);
+        this.logEditedUser(oldUser, newUser, modifiedBy);
+        return newUser;
     }
 
     updateUserActivationStatus(userId: number, isActive: boolean, modifiedBy: number): User {
         this.validateUserExistsById(userId);
 
+        const oldUser = this.getUserById(userId);
         this.userRepository.updateUserActivationStatus(userId, isActive, modifiedBy);
-        return this.getUserById(userId);
+
+        const newUser = this.getUserById(userId);
+        this.logActivationStatusChanged(oldUser, newUser, modifiedBy);
+        return newUser;
     }
 
     validateUserIsAdmin(id: number, insufficientPermissionsError: () => ResponseStatusError): void {
@@ -140,5 +151,48 @@ export class UserService {
         if (existingUser !== undefined && existingUser.id !== userId) {
             throw new TelegramUsernameAlreadyTakenByAnotherUser(telegramUsername);
         }
+    }
+
+    private logRegisteredUser(user: User, createdBy: number): void {
+        const creator = this.getUserById(createdBy);
+        const message = dedent`
+            <b>👤 New User Registered</b>
+
+            <b>User ID:</b> <code>${user.id}</code>
+            <b>Name:</b> ${user.name}
+            <b>Telegram Username:</b> ${user.telegramUsername || 'N/A'}
+            <b>Telegram ID:</b> <code>${user.telegramId || 'N/A'}</code>
+            <b>Registered by:</b> ${creator.name}
+        `;
+        LogService.logInfo(message);
+    }
+
+    private logEditedUser(oldUser: User, newUser: User, modifiedBy: number): void {
+        const modifier = this.getUserById(modifiedBy);
+        const message = dedent`
+            <b>✏️ User Edited</b>
+
+            <b>User ID:</b> <code>${newUser.id}</code>
+            <b>Name:</b> ${oldUser.name} → ${newUser.name}
+            <b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}
+            <b>Edited by:</b> ${modifier.name}
+        `;
+        LogService.logInfo(message);
+    }
+
+    private logActivationStatusChanged(oldUser: User, newUser: User, modifiedBy: number): void {
+        const modifier = this.getUserById(modifiedBy);
+        const statusEmoji = newUser.isActive ? '✅' : '❌';
+        const statusText = newUser.isActive ? 'Activated' : 'Deactivated';
+        const message = dedent`
+            <b>${statusEmoji} User ${statusText}</b>
+
+            <b>User ID:</b> <code>${newUser.id}</code>
+            <b>Name:</b> ${newUser.name}
+            <b>Telegram Username:</b> ${newUser.telegramUsername || 'N/A'}
+            <b>Activation Status:</b> ${oldUser.isActive} → ${newUser.isActive}
+            <b>Updated by:</b> ${modifier.name}
+        `;
+        LogService.logInfo(message);
     }
 }

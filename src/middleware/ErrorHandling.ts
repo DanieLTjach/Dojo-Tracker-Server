@@ -3,10 +3,10 @@ import { StatusCodes } from "http-status-codes";
 import { ResponseStatusError } from "../error/BaseErrors.ts";
 import { ZodError } from "zod";
 import { SqliteError } from "better-sqlite3";
+import LogService from "../service/LogService.ts";
 
 export const handleErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {
-    console.error(`Error while processing request ${req.method} ${req.url} with body ${JSON.stringify(req.body)}`);
-    console.error(err);
+    LogService.logError(`Error while processing request ${req.method} ${req.url} from user ${req.user?.userId} with body ${JSON.stringify(req.body)}`, err);
 
     if (res.headersSent) {
         return next(err)
