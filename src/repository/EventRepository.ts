@@ -45,6 +45,88 @@ export class EventRepository {
         const eventDBEntity = this.findEventByIdStatement().get({ id: eventId });
         return eventDBEntity !== undefined ? eventWithGameRulesFromDBEntity(eventDBEntity) : undefined;
     }
+
+    private createEventStatement(): Statement<EventCreateParams, { id: number }> {
+        return dbManager.db.prepare(`
+            INSERT INTO event (name, description, type, gameRules, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :gameRules, :dateFrom, :dateTo, :createdAt, :modifiedAt, :modifiedBy)
+            RETURNING id
+        `);
+    }
+
+    createEvent(params: EventCreateParams): number {
+        const result = this.createEventStatement().get(params);
+        return result!.id;
+    }
+
+    private updateEventStatement(): Statement<EventUpdateParams, void> {
+        return dbManager.db.prepare(`
+            UPDATE event
+            SET name = COALESCE(:name, name),
+                description = COALESCE(:description, description),
+                type = COALESCE(:type, type),
+                gameRules = COALESCE(:gameRules, gameRules),
+                dateFrom = COALESCE(:dateFrom, dateFrom),
+                dateTo = COALESCE(:dateTo, dateTo),
+                modifiedAt = :modifiedAt,
+                modifiedBy = :modifiedBy
+            WHERE id = :id
+        `);
+    }
+
+    updateEvent(params: EventUpdateParams): void {
+        this.updateEventStatement().run(params);
+    }
+
+    private deleteEventStatement(): Statement<{ id: number }, void> {
+        return dbManager.db.prepare(`
+            DELETE FROM event WHERE id = :id
+        `);
+    }
+
+    deleteEvent(eventId: number): void {
+        this.deleteEventStatement().run({ id: eventId });
+    }
+
+    private getGameCountForEventStatement(): Statement<{ eventId: number }, { count: number }> {
+        return dbManager.db.prepare(`
+            SELECT COUNT(*) as count FROM game WHERE eventId = :eventId
+        `);
+    }
+
+    getGameCountForEvent(eventId: number): number {
+        const result = this.getGameCountForEventStatement().get({ eventId });
+        return result!.count;
+    }
+
+    gameRulesExists(gameRulesId: number): boolean {
+        const result = dbManager.db.prepare(`SELECT 1 FROM gameRules WHERE id = ?`).get(gameRulesId);
+        return result !== undefined;
+    }
+}
+
+interface EventCreateParams {
+    name: string;
+    description: string | null;
+    type: string;
+    gameRules: number;
+    dateFrom: string | null;
+    dateTo: string | null;
+    createdAt: string;
+    modifiedAt: string;
+    modifiedBy: number;
+}
+
+interface EventUpdateParams {
+    id: number;
+    name?: string | undefined;
+    description?: string | undefined;
+    type?: string | undefined;
+    gameRules?: number | undefined;
+    dateFrom?: string | undefined;
+    dateTo?: string | undefined;
+    modifiedAt: string;
+    modifiedBy: number;
 }
 
 interface EventWithGameRulesDBEntity {
