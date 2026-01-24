@@ -66,6 +66,17 @@ async function syncDatabase() {
     const localDbPath = path.join(config.localDbDir, config.localDbName);
     log(`Local:  ${localDbPath}`, colors.bright);
 
+    // First, checkpoint the WAL on remote to consolidate all changes into main db file
+    log('\n🔄 Checkpointing WAL on remote server...', colors.yellow);
+    const checkpointCommand = `ssh -p ${config.sshPort} ${config.sshUser}@${config.sshHost} "sqlite3 ${config.remoteDbPath} 'PRAGMA wal_checkpoint(TRUNCATE);'"`;
+
+    try {
+      await execAsync(checkpointCommand);
+      log('✓ WAL checkpoint completed', colors.green);
+    } catch (error) {
+      log('⚠️  WAL checkpoint failed, continuing anyway...', colors.yellow);
+    }
+
     // Build SCP command
     const scpCommand = [
       'scp',
@@ -77,7 +88,7 @@ async function syncDatabase() {
     log('\n📦 Executing SCP command...', colors.yellow);
 
     // Execute SCP command
-    const { stdout, stderr } = await execAsync(scpCommand);
+    const { stdout, stderr} = await execAsync(scpCommand);
 
     if (stderr && !stderr.includes('Warning')) {
       log(`\nWarnings: ${stderr}`, colors.yellow);
