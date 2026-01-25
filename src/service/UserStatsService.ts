@@ -3,6 +3,7 @@ import { UserStatsRepository } from '../repository/UserStatsRepository.ts';
 import { UserService } from './UserService.ts';
 import { EventService } from './EventService.ts';
 import { UserHasNoRatingDespiteHavingPlayedGames } from '../error/RatingErrors.ts';
+import { RATING_TO_POINTS_COEFFICIENT } from './RatingService.ts';
 
 export class UserStatsService {
     private userStatsRepository: UserStatsRepository = new UserStatsRepository();
@@ -21,10 +22,11 @@ export class UserStatsService {
             return null;
         }
 
-        const playerRating = this.userStatsRepository.getUserCurrentRating(userId, eventId);
+        let playerRating = this.userStatsRepository.getUserCurrentRating(userId, eventId);
         if (playerRating === undefined) {
             throw new UserHasNoRatingDespiteHavingPlayedGames(userId, eventId);
         }
+        playerRating /= RATING_TO_POINTS_COEFFICIENT;
 
         const totalGamesInEvent = this.userStatsRepository.getTotalGamesInEvent(eventId);
         const userRank = this.userStatsRepository.getUserRankInEvent(userId, eventId);
@@ -67,7 +69,7 @@ export class UserStatsService {
 
         // Calculate rating stats
         const totalRatingChange = gameStats.reduce((sum, g) => sum + g.ratingChange, 0);
-        const averageIncrement = totalRatingChange / gamesPlayed;
+        const averageIncrement = totalRatingChange / gamesPlayed / RATING_TO_POINTS_COEFFICIENT;
 
         // Calculate percentages
         const percentageFirstPlace = (placementCounts[1] / gamesPlayed) * 100;
