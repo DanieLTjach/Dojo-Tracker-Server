@@ -169,7 +169,7 @@ export class RatingService {
     }
 }
 
-const RATING_TO_POINTS_COEFFICIENT: number = 1000;
+export const RATING_TO_POINTS_COEFFICIENT: number = 1000;
 
 function normalizeUserRating(userRating: UserRating): UserRating {
     return { ...userRating, rating: userRating.rating / RATING_TO_POINTS_COEFFICIENT };
