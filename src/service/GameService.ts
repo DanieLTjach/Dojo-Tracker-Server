@@ -134,7 +134,7 @@ export class GameService {
             <b>Game ID:</b> <code>${newGame.id}</code>
             <b>Event:</b> ${oldEvent.name} <code>(ID: ${oldEvent.id})</code> → ${event.name} <code>(ID: ${event.id})</code>
             <b>Timestamp:</b> <code>${oldGame.createdAt.toISOString()}</code> → <code>${newGame.createdAt.toISOString()}</code>
-            <b>Edited by:</b> ${user.name}
+            <b>Edited by:</b> ${user.name} <code>(ID: ${user.id})</code>
 
             <b>Players (Before):</b>\n
         ` + this.printPlayersLog(oldGame.players) + dedent`
@@ -161,7 +161,7 @@ export class GameService {
             <b>Game ID:</b> <code>${game.id}</code>
             <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
             <b>Timestamp:</b> <code>${game.createdAt.toISOString()}</code>
-            <b>${userLabel}:</b> ${user.name}
+            <b>${userLabel}:</b> ${user.name} <code>(ID: ${user.id})</code>
 
             <b>Players:</b>\n
         ` + this.printPlayersLog(game.players);
@@ -260,7 +260,8 @@ export class GameService {
             const seen = new Set<number>();
             for (const player of players) {
                 if (seen.has(player.userId)) {
-                    throw new DuplicatePlayerError(player.userId);
+                    const user = this.userService.getUserById(player.userId);
+                    throw new DuplicatePlayerError(user.name);
                 }
                 seen.add(player.userId);
             }

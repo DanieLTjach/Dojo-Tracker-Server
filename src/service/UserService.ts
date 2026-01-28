@@ -162,7 +162,7 @@ export class UserService {
             <b>Name:</b> ${user.name}
             <b>Telegram Username:</b> ${user.telegramUsername || 'N/A'}
             <b>Telegram ID:</b> <code>${user.telegramId || 'N/A'}</code>
-            <b>Registered by:</b> ${creator.name}
+            <b>Registered by:</b> ${creator.name} <code>(ID: ${creator.id})</code>
         `;
         LogService.logInfo(message);
     }
@@ -175,7 +175,7 @@ export class UserService {
             <b>User ID:</b> <code>${newUser.id}</code>
             <b>Name:</b> ${oldUser.name} → ${newUser.name}
             <b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}
-            <b>Edited by:</b> ${modifier.name}
+            <b>Edited by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         LogService.logInfo(message);
     }
@@ -191,7 +191,7 @@ export class UserService {
             <b>Name:</b> ${newUser.name}
             <b>Telegram Username:</b> ${newUser.telegramUsername || 'N/A'}
             <b>Activation Status:</b> ${oldUser.isActive} → ${newUser.isActive}
-            <b>Updated by:</b> ${modifier.name}
+            <b>Updated by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         LogService.logInfo(message);
     }

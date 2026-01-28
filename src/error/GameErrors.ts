@@ -19,8 +19,8 @@ export class IncorrectPlayerCountError extends BadRequestError {
 }
 
 export class DuplicatePlayerError extends BadRequestError {
-    constructor(userId: number) {
-        super(`Гравець з ID ${userId} присутній більше одного разу в цій грі`, 'duplicatePlayer');
+    constructor(playerName: string) {
+        super(`Гравець ${playerName} присутній більше одного разу в цій грі`, 'duplicatePlayer');
     }
 }
 
