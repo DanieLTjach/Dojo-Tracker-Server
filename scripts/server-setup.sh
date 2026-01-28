@@ -63,15 +63,38 @@ if [ -z "$BOT_TOKEN" ]; then
     exit 1
 fi
 
+read -p "Enter Admin Chat ID: " ADMIN_CHAT_ID
+
+if [ -z "$ADMIN_CHAT_ID" ]; then
+    echo -e "${RED}Error: Admin Chat ID cannot be empty${NC}"
+    exit 1
+fi
+
+read -p "Enter Rating Chat ID: " RATING_CHAT_ID
+
+if [ -z "$RATING_CHAT_ID" ]; then
+    echo -e "${RED}Error: Rating Chat ID cannot be empty${NC}"
+    exit 1
+fi
+
+read -p "Enter Rating Topic ID: " RATING_TOPIC_ID
+
+if [ -z "$RATING_TOPIC_ID" ]; then
+    echo -e "${RED}Error: Rating Topic ID cannot be empty${NC}"
+    exit 1
+fi
+
 echo "Generating JWT secret..."
 JWT_SECRET=$(openssl rand -base64 32)
 
 echo "Creating .env file on the server..."
 ssh $SSH_OPTS $SERVER "cat > app/.env << EOF
-NODE_ENV=production
 TAG=latest
-BOT_TOKEN=$BOT_TOKEN
 JWT_SECRET=$JWT_SECRET
+BOT_TOKEN=$BOT_TOKEN
+ADMIN_CHAT_ID=$ADMIN_CHAT_ID
+RATING_CHAT_ID=$RATING_CHAT_ID
+RATING_TOPIC_ID=$RATING_TOPIC_ID
 EOF"
 
 echo -e "${GREEN}Server setup completed successfully!${NC}"

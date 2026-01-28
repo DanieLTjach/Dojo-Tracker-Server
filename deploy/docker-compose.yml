@@ -29,8 +29,9 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DB_PATH=/app/db/data/data.db
-      - BOT_TOKEN=${BOT_TOKEN}
-      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=https://mahjong-tma-1.web.app
+    env_file:
+      - .env
     expose:
       - 3000
     volumes:
