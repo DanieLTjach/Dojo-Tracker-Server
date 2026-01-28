@@ -10,10 +10,6 @@ CREATE TABLE user (
     isAdmin BOOL NOT NULL DEFAULT false
 );
 
-CREATE TABLE eventType (
-    type TEXT NOT NULL PRIMARY KEY
-);
-
 CREATE TABLE gameRules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -23,11 +19,15 @@ CREATE TABLE gameRules (
     startingRating REAL NOT NULL
 );
 
+CREATE TABLE eventType (
+    type TEXT NOT NULL PRIMARY KEY
+);
+
 CREATE TABLE event (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT,
-    type INTEGER REFERENCES eventType(type),
+    type TEXT REFERENCES eventType(type),
     gameRules INTEGER NOT NULL REFERENCES gameRules(id),
     dateFrom TIMESTAMP,
     dateTo TIMESTAMP,
@@ -68,53 +68,6 @@ CREATE TABLE userRatingChange (
     rating INTEGER NOT NULL,
     timestamp TIMESTAMP NOT NULL,
     PRIMARY KEY (userId, gameId)
-);
-
-CREATE TABLE standartHanchanHands (
-    handId INTEGER PRIMARY KEY AUTOINCREMENT,
-    gameId INTEGER NOT NULL,
-    handType INTEGER NOT NULL REFERENCES handTypeDict(handType),
-    repeat INTEGER DEFAULT 0,
-    winType INTEGER REFERENCES winTypeDict(winType),
-    eastPoints INTEGER NOT NULL,
-    southPoints INTEGER NOT NULL,
-    westPoints INTEGER NOT NULL,
-    northPoints INTEGER NOT NULL,
-    riichiEast BOOL,
-    riichiSouth BOOL,
-    riichiWest BOOL,
-    riichiNorth BOOL,
-    createdAt TIMESTAMP NOT NULL,
-    modifiedAt TIMESTAMP NOT NULL,
-    modifiedBy INTEGER NOT NULL REFERENCES user(id)
-);
-
-CREATE TABLE achievements (
-    achievementId INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    description TEXT NOT NULL,
-    createdAt TIMESTAMP NOT NULL,
-    modifiedAt TIMESTAMP NOT NULL,
-    modifiedBy INTEGER NOT NULL REFERENCES user(id)
-);
-
-CREATE TABLE userToAchievements (
-    recordId INTEGER PRIMARY KEY AUTOINCREMENT,
-    userId INTEGER NOT NULL REFERENCES user(id),
-    achievementId INTEGER NOT NULL REFERENCES achievements(achievementId),
-    createdAt TIMESTAMP NOT NULL,
-    modifiedAt TIMESTAMP NOT NULL,
-    modifiedBy INTEGER NOT NULL REFERENCES user(id)
-);
-
-CREATE TABLE handTypeDict (
-    handType INTEGER PRIMARY KEY,
-    handTypeDesc TEXT NOT NULL
-);
-
-CREATE TABLE winTypeDict (
-    winType INTEGER PRIMARY KEY,
-    winTypeDesc TEXT NOT NULL
 );
 
 -- Insert initial data
