@@ -15,29 +15,13 @@ NC='\033[0m' # No Color
 # Configuration
 DOCKER_USERNAME=japandojo
 IMAGE_NAME=dojo-tracker-server
-TAG=""
-CLEAN_DB=false
-
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --clean-db)
-            CLEAN_DB=true
-            shift
-            ;;
-        *)
-            TAG="$1"
-            shift
-            ;;
-    esac
-done
+TAG="$1"
 
 # Check if TAG is provided
 if [ -z "$TAG" ]; then
     echo -e "${RED}Error: TAG parameter is required${NC}"
-    echo -e "${YELLOW}Usage: $0 <tag> [--clean-db]${NC}"
+    echo -e "${YELLOW}Usage: $0 <tag>${NC}"
     echo -e "${YELLOW}Example: $0 v1.0.0${NC}"
-    echo -e "${YELLOW}Example: $0 v1.0.0 --clean-db${NC}"
     exit 1
 fi
 
@@ -74,29 +58,13 @@ docker compose down
 
 echo -e "${GREEN}✓ Containers stopped${NC}\n"
 
-# Clean database if requested
-if [ "$CLEAN_DB" = true ]; then
-    echo -e "${YELLOW}Step 3: Cleaning database...${NC}"
-    DB_DATA_PATH="./db/data"
-    
-    if [ -d "$DB_DATA_PATH" ]; then
-        echo -e "${RED}WARNING: This will delete all data in ${DB_DATA_PATH}${NC}"
-        rm -rf "${DB_DATA_PATH}"/*
-        echo -e "${GREEN}✓ Database cleaned${NC}\n"
-    else
-        echo -e "${YELLOW}Database directory not found, skipping...${NC}\n"
-    fi
-fi
-
 # Start the application
-STEP_NUM=$((CLEAN_DB ? 4 : 3))
-echo -e "${GREEN}Step ${STEP_NUM}: Starting application...${NC}"
+echo -e "${GREEN}Step 3: Starting application...${NC}"
 docker compose up -d
 echo -e "${GREEN}✓ Application started${NC}\n"
 
 # Wait for the main service to become healthy
-STEP_NUM=$((CLEAN_DB ? 5 : 4))
-echo -e "${YELLOW}Step ${STEP_NUM}: Waiting for service to become healthy...${NC}"
+echo -e "${YELLOW}Step 4: Waiting for service to become healthy...${NC}"
 RETRY_COUNT=0
 MAX_RETRIES=10
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
