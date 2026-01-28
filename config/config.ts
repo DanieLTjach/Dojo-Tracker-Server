@@ -10,6 +10,8 @@ interface Config {
     adminChatId?: number | undefined;
     ratingChatId?: number | undefined;
     ratingTopicId?: number | undefined;
+    tournamentMode: boolean;
+    tournamentUserId?: number | undefined;
 }
 
 function getRequiredStringEnvVariable(varName: string): string {
@@ -50,6 +52,8 @@ if (env === 'production') {
     }
 }
 
+const tournamentMode = process.env["TOURNAMENT_MODE"] === 'true';
+
 const config: Config = {
     env: getRequiredStringEnvVariable("NODE_ENV"),
     port: tryParseIntEnvVariable("PORT") || 3000,
@@ -61,7 +65,9 @@ const config: Config = {
     frontendUrl: getRequiredStringEnvVariable("FRONTEND_URL"),
     adminChatId,
     ratingChatId,
-    ratingTopicId
+    ratingTopicId,
+    tournamentMode,
+    tournamentUserId: tournamentMode ? (tryParseIntEnvVariable("TOURNAMENT_USER_ID") || 1) : undefined
 };
 
 export default config;
