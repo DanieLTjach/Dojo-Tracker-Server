@@ -4,9 +4,21 @@ import { ResponseStatusError } from "../error/BaseErrors.ts";
 import { ZodError } from "zod";
 import { SqliteError } from "better-sqlite3";
 import LogService from "../service/LogService.ts";
+import { UserService } from "../service/UserService.ts";
+
+const userService = new UserService();
 
 export const handleErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {
-    LogService.logError(`Error while processing request ${req.method} ${req.url} from user ${req.user?.userId} with body ${JSON.stringify(req.body)}`, err);
+    let userInfo = 'unknown';
+    if (req.user?.userId) {
+        try {
+            const user = userService.getUserById(req.user.userId);
+            userInfo = `${user.name} (ID: ${user.id})`;
+        } catch {
+            userInfo = `(ID: ${req.user.userId})`;
+        }
+    }
+    LogService.logError(`Error while processing request ${req.method} ${req.url} from user ${userInfo} with body ${JSON.stringify(req.body)}`, err);
 
     if (res.headersSent) {
         return next(err)

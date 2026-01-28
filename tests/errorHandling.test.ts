@@ -17,7 +17,7 @@ describe('ErrorHandling Middleware', () => {
             method: 'GET',
             url: '/test',
             body: { test: 'data' },
-            user: { userId: 123}
+            user: { userId: 123 }
         };
         mockRes = {
             status: jest.fn().mockReturnThis() as any,
@@ -130,7 +130,7 @@ describe('ErrorHandling Middleware', () => {
         handleErrors(error, mockReq as Request, mockRes as Response, mockNext);
 
         expect(consoleErrorSpy).toHaveBeenCalledWith(
-            'Error while processing request GET /test from user 123 with body {"test":"data"}',
+            'Error while processing request GET /test from user (ID: 123) with body {"test":"data"}',
             error
         );
     });

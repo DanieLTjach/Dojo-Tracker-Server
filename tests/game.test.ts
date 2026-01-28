@@ -167,7 +167,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe(`Гравець з ID ${testUser1Id} присутній більше одного разу в цій грі`);
+            expect(response.body.message).toBe(`Гравець Player1 присутній більше одного разу в цій грі`);
         });
 
         test('should fail with duplicate start places', async () => {
@@ -579,7 +579,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe(`Гравець з ID ${testUser1Id} присутній більше одного разу в цій грі`);
+            expect(response.body.message).toBe(`Гравець Player1 присутній більше одного разу в цій грі`);
         });
     });
 
