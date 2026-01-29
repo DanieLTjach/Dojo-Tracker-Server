@@ -1,7 +1,8 @@
+import { booleanToInteger } from "../db/dbUtils.ts";
 import { UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
 import type { GameRules } from "../model/EventModels.ts";
 import type { GamePlayer, GameWithPlayers, PlayerData } from "../model/GameModels.ts";
-import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO } from "../model/RatingModels.ts";
+import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO, UserRatingWithPlace } from "../model/RatingModels.ts";
 import { RatingRepository } from "../repository/RatingRepository.ts";
 import { EventService } from "./EventService.ts";
 import { UserService } from "./UserService.ts";
@@ -12,10 +13,22 @@ export class RatingService {
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
 
-    getAllUsersCurrentRating(eventId: number): UserRating[] {
+    getAllUsersCurrentRating(eventId: number): UserRatingWithPlace[] {
         this.eventService.validateEventExists(eventId);
-        return this.ratingRepository.findAllUsersCurrentRating(eventId)
+        const userRatings = this.ratingRepository.findAllUsersCurrentRating(eventId)
             .map(normalizeUserRating);
+        const standingsMap = this.calculateStandingsMap(userRatings);
+
+        const result = userRatings.map(ur => ({
+            ...ur,
+            place: standingsMap.get(ur.user.id) ?? null
+        }));
+        result.sort((a, b) =>
+            (b.rating - a.rating)
+            || (booleanToInteger(b.minimumGamesPlayed) - booleanToInteger(a.minimumGamesPlayed))
+            || (a.user.name.localeCompare(b.user.name))
+        );
+        return result;
     }
 
     getAllUsersTotalRatingChangeDuringPeriod(
@@ -138,33 +151,40 @@ export class RatingService {
         return (gameRules.uma as number[][])[nonNegativePointsCount - 1]!;
     }
 
+
+    calculateStandings(eventId: number): Map<number, number> {
+        const userRatings = this.ratingRepository.findAllUsersCurrentRating(eventId)
+        return this.calculateStandingsMap(userRatings);
+    }
+
     /**
      * Calculate standings for users in an event based on their ratings.
      * Users with the same rating share the same standing.
+     * Only users who have played at least the minimum number of games are considered.
      * @returns Map from userId to standing (1-indexed)
      */
-    calculateStandings(eventId: number): Map<number, number> {
-        const userRatings = this.ratingRepository.findAllUsersCurrentRating(eventId);
-        
+    private calculateStandingsMap(userRatings: UserRating[]): Map<number, number> {
+        const ratings = userRatings.filter(ur => ur.minimumGamesPlayed);
+
         // Sort by rating descending
-        userRatings.sort((a, b) => b.rating - a.rating);
-        
+        ratings.sort((a, b) => b.rating - a.rating);
+
         const standingsMap = new Map<number, number>();
         let currentStanding = 1;
         let previousRating: number | null = null;
-        
-        for (let i = 0; i < userRatings.length; i++) {
-            const userRating = userRatings[i]!;
-            
+
+        for (let i = 0; i < ratings.length; i++) {
+            const userRating = ratings[i]!;
+
             // If rating is different from previous, update standing
             if (previousRating !== null && userRating.rating !== previousRating) {
                 currentStanding = i + 1;
             }
-            
+
             standingsMap.set(userRating.user.id, currentStanding);
             previousRating = userRating.rating;
         }
-        
+
         return standingsMap;
     }
 }

@@ -16,7 +16,8 @@ CREATE TABLE gameRules (
     numberOfPlayers INTEGER NOT NULL,
     uma TEXT NOT NULL,
     startingPoints INTEGER NOT NULL,
-    startingRating REAL NOT NULL
+    startingRating INTEGER NOT NULL,
+    minimumGamesForRating INTEGER NOT NULL
 );
 
 CREATE TABLE eventType (
@@ -71,10 +72,11 @@ CREATE TABLE userRatingChange (
 );
 
 -- Insert initial data
-INSERT INTO gameRules(id, name, numberOfPlayers, uma, startingPoints, startingRating) VALUES
-    (1, 'Сезон 3-5 йонма', 4, '15,5,-5,-15', 30000, 1000),
-    (2, 'Сезон 6 йонма', 4, '24,-2,-6,-16;16,8,-8,-16;16,6,2,-24', 30000, 0),
-    (3, 'Сезон 6 санма', 3, '15,0,-15', 35000, 1000);
+INSERT INTO gameRules(id, name, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating) VALUES
+    (1, 'Сезон 3-5 йонма', 4, '15,5,-5,-15', 30000, 1000, 0),
+    (2, 'Сезон 6 йонма', 4, '24,-2,-6,-16;16,8,-8,-16;16,6,2,-24', 30000, 0, 5),
+    (3, 'Сезон 6 санма', 3, '15,0,-15', 35000, 1000, 0),
+    (4, 'EMA 2025', 4, '15,5,-5,-15', 30000, 0, 0);
 
 INSERT INTO eventType(type) VALUES ('SEASON'), ('TOURNAMENT');
 
@@ -87,4 +89,5 @@ INSERT INTO event(id, name, description, type, gameRules, dateFrom, dateTo, crea
     (1, 'Сезон 3', '2024 осінній сезон', 'SEASON', 1, '2024-06-30T21:00:00.000Z', '2024-12-31T22:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
     (2, 'Сезон 4', '2025 весняний сезон', 'SEASON', 1, '2024-12-31T22:00:00.000Z', '2025-06-30T21:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
     (3, 'Сезон 5', '2025 осінній сезон', 'SEASON', 1, '2025-07-31T21:00:00.000Z', '2025-12-31T22:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
-    (4, 'Сезон 6', '2026 весняний сезон', 'SEASON', 2, '2026-01-31T22:00:00.000Z', '2026-06-30T21:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0);
+    (4, 'Сезон 6', '2026 весняний сезон', 'SEASON', 2, '2026-01-31T22:00:00.000Z', '2026-06-30T21:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+    (5, 'Санма Сезон 1', 'Рейтинговий сезон з санми', 'SEASON', 3, '2026-01-31T22:00:00.000Z', '2026-06-30T21:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0);

@@ -1,9 +1,11 @@
 export interface UserEventStats {
     userId: number;
     eventId: number;
-    place: number;
+    place: number | null;
     playerRating: number;
     gamesPlayed: number;
+    minimumGamesPlayed: boolean;
+    remainingGamesToRating: number;
     averageIncrement: number;
     averagePlace: number;
     percentageFirstPlace: number;
