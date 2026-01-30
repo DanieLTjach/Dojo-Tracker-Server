@@ -36,6 +36,12 @@ export class IncorrectTotalPointsError extends BadRequestError {
     }
 }
 
+export class PointsNotWithinRange extends BadRequestError {
+    constructor(points: number, minPoints: number, maxPoints: number) {
+        super(`Очки гравця (${points}) повинні бути в діапазоні від ${minPoints} до ${maxPoints}`, 'invalidPoints');
+    }
+}
+
 export class EventHasntStartedError extends BadRequestError {
     constructor(eventName: string) {
         super(`${eventName} ще не розпочався`, 'eventHasntStarted');

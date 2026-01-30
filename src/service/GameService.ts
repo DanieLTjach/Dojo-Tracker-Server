@@ -9,7 +9,8 @@ import {
     EventHasntStartedError,
     EventHasEndedError,
     DuplicateGameTimestampInEventError,
-    YouHaveToBeAdminToCreateGameWithCustomTime
+    YouHaveToBeAdminToCreateGameWithCustomTime,
+    PointsNotWithinRange
 } from '../error/GameErrors.ts';
 import type { GameWithPlayers, PlayerData, GameFilters, GamePlayer } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
@@ -239,6 +240,7 @@ export class GameService {
 
         this.validateNoDuplicatePlayers(playersData);
         this.validateTotalPoints(playersData, gameRules);
+        this.validatePoints(playersData);
     }
 
     private addPlayersToGame(gameId: number, players: PlayerData[], modifiedBy: number): void {
@@ -278,6 +280,14 @@ export class GameService {
         }
     }
 
+    private validatePoints(playersData: PlayerData[]): void {
+        for (const player of playersData) {
+            if (Math.abs(player.points) > MAX_POINTS) {
+                throw new PointsNotWithinRange(player.points, -MAX_POINTS, MAX_POINTS);
+            }
+        }
+    }
+
     private validateGameWithinEventDates(event: Event, gameTimestamp: Date): void {
         if (event.dateFrom !== null && gameTimestamp < event.dateFrom) {
             throw new EventHasntStartedError(event.name);
@@ -295,3 +305,5 @@ export class GameService {
         }
     }
 }
+
+const MAX_POINTS = 1_000_000;
