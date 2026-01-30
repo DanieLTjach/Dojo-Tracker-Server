@@ -62,33 +62,4 @@ export class UserStatsRepository {
     getTotalGamesInEvent(eventId: number): number {
         return this.getTotalGamesInEventStatement().get({ eventId })!.totalGames;
     }
-
-    // Get user's rank/place in the event based on current rating
-    private getUserRankInEventStatement(): Statement<{ userId: number; eventId: number }, { place: number }> {
-        return dbManager.db.prepare(`
-            SELECT COUNT(*) + 1 as place
-            FROM (
-                SELECT userId, rating
-                FROM userRatingChange
-                WHERE eventId = :eventId
-                AND (userId, timestamp) IN (
-                    SELECT userId, MAX(timestamp)
-                    FROM userRatingChange
-                    WHERE eventId = :eventId
-                    GROUP BY userId
-                )
-            ) ranked
-            WHERE rating > (
-                SELECT rating
-                FROM userRatingChange
-                WHERE userId = :userId AND eventId = :eventId
-                ORDER BY timestamp DESC
-                LIMIT 1
-            )`
-        );
-    }
-
-    getUserRankInEvent(userId: number, eventId: number): number {
-        return this.getUserRankInEventStatement().get({ userId, eventId })!.place;
-    }
 }

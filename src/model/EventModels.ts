@@ -6,6 +6,7 @@ export interface GameRules {
     uma: number[] | number[][];
     startingPoints: number;
     startingRating: number;
+    minimumGamesForRating: number;
 }
 
 export interface Event {

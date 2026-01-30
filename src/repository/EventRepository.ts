@@ -13,6 +13,7 @@ export class EventRepository {
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
                 gr.startingRating as gr_startingRating,
+                gr.minimumGamesForRating as gr_minimumGamesForRating,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
@@ -34,6 +35,7 @@ export class EventRepository {
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
                 gr.startingRating as gr_startingRating,
+                gr.minimumGamesForRating as gr_minimumGamesForRating,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
@@ -64,6 +66,7 @@ interface EventWithGameRulesDBEntity {
     gr_uma: string;
     gr_startingPoints: number;
     gr_startingRating: number;
+    gr_minimumGamesForRating: number;
     gameCount: number;
 }
 
@@ -79,7 +82,8 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             numberOfPlayers: dbEntity.gr_numberOfPlayers,
             uma: parseUma(dbEntity.gr_uma),
             startingPoints: dbEntity.gr_startingPoints,
-            startingRating: dbEntity.gr_startingRating
+            startingRating: dbEntity.gr_startingRating,
+            minimumGamesForRating: dbEntity.gr_minimumGamesForRating
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,

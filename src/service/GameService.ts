@@ -194,16 +194,17 @@ export class GameService {
 
         const playerLines = sortedPlayers.map((player, index) => {
             const user = this.userService.getUserById(player.userId);
-            const standingBefore = standingsBefore.get(player.userId) ?? Infinity;
-            const standingAfter = standingsAfter.get(player.userId)!;
+            const standingBefore = standingsBefore.get(player.userId) ?? NaN;
+            const standingAfter = standingsAfter.get(player.userId) ?? NaN;
 
-            const standingBeforeString = standingBefore === Infinity ? 'N/A' : standingBefore;
+            const standingBeforeString = Number.isNaN(standingBefore) ? 'N/A' : standingBefore;
+            const standingAfterString = Number.isNaN(standingAfter) ? 'N/A' : standingAfter;
+
             let standingString;
-
-            if (standingAfter < standingBefore) {
-                standingString = `↗️ (${standingBeforeString} → ${standingAfter})`;
+            if (standingAfter < standingBefore || Number.isNaN(standingBefore) && !Number.isNaN(standingAfter)) {
+                standingString = `↗️ (${standingBeforeString} → ${standingAfterString})`;
             } else if (standingAfter > standingBefore) {
-                standingString = `↘️ (${standingBeforeString} → ${standingAfter})`;
+                standingString = `↘️ (${standingBeforeString} → ${standingAfterString})`;
             } else {
                 standingString = `⏺️ (${standingBeforeString})`;
             }

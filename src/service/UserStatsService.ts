@@ -3,16 +3,18 @@ import { UserStatsRepository } from '../repository/UserStatsRepository.ts';
 import { UserService } from './UserService.ts';
 import { EventService } from './EventService.ts';
 import { UserHasNoRatingDespiteHavingPlayedGames } from '../error/RatingErrors.ts';
-import { RATING_TO_POINTS_COEFFICIENT } from './RatingService.ts';
+import { RATING_TO_POINTS_COEFFICIENT, RatingService } from './RatingService.ts';
+import type { Event } from '../model/EventModels.ts';
 
 export class UserStatsService {
     private userStatsRepository: UserStatsRepository = new UserStatsRepository();
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
+    private ratingService: RatingService = new RatingService();
 
     getUserEventStats(userId: number, eventId: number): UserEventStats | null {
         this.userService.getUserById(userId);
-        this.eventService.validateEventExists(eventId);
+        const event = this.eventService.getEventById(eventId);
 
         // Get game stats data
         const gameStats = this.userStatsRepository.getUserGameStats(userId, eventId);
@@ -29,19 +31,19 @@ export class UserStatsService {
         playerRating /= RATING_TO_POINTS_COEFFICIENT;
 
         const totalGamesInEvent = this.userStatsRepository.getTotalGamesInEvent(eventId);
-        const userRank = this.userStatsRepository.getUserRankInEvent(userId, eventId);
+        const userRank = this.ratingService.calculateStandings(eventId).get(userId) ?? null;
 
         // Calculate all stats
-        return this.calculateStats(userId, eventId, gameStats, playerRating, totalGamesInEvent, userRank);
+        return this.calculateStats(userId, event, gameStats, playerRating, totalGamesInEvent, userRank);
     }
 
     private calculateStats(
         userId: number,
-        eventId: number,
+        event: Event,
         gameStats: GameStatsData[],
         playerRating: number,
         totalGamesInEvent: number,
-        userRank: number
+        userRank: number | null
     ): UserEventStats {
         const gamesPlayed = gameStats.length;
 
@@ -82,10 +84,12 @@ export class UserStatsService {
 
         return {
             userId,
-            eventId,
+            eventId: event.id,
             place: userRank,
             playerRating,
             gamesPlayed,
+            minimumGamesPlayed: gamesPlayed >= event.gameRules.minimumGamesForRating,
+            remainingGamesToRating: Math.max(0, event.gameRules.minimumGamesForRating - gamesPlayed),
             averageIncrement,
             averagePlace,
             percentageFirstPlace,
