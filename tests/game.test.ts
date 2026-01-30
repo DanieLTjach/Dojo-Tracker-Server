@@ -295,6 +295,42 @@ describe('Game API Endpoints', () => {
             expect(response.body.message).toBe('Сума очок повинна дорівнювати 120000, у вас 130000');
         });
 
+        test('should fail with points outside valid range (too high)', async () => {
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 1000001 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: -940001 }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe('Очки гравця (1000001) повинні бути в діапазоні від -1000000 до 1000000');
+        });
+
+        test('should fail with points outside valid range (too low)', async () => {
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: -1000001 },
+                        { userId: testUser2Id, points: 1060001 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 30000 }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe('Очки гравця (-1000001) повинні бути в діапазоні від -1000000 до 1000000');
+        });
+
         test('should fail when event has not started yet', async () => {
             // Create an event that starts in the future
             const futureEventId = 9001;
