@@ -18,6 +18,7 @@ import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
 import LogService from './LogService.ts';
 import dedent from 'dedent';
+import type { User } from '../model/UserModels.ts';
 
 export class GameService {
 
@@ -52,7 +53,7 @@ export class GameService {
 
         const newGame = this.getGameById(newGameId);
         this.logNewGame(newGame, event);
-        this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter);
+        this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter, createdBy);
         return newGame;
     }
 
@@ -184,11 +185,12 @@ export class GameService {
         }).join('\n\n');
     }
 
-        private logRatingUpdateForGame(
+    private logRatingUpdateForGame(
         game: GameWithPlayers,
         event: Event,
         standingsBefore: Map<number, number>,
-        standingsAfter: Map<number, number>
+        standingsAfter: Map<number, number>,
+        createdBy: number
     ): void {
         // Sort players by points descending (as they were ranked in the game)
         const sortedPlayers = [...game.players].sort((a, b) => b.points - a.points);
@@ -211,13 +213,23 @@ export class GameService {
             }
 
             const ratingSign = player.ratingChange >= 0 ? '+' : '';
-            
-            return `<b>${index + 1}. ${user.name}</b> ${ratingSign}${player.ratingChange} ${standingString}`;
+
+            return `<b>${index + 1}.</b> ${this.formatUserNameForTelegram(user)}  ${ratingSign}${player.ratingChange} ${standingString}`;
         }).join('\n');
 
-        const message = `<b>${event.name}</b>: Додану нову гру\n\n` + playerLines;
+        const createdByUser = this.userService.getUserById(createdBy);
+        const message = `<b>${event.name}</b>\n${this.formatUserNameForTelegram(createdByUser)} додав нову гру\n\n` + playerLines;
         
         LogService.logRatingUpdate(message);
+    }
+
+    private formatUserNameForTelegram(user: User): string {
+        const name = `<b>${user.name}</b>`;
+        if (user.telegramUsername) {
+            const username = user.telegramUsername.startsWith('@') ? user.telegramUsername.slice(1) : user.telegramUsername;
+            return `<a href="https://t.me/${username}">${name}</a>`;
+        }
+        return name;
     }
 
     private validateGameFilters(filters: GameFilters): void {

@@ -22,7 +22,10 @@ class TelegramService {
                     message,
                     {
                         parse_mode: 'HTML',
-                        message_thread_id: config.ratingTopicId
+                        message_thread_id: config.ratingTopicId,
+                        link_preview_options: {
+                            is_disabled: true
+                        }
                     }
                 );
             } catch (error) {
