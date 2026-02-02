@@ -59,3 +59,9 @@ export class YouHaveToBeAdminToCreateGameWithCustomTime extends ForbiddenError {
         super('Щоб створити гру з заданим часом, ви повинні бути адміністратором', 'youHaveToBeAdminToCreateGameWithCustomTime');
     }
 }
+
+export class YouHaveToBeAdminToHideNewGameMessage extends ForbiddenError {
+    constructor() {
+        super('Щоб сховати повідомлення про нову гру, ви повинні бути адміністратором', 'youHaveToBeAdminToHideNewGameMessage');
+    }
+}

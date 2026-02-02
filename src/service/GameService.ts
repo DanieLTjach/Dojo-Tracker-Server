@@ -10,7 +10,8 @@ import {
     EventHasEndedError,
     DuplicateGameTimestampInEventError,
     YouHaveToBeAdminToCreateGameWithCustomTime,
-    PointsNotWithinRange
+    PointsNotWithinRange,
+    YouHaveToBeAdminToHideNewGameMessage
 } from '../error/GameErrors.ts';
 import type { GameWithPlayers, PlayerData, GameFilters, GamePlayer } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
@@ -31,11 +32,15 @@ export class GameService {
         eventId: number,
         playersData: PlayerData[],
         createdBy: number,
-        createdAt: Date | undefined
+        createdAt: Date | undefined,
+        hideNewGameMessage: boolean
     ): GameWithPlayers {
         const gameTimestamp = createdAt ?? new Date();
         if (createdAt !== undefined) {
             this.userService.validateUserIsAdmin(createdBy, () => new YouHaveToBeAdminToCreateGameWithCustomTime());
+        }
+        if (hideNewGameMessage !== false) {
+            this.userService.validateUserIsAdmin(createdBy, () => new YouHaveToBeAdminToHideNewGameMessage());
         }
 
         const event = this.eventService.getEventById(eventId);
@@ -53,7 +58,9 @@ export class GameService {
 
         const newGame = this.getGameById(newGameId);
         this.logNewGame(newGame, event);
-        this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter, createdBy);
+        if (!hideNewGameMessage) {
+            this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter, createdBy);
+        }
         return newGame;
     }
 
@@ -123,12 +130,12 @@ export class GameService {
     }
 
     private logNewGame(game: GameWithPlayers, event: Event): void {
-        this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by'); 
+        this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by');
     }
 
     private logEditedGame(oldGame: GameWithPlayers, newGame: GameWithPlayers, event: Event, modifiedBy: number): void {
         const user = this.userService.getUserById(modifiedBy);
-        
+
         const oldEvent = this.eventService.getEventById(oldGame.eventId);
         const message = dedent`
             <b>✏️ Game Edited</b>
@@ -174,7 +181,7 @@ export class GameService {
         return players.map((p, index) => {
             const user = this.userService.getUserById(p.userId);
             const ratingSign = p.ratingChange >= 0 ? '+' : '';
-            
+
             let userDescription = `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>`;
             userDescription += `\n   • Points: <b>${p.points}</b>`;
             if (p.startPlace !== null) {
@@ -219,7 +226,7 @@ export class GameService {
 
         const createdByUser = this.userService.getUserById(createdBy);
         const message = `<b>${event.name}</b>\n${this.formatUserNameForTelegram(createdByUser)} додав нову гру\n\n` + playerLines;
-        
+
         LogService.logRatingUpdate(message);
     }
 
