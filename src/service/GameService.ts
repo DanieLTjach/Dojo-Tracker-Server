@@ -19,6 +19,7 @@ import { RatingService } from './RatingService.ts';
 import LogService from './LogService.ts';
 import dedent from 'dedent';
 import type { User } from '../model/UserModels.ts';
+import config from '../../config/config.ts';
 
 export class GameService {
 
@@ -123,12 +124,12 @@ export class GameService {
     }
 
     private logNewGame(game: GameWithPlayers, event: Event): void {
-        this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by'); 
+        this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by');
     }
 
     private logEditedGame(oldGame: GameWithPlayers, newGame: GameWithPlayers, event: Event, modifiedBy: number): void {
         const user = this.userService.getUserById(modifiedBy);
-        
+
         const oldEvent = this.eventService.getEventById(oldGame.eventId);
         const message = dedent`
             <b>✏️ Game Edited</b>
@@ -174,7 +175,7 @@ export class GameService {
         return players.map((p, index) => {
             const user = this.userService.getUserById(p.userId);
             const ratingSign = p.ratingChange >= 0 ? '+' : '';
-            
+
             let userDescription = `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>`;
             userDescription += `\n   • Points: <b>${p.points}</b>`;
             if (p.startPlace !== null) {
@@ -195,41 +196,49 @@ export class GameService {
         // Sort players by points descending (as they were ranked in the game)
         const sortedPlayers = [...game.players].sort((a, b) => b.points - a.points);
 
+        const maxPlayerPointsStringLength = Math.max(...sortedPlayers.map(p => p.points.toString().length));
+        const maxPlayerRatingChangeStringLength = Math.max(
+            ...sortedPlayers.map(p => this.signedNumberToString(p.ratingChange).length)
+        );
+        const padding = Math.max(maxPlayerPointsStringLength, maxPlayerRatingChangeStringLength) + 1;
+
         const playerLines = sortedPlayers.map((player, index) => {
             const user = this.userService.getUserById(player.userId);
             const standingBefore = standingsBefore.get(player.userId) ?? NaN;
             const standingAfter = standingsAfter.get(player.userId) ?? NaN;
 
-            const standingBeforeString = Number.isNaN(standingBefore) ? 'N/A' : standingBefore;
-            const standingAfterString = Number.isNaN(standingAfter) ? 'N/A' : standingAfter;
-
-            let standingString;
-            if (standingAfter < standingBefore || Number.isNaN(standingBefore) && !Number.isNaN(standingAfter)) {
-                standingString = `↗️ (${standingBeforeString} → ${standingAfterString})`;
+            let standingString = '';
+            if (standingAfter < standingBefore) {
+                standingString = `↗️ (${standingBefore} → ${standingAfter})`;
             } else if (standingAfter > standingBefore) {
-                standingString = `↘️ (${standingBeforeString} → ${standingAfterString})`;
-            } else {
-                standingString = `⏺️ (${standingBeforeString})`;
+                standingString = `↘️ (${standingBefore} → ${standingAfter})`;
+            } else if (standingAfter === standingBefore) {
+                standingString = `⏺️ (${standingBefore})`;
+            } else if (Number.isNaN(standingBefore) && !Number.isNaN(standingAfter)) {
+                standingString = `🆕 (${standingAfter})`;
             }
 
-            const ratingSign = player.ratingChange >= 0 ? '+' : '';
-
-            return `<b>${index + 1}.</b> ${this.formatUserNameForTelegram(user)}  ${ratingSign}${player.ratingChange} ${standingString}`;
-        }).join('\n');
+            return `<code>${index + 1}.${player.points.toString().padStart(padding, ' ')}</code>`
+                + ` | ${this.generateUserProfileLink(user)}\n`
+                + `<code>${this.signedNumberToString(player.ratingChange).padStart(padding + 2, ' ')}</code>`
+                + (standingString ? ` | ${standingString}` : '');
+        }).join('\n\n');
 
         const createdByUser = this.userService.getUserById(createdBy);
-        const message = `<b>${event.name}</b>\n${this.formatUserNameForTelegram(createdByUser)} додав нову гру\n\n` + playerLines;
-        
+        const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
+            + `\n${this.generateUserProfileLink(createdByUser)}`
+            + ` додав нову <a href="${config.botUrl}?startapp=game_${game.id}">гру</a>\n\n`
+            + `${playerLines}`;
+
         LogService.logRatingUpdate(message);
     }
 
-    private formatUserNameForTelegram(user: User): string {
-        const name = `<b>${user.name}</b>`;
-        if (user.telegramUsername) {
-            const username = user.telegramUsername.startsWith('@') ? user.telegramUsername.slice(1) : user.telegramUsername;
-            return `<a href="https://t.me/${username}">${name}</a>`;
-        }
-        return name;
+    private signedNumberToString(num: number): string {
+        return num >= 0 ? `+${num}` : `${num}`;
+    }
+
+    private generateUserProfileLink(user: User): string {
+        return `<a href="${config.botUrl}?startapp=user_${user.id}"><b>${user.name}</b></a>`;
     }
 
     private validateGameFilters(filters: GameFilters): void {
