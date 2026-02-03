@@ -6,7 +6,18 @@ import { booleanToInteger } from '../db/dbUtils.ts';
 export class UserRepository {
 
     private findAllUsersStatement(): Statement<unknown[], UserDBEntity> {
-        return dbManager.db.prepare('SELECT * FROM user WHERE id != 0 ORDER BY id');
+        return dbManager.db.prepare(`
+            SELECT user.*
+            FROM user
+            LEFT JOIN (
+                SELECT userId, MAX(game.createdAt) as lastGameDate
+                FROM userToGame
+                JOIN game ON userToGame.gameId = game.id
+                GROUP BY userId
+            ) lastGame ON user.id = lastGame.userId
+            WHERE user.id != 0
+            ORDER BY lastGame.lastGameDate DESC NULLS LAST, user.id
+        `);
     }
 
     findAllUsers(): User[] {
