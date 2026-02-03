@@ -10,7 +10,8 @@ import {
     EventHasEndedError,
     DuplicateGameTimestampInEventError,
     YouHaveToBeAdminToCreateGameWithCustomTime,
-    PointsNotWithinRange
+    PointsNotWithinRange,
+    YouHaveToBeAdminToHideNewGameMessage
 } from '../error/GameErrors.ts';
 import type { GameWithPlayers, PlayerData, GameFilters, GamePlayer } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
@@ -32,11 +33,15 @@ export class GameService {
         eventId: number,
         playersData: PlayerData[],
         createdBy: number,
-        createdAt: Date | undefined
+        createdAt: Date | undefined,
+        hideNewGameMessage: boolean
     ): GameWithPlayers {
         const gameTimestamp = createdAt ?? new Date();
         if (createdAt !== undefined) {
             this.userService.validateUserIsAdmin(createdBy, () => new YouHaveToBeAdminToCreateGameWithCustomTime());
+        }
+        if (hideNewGameMessage !== false) {
+            this.userService.validateUserIsAdmin(createdBy, () => new YouHaveToBeAdminToHideNewGameMessage());
         }
 
         const event = this.eventService.getEventById(eventId);
@@ -54,7 +59,9 @@ export class GameService {
 
         const newGame = this.getGameById(newGameId);
         this.logNewGame(newGame, event);
-        this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter, createdBy);
+        if (!hideNewGameMessage) {
+            this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter, createdBy);
+        }
         return newGame;
     }
 

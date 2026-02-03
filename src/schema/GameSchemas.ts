@@ -26,7 +26,8 @@ export const gameCreationSchema = z.object({
     body: z.object({
         eventId: eventIdSchema,
         playersData: playerListSchema,
-        createdAt: dateSchema.nullish()
+        createdAt: dateSchema.nullish(),
+        hideNewGameMessage: z.boolean().nullish()
     })
 });
 
