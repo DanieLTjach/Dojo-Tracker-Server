@@ -31,21 +31,30 @@ export class GameRepository {
         userId: number,
         points: number,
         startPlace: string | undefined,
+        chomboCount: number,
         modifiedBy: number,
         timestamp: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO userToGame (gameId, userId, points, startPlace, modifiedBy, createdAt, modifiedAt)
-            VALUES (:gameId, :userId, :points, :startPlace, :modifiedBy, :timestamp, :timestamp)`
+            INSERT INTO userToGame (gameId, userId, points, startPlace, chomboCount, modifiedBy, createdAt, modifiedAt)
+            VALUES (:gameId, :userId, :points, :startPlace, :chomboCount, :modifiedBy, :timestamp, :timestamp)`
         );
     }
 
-    addGamePlayer(gameId: number, userId: number, points: number, startPlace: string | undefined, modifiedBy: number): void {
+    addGamePlayer(
+        gameId: number,
+        userId: number,
+        points: number,
+        startPlace: string | undefined,
+        chomboCount: number,
+        modifiedBy: number
+    ): void {
         this.addGamePlayerStatement().run({
             gameId,
             userId,
             points,
             startPlace,
+            chomboCount,
             modifiedBy,
             timestamp: new Date().toISOString()
         });

@@ -15,6 +15,7 @@ export interface GamePlayer {
     points: number;
     ratingChange: number;
     startPlace: string | null;
+    chomboCount: number;
 }
 
 export interface GameWithPlayers extends Game {
