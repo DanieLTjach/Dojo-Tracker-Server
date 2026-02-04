@@ -1,0 +1,1 @@
+ALTER TABLE gameRules ADD COLUMN chomboPointsAfterUma INTEGER;

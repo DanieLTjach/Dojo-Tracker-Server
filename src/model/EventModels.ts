@@ -7,6 +7,7 @@ export interface GameRules {
     startingPoints: number;
     startingRating: number;
     minimumGamesForRating: number;
+    chomboPointsAfterUma: number | null;
 }
 
 export interface Event {

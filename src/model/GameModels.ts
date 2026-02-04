@@ -25,6 +25,7 @@ export interface PlayerData {
     userId: number;
     points: number;
     startPlace?: string | undefined | null;
+    chomboCount?: number | undefined | null;
 }
 
 export interface GameFilters {
