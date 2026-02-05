@@ -25,7 +25,7 @@ describe('Authentication API Endpoints', () => {
         // Create test user before running auth tests
         const user = userService.registerUser("name", TEST_USERNAME, TEST_TELEGRAM_ID, 0);
         // Activate the user for tests
-        userRepository.updateUserActivationStatus(user.id, true, 0);
+        userRepository.updateUserStatus(user.id, true, 'ACTIVE', 0);
     });
 
     afterAll(() => {
@@ -206,8 +206,7 @@ describe('Authentication API Endpoints', () => {
             const inactiveTelegramId = 777888999;
             // Create an inactive user
             const user = userService.registerUser("inactive_name", 'inactiveuser', inactiveTelegramId, 0);
-            userRepository.updateUserActivationStatus(user.id, false, 0);
-
+            userRepository.updateUserStatus(user.id, false, 'INACTIVE', 0);
             const initData = generateValidInitData(inactiveTelegramId, 'inactiveuser');
 
             const response = await request(app)

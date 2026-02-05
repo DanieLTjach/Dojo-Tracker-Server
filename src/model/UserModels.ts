@@ -1,3 +1,5 @@
+export type UserStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE';
+
 export interface User {
     id: number;
     name: string;
@@ -5,6 +7,7 @@ export interface User {
     telegramId: number | null;
     isAdmin: boolean;
     isActive: boolean;
+    status: UserStatus;
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: string;

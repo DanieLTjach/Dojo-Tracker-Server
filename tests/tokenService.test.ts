@@ -32,6 +32,7 @@ describe('TokenService', () => {
                 telegramUsername: '@testuser',
                 isAdmin: false,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
@@ -52,6 +53,7 @@ describe('TokenService', () => {
                 telegramUsername: '@admin',
                 isAdmin: true,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
@@ -75,6 +77,7 @@ describe('TokenService', () => {
                 telegramUsername: '@test',
                 isAdmin: true,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
@@ -95,6 +98,7 @@ describe('TokenService', () => {
                 telegramUsername: '@test',
                 isAdmin: false,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
@@ -120,6 +124,7 @@ describe('TokenService', () => {
                 telegramUsername: '@test',
                 isAdmin: false,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'
@@ -159,6 +164,7 @@ describe('TokenService', () => {
                 telegramUsername: '@test',
                 isAdmin: true,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM'

@@ -41,7 +41,7 @@ export class AuthService {
      * @throws InvalidInitDataError if validation fails
      * @throws ExpiredAuthDataError if auth_date is too old
      */
-    private validateInitData(params: Record<string, string>): void {
+    validateInitData(params: Record<string, string>): void {
         // Get hash from params
         const receivedHash = params['hash'];
         if (!receivedHash) {
@@ -93,7 +93,7 @@ export class AuthService {
      * @returns Telegram user ID
      * @throws InvalidInitDataError if user ID is missing or invalid
      */
-    private extractTelegramId(params: Record<string, string>): number {
+    extractTelegramId(params: Record<string, string>): number {
         const userParam = params['user'];
         if (!userParam) {
             throw new InvalidInitDataError('Missing user parameter');
