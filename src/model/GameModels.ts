@@ -15,6 +15,7 @@ export interface GamePlayer {
     points: number;
     ratingChange: number;
     startPlace: string | null;
+    chomboCount: number;
 }
 
 export interface GameWithPlayers extends Game {
@@ -25,6 +26,7 @@ export interface PlayerData {
     userId: number;
     points: number;
     startPlace?: string | undefined | null;
+    chomboCount?: number | undefined | null;
 }
 
 export interface GameFilters {

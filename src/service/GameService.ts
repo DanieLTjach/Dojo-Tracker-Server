@@ -188,6 +188,9 @@ export class GameService {
             if (p.startPlace !== null) {
                 userDescription += `\n   • Start Place: <b>${p.startPlace}</b>`;
             }
+            if (p.chomboCount > 0) {
+                userDescription += `\n   • Chombo Count: <b>${p.chomboCount}</b>`;
+            }
             userDescription += `\n   • Rating: <b>${ratingSign}${p.ratingChange}</b>`;
             return userDescription;
         }).join('\n\n');
@@ -228,7 +231,8 @@ export class GameService {
             return `<code>${index + 1}.${player.points.toString().padStart(padding, ' ')}</code>`
                 + ` | ${this.generateUserProfileLink(user)}\n`
                 + `<code>${this.signedNumberToString(player.ratingChange).padStart(padding + 2, ' ')}</code>`
-                + (standingString ? ` | ${standingString}` : '');
+                + (standingString ? ` | ${standingString}` : '')
+                + (player.chomboCount > 0 ? ` | Chombo Count: ${player.chomboCount}` : '');
         }).join('\n\n');
 
         const createdByUser = this.userService.getUserById(createdBy);
@@ -278,6 +282,7 @@ export class GameService {
                 player.userId,
                 player.points,
                 player.startPlace ?? undefined,
+                player.chomboCount ?? 0,
                 modifiedBy
             );
         }

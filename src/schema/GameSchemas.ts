@@ -10,7 +10,8 @@ export const gameIdParamSchema = z.coerce.number().int("Game ID must be an integ
 const playerDataSchema = z.object({
     userId: userIdSchema,
     points: z.number().int("Points must be an integer"),
-    startPlace: gameStartPlace.nullish()
+    startPlace: gameStartPlace.nullish(),
+    chomboCount: z.number().int("Chombo count must be an integer").nonnegative().max(10).nullish()
 });
 
 const playerListSchema = z.array(playerDataSchema).refine((players) => {
