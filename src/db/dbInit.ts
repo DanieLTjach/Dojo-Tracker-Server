@@ -23,10 +23,12 @@ class DBManager {
     initDB() {
         try {
             this.db.pragma('journal_mode = WAL');
-            this.db.pragma('foreign_keys = ON');
+            this.db.pragma('foreign_keys = OFF');
             this.runMigrations();
+            this.db.pragma('foreign_keys = ON');
         } catch (error) {
             console.error('Failed to initialize database:', error);
+            this.closeDB();
             process.exit(1);
         }
     }
@@ -57,8 +59,11 @@ class DBManager {
                 console.log(`Running migration: ${file}`);
 
                 try {
-                    this.runSqlFile(filePath);
-                    this.setDBVersion(migrationNumber);
+                    this.db.transaction(() => {
+                        this.runSqlFile(filePath);
+                        this.validateForeignKeyConstraints();
+                        this.setDBVersion(migrationNumber);
+                    })();
                     console.log(`✓ Migration ${file} completed`);
                     migrationsRun++;
                 } catch (error) {
@@ -84,16 +89,20 @@ class DBManager {
         return result;
     }
 
-    setDBVersion(version: number) {
+    private setDBVersion(version: number) {
         this.db.pragma(`user_version = ${version}`);
     }
 
-    runSqlFile(filePath: string) {
+    private runSqlFile(filePath: string) {
         const sql = fs.readFileSync(filePath, 'utf8');
+        this.db.exec(sql);
+    }
 
-        this.db.transaction(() => {
-            this.db.exec(sql);
-        })();
+    private validateForeignKeyConstraints() {
+        const result = this.db.pragma('foreign_key_check', { simple: false }) as unknown[];
+        if (result.length > 0) {
+            throw new Error('Foreign key constraint violations found: ' + JSON.stringify(result));
+        }
     }
 }
 

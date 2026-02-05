@@ -1,2 +1,10 @@
+CREATE TABLE userStatus (
+    status TEXT NOT NULL PRIMARY KEY
+);
+INSERT INTO userStatus (status) VALUES ('PENDING'), ('ACTIVE'), ('INACTIVE');
+
+ALTER TABLE user ADD COLUMN status TEXT REFERENCES userStatus(status) DEFAULT 'ACTIVE' NOT NULL;
+UPDATE user SET status = 'INACTIVE' where isActive = 0;
+
 ALTER TABLE gameRules ADD COLUMN chomboPointsAfterUma INTEGER;
 ALTER TABLE userToGame ADD COLUMN chomboCount INTEGER NOT NULL DEFAULT 0;

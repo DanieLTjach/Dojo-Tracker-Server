@@ -9,16 +9,28 @@ import {
     getUserByIdSchema
 } from '../schema/UserSchemas.ts';
 import { SYSTEM_USER_ID } from '../../config/constants.ts';
+import { AuthService } from '../service/AuthService.ts';
 
 export class UserController {
 
     private userService: UserService = new UserService();
+    private authService: AuthService = new AuthService();
 
     registerUser(req: Request, res: Response) {
         const { name, telegramUsername, telegramId } = userRegistrationSchema.parse(req).body;
         const createdBy = req.user?.userId ?? SYSTEM_USER_ID;
         const newUser = this.userService.registerUser(name, telegramUsername ?? undefined, telegramId, createdBy);
         return res.status(StatusCodes.CREATED).json(newUser);
+    }
+
+    getCurrentUserStatus(req: Request, res: Response) {
+        const initDataParams = req.query as Record<string, string>;
+
+        this.authService.validateInitData(initDataParams);
+        const telegramId = this.authService.extractTelegramId(initDataParams);
+
+        const result = this.userService.getUserStatusByTelegramId(telegramId);
+        return res.status(StatusCodes.OK).json(result);
     }
 
     getAllUsers(_req: Request, res: Response) {

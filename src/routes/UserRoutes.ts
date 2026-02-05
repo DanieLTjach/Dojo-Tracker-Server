@@ -8,6 +8,8 @@ const userController = new UserController();
 
 // Public - user registration
 router.post('/', withTransaction((req, res) => userController.registerUser(req, res)));
+// Public - get current user status
+router.post('/current/status', withTransaction((req, res) => userController.getCurrentUserStatus(req, res)));
 
 // Authenticated users - read operations
 router.get('/', requireAuth, withTransaction((req, res) => userController.getAllUsers(req, res)));
