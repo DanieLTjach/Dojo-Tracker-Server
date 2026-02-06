@@ -12,6 +12,7 @@ import type { User } from '../model/UserModels.ts';
 import { ResponseStatusError } from '../error/BaseErrors.ts';
 import LogService from './LogService.ts';
 import dedent from 'dedent';
+import { UserLogsTopic } from '../model/TelegramTopic.ts';
 
 export class UserService {
 
@@ -164,7 +165,7 @@ export class UserService {
             <b>Telegram ID:</b> <code>${user.telegramId || 'N/A'}</code>
             <b>Registered by:</b> ${creator.name} <code>(ID: ${creator.id})</code>
         `;
-        LogService.logInfo(message);
+        LogService.logInfo(message, UserLogsTopic);
     }
 
     private logEditedUser(oldUser: User, newUser: User, modifiedBy: number): void {
@@ -177,7 +178,7 @@ export class UserService {
             <b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}
             <b>Edited by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
-        LogService.logInfo(message);
+        LogService.logInfo(message, UserLogsTopic);
     }
 
     private logActivationStatusChanged(oldUser: User, newUser: User, modifiedBy: number): void {
@@ -193,6 +194,6 @@ export class UserService {
             <b>Activation Status:</b> ${oldUser.isActive} → ${newUser.isActive}
             <b>Updated by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
-        LogService.logInfo(message);
+        LogService.logInfo(message, UserLogsTopic);
     }
 }
