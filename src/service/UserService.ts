@@ -11,6 +11,8 @@ import {
 import type { User, UserStatus } from '../model/UserModels.ts';
 import { ResponseStatusError } from '../error/BaseErrors.ts';
 import LogService from './LogService.ts';
+import TelegramService from './TelegramSevice.ts';
+import config from '../../config/config.ts';
 import dedent from 'dedent';
 import { UserLogsTopic } from '../model/TelegramTopic.ts';
 
@@ -97,6 +99,11 @@ export class UserService {
 
         const newUser = this.getUserById(userId);
         this.logActivationStatusChanged(oldUser, newUser, modifiedBy);
+
+        if (isActive && newUser.telegramId) {
+            this.notifyUserActivated(newUser);
+        }
+
         return newUser;
     }
 
@@ -183,6 +190,15 @@ export class UserService {
             <b>Edited by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         LogService.logInfo(message, UserLogsTopic);
+    }
+
+    private notifyUserActivated(user: User): void {
+        const message = dedent`
+            <b>Ваш акаунт було активовано!</b>
+
+            Тепер ви можете користуватися додатком. <a href="${config.botUrl}">Відкрити</a>
+        `;
+        TelegramService.sendDirectMessage(user.telegramId!, message);
     }
 
     private logActivationStatusChanged(oldUser: User, newUser: User, modifiedBy: number): void {

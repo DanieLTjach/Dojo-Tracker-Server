@@ -26,6 +26,13 @@ class TelegramService {
             console.error('Error sending Telegram message:', error);
         }
     }
+    async sendDirectMessage(telegramId: number, message: string): Promise<void> {
+        try {
+            await this.bot.telegram.sendMessage(telegramId, message, { parse_mode: 'HTML' });
+        } catch (error) {
+            console.error(`Error sending DM to Telegram user ${telegramId}:`, error);
+        }
+    }
 }
 
 export default new TelegramService();
