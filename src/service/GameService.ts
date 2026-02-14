@@ -237,8 +237,8 @@ export class GameService {
 
         const createdByUser = this.userService.getUserById(createdBy);
         const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
-            + `\n${this.generateUserProfileLink(createdByUser)}`
-            + ` додав нову <a href="${config.botUrl}?startapp=game_${game.id}">гру</a>\n\n`
+            + `\nДодано <a href="${config.botUrl}?startapp=game_${game.id}">нову гру</a>`
+            + ` користувачем ${this.generateUserProfileLink(createdByUser)}\n\n`
             + `${playerLines}`;
 
         LogService.logInfo(message, RatingTopic);
