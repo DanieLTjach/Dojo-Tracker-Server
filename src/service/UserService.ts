@@ -8,7 +8,7 @@ import {
     TelegramUsernameAlreadyTakenByAnotherUser,
     YouHaveToBeAdminToEditAnotherUser
 } from '../error/UserErrors.ts';
-import type { User } from '../model/UserModels.ts';
+import type { User, UserStatus } from '../model/UserModels.ts';
 import { ResponseStatusError } from '../error/BaseErrors.ts';
 import LogService from './LogService.ts';
 import dedent from 'dedent';
@@ -37,6 +37,10 @@ export class UserService {
         const newUser = this.getUserById(newUserId);
         this.logRegisteredUser(newUser, createdBy);
         return newUser;
+    }
+
+    getUserStatusByTelegramId(telegramId: number): UserStatus {
+        return this.getUserByTelegramId(telegramId).status;
     }
 
     getAllUsers(): User[] {
@@ -88,7 +92,7 @@ export class UserService {
         this.validateUserExistsById(userId);
 
         const oldUser = this.getUserById(userId);
-        this.userRepository.updateUserActivationStatus(userId, isActive, modifiedBy);
+        this.userRepository.updateUserStatus(userId, isActive, isActive ? 'ACTIVE' : 'INACTIVE', modifiedBy);
 
         const newUser = this.getUserById(userId);
         this.logActivationStatusChanged(oldUser, newUser, modifiedBy);
@@ -190,7 +194,8 @@ export class UserService {
             <b>User ID:</b> <code>${newUser.id}</code>
             <b>Name:</b> ${newUser.name}
             <b>Telegram Username:</b> ${newUser.telegramUsername || 'N/A'}
-            <b>Activation Status:</b> ${oldUser.isActive} → ${newUser.isActive}
+            <b>Is active:</b> ${oldUser.isActive} → ${newUser.isActive}
+            <b>Status:</b> ${oldUser.status} → ${newUser.status}
             <b>Updated by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         LogService.logInfo(message);

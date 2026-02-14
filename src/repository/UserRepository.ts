@@ -1,5 +1,5 @@
 import type { Statement } from 'better-sqlite3';
-import type { User } from '../model/UserModels.ts';
+import type { User, UserStatus } from '../model/UserModels.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
 
@@ -66,11 +66,12 @@ export class UserRepository {
         telegramId: number | undefined,
         modifiedBy: number,
         isActive: number,
+        status: UserStatus,
         timestamp: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy, isActive, createdAt, modifiedAt)
-            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :isActive, :timestamp, :timestamp)`
+            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy, isActive, status, createdAt, modifiedAt)
+            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :isActive, :status, :timestamp, :timestamp)`
         );
     }
 
@@ -81,6 +82,7 @@ export class UserRepository {
             telegramId,
             modifiedBy: createdBy,
             isActive: booleanToInteger(false),
+            status: 'PENDING',
             timestamp: new Date().toISOString()
         }).lastInsertRowid);
     }
@@ -119,21 +121,28 @@ export class UserRepository {
         this.updateUserTelegramUsernameStatement().run({ telegramUsername, modifiedBy, id: userId, timestamp: new Date().toISOString() });
     }
 
-    private updateUserActivationStatusStatement(): Statement<{
+    private updateUserStatusStatement(): Statement<{
         isActive: number,
+        status: UserStatus,
         modifiedBy: number,
         id: number,
         timestamp: string
     }, void> {
         return dbManager.db.prepare(`
             UPDATE user
-            SET isActive = :isActive, modifiedBy = :modifiedBy, modifiedAt = :timestamp
+            SET isActive = :isActive, status = :status, modifiedBy = :modifiedBy, modifiedAt = :timestamp
             WHERE id = :id`
         );
     }
 
-    updateUserActivationStatus(userId: number, newStatus: boolean, modifiedBy: number) {
-        this.updateUserActivationStatusStatement().run({ isActive: booleanToInteger(newStatus), modifiedBy, id: userId, timestamp: new Date().toISOString() });
+    updateUserStatus(userId: number, newIsActive: boolean, newStatus: UserStatus, modifiedBy: number) {
+        this.updateUserStatusStatement().run({
+            isActive: booleanToInteger(newIsActive),
+            status: newStatus,
+            modifiedBy,
+            id: userId,
+            timestamp: new Date().toISOString()
+        });
     }
 }
 
@@ -144,6 +153,7 @@ interface UserDBEntity {
     telegramId: number | null;
     isAdmin: number;
     isActive: number;
+    status: UserStatus;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: string;
