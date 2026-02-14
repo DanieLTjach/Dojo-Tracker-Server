@@ -21,6 +21,7 @@ import LogService from './LogService.ts';
 import dedent from 'dedent';
 import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
+import { GameLogsTopic, RatingTopic } from '../model/TelegramTopic.ts';
 
 export class GameService {
 
@@ -150,7 +151,7 @@ export class GameService {
         ` + this.printPlayersLog(oldGame.players) + dedent`
             \n\n<b>Players (After):</b>\n
         ` + this.printPlayersLog(newGame.players);
-        LogService.logInfo(message);
+        LogService.logInfo(message, GameLogsTopic);
     }
 
     private logDeletedGame(game: GameWithPlayers, event: Event, deletedBy: number): void {
@@ -175,7 +176,7 @@ export class GameService {
 
             <b>Players:</b>\n
         ` + this.printPlayersLog(game.players);
-        LogService.logInfo(message);
+        LogService.logInfo(message, GameLogsTopic);
     }
 
     private printPlayersLog(players: GamePlayer[]): string {
@@ -231,8 +232,7 @@ export class GameService {
             return `<code>${index + 1}.${player.points.toString().padStart(padding, ' ')}</code>`
                 + ` | ${this.generateUserProfileLink(user)}\n`
                 + `<code>${this.signedNumberToString(player.ratingChange).padStart(padding + 2, ' ')}</code>`
-                + (standingString ? ` | ${standingString}` : '')
-                + (player.chomboCount > 0 ? ` | Chombo Count: ${player.chomboCount}` : '');
+                + (standingString ? ` | ${standingString}` : '');
         }).join('\n\n');
 
         const createdByUser = this.userService.getUserById(createdBy);
@@ -241,7 +241,7 @@ export class GameService {
             + ` додав нову <a href="${config.botUrl}?startapp=game_${game.id}">гру</a>\n\n`
             + `${playerLines}`;
 
-        LogService.logRatingUpdate(message);
+        LogService.logInfo(message, RatingTopic);
     }
 
     private signedNumberToString(num: number): string {

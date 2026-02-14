@@ -8,11 +8,14 @@ interface Config {
     frontendUrl: string;
     botUrl: string;
     botToken: string;
-    adminChatId?: number | undefined;
-    ratingChatId?: number | undefined;
-    ratingTopicId?: number | undefined;
+    adminChatId: number | undefined;
+    errorLogsTopicId: number | undefined;
+    userLogsTopicId: number | undefined;
+    gameLogsTopicId: number | undefined;
+    ratingChatId: number | undefined;
+    ratingTopicId: number | undefined;
     tournamentMode: boolean;
-    tournamentUserId?: number | undefined;
+    tournamentUserId: number | undefined;
 }
 
 function getRequiredStringEnvVariable(varName: string): string {
@@ -66,6 +69,9 @@ const config: Config = {
     frontendUrl: getRequiredStringEnvVariable("FRONTEND_URL"),
     botUrl: getRequiredStringEnvVariable("BOT_URL"),
     adminChatId,
+    errorLogsTopicId: tryParseIntEnvVariable("ERROR_LOGS_TOPIC_ID"),
+    userLogsTopicId: tryParseIntEnvVariable("USER_LOGS_TOPIC_ID"),
+    gameLogsTopicId: tryParseIntEnvVariable("GAME_LOGS_TOPIC_ID"),
     ratingChatId,
     ratingTopicId,
     tournamentMode,
