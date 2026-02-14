@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { UserController } from '../controller/UserController.ts';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
+import profileRoutes from './ProfileRoutes.ts';
 
 const router = Router();
 const userController = new UserController();
@@ -36,5 +37,8 @@ router.post(
     requireAdmin,
     withTransaction((req, res) => userController.updateUserActivationStatus(req, res, false))
 );
+
+// Profile sub-routes
+router.use('/:id/profile', profileRoutes);
 
 export default router;
