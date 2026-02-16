@@ -47,7 +47,7 @@ export class GameService {
 
         const event = this.eventService.getEventById(eventId);
         this.validatePlayers(playersData, event.gameRules);
-        this.validateGameWithinEventDates(event, gameTimestamp);
+        this.validateGameWithinEventDates(event, gameTimestamp, createdBy);
         this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
 
         const standingsBefore = this.ratingService.calculateStandings(eventId);
@@ -321,12 +321,15 @@ export class GameService {
         }
     }
 
-    private validateGameWithinEventDates(event: Event, gameTimestamp: Date): void {
+    private validateGameWithinEventDates(event: Event, gameTimestamp: Date, createdBy: number): void {
         if (event.dateFrom !== null && gameTimestamp < event.dateFrom) {
             throw new EventHasntStartedError(event.name);
         }
         if (event.dateTo !== null && gameTimestamp > event.dateTo) {
-            throw new EventHasEndedError(event.name);
+            const user = this.userService.getUserById(createdBy);
+            if (!user.isAdmin) {
+                throw new EventHasEndedError(event.name);
+            }
         }
     }
 
