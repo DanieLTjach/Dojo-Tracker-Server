@@ -23,11 +23,19 @@ export class RatingService {
             ...ur,
             place: standingsMap.get(ur.user.id) ?? null
         }));
-        result.sort((a, b) =>
-            (b.rating - a.rating)
-            || (booleanToInteger(b.minimumGamesPlayed) - booleanToInteger(a.minimumGamesPlayed))
-            || (a.user.name.localeCompare(b.user.name))
-        );
+        result.sort((a, b) => {
+            // Ranked users first, then unranked
+            const rankedDiff = booleanToInteger(b.minimumGamesPlayed) - booleanToInteger(a.minimumGamesPlayed);
+            if (rankedDiff !== 0) return rankedDiff;
+
+            if (a.minimumGamesPlayed) {
+                // Ranked: sort by rating descending, then by name
+                return (b.rating - a.rating) || a.user.name.localeCompare(b.user.name);
+            } else {
+                // Unranked: sort by games played descending, then by name
+                return (b.gamesPlayed - a.gamesPlayed) || a.user.name.localeCompare(b.user.name);
+            }
+        });
         return result;
     }
 
