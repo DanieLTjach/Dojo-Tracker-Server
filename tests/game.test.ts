@@ -94,8 +94,67 @@ describe('Game API Endpoints', () => {
                 points: 40000,
                 startPlace: 'EAST'
             });
+            expect(response.body.tournamentHanchanNumber).toBeNull();
+            expect(response.body.tournamentTableNumber).toBeNull();
 
             testGameId = response.body.id; // Save for later tests
+        });
+
+        test('should create a game with tournament metadata', async () => {
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000 },
+                        { userId: testUser2Id, points: 35000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 20000 }
+                    ],
+                    tournamentHanchanNumber: 1,
+                    tournamentTableNumber: 3
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body.tournamentHanchanNumber).toBe(1);
+            expect(response.body.tournamentTableNumber).toBe(3);
+        });
+
+        test('should reject non-positive tournamentHanchanNumber', async () => {
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 30000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 30000 }
+                    ],
+                    tournamentHanchanNumber: 0
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject non-integer tournamentTableNumber', async () => {
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 30000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 30000 }
+                    ],
+                    tournamentTableNumber: 1.5
+                });
+
+            expect(response.status).toBe(400);
         });
 
         test('should create a game without startPlace', async () => {
@@ -546,6 +605,48 @@ describe('Game API Endpoints', () => {
             expect(response.status).toBe(200);
             expect(response.body.id).toBe(testGameId);
             expect(response.body.players[0].points).toBe(45000);
+        });
+
+        test('should update a game with tournament metadata', async () => {
+            const response = await request(app)
+                .put(`/api/games/${testGameId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 45000 },
+                        { userId: testUser2Id, points: 35000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 15000 }
+                    ],
+                    tournamentHanchanNumber: 2,
+                    tournamentTableNumber: 5
+                });
+
+            expect(response.status).toBe(200);
+            expect(response.body.tournamentHanchanNumber).toBe(2);
+            expect(response.body.tournamentTableNumber).toBe(5);
+        });
+
+        test('should clear tournament metadata by passing null', async () => {
+            const response = await request(app)
+                .put(`/api/games/${testGameId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 45000 },
+                        { userId: testUser2Id, points: 35000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 15000 }
+                    ],
+                    tournamentHanchanNumber: null,
+                    tournamentTableNumber: null
+                });
+
+            expect(response.status).toBe(200);
+            expect(response.body.tournamentHanchanNumber).toBeNull();
+            expect(response.body.tournamentTableNumber).toBeNull();
         });
 
         test('should fail to update game without admin privileges', async () => {
