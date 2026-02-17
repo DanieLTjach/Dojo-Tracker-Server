@@ -35,7 +35,9 @@ export class GameService {
         playersData: PlayerData[],
         createdBy: number,
         createdAt: Date | undefined,
-        hideNewGameMessage: boolean
+        hideNewGameMessage: boolean,
+        tournamentHanchanNumber: number | null,
+        tournamentTableNumber: number | null
     ): GameWithPlayers {
         const gameTimestamp = createdAt ?? new Date();
         if (createdAt !== undefined) {
@@ -52,7 +54,7 @@ export class GameService {
 
         const standingsBefore = this.ratingService.calculateStandings(eventId);
 
-        const newGameId = this.gameRepository.createGame(eventId, createdBy, gameTimestamp);
+        const newGameId = this.gameRepository.createGame(eventId, createdBy, gameTimestamp, tournamentHanchanNumber, tournamentTableNumber);
         this.addPlayersToGame(newGameId, playersData, createdBy);
         this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules);
 
@@ -100,7 +102,9 @@ export class GameService {
         eventId: number,
         playersData: PlayerData[],
         modifiedBy: number,
-        createdAt: Date | undefined
+        createdAt: Date | undefined,
+        tournamentHanchanNumber: number | null,
+        tournamentTableNumber: number | null
     ): GameWithPlayers {
         const oldGame = this.getGameById(gameId);
         const event = this.eventService.getEventById(eventId);
@@ -108,7 +112,7 @@ export class GameService {
 
         const newGameTimestamp = createdAt ?? oldGame.createdAt;
 
-        this.gameRepository.updateGame(gameId, eventId, modifiedBy, newGameTimestamp);
+        this.gameRepository.updateGame(gameId, eventId, modifiedBy, newGameTimestamp, tournamentHanchanNumber, tournamentTableNumber);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.addPlayersToGame(gameId, playersData, modifiedBy);
 
