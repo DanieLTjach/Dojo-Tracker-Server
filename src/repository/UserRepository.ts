@@ -5,10 +5,15 @@ import { booleanToInteger } from '../db/dbUtils.ts';
 
 export class UserRepository {
 
-    private findAllUsersStatement(): Statement<unknown[], UserDBEntity> {
+    private findAllUsersStatement(): Statement<unknown[], UserWithProfileDBEntity> {
         return dbManager.db.prepare(`
-            SELECT user.*
+            SELECT user.*,
+                p.firstNameEn as p_firstNameEn,
+                p.lastNameEn as p_lastNameEn,
+                p.emaNumber as p_emaNumber,
+                p.hideProfile as p_hideProfile
             FROM user
+            LEFT JOIN profile p ON user.id = p.userId
             LEFT JOIN (
                 SELECT userId, MAX(game.createdAt) as lastGameDate
                 FROM userToGame
@@ -21,43 +26,79 @@ export class UserRepository {
     }
 
     findAllUsers(): User[] {
-        return this.findAllUsersStatement().all().map(userFromDBEntity);
+        return this.findAllUsersStatement().all().map(userWithProfileFromDBEntity);
     }
 
-    private findUserByIdStatement(): Statement<{ id: number }, UserDBEntity> {
-        return dbManager.db.prepare('SELECT * FROM user WHERE id = :id');
+    private findUserByIdStatement(): Statement<{ id: number }, UserWithProfileDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT user.*,
+                p.firstNameEn as p_firstNameEn,
+                p.lastNameEn as p_lastNameEn,
+                p.emaNumber as p_emaNumber,
+                p.hideProfile as p_hideProfile
+            FROM user
+            LEFT JOIN profile p ON user.id = p.userId
+            WHERE user.id = :id`
+        );
     }
 
     findUserById(id: number): User | undefined {
         const userDBEntity = this.findUserByIdStatement().get({ id });
-        return userDBEntity !== undefined ? userFromDBEntity(userDBEntity) : undefined;
+        return userDBEntity !== undefined ? userWithProfileFromDBEntity(userDBEntity) : undefined;
     }
 
-    private findUserByTelegramIdStatement(): Statement<{ telegramId: number }, UserDBEntity> {
-        return dbManager.db.prepare('SELECT * FROM user WHERE telegramId = :telegramId');
+    private findUserByTelegramIdStatement(): Statement<{ telegramId: number }, UserWithProfileDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT user.*,
+                p.firstNameEn as p_firstNameEn,
+                p.lastNameEn as p_lastNameEn,
+                p.emaNumber as p_emaNumber,
+                p.hideProfile as p_hideProfile
+            FROM user
+            LEFT JOIN profile p ON user.id = p.userId
+            WHERE telegramId = :telegramId`
+        );
     }
 
     findUserByTelegramId(telegramId: number): User | undefined {
         const userDBEntity = this.findUserByTelegramIdStatement().get({ telegramId });
-        return userDBEntity !== undefined ? userFromDBEntity(userDBEntity) : undefined;
+        return userDBEntity !== undefined ? userWithProfileFromDBEntity(userDBEntity) : undefined;
     }
 
-    private findUserByTelegramUsernameStatement(): Statement<{ telegramUsername: string }, UserDBEntity> {
-        return dbManager.db.prepare('SELECT * FROM user WHERE telegramUsername = :telegramUsername');
+    private findUserByTelegramUsernameStatement(): Statement<{ telegramUsername: string }, UserWithProfileDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT user.*,
+                p.firstNameEn as p_firstNameEn,
+                p.lastNameEn as p_lastNameEn,
+                p.emaNumber as p_emaNumber,
+                p.hideProfile as p_hideProfile
+            FROM user
+            LEFT JOIN profile p ON user.id = p.userId
+            WHERE telegramUsername = :telegramUsername`
+        );
     }
 
     findUserByTelegramUsername(telegramUsername: string): User | undefined {
         const userDBEntity = this.findUserByTelegramUsernameStatement().get({ telegramUsername: telegramUsername });
-        return userDBEntity !== undefined ? userFromDBEntity(userDBEntity) : undefined;
+        return userDBEntity !== undefined ? userWithProfileFromDBEntity(userDBEntity) : undefined;
     }
 
-    private findUserByNameStatement(): Statement<{ name: string }, UserDBEntity> {
-        return dbManager.db.prepare('SELECT * FROM user WHERE name = :name');
+    private findUserByNameStatement(): Statement<{ name: string }, UserWithProfileDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT user.*,
+                p.firstNameEn as p_firstNameEn,
+                p.lastNameEn as p_lastNameEn,
+                p.emaNumber as p_emaNumber,
+                p.hideProfile as p_hideProfile
+            FROM user
+            LEFT JOIN profile p ON user.id = p.userId
+            WHERE name = :name`
+        );
     }
 
     findUserByName(name: string): User | undefined {
         const userDBEntity = this.findUserByNameStatement().get({ name });
-        return userDBEntity !== undefined ? userFromDBEntity(userDBEntity) : undefined;
+        return userDBEntity !== undefined ? userWithProfileFromDBEntity(userDBEntity) : undefined;
     }
 
     private registerUserStatement(): Statement<{
@@ -146,7 +187,7 @@ export class UserRepository {
     }
 }
 
-interface UserDBEntity {
+interface UserWithProfileDBEntity {
     id: number;
     name: string;
     telegramUsername: string | null;
@@ -157,14 +198,30 @@ interface UserDBEntity {
     createdAt: string;
     modifiedAt: string;
     modifiedBy: string;
+    p_firstNameEn: string | null;
+    p_lastNameEn: string | null;
+    p_emaNumber: string | null;
+    p_hideProfile: number | null;
 }
 
-function userFromDBEntity(dbEntity: UserDBEntity): User {
+function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
     return {
-        ...dbEntity,
+        id: dbEntity.id,
+        name: dbEntity.name,
+        telegramUsername: dbEntity.telegramUsername,
+        telegramId: dbEntity.telegramId,
         isAdmin: Boolean(dbEntity.isAdmin),
         isActive: Boolean(dbEntity.isActive),
+        status: dbEntity.status,
+        profile: dbEntity.p_hideProfile !== null ? {
+            userId: dbEntity.id,
+            firstNameEn: dbEntity.p_firstNameEn,
+            lastNameEn: dbEntity.p_lastNameEn,
+            emaNumber: dbEntity.p_emaNumber,
+            hideProfile: Boolean(dbEntity.p_hideProfile)
+        } : null,
         createdAt: new Date(dbEntity.createdAt),
-        modifiedAt: new Date(dbEntity.modifiedAt)
+        modifiedAt: new Date(dbEntity.modifiedAt),
+        modifiedBy: dbEntity.modifiedBy
     };
 }

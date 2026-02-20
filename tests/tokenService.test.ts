@@ -35,7 +35,8 @@ describe('TokenService', () => {
                 status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -56,7 +57,8 @@ describe('TokenService', () => {
                 status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -80,7 +82,8 @@ describe('TokenService', () => {
                 status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -101,7 +104,8 @@ describe('TokenService', () => {
                 status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             // Create an expired token (expired 1 hour ago)
@@ -127,7 +131,8 @@ describe('TokenService', () => {
                 status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             // Create a token with wrong secret
@@ -167,7 +172,8 @@ describe('TokenService', () => {
                 status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             const tokenPair = tokenService.createTokenPair(user);
