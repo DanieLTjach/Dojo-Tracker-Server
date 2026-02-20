@@ -23,9 +23,9 @@ export class RatingService {
             ...ur,
             place: standingsMap.get(ur.user.id) ?? null
         }));
-        result.sort((a, b) =>
-            (b.rating - a.rating)
-            || (booleanToInteger(b.minimumGamesPlayed) - booleanToInteger(a.minimumGamesPlayed))
+        result.sort((a, b) => 
+            (booleanToInteger(b.minimumGamesPlayed) - booleanToInteger(a.minimumGamesPlayed))
+            || (b.rating - a.rating)
             || (a.user.name.localeCompare(b.user.name))
         );
         return result;

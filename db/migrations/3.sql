@@ -7,3 +7,6 @@ CREATE TABLE profile (
     modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
+
+ALTER TABLE game ADD COLUMN tournamentHanchanNumber INTEGER;
+ALTER TABLE game ADD COLUMN tournamentTableNumber INTEGER;

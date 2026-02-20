@@ -5,6 +5,8 @@ export interface Game {
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;
+    tournamentHanchanNumber: number | null;
+    tournamentTableNumber: number | null;
 }
 
 export interface GamePlayer {

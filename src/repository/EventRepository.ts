@@ -14,6 +14,7 @@ export class EventRepository {
                 gr.startingPoints as gr_startingPoints,
                 gr.startingRating as gr_startingRating,
                 gr.minimumGamesForRating as gr_minimumGamesForRating,
+                gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
