@@ -7,11 +7,6 @@ export class ProfileService {
     private profileRepository: ProfileRepository = new ProfileRepository();
     private userService: UserService = new UserService();
 
-    getProfileByUserId(userId: number): Profile | undefined {
-        this.userService.validateUserExistsById(userId);
-        return this.profileRepository.findProfileByUserId(userId);
-    }
-
     updateProfile(
         userId: number,
         firstNameEn: string | null | undefined,
@@ -26,9 +21,9 @@ export class ProfileService {
 
         this.profileRepository.upsertProfile(
             userId,
-            firstNameEn !== undefined ? firstNameEn ?? null : existing?.firstNameEn ?? null,
-            lastNameEn !== undefined ? lastNameEn ?? null : existing?.lastNameEn ?? null,
-            emaNumber !== undefined ? emaNumber ?? null : existing?.emaNumber ?? null,
+            firstNameEn !== undefined ? firstNameEn : existing?.firstNameEn ?? null,
+            lastNameEn !== undefined ? lastNameEn : existing?.lastNameEn ?? null,
+            emaNumber !== undefined ? emaNumber : existing?.emaNumber ?? null,
             hideProfile !== undefined ? hideProfile : existing?.hideProfile ?? false,
             modifiedBy
         );

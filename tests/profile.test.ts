@@ -51,31 +51,6 @@ describe('Profile API Endpoints', () => {
             .send({});
     });
 
-    describe('GET /api/users/:id/profile', () => {
-        it('should return null when no profile exists', async () => {
-            const response = await request(app)
-                .get(`/api/users/${testUserId}/profile`)
-                .set('Authorization', adminAuthHeader)
-                .expect(200);
-
-            expect(response.body).toBeNull();
-        });
-
-        it('should fail without authentication', async () => {
-            await request(app)
-                .get(`/api/users/${testUserId}/profile`)
-                .expect(401);
-        });
-
-        it('should fail for non-existent user', async () => {
-            const response = await request(app)
-                .get('/api/users/99999/profile')
-                .set('Authorization', adminAuthHeader);
-
-            expect(response.status).toBe(404);
-        });
-    });
-
     describe('PATCH /api/users/:id/profile', () => {
         it('should create profile with all EMA fields', async () => {
             const profileData = {
@@ -98,16 +73,17 @@ describe('Profile API Endpoints', () => {
             expect(response.body.hideProfile).toBe(false);
         });
 
-        it('should return profile via GET after creation', async () => {
+        it('should return profile via user endpoint after creation', async () => {
             const response = await request(app)
-                .get(`/api/users/${testUserId}/profile`)
+                .get(`/api/users/${testUserId}`)
                 .set('Authorization', adminAuthHeader)
                 .expect(200);
 
-            expect(response.body.userId).toBe(testUserId);
-            expect(response.body.firstNameEn).toBe('John');
-            expect(response.body.lastNameEn).toBe('Doe');
-            expect(response.body.emaNumber).toBe('11990133');
+            expect(response.body.profile).not.toBeNull();
+            expect(response.body.profile.userId).toBe(testUserId);
+            expect(response.body.profile.firstNameEn).toBe('John');
+            expect(response.body.profile.lastNameEn).toBe('Doe');
+            expect(response.body.profile.emaNumber).toBe('11990133');
         });
 
         it('should partially update profile (only hideProfile)', async () => {
@@ -232,6 +208,58 @@ describe('Profile API Endpoints', () => {
             expect(userWithProfile.profile).not.toBeNull();
             expect(userWithProfile.profile.firstNameEn).toBe('Jane');
             expect(userWithoutProfile.profile).toBeNull();
+        });
+    });
+
+    describe('Profile visibility (hideProfile)', () => {
+        beforeAll(async () => {
+            // Ensure testUser has hideProfile set to true
+            await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', adminAuthHeader)
+                .send({ hideProfile: true })
+                .expect(200);
+        });
+
+        it('should hide profile from other non-admin users', async () => {
+            const otherUserAuthHeader = createAuthHeader(testUser2Id);
+            const response = await request(app)
+                .get(`/api/users/${testUserId}`)
+                .set('Authorization', otherUserAuthHeader)
+                .expect(200);
+
+            expect(response.body.profile).toBeNull();
+        });
+
+        it('should show profile to admin even when hidden', async () => {
+            const response = await request(app)
+                .get(`/api/users/${testUserId}`)
+                .set('Authorization', adminAuthHeader)
+                .expect(200);
+
+            expect(response.body.profile).not.toBeNull();
+            expect(response.body.profile.hideProfile).toBe(true);
+        });
+
+        it('should show profile to the user themselves', async () => {
+            const response = await request(app)
+                .get(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
+                .expect(200);
+
+            expect(response.body.profile).not.toBeNull();
+            expect(response.body.profile.hideProfile).toBe(true);
+        });
+
+        it('should hide profile in user list for non-admin users', async () => {
+            const otherUserAuthHeader = createAuthHeader(testUser2Id);
+            const response = await request(app)
+                .get('/api/users')
+                .set('Authorization', otherUserAuthHeader)
+                .expect(200);
+
+            const hiddenUser = response.body.find((u: any) => u.id === testUserId);
+            expect(hiddenUser.profile).toBeNull();
         });
     });
 });

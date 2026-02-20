@@ -33,20 +33,23 @@ export class UserController {
         return res.status(StatusCodes.OK).json(result);
     }
 
-    getAllUsers(_req: Request, res: Response) {
-        const users = this.userService.getAllUsers();
+    getAllUsers(req: Request, res: Response) {
+        const requestingUserId = req.user!.userId;
+        const users = this.userService.getAllUsers(requestingUserId);
         return res.status(StatusCodes.OK).json(users);
     }
 
     getUserById(req: Request, res: Response) {
         const { id } = getUserByIdSchema.parse(req).params;
-        const user = this.userService.getUserById(id);
+        const requestingUserId = req.user!.userId;
+        const user = this.userService.getUserById(id, requestingUserId);
         return res.status(StatusCodes.OK).json(user);
     }
 
     getUserByTelegramId(req: Request, res: Response) {
         const { telegramId } = getUserByTelegramIdSchema.parse(req).params;
-        const user = this.userService.getUserByTelegramId(telegramId);
+        const requestingUserId = req.user!.userId;
+        const user = this.userService.getUserByTelegramId(telegramId, requestingUserId);
         return res.status(StatusCodes.OK).json(user);
     }
 

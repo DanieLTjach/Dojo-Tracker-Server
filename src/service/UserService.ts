@@ -46,24 +46,25 @@ export class UserService {
         return this.getUserByTelegramId(telegramId).status;
     }
 
-    getAllUsers(): User[] {
-        return this.userRepository.findAllUsers();
+    getAllUsers(requestingUserId?: number): User[] {
+        const users = this.userRepository.findAllUsers();
+        return users.map(user => this.applyProfileVisibility(user, requestingUserId));
     }
 
-    getUserById(id: number): User {
+    getUserById(id: number, requestingUserId?: number): User {
         const user = this.userRepository.findUserById(id);
         if (!user) {
             throw new UserNotFoundById(id);
         }
-        return user;
+        return this.applyProfileVisibility(user, requestingUserId);
     }
 
-    getUserByTelegramId(telegramId: number): User {
+    getUserByTelegramId(telegramId: number, requestingUserId?: number): User {
         const user = this.userRepository.findUserByTelegramId(telegramId);
         if (!user) {
             throw new UserNotFoundByTelegramId(telegramId);
         }
-        return user;
+        return this.applyProfileVisibility(user, requestingUserId);
     }
 
     editUser(
@@ -129,6 +130,20 @@ export class UserService {
         if (!user.isActive) {
             throw new UserIsNotActive(id);
         }
+    }
+
+    private applyProfileVisibility(user: User, requestingUserId?: number): User {
+        if (
+            user.profile?.hideProfile &&
+            requestingUserId !== undefined &&
+            requestingUserId !== user.id
+        ) {
+            const requestingUser = this.userRepository.findUserById(requestingUserId);
+            if (!requestingUser?.isAdmin) {
+                return { ...user, profile: null };
+            }
+        }
+        return user;
     }
 
     private userExistsByName(name: string): boolean {

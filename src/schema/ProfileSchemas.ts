@@ -1,12 +1,6 @@
 import { z } from 'zod';
 import { userIdParamSchema } from './UserSchemas.ts';
 
-export const profileParamsSchema = z.object({
-    params: z.object({
-        id: userIdParamSchema
-    })
-});
-
 export const profileEditSchema = z.object({
     params: z.object({
         id: userIdParamSchema
