@@ -123,11 +123,60 @@ describe('Profile API Endpoints', () => {
             expect(response.body.firstNameEn).toBe('Jane');
         });
 
-        it('should fail when non-admin tries to update profile', async () => {
+        it('should fail when non-admin tries to update other fields on own profile', async () => {
             const response = await request(app)
                 .patch(`/api/users/${testUserId}/profile`)
                 .set('Authorization', regularUserAuthHeader)
                 .send({ firstNameEn: 'Hacker' });
+
+            expect(response.status).toBe(403);
+        });
+
+        it('should allow non-admin to update hideProfile on own profile', async () => {
+            // First ensure hideProfile is false
+            await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', adminAuthHeader)
+                .send({ hideProfile: false })
+                .expect(200);
+
+            // Non-admin sets hideProfile to true on own profile
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ hideProfile: true });
+
+            expect(response.status).toBe(200);
+            expect(response.body.hideProfile).toBe(true);
+            // Other fields should remain unchanged
+            expect(response.body.firstNameEn).toBe('Jane');
+            expect(response.body.lastNameEn).toBe('Smith');
+        });
+
+        it('should allow non-admin to unhide own profile', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ hideProfile: false });
+
+            expect(response.status).toBe(200);
+            expect(response.body.hideProfile).toBe(false);
+        });
+
+        it('should fail when non-admin tries to update another users profile', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUser2Id}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ hideProfile: true });
+
+            expect(response.status).toBe(403);
+        });
+
+        it('should fail when non-admin sends hideProfile with other fields', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ hideProfile: true, firstNameEn: 'Sneaky' });
 
             expect(response.status).toBe(403);
         });
