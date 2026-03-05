@@ -46,7 +46,17 @@ export class EventRepository {
         return eventDBEntity !== undefined ? eventWithGameRulesFromDBEntity(eventDBEntity) : undefined;
     }
 
-    private createEventStatement(): Statement<EventCreateParams, { id: number }> {
+    private createEventStatement(): Statement<{
+        name: string;
+        description: string | null;
+        type: string;
+        gameRules: number;
+        dateFrom: string | null;
+        dateTo: string | null;
+        createdAt: string;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, { id: number }> {
         return dbManager.db.prepare(`
             INSERT INTO event (name, description, type, gameRules, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
             VALUES (:name, :description, :type, :gameRules, :dateFrom, :dateTo, :createdAt, :modifiedAt, :modifiedBy)
@@ -55,19 +65,35 @@ export class EventRepository {
     }
 
     createEvent(params: EventCreateParams): number {
-        const result = this.createEventStatement().get(params);
+        const result = this.createEventStatement().get({
+            ...params,
+            dateFrom: params.dateFrom?.toISOString() ?? null,
+            dateTo: params.dateTo?.toISOString() ?? null,
+            createdAt: params.createdAt.toISOString(),
+            modifiedAt: params.modifiedAt.toISOString()
+        });
         return result!.id;
     }
 
-    private updateEventStatement(): Statement<EventUpdateParams, void> {
+    private updateEventStatement(): Statement<{
+        id: number;
+        name: string;
+        description: string | null;
+        type: string;
+        gameRules: number;
+        dateFrom: string | null;
+        dateTo: string | null;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, void> {
         return dbManager.db.prepare(`
             UPDATE event
-            SET name = COALESCE(:name, name),
-                description = COALESCE(:description, description),
-                type = COALESCE(:type, type),
-                gameRules = COALESCE(:gameRules, gameRules),
-                dateFrom = COALESCE(:dateFrom, dateFrom),
-                dateTo = COALESCE(:dateTo, dateTo),
+            SET name = :name,
+                description = :description,
+                type = :type,
+                gameRules = :gameRules,
+                dateFrom = :dateFrom,
+                dateTo = :dateTo,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
             WHERE id = :id
@@ -75,7 +101,12 @@ export class EventRepository {
     }
 
     updateEvent(params: EventUpdateParams): void {
-        this.updateEventStatement().run(params);
+        this.updateEventStatement().run({
+            ...params,
+            dateFrom: params.dateFrom?.toISOString() ?? null,
+            dateTo: params.dateTo?.toISOString() ?? null,
+            modifiedAt: params.modifiedAt.toISOString()
+        });
     }
 
     private deleteEventStatement(): Statement<{ id: number }, void> {
@@ -105,27 +136,27 @@ export class EventRepository {
     }
 }
 
-interface EventCreateParams {
+export interface EventCreateParams {
     name: string;
     description: string | null;
     type: string;
     gameRules: number;
-    dateFrom: string | null;
-    dateTo: string | null;
-    createdAt: string;
-    modifiedAt: string;
+    dateFrom: Date | null;
+    dateTo: Date | null;
+    createdAt: Date;
+    modifiedAt: Date;
     modifiedBy: number;
 }
 
-interface EventUpdateParams {
+export interface EventUpdateParams {
     id: number;
-    name?: string | undefined;
-    description?: string | undefined;
-    type?: string | undefined;
-    gameRules?: number | undefined;
-    dateFrom?: string | undefined;
-    dateTo?: string | undefined;
-    modifiedAt: string;
+    name: string;
+    description: string | null;
+    type: string;
+    gameRules: number;
+    dateFrom: Date | null;
+    dateTo: Date | null;
+    modifiedAt: Date;
     modifiedBy: number;
 }
 

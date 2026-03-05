@@ -13,9 +13,9 @@ export class GameRulesNotFoundError extends NotFoundError {
 }
 
 export class CannotDeleteEventWithGamesError extends BadRequestError {
-    constructor(eventId: number, gameCount: number) {
+    constructor(eventName: string, gameCount: number) {
         super(
-            `Неможливо видалити подію з існуючими іграми. Подія ${eventId} має ${gameCount} ігор`,
+            `Неможливо видалити подію з існуючими іграми. Подія "${eventName}" має ${gameCount} ігор`,
             'cannotDeleteEventWithGames'
         );
     }
