@@ -11,7 +11,9 @@ export class GameRulesRepository {
                 numberOfPlayers,
                 uma,
                 startingPoints,
-                startingRating
+                startingRating,
+                minimumGamesForRating,
+                chomboPointsAfterUma
             FROM gameRules
             ORDER BY id ASC`
         );
@@ -29,7 +31,9 @@ export class GameRulesRepository {
                 numberOfPlayers,
                 uma,
                 startingPoints,
-                startingRating
+                startingRating,
+                minimumGamesForRating,
+                chomboPointsAfterUma
             FROM gameRules
             WHERE id = :id`
         );
@@ -113,6 +117,8 @@ interface GameRulesDBEntity {
     uma: string;
     startingPoints: number;
     startingRating: number;
+    minimumGamesForRating: number;
+    chomboPointsAfterUma: number | null;
 }
 
 interface GameRulesCreateParams {
@@ -138,6 +144,8 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         numberOfPlayers: dbEntity.numberOfPlayers,
         uma: JSON.parse(dbEntity.uma),
         startingPoints: dbEntity.startingPoints,
-        startingRating: dbEntity.startingRating
+        startingRating: dbEntity.startingRating,
+        minimumGamesForRating: dbEntity.minimumGamesForRating,
+        chomboPointsAfterUma: dbEntity.chomboPointsAfterUma
     };
 }
