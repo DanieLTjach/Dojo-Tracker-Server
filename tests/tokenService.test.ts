@@ -32,9 +32,11 @@ describe('TokenService', () => {
                 telegramUsername: '@testuser',
                 isAdmin: false,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -52,9 +54,11 @@ describe('TokenService', () => {
                 telegramUsername: '@admin',
                 isAdmin: true,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -75,9 +79,11 @@ describe('TokenService', () => {
                 telegramUsername: '@test',
                 isAdmin: true,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -95,9 +101,11 @@ describe('TokenService', () => {
                 telegramUsername: '@test',
                 isAdmin: false,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             // Create an expired token (expired 1 hour ago)
@@ -120,9 +128,11 @@ describe('TokenService', () => {
                 telegramUsername: '@test',
                 isAdmin: false,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             // Create a token with wrong secret
@@ -159,9 +169,11 @@ describe('TokenService', () => {
                 telegramUsername: '@test',
                 isAdmin: true,
                 isActive: true,
+                status: 'ACTIVE',
                 createdAt: new Date(),
                 modifiedAt: new Date(),
-                modifiedBy: 'SYSTEM'
+                modifiedBy: 'SYSTEM',
+                profile: null
             };
 
             const tokenPair = tokenService.createTokenPair(user);

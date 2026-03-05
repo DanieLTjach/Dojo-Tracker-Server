@@ -39,7 +39,8 @@ export class RatingRepository {
 
     private findAllUsersCurrentRatingStatement(): Statement<{ eventId: number }, UserRatingDBEntity> {
         return dbManager.db.prepare(`
-            SELECT u.id as userId, u.name as userName, urc.rating as rating, gc.gamesPlayed as gamesPlayed
+            SELECT u.id as userId, u.name as userName, urc.rating as rating, gc.gamesPlayed as gamesPlayed,
+                   CASE WHEN gc.gamesPlayed >= gr.minimumGamesForRating THEN 1 ELSE 0 END as minimumGamesPlayed
             FROM (
                 SELECT userId,
                         rating,
@@ -48,6 +49,8 @@ export class RatingRepository {
                 WHERE eventId = :eventId
             ) urc
             JOIN user u ON urc.userId = u.id
+            JOIN event e ON e.id = :eventId
+            JOIN gameRules gr ON e.gameRules = gr.id
             JOIN (
                 SELECT utg.userId, COUNT(DISTINCT utg.gameId) as gamesPlayed
                 FROM userToGame utg
@@ -180,13 +183,15 @@ interface UserRatingDBEntity {
     userName: string;
     rating: number;
     gamesPlayed: number;
+    minimumGamesPlayed: number;
 }
 
 function userRatingFromDBEntity(dbEntity: UserRatingDBEntity): UserRating {
     return {
         user: { id: dbEntity.userId, name: dbEntity.userName },
         rating: dbEntity.rating,
-        gamesPlayed: dbEntity.gamesPlayed
+        gamesPlayed: dbEntity.gamesPlayed,
+        minimumGamesPlayed: Boolean(dbEntity.minimumGamesPlayed)
     };
 }
 

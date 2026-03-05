@@ -7,6 +7,7 @@ import {
     InsufficientPermissionsError
 } from '../error/AuthErrors.ts';
 import type { DecodedToken } from '../model/AuthModels.ts';
+import config from '../../config/config.ts';
 
 // Extend Express Request type to include user
 declare global {
@@ -22,13 +23,22 @@ const userService = new UserService();
 
 /**
  * Middleware to require authentication.
- * Extracts and validates JWT token from Authorization header.
+ * In tournament mode, bypasses token validation and uses configured user ID.
+ * Otherwise, extracts and validates JWT token from Authorization header.
  * Attaches decoded user info to req.user.
  *
  * Usage: router.get('/protected', requireAuth, handler)
  */
 export const requireAuth = (req: Request, _res: Response, next: NextFunction): void => {
     try {
+        // Tournament mode: bypass authentication
+        if (config.tournamentMode) {
+            req.user = { userId: config.tournamentUserId! };
+            next();
+            return;
+        }
+
+        // Normal mode: validate JWT token
         const authHeader = req.headers.authorization;
 
         if (!authHeader) {

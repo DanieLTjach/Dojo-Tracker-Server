@@ -14,9 +14,9 @@ export class GameController {
     private gameService: GameService = new GameService();
 
     addGame(req: Request, res: Response) {
-        const { body: { eventId, playersData, createdAt } } = gameCreationSchema.parse(req);
+        const { body: { eventId, playersData, createdAt, hideNewGameMessage, tournamentHanchanNumber, tournamentTableNumber } } = gameCreationSchema.parse(req);
         const createdBy = req.user!.userId;
-        const newGame = this.gameService.addGame(eventId, playersData, createdBy, createdAt ?? undefined);
+        const newGame = this.gameService.addGame(eventId, playersData, createdBy, createdAt ?? undefined, hideNewGameMessage ?? false, tournamentHanchanNumber ?? null, tournamentTableNumber ?? null);
         return res.status(StatusCodes.CREATED).json(newGame);
     }
 
@@ -35,7 +35,7 @@ export class GameController {
     editGame(req: Request, res: Response) {
         const {
             params: { gameId },
-            body: { playersData, eventId, createdAt }
+            body: { playersData, eventId, createdAt, tournamentHanchanNumber, tournamentTableNumber }
         } = gameUpdateSchema.parse(req);
 
         const modifiedBy = req.user!.userId; // Non-null assertion safe because requireAdmin ensures user exists
@@ -44,7 +44,9 @@ export class GameController {
             eventId,
             playersData,
             modifiedBy,
-            createdAt ?? undefined
+            createdAt ?? undefined,
+            tournamentHanchanNumber ?? null,
+            tournamentTableNumber ?? null
         );
         return res.status(StatusCodes.OK).json(updatedGame);
     }

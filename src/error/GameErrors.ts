@@ -19,8 +19,8 @@ export class IncorrectPlayerCountError extends BadRequestError {
 }
 
 export class DuplicatePlayerError extends BadRequestError {
-    constructor(userId: number) {
-        super(`Гравець з ID ${userId} присутній більше одного разу в цій грі`, 'duplicatePlayer');
+    constructor(playerName: string) {
+        super(`Гравець ${playerName} присутній більше одного разу в цій грі`, 'duplicatePlayer');
     }
 }
 
@@ -33,6 +33,12 @@ export class DuplicateGameTimestampInEventError extends BadRequestError {
 export class IncorrectTotalPointsError extends BadRequestError {
     constructor(expectedTotal: number, actualTotal: number) {
         super(`Сума очок повинна дорівнювати ${expectedTotal}, у вас ${actualTotal}`, 'incorrectTotalPoints');
+    }
+}
+
+export class PointsNotWithinRange extends BadRequestError {
+    constructor(points: number, minPoints: number, maxPoints: number) {
+        super(`Очки гравця (${points}) повинні бути в діапазоні від ${minPoints} до ${maxPoints}`, 'invalidPoints');
     }
 }
 
@@ -51,5 +57,11 @@ export class EventHasEndedError extends BadRequestError {
 export class YouHaveToBeAdminToCreateGameWithCustomTime extends ForbiddenError {
     constructor() {
         super('Щоб створити гру з заданим часом, ви повинні бути адміністратором', 'youHaveToBeAdminToCreateGameWithCustomTime');
+    }
+}
+
+export class YouHaveToBeAdminToHideNewGameMessage extends ForbiddenError {
+    constructor() {
+        super('Щоб сховати повідомлення про нову гру, ви повинні бути адміністратором', 'youHaveToBeAdminToHideNewGameMessage');
     }
 }

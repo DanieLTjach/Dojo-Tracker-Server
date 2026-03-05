@@ -26,7 +26,7 @@ describe('AuthMiddleware', () => {
         // Create test user
         testUser = userService.registerUser("test_name", 'testuser', 123456789, 0);
         // Activate the user for tests
-        userRepository.updateUserActivationStatus(testUser.id, true, 0);
+        userRepository.updateUserStatus(testUser.id, true, 'ACTIVE', 0);
         // Refresh testUser to get updated isActive status
         testUser = userService.getUserById(testUser.id);
     });

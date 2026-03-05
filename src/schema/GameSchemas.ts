@@ -10,7 +10,8 @@ export const gameIdParamSchema = z.coerce.number().int("Game ID must be an integ
 const playerDataSchema = z.object({
     userId: userIdSchema,
     points: z.number().int("Points must be an integer"),
-    startPlace: gameStartPlace.nullish()
+    startPlace: gameStartPlace.nullish(),
+    chomboCount: z.number().int("Chombo count must be an integer").nonnegative().max(10).nullish()
 });
 
 const playerListSchema = z.array(playerDataSchema).refine((players) => {
@@ -26,7 +27,10 @@ export const gameCreationSchema = z.object({
     body: z.object({
         eventId: eventIdSchema,
         playersData: playerListSchema,
-        createdAt: dateSchema.nullish()
+        createdAt: dateSchema.nullish(),
+        hideNewGameMessage: z.boolean().nullish(),
+        tournamentHanchanNumber: z.number().int().positive().nullish(),
+        tournamentTableNumber: z.number().int().positive().nullish()
     })
 });
 
@@ -55,7 +59,9 @@ export const gameUpdateSchema = z.object({
     body: z.object({
         eventId: eventIdSchema,
         playersData: playerListSchema,
-        createdAt: dateSchema.nullish()
+        createdAt: dateSchema.nullish(),
+        tournamentHanchanNumber: z.number().int().positive().nullish(),
+        tournamentTableNumber: z.number().int().positive().nullish()
     })
 });
 

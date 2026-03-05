@@ -6,10 +6,16 @@ interface Config {
     jwtExpiry: string;
     authInitDataValiditySeconds: number;
     frontendUrl: string;
+    botUrl: string;
     botToken: string;
-    adminChatId?: number | undefined;
-    ratingChatId?: number | undefined;
-    ratingTopicId?: number | undefined;
+    adminChatId: number | undefined;
+    errorLogsTopicId: number | undefined;
+    userLogsTopicId: number | undefined;
+    gameLogsTopicId: number | undefined;
+    ratingChatId: number | undefined;
+    ratingTopicId: number | undefined;
+    tournamentMode: boolean;
+    tournamentUserId: number | undefined;
 }
 
 function getRequiredStringEnvVariable(varName: string): string {
@@ -50,6 +56,8 @@ if (env === 'production') {
     }
 }
 
+const tournamentMode = process.env["TOURNAMENT_MODE"] === 'true';
+
 const config: Config = {
     env: getRequiredStringEnvVariable("NODE_ENV"),
     port: tryParseIntEnvVariable("PORT") || 3000,
@@ -59,9 +67,15 @@ const config: Config = {
     jwtExpiry: process.env["JWT_EXPIRY"] || '7d',
     authInitDataValiditySeconds: tryParseIntEnvVariable("AUTH_INIT_DATA_VALIDITY_SECONDS") || 3600,
     frontendUrl: getRequiredStringEnvVariable("FRONTEND_URL"),
+    botUrl: getRequiredStringEnvVariable("BOT_URL"),
     adminChatId,
+    errorLogsTopicId: tryParseIntEnvVariable("ERROR_LOGS_TOPIC_ID"),
+    userLogsTopicId: tryParseIntEnvVariable("USER_LOGS_TOPIC_ID"),
+    gameLogsTopicId: tryParseIntEnvVariable("GAME_LOGS_TOPIC_ID"),
     ratingChatId,
-    ratingTopicId
+    ratingTopicId,
+    tournamentMode,
+    tournamentUserId: tournamentMode ? (tryParseIntEnvVariable("TOURNAMENT_USER_ID") || 1) : undefined
 };
 
 export default config;

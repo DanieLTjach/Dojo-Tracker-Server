@@ -9,10 +9,12 @@ import {
     getUserByIdSchema
 } from '../schema/UserSchemas.ts';
 import { SYSTEM_USER_ID } from '../../config/constants.ts';
+import { AuthService } from '../service/AuthService.ts';
 
 export class UserController {
 
     private userService: UserService = new UserService();
+    private authService: AuthService = new AuthService();
 
     registerUser(req: Request, res: Response) {
         const { name, telegramUsername, telegramId } = userRegistrationSchema.parse(req).body;
@@ -21,20 +23,33 @@ export class UserController {
         return res.status(StatusCodes.CREATED).json(newUser);
     }
 
-    getAllUsers(_req: Request, res: Response) {
-        const users = this.userService.getAllUsers();
+    getCurrentUserStatus(req: Request, res: Response) {
+        const initDataParams = req.query as Record<string, string>;
+
+        this.authService.validateInitData(initDataParams);
+        const telegramId = this.authService.extractTelegramId(initDataParams);
+
+        const result = this.userService.getUserStatusByTelegramId(telegramId);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    getAllUsers(req: Request, res: Response) {
+        const requestingUserId = req.user!.userId;
+        const users = this.userService.getAllUsers(requestingUserId);
         return res.status(StatusCodes.OK).json(users);
     }
 
     getUserById(req: Request, res: Response) {
         const { id } = getUserByIdSchema.parse(req).params;
-        const user = this.userService.getUserById(id);
+        const requestingUserId = req.user!.userId;
+        const user = this.userService.getUserById(id, requestingUserId);
         return res.status(StatusCodes.OK).json(user);
     }
 
     getUserByTelegramId(req: Request, res: Response) {
         const { telegramId } = getUserByTelegramIdSchema.parse(req).params;
-        const user = this.userService.getUserByTelegramId(telegramId);
+        const requestingUserId = req.user!.userId;
+        const user = this.userService.getUserByTelegramId(telegramId, requestingUserId);
         return res.status(StatusCodes.OK).json(user);
     }
 

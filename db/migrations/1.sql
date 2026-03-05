@@ -10,24 +10,25 @@ CREATE TABLE user (
     isAdmin BOOL NOT NULL DEFAULT false
 );
 
-CREATE TABLE eventType (
-    type TEXT NOT NULL PRIMARY KEY
-);
-
 CREATE TABLE gameRules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     numberOfPlayers INTEGER NOT NULL,
     uma TEXT NOT NULL,
     startingPoints INTEGER NOT NULL,
-    startingRating REAL NOT NULL
+    startingRating INTEGER NOT NULL,
+    minimumGamesForRating INTEGER NOT NULL
+);
+
+CREATE TABLE eventType (
+    type TEXT NOT NULL PRIMARY KEY
 );
 
 CREATE TABLE event (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT,
-    type INTEGER REFERENCES eventType(type),
+    type TEXT REFERENCES eventType(type),
     gameRules INTEGER NOT NULL REFERENCES gameRules(id),
     dateFrom TIMESTAMP,
     dateTo TIMESTAMP,
@@ -70,58 +71,12 @@ CREATE TABLE userRatingChange (
     PRIMARY KEY (userId, gameId)
 );
 
-CREATE TABLE standartHanchanHands (
-    handId INTEGER PRIMARY KEY AUTOINCREMENT,
-    gameId INTEGER NOT NULL,
-    handType INTEGER NOT NULL REFERENCES handTypeDict(handType),
-    repeat INTEGER DEFAULT 0,
-    winType INTEGER REFERENCES winTypeDict(winType),
-    eastPoints INTEGER NOT NULL,
-    southPoints INTEGER NOT NULL,
-    westPoints INTEGER NOT NULL,
-    northPoints INTEGER NOT NULL,
-    riichiEast BOOL,
-    riichiSouth BOOL,
-    riichiWest BOOL,
-    riichiNorth BOOL,
-    createdAt TIMESTAMP NOT NULL,
-    modifiedAt TIMESTAMP NOT NULL,
-    modifiedBy INTEGER NOT NULL REFERENCES user(id)
-);
-
-CREATE TABLE achievements (
-    achievementId INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    description TEXT NOT NULL,
-    createdAt TIMESTAMP NOT NULL,
-    modifiedAt TIMESTAMP NOT NULL,
-    modifiedBy INTEGER NOT NULL REFERENCES user(id)
-);
-
-CREATE TABLE userToAchievements (
-    recordId INTEGER PRIMARY KEY AUTOINCREMENT,
-    userId INTEGER NOT NULL REFERENCES user(id),
-    achievementId INTEGER NOT NULL REFERENCES achievements(achievementId),
-    createdAt TIMESTAMP NOT NULL,
-    modifiedAt TIMESTAMP NOT NULL,
-    modifiedBy INTEGER NOT NULL REFERENCES user(id)
-);
-
-CREATE TABLE handTypeDict (
-    handType INTEGER PRIMARY KEY,
-    handTypeDesc TEXT NOT NULL
-);
-
-CREATE TABLE winTypeDict (
-    winType INTEGER PRIMARY KEY,
-    winTypeDesc TEXT NOT NULL
-);
-
 -- Insert initial data
-INSERT INTO gameRules(id, name, numberOfPlayers, uma, startingPoints, startingRating) VALUES
-    (1, 'Сезон 3-5 йонма', 4, '15,5,-5,-15', 30000, 1000),
-    (2, 'Сезон 6 йонма', 4, '24,-2,-6,-16;16,8,-8,-16;16,6,2,-24', 30000, 0),
-    (3, 'Сезон 6 санма', 3, '15,0,-15', 35000, 1000);
+INSERT INTO gameRules(id, name, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating) VALUES
+    (1, 'Сезон 3-5 йонма', 4, '15,5,-5,-15', 30000, 1000, 0),
+    (2, 'Сезон 6 йонма', 4, '24,-2,-6,-16;16,8,-8,-16;16,6,2,-24', 30000, 0, 5),
+    (3, 'Сезон 6 санма', 3, '15,0,-15', 35000, 1000, 0),
+    (4, 'EMA 2025', 4, '15,5,-5,-15', 30000, 0, 0);
 
 INSERT INTO eventType(type) VALUES ('SEASON'), ('TOURNAMENT');
 
@@ -131,7 +86,8 @@ INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, i
 VALUES (0, 'SYSTEM', NULL, NULL, 0, 1, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
 
 INSERT INTO event(id, name, description, type, gameRules, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy) VALUES
-    (1, 'Сезон 3', '2024 осінній сезон', 'SEASON', 1, '2024-06-30T21:00:00.000Z', '2025-12-31T22:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+    (1, 'Сезон 3', '2024 осінній сезон', 'SEASON', 1, '2024-06-30T21:00:00.000Z', '2024-12-31T22:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
     (2, 'Сезон 4', '2025 весняний сезон', 'SEASON', 1, '2024-12-31T22:00:00.000Z', '2025-06-30T21:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
     (3, 'Сезон 5', '2025 осінній сезон', 'SEASON', 1, '2025-07-31T21:00:00.000Z', '2025-12-31T22:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
-    (4, 'Сезон 6', '2026 весняний сезон', 'SEASON', 2, '2026-01-31T22:00:00.000Z', '2026-06-30T21:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0);
+    (4, 'Сезон 6', '2026 весняний сезон', 'SEASON', 2, '2026-01-31T22:00:00.000Z', '2026-06-30T21:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+    (5, 'Санма Сезон 1', 'Рейтинговий сезон з санми', 'SEASON', 3, '2026-01-31T22:00:00.000Z', '2026-06-30T21:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0);

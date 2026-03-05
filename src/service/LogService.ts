@@ -1,10 +1,12 @@
 import config from '../../config/config.ts';
+import { ErrorLogsTopic } from '../model/TelegramTopic.ts';
+import type { TelegramTopic } from '../model/TelegramTopic.ts';
 import TelegramService from './TelegramSevice.ts';
 import escapeHtml from 'escape-html';
 
 interface LogMessage {
     message: string;
-    chatType: 'admin' | 'rating';
+    topic: TelegramTopic;
 }
 
 class LogService {
@@ -14,7 +16,7 @@ class LogService {
     constructor() {
         if (config.env !== 'test') {
             this.isRunning = true;
-            this.processQueue(); 
+            this.processQueue();
         }
     }
 
@@ -23,20 +25,18 @@ class LogService {
         await this.flushQueue();
     }
 
-    logInfo(message: string) {
+    logInfo(message: string, topic: TelegramTopic) {
         console.log(message);
-        this.messageQueue.push({ message, chatType: 'admin' });
+        this.messageQueue.push({ message, topic });
     }
 
     logError(message: string, error: Error | null = null) {
         console.error(message, error);
         const errorDetails = error ? `${escapeHtml(error.message)}\n<pre>${escapeHtml(error.stack || '')}</pre>` : '';
-        this.messageQueue.push({ message: `<b>❌ ERROR</b>\n${escapeHtml(message)} ${errorDetails}`, chatType: 'admin' });
-    }
-
-    logRatingUpdate(message: string) {
-        console.log(message);
-        this.messageQueue.push({ message, chatType: 'rating' });
+        this.messageQueue.push({
+            message: `<b>❌ ERROR</b>\n${escapeHtml(message)} ${errorDetails}`,
+            topic: ErrorLogsTopic
+        });
     }
 
     private async processQueue() {
@@ -72,11 +72,7 @@ class LogService {
     }
 
     private async sendMessageToTelegram(message: LogMessage): Promise<void> {
-        if (message.chatType === 'admin') {
-            await TelegramService.sendMessageToAdminChat(message.message);
-        } else if (message.chatType === 'rating') {
-            await TelegramService.sendMessageToRatingTopic(message.message);
-        }
+        await TelegramService.sendMessage(message.message, message.topic);
     }
 }
 

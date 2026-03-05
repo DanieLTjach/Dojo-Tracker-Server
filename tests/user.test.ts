@@ -48,6 +48,7 @@ describe('User API Endpoints', () => {
             expect(response.body.telegramUsername).toBe(userData.telegramUsername);
             expect(response.body.telegramId).toBe(userData.telegramId);
             expect(response.body.isActive).toBe(false);
+            expect(response.body.status).toBe('PENDING');
             expect(response.body.isAdmin).toBe(false);
 
             // Activate the user for subsequent tests
@@ -77,6 +78,7 @@ describe('User API Endpoints', () => {
             expect(response.body.telegramUsername).toBeNull();
             expect(response.body.telegramId).toBe(userData.telegramId);
             expect(response.body.isActive).toBe(false);
+            expect(response.body.status).toBe('PENDING');
             expect(response.body.isAdmin).toBe(false);
 
             // Activate the user for subsequent tests
@@ -441,6 +443,7 @@ describe('User API Endpoints', () => {
                 .expect(200);
 
             expect(response.body.isActive).toBe(true);
+            expect(response.body.status).toBe('ACTIVE');
             expect(response.body.id).toBe(testUser2Id);
         });
 
@@ -482,6 +485,7 @@ describe('User API Endpoints', () => {
                 .expect(200);
 
             expect(response.body.isActive).toBe(false);
+            expect(response.body.status).toBe('INACTIVE');
             expect(response.body.id).toBe(testUser2Id);
         });
 

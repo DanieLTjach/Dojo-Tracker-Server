@@ -35,4 +35,4 @@ jobs:
         port: ${{ secrets.SSH_PORT }}
         script: |
           cd app
-          ./deploy.sh ${{ github.event.release.tag_name }} --clean-db
+          ./deploy.sh ${{ github.event.release.tag_name }}

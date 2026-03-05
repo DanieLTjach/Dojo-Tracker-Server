@@ -8,10 +8,13 @@ import {
     TelegramUsernameAlreadyTakenByAnotherUser,
     YouHaveToBeAdminToEditAnotherUser
 } from '../error/UserErrors.ts';
-import type { User } from '../model/UserModels.ts';
+import type { User, UserStatus } from '../model/UserModels.ts';
 import { ResponseStatusError } from '../error/BaseErrors.ts';
 import LogService from './LogService.ts';
+import TelegramService from './TelegramSevice.ts';
+import config from '../../config/config.ts';
 import dedent from 'dedent';
+import { UserLogsTopic } from '../model/TelegramTopic.ts';
 
 export class UserService {
 
@@ -39,24 +42,29 @@ export class UserService {
         return newUser;
     }
 
-    getAllUsers(): User[] {
-        return this.userRepository.findAllUsers();
+    getUserStatusByTelegramId(telegramId: number): UserStatus {
+        return this.getUserByTelegramId(telegramId).status;
     }
 
-    getUserById(id: number): User {
+    getAllUsers(requestingUserId?: number): User[] {
+        const users = this.userRepository.findAllUsers();
+        return users.map(user => this.applyProfileVisibility(user, requestingUserId));
+    }
+
+    getUserById(id: number, requestingUserId?: number): User {
         const user = this.userRepository.findUserById(id);
         if (!user) {
             throw new UserNotFoundById(id);
         }
-        return user;
+        return this.applyProfileVisibility(user, requestingUserId);
     }
 
-    getUserByTelegramId(telegramId: number): User {
+    getUserByTelegramId(telegramId: number, requestingUserId?: number): User {
         const user = this.userRepository.findUserByTelegramId(telegramId);
         if (!user) {
             throw new UserNotFoundByTelegramId(telegramId);
         }
-        return user;
+        return this.applyProfileVisibility(user, requestingUserId);
     }
 
     editUser(
@@ -88,10 +96,15 @@ export class UserService {
         this.validateUserExistsById(userId);
 
         const oldUser = this.getUserById(userId);
-        this.userRepository.updateUserActivationStatus(userId, isActive, modifiedBy);
+        this.userRepository.updateUserStatus(userId, isActive, isActive ? 'ACTIVE' : 'INACTIVE', modifiedBy);
 
         const newUser = this.getUserById(userId);
         this.logActivationStatusChanged(oldUser, newUser, modifiedBy);
+
+        if (isActive && newUser.telegramId) {
+            this.notifyUserActivated(newUser);
+        }
+
         return newUser;
     }
 
@@ -117,6 +130,20 @@ export class UserService {
         if (!user.isActive) {
             throw new UserIsNotActive(id);
         }
+    }
+
+    private applyProfileVisibility(user: User, requestingUserId?: number): User {
+        if (
+            user.profile?.hideProfile &&
+            requestingUserId !== undefined &&
+            requestingUserId !== user.id
+        ) {
+            const requestingUser = this.userRepository.findUserById(requestingUserId);
+            if (!requestingUser?.isAdmin) {
+                return { ...user, profile: null };
+            }
+        }
+        return user;
     }
 
     private userExistsByName(name: string): boolean {
@@ -162,9 +189,9 @@ export class UserService {
             <b>Name:</b> ${user.name}
             <b>Telegram Username:</b> ${user.telegramUsername || 'N/A'}
             <b>Telegram ID:</b> <code>${user.telegramId || 'N/A'}</code>
-            <b>Registered by:</b> ${creator.name}
+            <b>Registered by:</b> ${creator.name} <code>(ID: ${creator.id})</code>
         `;
-        LogService.logInfo(message);
+        LogService.logInfo(message, UserLogsTopic);
     }
 
     private logEditedUser(oldUser: User, newUser: User, modifiedBy: number): void {
@@ -175,9 +202,18 @@ export class UserService {
             <b>User ID:</b> <code>${newUser.id}</code>
             <b>Name:</b> ${oldUser.name} → ${newUser.name}
             <b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}
-            <b>Edited by:</b> ${modifier.name}
+            <b>Edited by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
-        LogService.logInfo(message);
+        LogService.logInfo(message, UserLogsTopic);
+    }
+
+    private notifyUserActivated(user: User): void {
+        const message = dedent`
+            <b>Ваш акаунт було активовано!</b>
+
+            Тепер ви можете користуватися додатком. <a href="${config.botUrl}">Відкрити</a>
+        `;
+        TelegramService.sendDirectMessage(user.telegramId!, message);
     }
 
     private logActivationStatusChanged(oldUser: User, newUser: User, modifiedBy: number): void {
@@ -190,9 +226,10 @@ export class UserService {
             <b>User ID:</b> <code>${newUser.id}</code>
             <b>Name:</b> ${newUser.name}
             <b>Telegram Username:</b> ${newUser.telegramUsername || 'N/A'}
-            <b>Activation Status:</b> ${oldUser.isActive} → ${newUser.isActive}
-            <b>Updated by:</b> ${modifier.name}
+            <b>Is active:</b> ${oldUser.isActive} → ${newUser.isActive}
+            <b>Status:</b> ${oldUser.status} → ${newUser.status}
+            <b>Updated by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
-        LogService.logInfo(message);
+        LogService.logInfo(message, UserLogsTopic);
     }
 }
