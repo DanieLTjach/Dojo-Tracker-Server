@@ -1,6 +1,7 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { GameRules } from '../model/EventModels.ts';
+import { parseUma } from '../util/UmaUtil.ts';
 
 export class GameRulesRepository {
     private findAllGameRulesStatement(): Statement<[], GameRulesDBEntity> {
@@ -67,12 +68,4 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         minimumGamesForRating: dbEntity.minimumGamesForRating,
         chomboPointsAfterUma: dbEntity.chomboPointsAfterUma
     };
-}
-
-function parseUma(umaString: string): number[] | number[][] {
-    const parsedUma = umaString.split(';').map(part => part.split(',').map(Number));
-    if (parsedUma.length === 1) {
-        return parsedUma[0]!;
-    }
-    return parsedUma;
 }

@@ -1,6 +1,7 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { Event } from '../model/EventModels.ts';
+import { parseUma } from '../util/UmaUtil.ts';
 
 export class EventRepository {
     private findAllEventsStatement(): Statement<[], EventWithGameRulesDBEntity> {
@@ -209,13 +210,4 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy
     };
-}
-
-function parseUma(umaString: string): number[] | number[][] {
-    const parsedUma = umaString.split(';').map(part => part.split(',').map(Number));
-    if (parsedUma.length === 1) {
-        return parsedUma[0]!;
-    } else {
-        return parsedUma;
-    }
 }
