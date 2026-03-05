@@ -271,6 +271,14 @@ describe('Event API Endpoints', () => {
 
     describe('PUT /api/events/:eventId - Update Event (admin only)', () => {
         const baseEventId = 2001;
+        const updatePayload = {
+            name: 'Updated Name',
+            description: null,
+            type: 'TOURNAMENT',
+            gameRulesId: 1,
+            dateFrom: '2026-04-01T00:00:00.000Z',
+            dateTo: '2026-05-01T00:00:00.000Z'
+        };
 
         beforeEach(() => {
             createCustomEvent(baseEventId, 'Event To Update', '2026-02-01T00:00:00.000Z', '2026-03-01T00:00:00.000Z');
@@ -281,61 +289,38 @@ describe('Event API Endpoints', () => {
         });
 
         test('should update event with full body', async () => {
-            const payload = {
-                name: 'Updated Name',
-                description: null,
-                type: 'TOURNAMENT',
-                gameRulesId: 1,
-                dateFrom: '2026-04-01T00:00:00.000Z',
-                dateTo: '2026-05-01T00:00:00.000Z'
-            };
-
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', adminAuthHeader)
-                .send(payload);
+                .send(updatePayload);
 
             expect(response.status).toBe(200);
-            expect(response.body.name).toBe(payload.name);
-            expect(response.body.type).toBe(payload.type);
+            expect(response.body.name).toBe(updatePayload.name);
+            expect(response.body.type).toBe(updatePayload.type);
             expect(response.body.description).toBeNull();
-            expect(response.body.gameRules.id).toBe(payload.gameRulesId);
+            expect(response.body.gameRules.id).toBe(updatePayload.gameRulesId);
         });
 
-        test('should require authentication and admin', async () => {
-            const payload = {
-                name: 'Name',
-                description: 'Desc',
-                type: 'SEASON',
-                gameRulesId: 1,
-                dateFrom: '2026-04-01T00:00:00.000Z',
-                dateTo: '2026-05-01T00:00:00.000Z'
-            };
+        test('should reject when not authenticated', async () => {
+            const response = await request(app)
+                .put(`/api/events/${baseEventId}`)
+                .send(updatePayload);
+            expect(response.status).toBe(401);
+        });
 
-            const noAuth = await request(app).put(`/api/events/${baseEventId}`).send(payload);
-            expect(noAuth.status).toBe(401);
-
-            const nonAdmin = await request(app)
+        test('should reject when not admin', async () => {
+            const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', nonAdminAuthHeader)
-                .send(payload);
-            expect(nonAdmin.status).toBe(403);
+                .send(updatePayload);
+            expect(response.status).toBe(403);
         });
 
         test('should return 404 for missing event', async () => {
-            const payload = {
-                name: 'Name',
-                description: 'Desc',
-                type: 'SEASON',
-                gameRulesId: 1,
-                dateFrom: '2026-04-01T00:00:00.000Z',
-                dateTo: '2026-05-01T00:00:00.000Z'
-            };
-
             const response = await request(app)
                 .put('/api/events/99999')
                 .set('Authorization', adminAuthHeader)
-                .send(payload);
+                .send(updatePayload);
             expect(response.status).toBe(404);
         });
 
@@ -373,14 +358,16 @@ describe('Event API Endpoints', () => {
             expect(fetchResponse.status).toBe(404);
         });
 
-        test('should require authentication and admin', async () => {
-            const noAuth = await request(app).delete(`/api/events/${deletableEventId}`);
-            expect(noAuth.status).toBe(401);
+        test('should reject when not authenticated', async () => {
+            const response = await request(app).delete(`/api/events/${deletableEventId}`);
+            expect(response.status).toBe(401);
+        });
 
-            const nonAdmin = await request(app)
+        test('should reject when not admin', async () => {
+            const response = await request(app)
                 .delete(`/api/events/${deletableEventId}`)
                 .set('Authorization', nonAdminAuthHeader);
-            expect(nonAdmin.status).toBe(403);
+            expect(response.status).toBe(403);
         });
 
         test('should return 404 for missing event', async () => {
