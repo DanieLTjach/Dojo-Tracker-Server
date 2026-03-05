@@ -4,7 +4,9 @@ import eventRoutes from '../src/routes/EventRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent, createCustomEvent, deleteEventById } from './testHelpers.ts';
+import { UserService } from '../src/service/UserService.ts';
+import { UserRepository } from '../src/repository/UserRepository.ts';
 
 const app = express();
 app.use(express.json());
@@ -16,10 +18,18 @@ describe('Event API Endpoints', () => {
     const TEST_EVENT_ID = 1000; // Test Event created in beforeAll
 
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
+    let nonAdminAuthHeader: string;
 
     beforeAll(async () => {
         // Create test event
         createTestEvent();
+
+        // Create non-admin test user
+        const userService = new UserService();
+        const userRepository = new UserRepository();
+        const user = userService.registerUser('NonAdminEventUser', 'nonadmin_event', 555555555, SYSTEM_USER_ID);
+        userRepository.updateUserStatus(user.id, true, 'ACTIVE', SYSTEM_USER_ID);
+        nonAdminAuthHeader = createAuthHeader(user.id);
     });
 
     afterAll(() => {
@@ -191,6 +201,193 @@ describe('Event API Endpoints', () => {
             expect(response.status).toBe(400);
             expect(response.body).toHaveProperty('error');
             expect(response.body).toHaveProperty('details');
+        });
+    });
+
+    describe('POST /api/events - Create Event (admin only)', () => {
+        const createPayload = {
+            name: 'Integration Created Event',
+            description: 'Created via tests',
+            type: 'SEASON',
+            gameRulesId: 1,
+            dateFrom: '2026-01-01T00:00:00.000Z',
+            dateTo: '2026-01-31T00:00:00.000Z'
+        };
+
+        let createdEventId: number | undefined;
+
+        afterEach(() => {
+            if (createdEventId) {
+                deleteEventById(createdEventId);
+                createdEventId = undefined;
+            }
+        });
+
+        test('should create an event when admin and payload valid', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send(createPayload);
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(typeof response.body.id).toBe('number');
+            expect(response.body.name).toBe(createPayload.name);
+            expect(response.body.type).toBe(createPayload.type);
+            expect(response.body.gameRules.id).toBe(createPayload.gameRulesId);
+        });
+
+        test('should reject when not authenticated', async () => {
+            const response = await request(app).post('/api/events').send(createPayload);
+            expect(response.status).toBe(401);
+        });
+
+        test('should reject when not admin', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', nonAdminAuthHeader)
+                .send(createPayload);
+            expect(response.status).toBe(403);
+        });
+
+        test('should validate body and return 400 for invalid payload', async () => {
+            const invalidPayload = { ...createPayload, type: 'INVALID' } as any;
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send(invalidPayload);
+            expect(response.status).toBe(400);
+        });
+
+        test('should return 404 when gameRules does not exist', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, gameRulesId: 99999 });
+            expect(response.status).toBe(404);
+        });
+    });
+
+    describe('PUT /api/events/:eventId - Update Event (admin only)', () => {
+        const baseEventId = 2001;
+
+        beforeEach(() => {
+            createCustomEvent(baseEventId, 'Event To Update', '2026-02-01T00:00:00.000Z', '2026-03-01T00:00:00.000Z');
+        });
+
+        afterEach(() => {
+            deleteEventById(baseEventId);
+        });
+
+        test('should update event with full body', async () => {
+            const payload = {
+                name: 'Updated Name',
+                description: null,
+                type: 'TOURNAMENT',
+                gameRulesId: 1,
+                dateFrom: '2026-04-01T00:00:00.000Z',
+                dateTo: '2026-05-01T00:00:00.000Z'
+            };
+
+            const response = await request(app)
+                .put(`/api/events/${baseEventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send(payload);
+
+            expect(response.status).toBe(200);
+            expect(response.body.name).toBe(payload.name);
+            expect(response.body.type).toBe(payload.type);
+            expect(response.body.description).toBeNull();
+            expect(response.body.gameRules.id).toBe(payload.gameRulesId);
+        });
+
+        test('should require authentication and admin', async () => {
+            const payload = {
+                name: 'Name',
+                description: 'Desc',
+                type: 'SEASON',
+                gameRulesId: 1,
+                dateFrom: '2026-04-01T00:00:00.000Z',
+                dateTo: '2026-05-01T00:00:00.000Z'
+            };
+
+            const noAuth = await request(app).put(`/api/events/${baseEventId}`).send(payload);
+            expect(noAuth.status).toBe(401);
+
+            const nonAdmin = await request(app)
+                .put(`/api/events/${baseEventId}`)
+                .set('Authorization', nonAdminAuthHeader)
+                .send(payload);
+            expect(nonAdmin.status).toBe(403);
+        });
+
+        test('should return 404 for missing event', async () => {
+            const payload = {
+                name: 'Name',
+                description: 'Desc',
+                type: 'SEASON',
+                gameRulesId: 1,
+                dateFrom: '2026-04-01T00:00:00.000Z',
+                dateTo: '2026-05-01T00:00:00.000Z'
+            };
+
+            const response = await request(app)
+                .put('/api/events/99999')
+                .set('Authorization', adminAuthHeader)
+                .send(payload);
+            expect(response.status).toBe(404);
+        });
+
+        test('should return 400 for invalid body', async () => {
+            const response = await request(app)
+                .put(`/api/events/${baseEventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ name: 'Missing required fields' });
+            expect(response.status).toBe(400);
+        });
+    });
+
+    describe('DELETE /api/events/:eventId - Delete Event (admin only)', () => {
+        const deletableEventId = 2002;
+
+        beforeEach(() => {
+            createCustomEvent(deletableEventId, 'Event To Delete');
+        });
+
+        afterEach(() => {
+            // Ensure cleanup if delete failed
+            deleteEventById(deletableEventId);
+        });
+
+        test('should delete event and return 204', async () => {
+            const response = await request(app)
+                .delete(`/api/events/${deletableEventId}`)
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(204);
+
+            const fetchResponse = await request(app)
+                .get(`/api/events/${deletableEventId}`)
+                .set('Authorization', adminAuthHeader);
+            expect(fetchResponse.status).toBe(404);
+        });
+
+        test('should require authentication and admin', async () => {
+            const noAuth = await request(app).delete(`/api/events/${deletableEventId}`);
+            expect(noAuth.status).toBe(401);
+
+            const nonAdmin = await request(app)
+                .delete(`/api/events/${deletableEventId}`)
+                .set('Authorization', nonAdminAuthHeader);
+            expect(nonAdmin.status).toBe(403);
+        });
+
+        test('should return 404 for missing event', async () => {
+            const response = await request(app)
+                .delete('/api/events/99999')
+                .set('Authorization', adminAuthHeader);
+            expect(response.status).toBe(404);
         });
     });
 });
