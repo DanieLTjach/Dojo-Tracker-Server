@@ -15,7 +15,9 @@ services:
       - nginx
     command: >-
       certonly --reinstall --webroot --webroot-path=/var/www/certbot
-      --non-interactive --agree-tos -d dojo-tracker.japan-dojo.com
+      --non-interactive --agree-tos
+      -d dojo-tracker.japan-dojo.com
+      -d games.japan-dojo.com
     volumes:
       - ./letsencrypt:/etc/letsencrypt
       - ./certbot:/var/www/certbot
