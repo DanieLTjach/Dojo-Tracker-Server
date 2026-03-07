@@ -8,6 +8,8 @@ services:
     ports:
       - 80:80
       - 443:443
+    networks:
+      - shared_network
     volumes:
       - ./nginx/backend.conf:/etc/nginx/conf.d/default.conf:ro
       - ./letsencrypt:/etc/letsencrypt:ro
@@ -22,6 +24,8 @@ services:
       --non-interactive --agree-tos
       -d dojo-tracker.japan-dojo.com
       -d games.japan-dojo.com
+    networks:
+      - shared_network
     volumes:
       - ./letsencrypt:/etc/letsencrypt
       - ./certbot:/var/www/certbot
@@ -35,6 +39,8 @@ services:
       - BOT_URL=https://t.me/japan_dojo_bot/tracker
     env_file:
       - .env
+    networks:
+      - shared_network
     expose:
       - 3000
     volumes:
@@ -58,3 +64,7 @@ services:
       - SQLITE_DATABASE=/data/data.db
     volumes:
       - ./db/data:/data
+
+networks:
+  shared_network:
+    name: shared_network
