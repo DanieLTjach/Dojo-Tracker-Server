@@ -17,15 +17,14 @@ export class EventService {
         return event;
     }
 
-    validateEventExists(eventId: number): Event {
+    validateEventExists(eventId: number): void {
         const event = this.eventRepository.findEventById(eventId);
         if (!event) {
             throw new EventNotFoundError(eventId);
         }
-        return event;
     }
 
-    createEvent(data: EventCreateData, modifiedBy: number): Event {
+    createEvent(data: EventData, modifiedBy: number): Event {
         if (!this.eventRepository.gameRulesExists(data.gameRulesId)) {
             throw new GameRulesNotFoundError(data.gameRulesId);
         }
@@ -46,7 +45,7 @@ export class EventService {
         return this.getEventById(eventId);
     }
 
-    updateEvent(eventId: number, data: EventUpdateData, modifiedBy: number): Event {
+    updateEvent(eventId: number, data: EventData, modifiedBy: number): Event {
         this.validateEventExists(eventId);
 
         if (!this.eventRepository.gameRulesExists(data.gameRulesId)) {
@@ -70,7 +69,7 @@ export class EventService {
     }
 
     deleteEvent(eventId: number): void {
-        const event = this.validateEventExists(eventId);
+        const event = this.getEventById(eventId);
 
         const gameCount = this.eventRepository.getGameCountForEvent(eventId);
         if (gameCount > 0) {
@@ -81,16 +80,7 @@ export class EventService {
     }
 }
 
-export interface EventCreateData {
-    name: string;
-    description?: string | null | undefined;
-    type: string;
-    dateFrom?: Date | null | undefined;
-    dateTo?: Date | null | undefined;
-    gameRulesId: number;
-}
-
-export interface EventUpdateData {
+export interface EventData {
     name: string;
     description?: string | null | undefined;
     type: string;
