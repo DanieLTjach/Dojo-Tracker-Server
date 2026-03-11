@@ -1,6 +1,7 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { Event } from '../model/EventModels.ts';
+import { parseUma } from '../util/UmaUtil.ts';
 
 export class EventRepository {
     private findAllEventsStatement(): Statement<[], EventWithGameRulesDBEntity> {
@@ -49,6 +50,119 @@ export class EventRepository {
         const eventDBEntity = this.findEventByIdStatement().get({ id: eventId });
         return eventDBEntity !== undefined ? eventWithGameRulesFromDBEntity(eventDBEntity) : undefined;
     }
+
+    private createEventStatement(): Statement<{
+        name: string;
+        description: string | null;
+        type: string;
+        gameRules: number;
+        dateFrom: string | null;
+        dateTo: string | null;
+        createdAt: string;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, { id: number }> {
+        return dbManager.db.prepare(`
+            INSERT INTO event (name, description, type, gameRules, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :gameRules, :dateFrom, :dateTo, :createdAt, :modifiedAt, :modifiedBy)
+            RETURNING id
+        `);
+    }
+
+    createEvent(params: EventCreateParams): number {
+        const result = this.createEventStatement().get({
+            ...params,
+            dateFrom: params.dateFrom?.toISOString() ?? null,
+            dateTo: params.dateTo?.toISOString() ?? null,
+            createdAt: params.createdAt.toISOString(),
+            modifiedAt: params.modifiedAt.toISOString()
+        });
+        return result!.id;
+    }
+
+    private updateEventStatement(): Statement<{
+        id: number;
+        name: string;
+        description: string | null;
+        type: string;
+        gameRules: number;
+        dateFrom: string | null;
+        dateTo: string | null;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE event
+            SET name = :name,
+                description = :description,
+                type = :type,
+                gameRules = :gameRules,
+                dateFrom = :dateFrom,
+                dateTo = :dateTo,
+                modifiedAt = :modifiedAt,
+                modifiedBy = :modifiedBy
+            WHERE id = :id
+        `);
+    }
+
+    updateEvent(params: EventUpdateParams): void {
+        this.updateEventStatement().run({
+            ...params,
+            dateFrom: params.dateFrom?.toISOString() ?? null,
+            dateTo: params.dateTo?.toISOString() ?? null,
+            modifiedAt: params.modifiedAt.toISOString()
+        });
+    }
+
+    private deleteEventStatement(): Statement<{ id: number }, void> {
+        return dbManager.db.prepare(`
+            DELETE FROM event WHERE id = :id
+        `);
+    }
+
+    deleteEvent(eventId: number): void {
+        this.deleteEventStatement().run({ id: eventId });
+    }
+
+    private getGameCountForEventStatement(): Statement<{ eventId: number }, { count: number }> {
+        return dbManager.db.prepare(`
+            SELECT COUNT(*) as count FROM game WHERE eventId = :eventId
+        `);
+    }
+
+    getGameCountForEvent(eventId: number): number {
+        const result = this.getGameCountForEventStatement().get({ eventId });
+        return result!.count;
+    }
+
+    gameRulesExists(gameRulesId: number): boolean {
+        const result = dbManager.db.prepare(`SELECT 1 FROM gameRules WHERE id = ?`).get(gameRulesId);
+        return result !== undefined;
+    }
+}
+
+export interface EventCreateParams {
+    name: string;
+    description: string | null;
+    type: string;
+    gameRules: number;
+    dateFrom: Date | null;
+    dateTo: Date | null;
+    createdAt: Date;
+    modifiedAt: Date;
+    modifiedBy: number;
+}
+
+export interface EventUpdateParams {
+    id: number;
+    name: string;
+    description: string | null;
+    type: string;
+    gameRules: number;
+    dateFrom: Date | null;
+    dateTo: Date | null;
+    modifiedAt: Date;
+    modifiedBy: number;
 }
 
 interface EventWithGameRulesDBEntity {
@@ -96,13 +210,4 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy
     };
-}
-
-function parseUma(umaString: string): number[] | number[][] {
-    const parsedUma = umaString.split(';').map(part => part.split(',').map(Number));
-    if (parsedUma.length === 1) {
-        return parsedUma[0]!;
-    } else {
-        return parsedUma;
-    }
 }

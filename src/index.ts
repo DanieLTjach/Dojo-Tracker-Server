@@ -7,6 +7,7 @@ import authRoutes from './routes/AuthRoutes.ts';
 import userRoutes from './routes/UserRoutes.ts';
 import gameRoutes from './routes/GameRoutes.ts';
 import eventRoutes from './routes/EventRoutes.ts';
+import gameRulesRoutes from './routes/GameRulesRoutes.ts';
 import ratingRoutes from './routes/RatingRoutes.ts';
 import userStatsRoutes from './routes/UserStatsRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
@@ -32,6 +33,7 @@ app.use('/api', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/game-rules', gameRulesRoutes);
 app.use('/api', ratingRoutes);
 app.use('/api/events', userStatsRoutes);
 

@@ -63,3 +63,10 @@ export function createTestEvent(): void {
         '2026-12-31T23:59:59.999Z'
     );
 }
+
+/**
+ * Deletes an event by id (useful for cleaning up test-created events).
+ */
+export function deleteEventById(eventId: number): void {
+    dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+}
