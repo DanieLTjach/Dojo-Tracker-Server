@@ -22,6 +22,7 @@ import dedent from 'dedent';
 import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
 import { GameLogsTopic, RatingTopic } from '../model/TelegramTopic.ts';
+import { ClubRepository } from '../repository/ClubRepository.ts';
 
 export class GameService {
 
@@ -29,6 +30,7 @@ export class GameService {
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
+    private clubRepository: ClubRepository = new ClubRepository();
 
     addGame(
         eventId: number,
@@ -83,7 +85,16 @@ export class GameService {
     getGames(filters: GameFilters): GameWithPlayers[] {
         this.validateGameFilters(filters);
 
-        const games = this.gameRepository.findGames(filters);
+        const games = this.gameRepository.findGames({
+            dateFrom: filters.dateFrom,
+            dateTo: filters.dateTo,
+            userId: filters.userId,
+            eventId: filters.eventId,
+            clubId: filters.clubId,
+            sortOrder: filters.sortOrder,
+            limit: filters.limit,
+            offset: filters.offset
+        });
 
         if (games.length > 100) {
             throw new TooManyGamesFoundError();
@@ -136,7 +147,8 @@ export class GameService {
     }
 
     private logNewGame(game: GameWithPlayers, event: Event): void {
-        this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by');
+        const clubPrefix = this.buildClubPrefix(event);
+        this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by', clubPrefix);
     }
 
     private logEditedGame(oldGame: GameWithPlayers, newGame: GameWithPlayers, event: Event, modifiedBy: number): void {
@@ -167,10 +179,11 @@ export class GameService {
         event: Event,
         userId: number,
         title: string,
-        userLabel: string
+        userLabel: string,
+        prefix: string = ''
     ): void {
         const user = this.userService.getUserById(userId);
-        const message = dedent`
+        const message = prefix + dedent`
             <b>${title}</b>
 
             <b>Game ID:</b> <code>${game.id}</code>
@@ -240,7 +253,8 @@ export class GameService {
         }).join('\n\n');
 
         const createdByUser = this.userService.getUserById(createdBy);
-        const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
+        const clubPrefix = this.buildClubPrefix(event);
+        const message = clubPrefix + `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
             + `\nДодано <a href="${config.botUrl}?startapp=game_${game.id}">нову гру</a>`
             + ` користувачем ${this.generateUserProfileLink(createdByUser)}\n\n`
             + `${playerLines}`;
@@ -254,6 +268,19 @@ export class GameService {
 
     private generateUserProfileLink(user: User): string {
         return `<a href="${config.botUrl}?startapp=user_${user.id}"><b>${user.name}</b></a>`;
+    }
+
+    private buildClubPrefix(event: Event): string {
+        if (event.clubId === null) {
+            return '';
+        }
+
+        const club = this.clubRepository.findClubById(event.clubId);
+        if (club === undefined) {
+            return '';
+        }
+
+        return `[${club.name}] `;
     }
 
     private validateGameFilters(filters: GameFilters): void {
