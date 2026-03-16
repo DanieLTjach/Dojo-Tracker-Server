@@ -9,6 +9,7 @@ export class GameRulesRepository {
             SELECT
                 id,
                 name,
+                clubId,
                 numberOfPlayers,
                 uma,
                 startingPoints,
@@ -24,11 +25,34 @@ export class GameRulesRepository {
         return this.findAllGameRulesStatement().all().map(gameRulesFromDBEntity);
     }
 
+    private findAllGameRulesByClubIdStatement(): Statement<{ clubId: number }, GameRulesDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT
+                id,
+                name,
+                clubId,
+                numberOfPlayers,
+                uma,
+                startingPoints,
+                startingRating,
+                minimumGamesForRating,
+                chomboPointsAfterUma
+            FROM gameRules
+            WHERE clubId = :clubId OR clubId IS NULL
+            ORDER BY id ASC`
+        );
+    }
+
+    findAllGameRulesByClubId(clubId: number): GameRules[] {
+        return this.findAllGameRulesByClubIdStatement().all({ clubId }).map(gameRulesFromDBEntity);
+    }
+
     private findGameRulesByIdStatement(): Statement<{ id: number }, GameRulesDBEntity> {
         return dbManager.db.prepare(`
             SELECT
                 id,
                 name,
+                clubId,
                 numberOfPlayers,
                 uma,
                 startingPoints,
@@ -49,6 +73,7 @@ export class GameRulesRepository {
 interface GameRulesDBEntity {
     id: number;
     name: string;
+    clubId: number | null;
     numberOfPlayers: number;
     uma: string;
     startingPoints: number;
@@ -61,6 +86,7 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
     return {
         id: dbEntity.id,
         name: dbEntity.name,
+        clubId: dbEntity.clubId,
         numberOfPlayers: dbEntity.numberOfPlayers,
         uma: parseUma(dbEntity.uma),
         startingPoints: dbEntity.startingPoints,

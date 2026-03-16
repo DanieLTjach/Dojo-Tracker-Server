@@ -52,13 +52,63 @@ describe('Game Rules API Endpoints', () => {
             const twoD = response.body.find((gr: any) => gr.id === 2);
 
             expect(Array.isArray(oneD.uma)).toBe(true);
-            oneD.uma.forEach((n: any) => expect(typeof n).toBe('number'));
+            oneD.uma.forEach((n: any) => {
+                expect(typeof n).toBe('number');
+            });
 
             expect(Array.isArray(twoD.uma)).toBe(true);
             twoD.uma.forEach((row: any) => {
                 expect(Array.isArray(row)).toBe(true);
-                row.forEach((n: any) => expect(typeof n).toBe('number'));
+                row.forEach((n: any) => {
+                    expect(typeof n).toBe('number');
+                });
             });
+        });
+
+        test('should filter game rules by clubId including global rules', async () => {
+            const clubId = 910;
+            const otherClubId = 911;
+            const clubRuleId = 9101;
+            const globalRuleId = 9102;
+            const otherClubRuleId = 9103;
+            const timestamp = '2026-01-01T00:00:00.000Z';
+
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubId, 'Game Rules Test Club', null, null, null, null, 1, null, null, timestamp, timestamp, 0);
+
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubId, 'Game Rules Test Club 2', null, null, null, null, 1, null, null, timestamp, timestamp, 0);
+
+            dbManager.db.prepare(
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubRuleId, 'Club Rule', clubId, 4, '15,5,-5,-15', 30000, 1000, 0, null);
+
+            dbManager.db.prepare(
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(globalRuleId, 'Global Rule', null, 4, '15,5,-5,-15', 30000, 1000, 0, null);
+
+            dbManager.db.prepare(
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubRuleId, 'Other Club Rule', otherClubId, 4, '15,5,-5,-15', 30000, 1000, 0, null);
+
+            const response = await request(app)
+                .get(`/api/game-rules?clubId=${clubId}`)
+                .set('Authorization', adminAuthHeader);
+
+            dbManager.db.prepare('DELETE FROM gameRules WHERE id IN (?, ?, ?)').run(clubRuleId, globalRuleId, otherClubRuleId);
+            dbManager.db.prepare('DELETE FROM club WHERE id IN (?, ?)').run(clubId, otherClubId);
+
+            expect(response.status).toBe(200);
+            expect(response.body.some((rule: { id: number }) => rule.id === clubRuleId)).toBe(true);
+            expect(response.body.some((rule: { id: number }) => rule.id === globalRuleId)).toBe(true);
+            expect(response.body.some((rule: { id: number }) => rule.id === otherClubRuleId)).toBe(false);
         });
 
         test('should require authentication', async () => {

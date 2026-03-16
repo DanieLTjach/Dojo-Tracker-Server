@@ -9,7 +9,10 @@ export class GameRulesService {
         this.gameRulesRepository = new GameRulesRepository();
     }
 
-    getAllGameRules(): GameRules[] {
+    getAllGameRules(clubId?: number): GameRules[] {
+        if (clubId !== undefined) {
+            return this.gameRulesRepository.findAllGameRulesByClubId(clubId);
+        }
         return this.gameRulesRepository.findAllGameRules();
     }
 
