@@ -168,6 +168,26 @@ export class MembershipRepository {
         const result = this.getUserClubRoleStatement().get({ clubId, userId, status: 'ACTIVE' });
         return result?.role;
     }
+
+    private findActiveMembershipsByUserIdStatement(): Statement<{ userId: number; status: ClubMembershipStatus }, ClubMembershipDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT
+                clubId,
+                userId,
+                role,
+                status,
+                createdAt,
+                modifiedAt,
+                modifiedBy
+            FROM clubMembership
+            WHERE userId = :userId
+              AND status = :status
+        `);
+    }
+
+    findActiveMembershipsByUserId(userId: number): ClubMembership[] {
+        return this.findActiveMembershipsByUserIdStatement().all({ userId, status: 'ACTIVE' }).map(clubMembershipFromDBEntity);
+    }
 }
 
 export interface MembershipCreateParams {

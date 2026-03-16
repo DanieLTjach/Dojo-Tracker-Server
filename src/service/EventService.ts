@@ -1,12 +1,17 @@
 import { EventNotFoundError, GameRulesNotFoundError, CannotDeleteEventWithGamesError } from '../error/EventErrors.ts';
-import { ClubNotFoundError } from '../error/ClubErrors.ts';
+import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
+import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { Event } from '../model/EventModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
+import { MembershipRepository } from '../repository/MembershipRepository.ts';
+import { UserService } from './UserService.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
     private clubRepository: ClubRepository = new ClubRepository();
+    private membershipRepository: MembershipRepository = new MembershipRepository();
+    private userService: UserService = new UserService();
 
     getAllEvents(clubId?: number): Event[] {
         if (clubId !== undefined) {
@@ -31,6 +36,8 @@ export class EventService {
     }
 
     createEvent(data: EventData, modifiedBy: number): Event {
+        this.authorizeEventCreation(data.clubId, modifiedBy);
+
         if (!this.eventRepository.gameRulesExists(data.gameRulesId)) {
             throw new GameRulesNotFoundError(data.gameRulesId);
         }
@@ -57,7 +64,8 @@ export class EventService {
     }
 
     updateEvent(eventId: number, data: EventData, modifiedBy: number): Event {
-        this.validateEventExists(eventId);
+        const existingEvent = this.getEventById(eventId);
+        this.authorizeEventUpdate(existingEvent, data.clubId, modifiedBy);
 
         if (!this.eventRepository.gameRulesExists(data.gameRulesId)) {
             throw new GameRulesNotFoundError(data.gameRulesId);
@@ -82,6 +90,42 @@ export class EventService {
         });
 
         return this.getEventById(eventId);
+    }
+
+    private authorizeEventCreation(clubId: number | null | undefined, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (clubId === null || clubId === undefined) {
+            throw new InsufficientPermissionsError();
+        }
+
+        const clubRole = this.membershipRepository.getUserClubRole(clubId, userId);
+        if (clubRole !== 'OWNER') {
+            throw new InsufficientClubPermissionsError('OWNER');
+        }
+    }
+
+    private authorizeEventUpdate(existingEvent: Event, requestedClubId: number | null | undefined, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (existingEvent.clubId === null) {
+            throw new InsufficientPermissionsError();
+        }
+
+        const clubRole = this.membershipRepository.getUserClubRole(existingEvent.clubId, userId);
+        if (clubRole !== 'OWNER') {
+            throw new InsufficientClubPermissionsError('OWNER');
+        }
+
+        if (requestedClubId !== existingEvent.clubId) {
+            throw new InsufficientPermissionsError();
+        }
     }
 
     deleteEvent(eventId: number): void {

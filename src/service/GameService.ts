@@ -23,6 +23,10 @@ import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
 import { GameLogsTopic, RatingTopic } from '../model/TelegramTopic.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
+import { MembershipRepository } from '../repository/MembershipRepository.ts';
+import { InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
+import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
+import type { ClubRole } from '../model/ClubModels.ts';
 
 export class GameService {
 
@@ -31,6 +35,7 @@ export class GameService {
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
     private clubRepository: ClubRepository = new ClubRepository();
+    private membershipRepository: MembershipRepository = new MembershipRepository();
 
     addGame(
         eventId: number,
@@ -50,6 +55,7 @@ export class GameService {
         }
 
         const event = this.eventService.getEventById(eventId);
+        this.authorizeGameCreation(event, playersData, createdBy);
         this.validatePlayers(playersData, event.gameRules);
         this.validateGameWithinEventDates(event, gameTimestamp, createdBy);
         this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
@@ -118,6 +124,9 @@ export class GameService {
         tournamentTableNumber: number | null
     ): GameWithPlayers {
         const oldGame = this.getGameById(gameId);
+        const oldEvent = this.eventService.getEventById(oldGame.eventId);
+        this.authorizeClubScopedAction(oldEvent.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
+
         const event = this.eventService.getEventById(eventId);
         this.validatePlayers(playersData, event.gameRules);
 
@@ -138,12 +147,61 @@ export class GameService {
     deleteGame(gameId: number, deletedBy: number): void {
         const game = this.getGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
+        this.authorizeClubScopedAction(event.clubId, deletedBy, ['OWNER']);
+
         this.ratingService.deleteRatingChangesFromGame(game);
 
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.gameRepository.deleteGameById(gameId);
 
         this.logDeletedGame(game, event, deletedBy);
+    }
+
+    private authorizeGameCreation(event: Event, playersData: PlayerData[], createdBy: number): void {
+        const user = this.userService.getUserById(createdBy);
+        if (user.isAdmin || event.clubId === null) {
+            return;
+        }
+
+        if (!this.clubHasActiveMemberships(event.clubId)) {
+            return;
+        }
+
+        const creatorRole = this.membershipRepository.getUserClubRole(event.clubId, createdBy);
+        if (!creatorRole) {
+            throw new InsufficientClubPermissionsError(['OWNER', 'MODERATOR', 'MEMBER']);
+        }
+
+        if (creatorRole === 'MEMBER') {
+            const allPlayersInClub = playersData.every((player) => this.membershipRepository.getUserClubRole(event.clubId!, player.userId) !== undefined);
+            if (!allPlayersInClub) {
+                throw new InsufficientClubPermissionsError(['OWNER', 'MODERATOR', 'MEMBER']);
+            }
+        }
+    }
+
+    private authorizeClubScopedAction(clubId: number | null, userId: number, allowedRoles: ClubRole[]): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (clubId === null) {
+            throw new InsufficientPermissionsError();
+        }
+
+        const role = this.membershipRepository.getUserClubRole(clubId, userId);
+        if (!this.clubHasActiveMemberships(clubId)) {
+            throw new InsufficientPermissionsError();
+        }
+
+        if (role === undefined || !allowedRoles.includes(role)) {
+            throw new InsufficientClubPermissionsError(allowedRoles);
+        }
+    }
+
+    private clubHasActiveMemberships(clubId: number): boolean {
+        return this.membershipRepository.findMembersByClubId(clubId).some((membership) => membership.status === 'ACTIVE');
     }
 
     private logNewGame(game: GameWithPlayers, event: Event): void {
