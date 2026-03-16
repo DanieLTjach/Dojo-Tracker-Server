@@ -91,16 +91,7 @@ export class GameService {
     getGames(filters: GameFilters): GameWithPlayers[] {
         this.validateGameFilters(filters);
 
-        const games = this.gameRepository.findGames({
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo,
-            userId: filters.userId,
-            eventId: filters.eventId,
-            clubId: filters.clubId,
-            sortOrder: filters.sortOrder,
-            limit: filters.limit,
-            offset: filters.offset
-        });
+        const games = this.gameRepository.findGames(filters);
 
         if (games.length > 100) {
             throw new TooManyGamesFoundError();
