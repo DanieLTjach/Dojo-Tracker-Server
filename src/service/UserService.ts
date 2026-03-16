@@ -46,8 +46,10 @@ export class UserService {
         return this.getUserByTelegramId(telegramId).status;
     }
 
-    getAllUsers(requestingUserId?: number): User[] {
-        const users = this.userRepository.findAllUsers();
+    getAllUsers(requestingUserId?: number, clubId?: number): User[] {
+        const users = clubId !== undefined
+            ? this.userRepository.findAllUsersByClubId(clubId)
+            : this.userRepository.findAllUsers();
         return users.map(user => this.applyProfileVisibility(user, requestingUserId));
     }
 

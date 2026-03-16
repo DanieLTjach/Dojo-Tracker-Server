@@ -239,6 +239,69 @@ describe('User API Endpoints', () => {
             expect(response.body.length).toBeGreaterThan(0);
         });
 
+        it('should filter users by clubId and include only ACTIVE memberships', async () => {
+            const clubId = 920;
+            const otherClubId = 921;
+            const activeMemberUserId = 9201;
+            const pendingMemberUserId = 9202;
+            const otherClubUserId = 9203;
+            const timestamp = '2026-01-01T00:00:00.000Z';
+
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubId, 'Users Filter Test Club', null, null, null, null, 1, null, null, timestamp, timestamp, 0);
+
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubId, 'Users Filter Test Club 2', null, null, null, null, 1, null, null, timestamp, timestamp, 0);
+
+            dbManager.db.prepare(
+                `INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(activeMemberUserId, 'Club Active User', '@clubactiveuser', 920100001, 0, 0, 1, 'ACTIVE', timestamp, timestamp);
+
+            dbManager.db.prepare(
+                `INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(pendingMemberUserId, 'Club Pending User', '@clubpendinguser', 920100002, 0, 0, 1, 'ACTIVE', timestamp, timestamp);
+
+            dbManager.db.prepare(
+                `INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubUserId, 'Other Club User', '@otherclubuser', 920100003, 0, 0, 1, 'ACTIVE', timestamp, timestamp);
+
+            dbManager.db.prepare(
+                `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubId, activeMemberUserId, 'MEMBER', 'ACTIVE', timestamp, timestamp, 0);
+
+            dbManager.db.prepare(
+                `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubId, pendingMemberUserId, 'MEMBER', 'PENDING', timestamp, timestamp, 0);
+
+            dbManager.db.prepare(
+                `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubId, otherClubUserId, 'MEMBER', 'ACTIVE', timestamp, timestamp, 0);
+
+            const response = await request(app)
+                .get(`/api/users?clubId=${clubId}`)
+                .set('Authorization', adminAuthHeader)
+                .expect(200);
+
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE userId IN (?, ?, ?)').run(activeMemberUserId, pendingMemberUserId, otherClubUserId);
+            dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?, ?)').run(activeMemberUserId, pendingMemberUserId, otherClubUserId);
+            dbManager.db.prepare('DELETE FROM club WHERE id IN (?, ?)').run(clubId, otherClubId);
+
+            expect(response.body.some((user: { id: number }) => user.id === activeMemberUserId)).toBe(true);
+            expect(response.body.some((user: { id: number }) => user.id === pendingMemberUserId)).toBe(false);
+            expect(response.body.some((user: { id: number }) => user.id === otherClubUserId)).toBe(false);
+            expect(response.body.some((user: { id: number }) => user.id === 0)).toBe(false);
+        });
+
         it('should fail when no authentication token provided', async () => {
             const response = await request(app)
                 .get('/api/users');

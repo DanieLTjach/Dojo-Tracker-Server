@@ -4,6 +4,7 @@ import { UserService } from '../service/UserService.ts';
 import {
     userActivationSchema,
     userEditSchema,
+    getUserListSchema,
     getUserByTelegramIdSchema,
     userRegistrationSchema,
     getUserByIdSchema
@@ -34,8 +35,9 @@ export class UserController {
     }
 
     getAllUsers(req: Request, res: Response) {
+        const { query } = getUserListSchema.parse(req);
         const requestingUserId = req.user!.userId;
-        const users = this.userService.getAllUsers(requestingUserId);
+        const users = this.userService.getAllUsers(requestingUserId, query?.clubId);
         return res.status(StatusCodes.OK).json(users);
     }
 

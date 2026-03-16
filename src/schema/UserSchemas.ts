@@ -30,6 +30,12 @@ export const getUserByTelegramIdSchema = z.object({
     })
 });
 
+export const getUserListSchema = z.object({
+    query: z.object({
+        clubId: z.coerce.number().int('Club ID must be an integer').optional()
+    }).optional()
+});
+
 export const userEditSchema = z.object({
     params: z.object({
         id: userIdParamSchema
