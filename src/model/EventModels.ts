@@ -2,6 +2,7 @@
 export interface GameRules {
     id: number;
     name: string;
+    clubId: number | null;
     numberOfPlayers: number;
     uma: number[] | number[][];
     startingPoints: number;
@@ -15,6 +16,7 @@ export interface Event {
     name: string;
     description: string | null;
     type: string;
+    clubId: number | null;
     gameRules: GameRules;
     dateFrom: Date | null;
     dateTo: Date | null;

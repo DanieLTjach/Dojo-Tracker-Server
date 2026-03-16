@@ -1,5 +1,6 @@
 import z from "zod";
 import { dateSchema } from './CommonSchemas.ts';
+import { clubIdParamSchema, clubIdSchema } from './ClubSchemas.ts';
 
 export const eventIdSchema = z.number().int("Event ID must be an integer");
 export const eventIdParamSchema = z.coerce.number().int("Event ID must be an integer");
@@ -18,7 +19,8 @@ const eventSchema = z.object({
     type: eventTypeEnum,
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
-    gameRulesId: z.number().int("gameRulesId must be an integer")
+    gameRulesId: z.number().int("gameRulesId must be an integer"),
+    clubId: clubIdSchema.nullish()
 }).refine(
     (data) => {
         if (data.dateFrom && data.dateTo) {
@@ -44,4 +46,10 @@ export const eventDeleteSchema = z.object({
     params: z.object({
         eventId: eventIdParamSchema
     })
+});
+
+export const eventGetListSchema = z.object({
+    query: z.object({
+        clubId: clubIdParamSchema.optional()
+    }).optional()
 });

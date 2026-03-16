@@ -1,13 +1,14 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { EventService } from '../service/EventService.ts';
-import { eventGetByIdSchema, eventCreateSchema, eventUpdateSchema, eventDeleteSchema } from '../schema/EventSchemas.ts';
+import { eventGetByIdSchema, eventCreateSchema, eventUpdateSchema, eventDeleteSchema, eventGetListSchema } from '../schema/EventSchemas.ts';
 
 export class EventController {
     private eventService: EventService = new EventService();
 
-    getAllEvents(_req: Request, res: Response) {
-        const events = this.eventService.getAllEvents();
+    getAllEvents(req: Request, res: Response) {
+        const { query } = eventGetListSchema.parse(req);
+        const events = this.eventService.getAllEvents(query?.clubId);
         return res.status(StatusCodes.OK).json(events);
     }
 

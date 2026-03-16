@@ -1,11 +1,17 @@
 import { EventNotFoundError, GameRulesNotFoundError, CannotDeleteEventWithGamesError } from '../error/EventErrors.ts';
+import { ClubNotFoundError } from '../error/ClubErrors.ts';
 import type { Event } from '../model/EventModels.ts';
+import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
+    private clubRepository: ClubRepository = new ClubRepository();
 
-    getAllEvents(): Event[] {
+    getAllEvents(clubId?: number): Event[] {
+        if (clubId !== undefined) {
+            return this.eventRepository.findAllEventsByClubId(clubId);
+        }
         return this.eventRepository.findAllEvents();
     }
 
@@ -29,12 +35,17 @@ export class EventService {
             throw new GameRulesNotFoundError(data.gameRulesId);
         }
 
+        if (data.clubId !== null && data.clubId !== undefined && !this.clubRepository.clubExists(data.clubId)) {
+            throw new ClubNotFoundError(data.clubId);
+        }
+
         const now = new Date();
         const eventId = this.eventRepository.createEvent({
             name: data.name,
             description: data.description ?? null,
             type: data.type,
             gameRules: data.gameRulesId,
+            clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
             createdAt: now,
@@ -52,6 +63,10 @@ export class EventService {
             throw new GameRulesNotFoundError(data.gameRulesId);
         }
 
+        if (data.clubId !== null && data.clubId !== undefined && !this.clubRepository.clubExists(data.clubId)) {
+            throw new ClubNotFoundError(data.clubId);
+        }
+
         const now = new Date();
         this.eventRepository.updateEvent({
             id: eventId,
@@ -59,6 +74,7 @@ export class EventService {
             description: data.description ?? null,
             type: data.type,
             gameRules: data.gameRulesId,
+            clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
             modifiedAt: now,
@@ -84,6 +100,7 @@ export interface EventData {
     name: string;
     description?: string | null | undefined;
     type: string;
+    clubId?: number | null | undefined;
     dateFrom?: Date | null | undefined;
     dateTo?: Date | null | undefined;
     gameRulesId: number;
