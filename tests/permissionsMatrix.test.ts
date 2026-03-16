@@ -1240,4 +1240,121 @@ describe('Permissions matrix integration specification', () => {
             (response) => captureCreatedId(response, createdEventIds)
         );
     });
+
+    describe('Multi-club scenarios (role independence)', () => {
+        const CLUB_B_ID = 95200;
+        const CLUB_B_GAME_RULES_ID = 95210;
+        let clubBEventId: number;
+        let clubBGameId: number;
+
+        beforeAll(() => {
+            insertClub(CLUB_B_ID, 'Permissions Matrix Club B');
+            insertGameRules(CLUB_B_GAME_RULES_ID, 'Permissions Matrix Club B Rules', 3, 40000, CLUB_B_ID);
+
+            upsertMembership(CLUB_B_ID, OWNER_USER_ID, 'MEMBER', 'ACTIVE');
+            upsertMembership(CLUB_B_ID, MODERATOR_USER_ID, 'MEMBER', 'ACTIVE');
+            upsertMembership(CLUB_B_ID, MEMBER_USER_ID, 'OWNER', 'ACTIVE');
+
+            const eventId = nextId();
+            insertEvent(eventId, 'Permissions Matrix Club B Event', CLUB_B_ID, CLUB_B_GAME_RULES_ID);
+            clubBEventId = eventId;
+
+            const gameId = nextId();
+            insertGame(gameId, clubBEventId);
+            clubBGameId = gameId;
+        });
+
+        afterAll(() => {
+            cleanupEventCascade(clubBEventId);
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(CLUB_B_ID);
+            dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(CLUB_B_GAME_RULES_ID);
+            dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(CLUB_B_ID);
+        });
+
+        test('OWNER in Club A is only MEMBER in Club B — CANNOT edit Club B', async () => {
+            const res = await request(app)
+                .put(`/api/clubs/${CLUB_B_ID}`)
+                .set('Authorization', authHeaders.owner)
+                .send({
+                    name: 'Permissions Matrix Club B',
+                    address: null, city: null, description: null, contactInfo: null,
+                    isActive: true, ratingChatId: null, ratingTopicId: null
+                });
+            expect(res.status).toBe(403);
+        });
+
+        test('OWNER in Club A is only MEMBER in Club B — CANNOT create event in Club B', async () => {
+            const res = await request(app)
+                .post('/api/events')
+                .set('Authorization', authHeaders.owner)
+                .send(buildEventPayload(CLUB_B_ID, CLUB_B_GAME_RULES_ID));
+            expect(res.status).toBe(403);
+        });
+
+        test('OWNER in Club A is only MEMBER in Club B — CANNOT edit game in Club B', async () => {
+            const res = await request(app)
+                .put(`/api/games/${clubBGameId}`)
+                .set('Authorization', authHeaders.owner)
+                .send({
+                    eventId: clubBEventId,
+                    playersData: [
+                        { userId: OWNER_USER_ID, points: 45000 },
+                        { userId: MODERATOR_USER_ID, points: 40000 },
+                        { userId: MEMBER_USER_ID, points: 35000 }
+                    ]
+                });
+            expect(res.status).toBe(403);
+        });
+
+        test('OWNER in Club A is only MEMBER in Club B — CANNOT delete game in Club B', async () => {
+            const res = await request(app)
+                .delete(`/api/games/${clubBGameId}`)
+                .set('Authorization', authHeaders.owner);
+            expect(res.status).toBe(403);
+        });
+
+        test('MEMBER in Club A is OWNER in Club B — CAN edit Club B', async () => {
+            const res = await request(app)
+                .put(`/api/clubs/${CLUB_B_ID}`)
+                .set('Authorization', authHeaders.member)
+                .send({
+                    name: 'Permissions Matrix Club B',
+                    address: null, city: null, description: null, contactInfo: null,
+                    isActive: true, ratingChatId: null, ratingTopicId: null
+                });
+            expect(res.status).toBe(200);
+        });
+
+        test('MEMBER in Club A is OWNER in Club B — CAN create event in Club B', async () => {
+            const res = await request(app)
+                .post('/api/events')
+                .set('Authorization', authHeaders.member)
+                .send(buildEventPayload(CLUB_B_ID, CLUB_B_GAME_RULES_ID));
+            if (res.body.id) {
+                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(res.body.id);
+            }
+            expect(res.status).toBe(201);
+        });
+
+        test('MEMBER in Club A is OWNER in Club B — CAN delete game in Club B', async () => {
+            const tempGameId = nextId();
+            insertGame(tempGameId, clubBEventId);
+            const res = await request(app)
+                .delete(`/api/games/${tempGameId}`)
+                .set('Authorization', authHeaders.member);
+            expect(res.status).toBe(204);
+        });
+
+        test('MEMBER in Club A is OWNER in Club B — still CANNOT edit Club A', async () => {
+            const res = await request(app)
+                .put(`/api/clubs/${TEST_CLUB_ID}`)
+                .set('Authorization', authHeaders.member)
+                .send({
+                    name: 'Permissions Matrix Test Club',
+                    address: null, city: null, description: null, contactInfo: null,
+                    isActive: true, ratingChatId: null, ratingTopicId: null
+                });
+            expect(res.status).toBe(403);
+        });
+    });
 });
