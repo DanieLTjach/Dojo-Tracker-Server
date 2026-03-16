@@ -22,7 +22,16 @@ export class GameController {
 
     getGames(req: Request, res: Response) {
         const { query } = gameGetListSchema.parse(req);
-        const games = this.gameService.getGames(query || {});
+        const games = this.gameService.getGames({
+            dateFrom: query?.dateFrom,
+            dateTo: query?.dateTo,
+            userId: query?.userId,
+            eventId: query?.eventId,
+            clubId: query?.clubId,
+            sortOrder: query?.sortOrder,
+            limit: query?.limit,
+            offset: query?.offset
+        });
         return res.status(StatusCodes.OK).json(games);
     }
 

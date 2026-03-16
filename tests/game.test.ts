@@ -510,6 +510,43 @@ describe('Game API Endpoints', () => {
             });
         });
 
+        test('should filter games by clubId', async () => {
+            const otherClubId = 930;
+            const otherClubEventId = 9300;
+            const timestamp = '2024-01-01T00:00:00.000Z';
+
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubId, 'Game Filter Test Club', null, null, null, null, 1, null, null, timestamp, timestamp, 0);
+
+            createCustomEvent(otherClubEventId, 'Інший клубний сезон', undefined, undefined, 2, otherClubId);
+
+            await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: otherClubEventId,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
+                        { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
+                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const response = await request(app)
+                .get(`/api/games?clubId=${otherClubId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+            expect(response.body.length).toBeGreaterThan(0);
+            response.body.forEach((game: any) => {
+                expect(game.eventId).toBe(otherClubEventId);
+            });
+        });
+
         test('should filter games by userId', async () => {
             const response = await request(app)
                 .get(`/api/games?userId=${testUser1Id}`)
