@@ -2,10 +2,10 @@ import type { Request, Response, NextFunction } from 'express';
 import { MissingAuthTokenError } from '../error/AuthErrors.ts';
 import { InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
-import { MembershipRepository } from '../repository/MembershipRepository.ts';
+import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { UserService } from '../service/UserService.ts';
 
-const membershipRepository = new MembershipRepository();
+const membershipRepository = new ClubMembershipRepository();
 const userService = new UserService();
 
 export const requireClubRole = (...roles: ClubRole[]) => {

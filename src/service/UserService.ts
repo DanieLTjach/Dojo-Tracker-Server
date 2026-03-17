@@ -15,14 +15,14 @@ import TelegramService from './TelegramSevice.ts';
 import config from '../../config/config.ts';
 import dedent from 'dedent';
 import { UserLogsTopic } from '../model/TelegramTopic.ts';
-import { MembershipRepository } from '../repository/MembershipRepository.ts';
+import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 
 export class UserService {
 
     private userRepository: UserRepository = new UserRepository();
-    private membershipRepository: MembershipRepository = new MembershipRepository();
+    private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
 
     registerUser(
         userName: string,

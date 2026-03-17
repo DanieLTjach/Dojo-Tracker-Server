@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { ClubController } from '../controller/ClubController.ts';
-import { MembershipController } from '../controller/MembershipController.ts';
+import { ClubMembershipController } from '../controller/ClubMembershipController.ts';
 import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
 import { requireClubRole } from '../middleware/ClubRoleMiddleware.ts';
 
 const router = Router();
 const clubController = new ClubController();
-const membershipController = new MembershipController();
+const membershipController = new ClubMembershipController();
 
 router.get('/', requireAuth, withTransaction((req, res) => clubController.getAllClubs(req, res)));
 router.get('/:clubId', requireAuth, withTransaction((req, res) => clubController.getClubById(req, res)));

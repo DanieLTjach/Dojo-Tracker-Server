@@ -23,7 +23,7 @@ import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
 import { GameLogsTopic, RatingTopic } from '../model/TelegramTopic.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
-import { MembershipRepository } from '../repository/MembershipRepository.ts';
+import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
@@ -35,7 +35,7 @@ export class GameService {
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
     private clubRepository: ClubRepository = new ClubRepository();
-    private membershipRepository: MembershipRepository = new MembershipRepository();
+    private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
 
     addGame(
         eventId: number,

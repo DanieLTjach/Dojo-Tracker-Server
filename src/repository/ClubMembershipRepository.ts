@@ -2,7 +2,7 @@ import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { ClubMembership, ClubMembershipStatus, ClubRole } from '../model/ClubModels.ts';
 
-export class MembershipRepository {
+export class ClubMembershipRepository {
     private findMembersByClubIdStatement(): Statement<{ clubId: number }, ClubMembershipDBEntity> {
         return dbManager.db.prepare(`
             SELECT
@@ -80,7 +80,7 @@ export class MembershipRepository {
         `);
     }
 
-    createMembership(params: MembershipCreateParams): void {
+    createMembership(params: ClubMembershipCreateParams): void {
         this.createMembershipStatement().run({
             ...params,
             createdAt: params.createdAt.toISOString(),
@@ -190,7 +190,7 @@ export class MembershipRepository {
     }
 }
 
-export interface MembershipCreateParams {
+export interface ClubMembershipCreateParams {
     clubId: number;
     userId: number;
     role: ClubRole;
@@ -200,7 +200,7 @@ export interface MembershipCreateParams {
     modifiedBy: number;
 }
 
-export interface MembershipUpdateParams {
+export interface ClubMembershipUpdateParams {
     clubId: number;
     userId: number;
     role: ClubRole;

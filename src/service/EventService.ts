@@ -4,13 +4,13 @@ import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { Event } from '../model/EventModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
-import { MembershipRepository } from '../repository/MembershipRepository.ts';
+import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { UserService } from './UserService.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
     private clubRepository: ClubRepository = new ClubRepository();
-    private membershipRepository: MembershipRepository = new MembershipRepository();
+    private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
     private userService: UserService = new UserService();
 
     getAllEvents(clubId?: number): Event[] {

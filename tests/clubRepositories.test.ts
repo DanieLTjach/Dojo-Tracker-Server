@@ -1,5 +1,5 @@
 import { ClubRepository } from '../src/repository/ClubRepository.ts';
-import { MembershipRepository } from '../src/repository/MembershipRepository.ts';
+import { ClubMembershipRepository } from '../src/repository/ClubMembershipRepository.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 
@@ -55,7 +55,7 @@ function cleanupRepositoryFixtures(): void {
 
 describe('Club and Membership repositories', () => {
     const clubRepository = new ClubRepository();
-    const membershipRepository = new MembershipRepository();
+    const membershipRepository = new ClubMembershipRepository();
 
     beforeAll(() => {
         seedTestUsers();

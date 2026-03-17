@@ -6,12 +6,12 @@ import {
 } from '../error/ClubErrors.ts';
 import type { ClubMembership, ClubRole } from '../model/ClubModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
-import { MembershipRepository } from '../repository/MembershipRepository.ts';
+import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { UserService } from './UserService.ts';
 
-export class MembershipService {
+export class ClubMembershipService {
     private clubRepository: ClubRepository = new ClubRepository();
-    private membershipRepository: MembershipRepository = new MembershipRepository();
+    private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
     private userService: UserService = new UserService();
 
     getMembers(clubId: number): ClubMembership[] {

@@ -2,9 +2,9 @@ import type { NextFunction, Request, Response } from 'express';
 import { jest } from '@jest/globals';
 import { dbManager } from '../src/db/dbInit.ts';
 import { requireClubRole } from '../src/middleware/ClubRoleMiddleware.ts';
-import { MembershipRepository } from '../src/repository/MembershipRepository.ts';
+import { ClubMembershipRepository } from '../src/repository/ClubMembershipRepository.ts';
 import { ClubService } from '../src/service/ClubService.ts';
-import { MembershipService } from '../src/service/MembershipService.ts';
+import { ClubMembershipService } from '../src/service/ClubMembershipService.ts';
 import {
     ClubNameAlreadyExistsError,
     ClubNotFoundError,
@@ -21,8 +21,8 @@ const MEMBER_TEST_USER_ID = 92003;
 const ADMIN_TEST_USER_ID = 92004;
 
 const clubService = new ClubService();
-const membershipService = new MembershipService();
-const membershipRepository = new MembershipRepository();
+const membershipService = new ClubMembershipService();
+const membershipRepository = new ClubMembershipRepository();
 
 let clubSequence = 0;
 

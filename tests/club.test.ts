@@ -7,7 +7,7 @@ import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
-import { MembershipService } from '../src/service/MembershipService.ts';
+import { ClubMembershipService } from '../src/service/ClubMembershipService.ts';
 
 const app = express();
 app.use(express.json());
@@ -26,7 +26,7 @@ describe('Club API Endpoints', () => {
     let ownerId: number;
     let memberId: number;
 
-    const membershipService = new MembershipService();
+    const membershipService = new ClubMembershipService();
 
     function cleanupClub(clubId: number): void {
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(clubId);

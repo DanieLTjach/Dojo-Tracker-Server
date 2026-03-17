@@ -7,10 +7,10 @@ import {
     clubMembershipDeactivateSchema,
     clubMembershipUpdateSchema
 } from '../schema/ClubSchemas.ts';
-import { MembershipService } from '../service/MembershipService.ts';
+import { ClubMembershipService } from '../service/ClubMembershipService.ts';
 
-export class MembershipController {
-    private membershipService: MembershipService = new MembershipService();
+export class ClubMembershipController {
+    private membershipService: ClubMembershipService = new ClubMembershipService();
 
     getMembers(req: Request, res: Response) {
         const { params: { clubId } } = clubMembershipGetListSchema.parse(req);
