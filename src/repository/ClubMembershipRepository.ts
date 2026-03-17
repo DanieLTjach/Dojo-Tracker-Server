@@ -23,7 +23,7 @@ export class ClubMembershipRepository {
         return this.findMembersByClubIdStatement().all({ clubId }).map(clubMembershipFromDBEntity);
     }
 
-    private findPendingMembersByClubIdStatement(): Statement<{ clubId: number; status: ClubMembershipStatus }, ClubMembershipDBEntity> {
+    private findMembersByClubIdAndStatusStatement(): Statement<{ clubId: number; status: ClubMembershipStatus }, ClubMembershipDBEntity> {
         return dbManager.db.prepare(`
             SELECT
                 clubId,
@@ -41,7 +41,11 @@ export class ClubMembershipRepository {
     }
 
     findPendingMembersByClubId(clubId: number): ClubMembership[] {
-        return this.findPendingMembersByClubIdStatement().all({ clubId, status: 'PENDING' }).map(clubMembershipFromDBEntity);
+        return this.findMembersByClubIdAndStatusStatement().all({ clubId, status: 'PENDING' }).map(clubMembershipFromDBEntity);
+    }
+
+    findActiveMembersByClubId(clubId: number): ClubMembership[] {
+        return this.findMembersByClubIdAndStatusStatement().all({ clubId, status: 'ACTIVE' }).map(clubMembershipFromDBEntity);
     }
 
     private findMembershipStatement(): Statement<{ clubId: number; userId: number }, ClubMembershipDBEntity> {
@@ -169,7 +173,7 @@ export class ClubMembershipRepository {
         return result?.role;
     }
 
-    private findActiveMembershipsByUserIdStatement(): Statement<{ userId: number; status: ClubMembershipStatus }, ClubMembershipDBEntity> {
+    private findMembershipsByUserIdAndStatusStatement(): Statement<{ userId: number; status: ClubMembershipStatus }, ClubMembershipDBEntity> {
         return dbManager.db.prepare(`
             SELECT
                 clubId,
@@ -186,7 +190,7 @@ export class ClubMembershipRepository {
     }
 
     findActiveMembershipsByUserId(userId: number): ClubMembership[] {
-        return this.findActiveMembershipsByUserIdStatement().all({ userId, status: 'ACTIVE' }).map(clubMembershipFromDBEntity);
+        return this.findMembershipsByUserIdAndStatusStatement().all({ userId, status: 'ACTIVE' }).map(clubMembershipFromDBEntity);
     }
 }
 
