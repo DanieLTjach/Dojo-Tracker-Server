@@ -217,13 +217,32 @@ describe('ClubService and MembershipService', () => {
             expect(membership.status).toBe('PENDING');
         });
 
-        it('requestJoin throws when membership already exists', () => {
+        it('requestJoin returns existing membership when PENDING', () => {
             const clubId = createServiceTestClub();
             membershipService.requestJoin(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
+
+            const membership = membershipService.requestJoin(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
+            expect(membership.status).toBe('PENDING');
+        });
+
+        it('requestJoin throws when membership is ACTIVE', () => {
+            const clubId = createServiceTestClub();
+            membershipService.requestJoin(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
+            membershipService.activateMember(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
 
             expect(() => {
                 membershipService.requestJoin(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
             }).toThrow(ClubMembershipAlreadyExistsError);
+        });
+
+        it('requestJoin re-joins INACTIVE membership as PENDING', () => {
+            const clubId = createServiceTestClub();
+            membershipService.requestJoin(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
+            membershipService.activateMember(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
+            membershipService.deactivateMember(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
+
+            const membership = membershipService.requestJoin(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
+            expect(membership.status).toBe('PENDING');
         });
 
         it('activateMember succeeds when membership is PENDING', () => {

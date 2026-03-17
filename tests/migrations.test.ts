@@ -94,7 +94,7 @@ describe('Database Migrations', () => {
       { name: 'city', type: 'TEXT', notnull: 0, dflt_value: null },
       { name: 'description', type: 'TEXT', notnull: 0, dflt_value: null },
       { name: 'contactInfo', type: 'TEXT', notnull: 0, dflt_value: null },
-      { name: 'isActive', type: 'BOOL', notnull: 1, dflt_value: '1' },
+      { name: 'isActive', type: 'BOOL', notnull: 1, dflt_value: 'true' },
       { name: 'ratingChatId', type: 'TEXT', notnull: 0, dflt_value: null },
       { name: 'ratingTopicId', type: 'TEXT', notnull: 0, dflt_value: null },
       { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },

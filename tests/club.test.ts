@@ -43,7 +43,7 @@ describe('Club API Endpoints', () => {
 
     async function setupOwner(clubId: number): Promise<void> {
         await request(app)
-            .post(`/api/clubs/${clubId}/members`)
+            .post(`/api/clubs/${clubId}/join`)
             .set('Authorization', ownerAuthHeader);
 
         membershipService.activateMember(clubId, ownerId, SYSTEM_USER_ID);
@@ -231,7 +231,7 @@ describe('Club API Endpoints', () => {
     });
 
     describe('Membership endpoints', () => {
-        describe('POST /api/clubs/:clubId/members - Request Join', () => {
+        describe('POST /api/clubs/:clubId/join - Request Join', () => {
             let clubId: number;
 
             beforeEach(async () => {
@@ -244,7 +244,7 @@ describe('Club API Endpoints', () => {
 
             test('should create pending membership for authenticated user', async () => {
                 const response = await request(app)
-                    .post(`/api/clubs/${clubId}/members`)
+                    .post(`/api/clubs/${clubId}/join`)
                     .set('Authorization', memberAuthHeader);
 
                 expect(response.status).toBe(201);
@@ -262,7 +262,7 @@ describe('Club API Endpoints', () => {
                 clubId = await createClub('Integration Club Activate');
                 await setupOwner(clubId);
                 await request(app)
-                    .post(`/api/clubs/${clubId}/members`)
+                    .post(`/api/clubs/${clubId}/join`)
                     .set('Authorization', memberAuthHeader);
             });
 
@@ -296,7 +296,7 @@ describe('Club API Endpoints', () => {
                 clubId = await createClub('Integration Club Members List');
                 await setupOwner(clubId);
                 await request(app)
-                    .post(`/api/clubs/${clubId}/members`)
+                    .post(`/api/clubs/${clubId}/join`)
                     .set('Authorization', memberAuthHeader);
             });
 

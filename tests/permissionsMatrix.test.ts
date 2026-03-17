@@ -1125,7 +1125,7 @@ describe('Permissions matrix integration specification', () => {
 
         createRoleTest(
             'moderator',
-            403,
+            200,
             (authHeader) => request(app)
                 .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
                 .set('Authorization', authHeader)
