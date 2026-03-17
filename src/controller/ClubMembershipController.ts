@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import {
     clubMembershipGetListSchema,
     clubMembershipGetPendingListSchema,
+    clubMembershipRequestJoinSchema,
     clubMembershipActivateSchema,
     clubMembershipDeactivateSchema,
     clubMembershipUpdateSchema
@@ -18,6 +19,12 @@ export class ClubMembershipController {
         return res.status(StatusCodes.OK).json(members);
     }
 
+    getActiveMembers(req: Request, res: Response) {
+        const { params: { clubId } } = clubMembershipGetListSchema.parse(req);
+        const members = this.membershipService.getActiveMembersByClubId(clubId);
+        return res.status(StatusCodes.OK).json(members);
+    }
+
     getPendingMembers(req: Request, res: Response) {
         const { params: { clubId } } = clubMembershipGetPendingListSchema.parse(req);
         const members = this.membershipService.getPendingMembers(clubId);
@@ -25,10 +32,17 @@ export class ClubMembershipController {
     }
 
     requestJoin(req: Request, res: Response) {
-        const { params: { clubId } } = clubMembershipGetListSchema.parse(req);
+        const { params: { clubId } } = clubMembershipRequestJoinSchema.parse(req);
         const userId = req.user!.userId;
         const membership = this.membershipService.requestJoin(clubId, userId, userId);
         return res.status(StatusCodes.CREATED).json(membership);
+    }
+
+    leaveClub(req: Request, res: Response) {
+        const { params: { clubId } } = clubMembershipRequestJoinSchema.parse(req);
+        const userId = req.user!.userId;
+        const membership = this.membershipService.leaveClub(clubId, userId);
+        return res.status(StatusCodes.OK).json(membership);
     }
 
     activateMember(req: Request, res: Response) {

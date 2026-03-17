@@ -3,7 +3,7 @@ import {
     clubCreateSchema,
     clubGetByIdSchema,
     clubMembershipActivateSchema,
-    clubMembershipCreateSchema,
+    clubMembershipRequestJoinSchema,
     clubMembershipUpdateSchema
 } from '../src/schema/ClubSchemas.ts';
 import {
@@ -47,13 +47,10 @@ describe('ClubSchemas', () => {
         expect(params.params.clubId).toBe(7);
     });
 
-    it('allows optional membership role on create and coerces membership route params', () => {
-        const created = clubMembershipCreateSchema.parse({
+    it('coerces membership route params', () => {
+        const joinRequest = clubMembershipRequestJoinSchema.parse({
             params: {
                 clubId: '3'
-            },
-            body: {
-                userId: 11
             }
         });
 
@@ -64,7 +61,7 @@ describe('ClubSchemas', () => {
             }
         });
 
-        expect(created.body).toEqual({ userId: 11 });
+        expect(joinRequest.params).toEqual({ clubId: 3 });
         expect(activated.params).toEqual({ clubId: 3, userId: 11 });
     });
 

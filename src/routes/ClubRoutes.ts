@@ -15,24 +15,31 @@ router.post('/', requireAuth, requireAdmin, withTransaction((req, res) => clubCo
 router.put('/:clubId', requireAuth, requireClubRole('OWNER'), withTransaction((req, res) => clubController.updateClub(req, res)));
 router.delete('/:clubId', requireAuth, requireAdmin, withTransaction((req, res) => clubController.deleteClub(req, res)));
 
-router.get('/:clubId/members', requireAuth, withTransaction((req, res) => membershipController.getMembers(req, res)));
+router.get(
+    '/:clubId/members',
+    requireAuth,
+    requireClubRole('OWNER', 'MODERATOR'),
+    withTransaction((req, res) => membershipController.getMembers(req, res))
+);
+router.get('/:clubId/members/active', requireAuth, withTransaction((req, res) => membershipController.getActiveMembers(req, res)));
 router.get(
     '/:clubId/members/pending',
     requireAuth,
     requireClubRole('OWNER', 'MODERATOR'),
     withTransaction((req, res) => membershipController.getPendingMembers(req, res))
 );
-router.post('/:clubId/members', requireAuth, withTransaction((req, res) => membershipController.requestJoin(req, res)));
+router.post('/:clubId/join', requireAuth, withTransaction((req, res) => membershipController.requestJoin(req, res)));
+router.post('/:clubId/leave', requireAuth, withTransaction((req, res) => membershipController.leaveClub(req, res)));
 router.post(
     '/:clubId/members/:userId/activate',
     requireAuth,
-    requireClubRole('OWNER'),
+    requireClubRole('OWNER', 'MODERATOR'),
     withTransaction((req, res) => membershipController.activateMember(req, res))
 );
 router.post(
     '/:clubId/members/:userId/deactivate',
     requireAuth,
-    requireClubRole('OWNER'),
+    requireClubRole('OWNER', 'MODERATOR'),
     withTransaction((req, res) => membershipController.deactivateMember(req, res))
 );
 router.patch(
