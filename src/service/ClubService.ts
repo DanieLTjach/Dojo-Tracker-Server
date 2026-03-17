@@ -12,7 +12,7 @@ export class ClubService {
     getClubById(clubId: number): Club {
         const club = this.clubRepository.findClubById(clubId);
         if (!club) {
-            throw new ClubNotFoundError(clubId);
+            throw new ClubNotFoundError(String(clubId));
         }
         return club;
     }

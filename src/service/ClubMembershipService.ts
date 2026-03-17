@@ -19,18 +19,31 @@ export class ClubMembershipService {
         return this.membershipRepository.findMembersByClubId(clubId);
     }
 
+    getActiveMembersByClubId(clubId: number): ClubMembership[] {
+        this.validateClubExists(clubId);
+        return this.membershipRepository.findActiveMembersByClubId(clubId);
+    }
+
     getPendingMembers(clubId: number): ClubMembership[] {
         this.validateClubExists(clubId);
         return this.membershipRepository.findPendingMembersByClubId(clubId);
     }
 
     requestJoin(clubId: number, userId: number, modifiedBy: number): ClubMembership {
-        this.validateClubExists(clubId);
+        const clubName = this.validateClubExists(clubId);
         this.userService.validateUserExistsById(userId);
 
         const existingMembership = this.membershipRepository.findMembership(clubId, userId);
         if (existingMembership) {
-            throw new ClubMembershipAlreadyExistsError(clubId, userId);
+            if (existingMembership.status === 'PENDING') {
+                return existingMembership;
+            }
+            if (existingMembership.status === 'ACTIVE') {
+                throw new ClubMembershipAlreadyExistsError(clubName, userId);
+            }
+            // INACTIVE — user wants to re-join, update status back to PENDING
+            this.membershipRepository.updateMembershipStatus(clubId, userId, 'PENDING', modifiedBy);
+            return this.getMembership(clubId, userId);
         }
 
         const now = new Date();
@@ -44,6 +57,14 @@ export class ClubMembershipService {
             modifiedBy
         });
 
+        return this.getMembership(clubId, userId);
+    }
+
+    leaveClub(clubId: number, userId: number): ClubMembership {
+        this.validateClubExists(clubId);
+        this.validateMembershipExists(clubId, userId);
+
+        this.membershipRepository.updateMembershipStatus(clubId, userId, 'INACTIVE', userId);
         return this.getMembership(clubId, userId);
     }
 
@@ -61,7 +82,7 @@ export class ClubMembershipService {
 
     deactivateMember(clubId: number, userId: number, modifiedBy: number): ClubMembership {
         this.validateClubExists(clubId);
-        this.getMembership(clubId, userId);
+        this.validateMembershipExists(clubId, userId);
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'INACTIVE', modifiedBy);
         return this.getMembership(clubId, userId);
@@ -79,16 +100,23 @@ export class ClubMembershipService {
         return this.getMembership(clubId, userId);
     }
 
-    private validateClubExists(clubId: number): void {
-        if (!this.clubRepository.clubExists(clubId)) {
-            throw new ClubNotFoundError(clubId);
+    private validateClubExists(clubId: number): string {
+        const club = this.clubRepository.findClubById(clubId);
+        if (!club) {
+            throw new ClubNotFoundError(String(clubId));
         }
+        return club.name;
+    }
+
+    private validateMembershipExists(clubId: number, userId: number): void {
+        this.getMembership(clubId, userId);
     }
 
     private getMembership(clubId: number, userId: number): ClubMembership {
         const membership = this.membershipRepository.findMembership(clubId, userId);
         if (!membership) {
-            throw new ClubMembershipNotFoundError(clubId, userId);
+            const club = this.clubRepository.findClubById(clubId);
+            throw new ClubMembershipNotFoundError(club?.name ?? String(clubId), userId);
         }
         return membership;
     }

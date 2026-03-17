@@ -85,16 +85,16 @@ describe('ClubSchemas', () => {
 
 describe('ClubErrors', () => {
     it('exposes repository and service friendly error metadata', () => {
-        expect(new ClubNotFoundError(5)).toMatchObject({
+        expect(new ClubNotFoundError('Test Club')).toMatchObject({
             statusCode: 404,
             errorCode: 'clubNotFound',
-            message: 'Клуб з id 5 не знайдено'
+            message: "Клуб 'Test Club' не знайдено"
         });
 
-        expect(new ClubMembershipAlreadyExistsError(2, 8)).toMatchObject({
+        expect(new ClubMembershipAlreadyExistsError('Test Club', 8)).toMatchObject({
             statusCode: 400,
             errorCode: 'clubMembershipAlreadyExists',
-            message: 'Користувач з id 8 вже є учасником клубу з id 2'
+            message: "Користувач з id 8 вже є учасником клубу 'Test Club'"
         });
     });
 

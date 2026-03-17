@@ -43,7 +43,7 @@ export class EventService {
         }
 
         if (data.clubId !== null && data.clubId !== undefined && !this.clubRepository.clubExists(data.clubId)) {
-            throw new ClubNotFoundError(data.clubId);
+            throw new ClubNotFoundError(String(data.clubId));
         }
 
         const now = new Date();
@@ -72,7 +72,7 @@ export class EventService {
         }
 
         if (data.clubId !== null && data.clubId !== undefined && !this.clubRepository.clubExists(data.clubId)) {
-            throw new ClubNotFoundError(data.clubId);
+            throw new ClubNotFoundError(String(data.clubId));
         }
 
         const now = new Date();
