@@ -15,7 +15,7 @@ CREATE TABLE club (
     city TEXT,
     description TEXT,
     contactInfo TEXT,
-    isActive BOOL NOT NULL DEFAULT 1,
+    isActive BOOL NOT NULL DEFAULT true,
     ratingChatId TEXT,
     ratingTopicId TEXT,
     createdAt TIMESTAMP NOT NULL,
