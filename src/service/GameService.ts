@@ -154,10 +154,6 @@ export class GameService {
             return;
         }
 
-        if (!this.clubHasActiveMemberships(event.clubId)) {
-            return;
-        }
-
         const creatorRole = this.membershipRepository.getUserClubRole(event.clubId, createdBy);
         if (!creatorRole) {
             throw new InsufficientClubPermissionsError(['OWNER', 'MODERATOR', 'MEMBER']);
@@ -182,17 +178,9 @@ export class GameService {
         }
 
         const role = this.membershipRepository.getUserClubRole(clubId, userId);
-        if (!this.clubHasActiveMemberships(clubId)) {
-            throw new InsufficientPermissionsError();
-        }
-
         if (role === undefined || !allowedRoles.includes(role)) {
             throw new InsufficientClubPermissionsError(allowedRoles);
         }
-    }
-
-    private clubHasActiveMemberships(clubId: number): boolean {
-        return this.membershipRepository.findMembersByClubId(clubId).some((membership) => membership.status === 'ACTIVE');
     }
 
     private logNewGame(game: GameWithPlayers, event: Event): void {
