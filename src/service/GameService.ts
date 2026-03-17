@@ -24,7 +24,11 @@ import config from '../../config/config.ts';
 import { GameLogsTopic, RatingTopic } from '../model/TelegramTopic.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
-import { InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
+import {
+    InsufficientClubPermissionsError,
+    YouHaveToBeClubMemberError,
+    YouNeedToBeModeratorToCreateGamesWithNonClubMembersError
+} from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 
@@ -119,6 +123,9 @@ export class GameService {
         this.authorizeClubScopedAction(oldEvent.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
 
         const event = this.eventService.getEventById(eventId);
+        if (event.id !== oldEvent.id) {
+            this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
+        }
         this.validatePlayers(playersData, event.gameRules);
 
         const newGameTimestamp = createdAt ?? oldGame.createdAt;
@@ -156,13 +163,13 @@ export class GameService {
 
         const creatorRole = this.membershipRepository.getUserClubRole(event.clubId, createdBy);
         if (!creatorRole) {
-            throw new InsufficientClubPermissionsError(['OWNER', 'MODERATOR', 'MEMBER']);
+            throw new YouHaveToBeClubMemberError();
         }
 
         if (creatorRole === 'MEMBER') {
             const allPlayersInClub = playersData.every((player) => this.membershipRepository.getUserClubRole(event.clubId!, player.userId) !== undefined);
             if (!allPlayersInClub) {
-                throw new InsufficientClubPermissionsError(['OWNER', 'MODERATOR', 'MEMBER']);
+                throw new YouNeedToBeModeratorToCreateGamesWithNonClubMembersError();
             }
         }
     }
@@ -208,7 +215,8 @@ export class GameService {
     }
 
     private logDeletedGame(game: GameWithPlayers, event: Event, deletedBy: number): void {
-        this.logGameAction(game, event, deletedBy, '🗑️ Game Deleted', 'Deleted by');
+        const clubPrefix = this.buildClubPrefix(event);
+        this.logGameAction(game, event, deletedBy, '🗑️ Game Deleted', 'Deleted by', clubPrefix);
     }
 
     private logGameAction(
