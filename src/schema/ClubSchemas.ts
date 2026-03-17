@@ -1,14 +1,13 @@
 import z from 'zod';
 import { clubMembershipStatuses, clubRoles } from '../model/ClubModels.ts';
-import { userIdParamSchema, userIdSchema } from './UserSchemas.ts';
+import { userIdParamSchema } from './UserSchemas.ts';
+import { optionalTextFieldSchema, clubIdParamSchema } from './CommonSchemas.ts';
 
 export const clubIdSchema = z.number().int('Club ID must be an integer');
-export const clubIdParamSchema = z.coerce.number().int('Club ID must be an integer');
+export { clubIdParamSchema };
 
 export const clubRoleSchema = z.enum(clubRoles);
 export const clubMembershipStatusSchema = z.enum(clubMembershipStatuses);
-
-const optionalTextFieldSchema = z.string().trim().min(1, 'Field cannot be empty').nullish();
 
 const clubBodySchema = z.object({
     name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
@@ -28,10 +27,6 @@ const clubParamsSchema = z.object({
 const clubMembershipParamsSchema = z.object({
     clubId: clubIdParamSchema,
     userId: userIdParamSchema
-});
-
-export const clubGetListSchema = z.object({
-    query: z.object({}).optional()
 });
 
 export const clubGetByIdSchema = z.object({
@@ -59,12 +54,8 @@ export const clubMembershipGetPendingListSchema = z.object({
     params: clubParamsSchema
 });
 
-export const clubMembershipCreateSchema = z.object({
-    params: clubParamsSchema,
-    body: z.object({
-        userId: userIdSchema,
-        role: clubRoleSchema.nullish()
-    })
+export const clubMembershipRequestJoinSchema = z.object({
+    params: clubParamsSchema
 });
 
 export const clubMembershipActivateSchema = z.object({

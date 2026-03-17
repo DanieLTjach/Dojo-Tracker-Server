@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { clubIdParamSchema } from './CommonSchemas.ts';
 
 export const userNameSchema = z.string().trim().min(1, "Name cannot be empty");
 
@@ -32,7 +33,7 @@ export const getUserByTelegramIdSchema = z.object({
 
 export const getUserListSchema = z.object({
     query: z.object({
-        clubId: z.coerce.number().int('Club ID must be an integer').optional()
+        clubId: clubIdParamSchema.optional()
     }).optional()
 });
 
