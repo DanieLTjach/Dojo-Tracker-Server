@@ -73,7 +73,6 @@ describe('Club and Membership repositories', () => {
 
     it('ClubRepository creates, reads, updates and deletes a club with proper mapping', () => {
         const createdAt = new Date('2026-03-10T10:00:00.000Z');
-        const modifiedAt = new Date('2026-03-10T10:05:00.000Z');
 
         const clubId = clubRepository.createClub({
             name: 'Repo Test Club Alpha',
@@ -85,7 +84,6 @@ describe('Club and Membership repositories', () => {
             ratingChatId: '-10012345',
             ratingTopicId: '77',
             createdAt,
-            modifiedAt,
             modifiedBy: SYSTEM_USER_ID
         });
 
@@ -104,7 +102,7 @@ describe('Club and Membership repositories', () => {
             modifiedBy: SYSTEM_USER_ID
         });
         expect(byId!.createdAt).toEqual(createdAt);
-        expect(byId!.modifiedAt).toEqual(modifiedAt);
+        expect(byId!.modifiedAt).toEqual(createdAt);
 
         const byName = clubRepository.findClubByName('Repo Test Club Alpha');
         expect(byName?.id).toBe(clubId);
@@ -158,7 +156,6 @@ describe('Club and Membership repositories', () => {
             ratingChatId: null,
             ratingTopicId: null,
             createdAt: new Date('2026-03-11T10:00:00.000Z'),
-            modifiedAt: new Date('2026-03-11T10:00:00.000Z'),
             modifiedBy: SYSTEM_USER_ID
         });
 

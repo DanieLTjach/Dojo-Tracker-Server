@@ -103,7 +103,7 @@ export class ClubRepository {
             ...params,
             isActive: booleanToInteger(params.isActive),
             createdAt: params.createdAt.toISOString(),
-            modifiedAt: params.modifiedAt.toISOString()
+            modifiedAt: params.createdAt.toISOString()
         });
 
         return result!.id;
@@ -181,7 +181,6 @@ export interface ClubCreateParams {
     ratingChatId: string | null;
     ratingTopicId: string | null;
     createdAt: Date;
-    modifiedAt: Date;
     modifiedBy: number;
 }
 

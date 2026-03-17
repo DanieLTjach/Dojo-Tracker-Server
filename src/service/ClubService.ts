@@ -34,7 +34,6 @@ export class ClubService {
             ratingChatId: data.ratingChatId ?? null,
             ratingTopicId: data.ratingTopicId ?? null,
             createdAt: now,
-            modifiedAt: now,
             modifiedBy
         });
 
