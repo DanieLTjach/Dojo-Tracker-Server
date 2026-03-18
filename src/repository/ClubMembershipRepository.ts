@@ -6,16 +6,24 @@ export class ClubMembershipRepository {
     private findMembersByClubIdStatement(): Statement<{ clubId: number }, ClubMembershipDBEntity> {
         return dbManager.db.prepare(`
             SELECT
-                clubId,
-                userId,
-                role,
-                status,
-                createdAt,
-                modifiedAt,
-                modifiedBy
-            FROM clubMembership
-            WHERE clubId = :clubId
-            ORDER BY createdAt ASC`
+                cm.clubId,
+                cm.userId,
+                u.name as userName,
+                cm.role,
+                cm.status,
+                cm.createdAt,
+                cm.modifiedAt,
+                cm.modifiedBy
+            FROM clubMembership cm
+            JOIN user u ON cm.userId = u.id
+            LEFT JOIN (
+                SELECT userId, MAX(game.createdAt) as lastGameDate
+                FROM userToGame
+                JOIN game ON userToGame.gameId = game.id
+                GROUP BY userId
+            ) lastGame ON cm.userId = lastGame.userId
+            WHERE cm.clubId = :clubId
+            ORDER BY lastGame.lastGameDate DESC NULLS LAST, cm.userId`
         );
     }
 
@@ -26,17 +34,25 @@ export class ClubMembershipRepository {
     private findMembersByClubIdAndStatusStatement(): Statement<{ clubId: number; status: ClubMembershipStatus }, ClubMembershipDBEntity> {
         return dbManager.db.prepare(`
             SELECT
-                clubId,
-                userId,
-                role,
-                status,
-                createdAt,
-                modifiedAt,
-                modifiedBy
-            FROM clubMembership
-            WHERE clubId = :clubId
-              AND status = :status
-            ORDER BY createdAt ASC`
+                cm.clubId,
+                cm.userId,
+                u.name as userName,
+                cm.role,
+                cm.status,
+                cm.createdAt,
+                cm.modifiedAt,
+                cm.modifiedBy
+            FROM clubMembership cm
+            JOIN user u ON cm.userId = u.id
+            LEFT JOIN (
+                SELECT userId, MAX(game.createdAt) as lastGameDate
+                FROM userToGame
+                JOIN game ON userToGame.gameId = game.id
+                GROUP BY userId
+            ) lastGame ON cm.userId = lastGame.userId
+            WHERE cm.clubId = :clubId
+              AND cm.status = :status
+            ORDER BY lastGame.lastGameDate DESC NULLS LAST, cm.userId`
         );
     }
 
@@ -51,16 +67,18 @@ export class ClubMembershipRepository {
     private findMembershipStatement(): Statement<{ clubId: number; userId: number }, ClubMembershipDBEntity> {
         return dbManager.db.prepare(`
             SELECT
-                clubId,
-                userId,
-                role,
-                status,
-                createdAt,
-                modifiedAt,
-                modifiedBy
-            FROM clubMembership
-            WHERE clubId = :clubId
-              AND userId = :userId`
+                cm.clubId,
+                cm.userId,
+                u.name as userName,
+                cm.role,
+                cm.status,
+                cm.createdAt,
+                cm.modifiedAt,
+                cm.modifiedBy
+            FROM clubMembership cm
+            JOIN user u ON cm.userId = u.id
+            WHERE cm.clubId = :clubId
+              AND cm.userId = :userId`
         );
     }
 
@@ -176,16 +194,18 @@ export class ClubMembershipRepository {
     private findMembershipsByUserIdAndStatusStatement(): Statement<{ userId: number; status: ClubMembershipStatus }, ClubMembershipDBEntity> {
         return dbManager.db.prepare(`
             SELECT
-                clubId,
-                userId,
-                role,
-                status,
-                createdAt,
-                modifiedAt,
-                modifiedBy
-            FROM clubMembership
-            WHERE userId = :userId
-              AND status = :status
+                cm.clubId,
+                cm.userId,
+                u.name as userName,
+                cm.role,
+                cm.status,
+                cm.createdAt,
+                cm.modifiedAt,
+                cm.modifiedBy
+            FROM clubMembership cm
+            JOIN user u ON cm.userId = u.id
+            WHERE cm.userId = :userId
+              AND cm.status = :status
         `);
     }
 
@@ -216,6 +236,7 @@ export interface ClubMembershipUpdateParams {
 interface ClubMembershipDBEntity {
     clubId: number;
     userId: number;
+    userName: string;
     role: ClubRole;
     status: ClubMembershipStatus;
     createdAt: string;
@@ -227,6 +248,7 @@ function clubMembershipFromDBEntity(dbEntity: ClubMembershipDBEntity): ClubMembe
     return {
         clubId: dbEntity.clubId,
         userId: dbEntity.userId,
+        userName: dbEntity.userName,
         role: dbEntity.role,
         status: dbEntity.status,
         createdAt: new Date(dbEntity.createdAt),

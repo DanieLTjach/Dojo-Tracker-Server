@@ -22,6 +22,7 @@ export interface Club {
 export interface ClubMembership {
     clubId: number;
     userId: number;
+    userName: string;
     role: ClubRole;
     status: ClubMembershipStatus;
     createdAt: Date;
