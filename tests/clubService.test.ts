@@ -9,6 +9,7 @@ import {
     ClubNameAlreadyExistsError,
     ClubNotFoundError,
     ClubMembershipAlreadyExistsError,
+    ClubMembershipNotFoundError,
     InsufficientClubPermissionsError,
     InvalidClubMembershipStateError
 } from '../src/error/ClubErrors.ts';
@@ -252,6 +253,24 @@ describe('ClubService and MembershipService', () => {
             const activatedMembership = membershipService.activateMember(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
 
             expect(activatedMembership.status).toBe('ACTIVE');
+        });
+
+        it('leaveClub sets membership status to INACTIVE', () => {
+            const clubId = createServiceTestClub();
+            membershipService.requestJoin(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
+            membershipService.activateMember(clubId, SERVICE_TEST_USER_ID, SYSTEM_USER_ID);
+
+            const membership = membershipService.leaveClub(clubId, SERVICE_TEST_USER_ID);
+
+            expect(membership.status).toBe('INACTIVE');
+        });
+
+        it('leaveClub throws ClubMembershipNotFoundError for non-member', () => {
+            const clubId = createServiceTestClub();
+
+            expect(() => {
+                membershipService.leaveClub(clubId, SERVICE_TEST_USER_ID);
+            }).toThrow(ClubMembershipNotFoundError);
         });
 
         it('activateMember throws InvalidClubMembershipStateError when already ACTIVE', () => {

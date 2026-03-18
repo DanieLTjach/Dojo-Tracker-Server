@@ -289,6 +289,40 @@ describe('Club API Endpoints', () => {
             });
         });
 
+        describe('POST /api/clubs/:clubId/leave - Leave club', () => {
+            let clubId: number;
+
+            beforeEach(async () => {
+                clubId = await createClub('Integration Club Leave');
+                await setupOwner(clubId);
+                await request(app)
+                    .post(`/api/clubs/${clubId}/join`)
+                    .set('Authorization', memberAuthHeader);
+                membershipService.activateMember(clubId, memberId, 0);
+            });
+
+            afterEach(() => {
+                cleanupClub(clubId);
+            });
+
+            test('should allow active member to leave club', async () => {
+                const response = await request(app)
+                    .post(`/api/clubs/${clubId}/leave`)
+                    .set('Authorization', memberAuthHeader);
+
+                expect(response.status).toBe(200);
+                expect(response.body.userId).toBe(memberId);
+                expect(response.body.status).toBe('INACTIVE');
+            });
+
+            test('should reject unauthenticated leave attempt', async () => {
+                const response = await request(app)
+                    .post(`/api/clubs/${clubId}/leave`);
+
+                expect(response.status).toBe(401);
+            });
+        });
+
         describe('GET /api/clubs/:clubId/members - Get members list', () => {
             let clubId: number;
 
