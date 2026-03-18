@@ -191,8 +191,7 @@ export class GameService {
     }
 
     private logNewGame(game: GameWithPlayers, event: Event): void {
-        const clubPrefix = this.buildClubPrefix(event);
-        this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by', clubPrefix);
+        this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by');
     }
 
     private logEditedGame(oldGame: GameWithPlayers, newGame: GameWithPlayers, event: Event, modifiedBy: number): void {
@@ -215,8 +214,7 @@ export class GameService {
     }
 
     private logDeletedGame(game: GameWithPlayers, event: Event, deletedBy: number): void {
-        const clubPrefix = this.buildClubPrefix(event);
-        this.logGameAction(game, event, deletedBy, '🗑️ Game Deleted', 'Deleted by', clubPrefix);
+        this.logGameAction(game, event, deletedBy, '🗑️ Game Deleted', 'Deleted by');
     }
 
     private logGameAction(
@@ -224,11 +222,11 @@ export class GameService {
         event: Event,
         userId: number,
         title: string,
-        userLabel: string,
-        prefix: string = ''
+        userLabel: string
     ): void {
+        const clubPrefix = this.buildClubPrefix(event);
         const user = this.userService.getUserById(userId);
-        const message = prefix + dedent`
+        const message = clubPrefix + dedent`
             <b>${title}</b>
 
             <b>Game ID:</b> <code>${game.id}</code>
