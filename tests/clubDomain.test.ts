@@ -82,10 +82,10 @@ describe('ClubSchemas', () => {
 
 describe('ClubErrors', () => {
     it('exposes repository and service friendly error metadata', () => {
-        expect(new ClubNotFoundError('Test Club')).toMatchObject({
+        expect(new ClubNotFoundError(42)).toMatchObject({
             statusCode: 404,
             errorCode: 'clubNotFound',
-            message: "Клуб 'Test Club' не знайдено"
+            message: "Клуб з id 42 не знайдено"
         });
 
         expect(new ClubMembershipAlreadyExistsError('Test Club', 8)).toMatchObject({

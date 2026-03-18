@@ -2,8 +2,8 @@ import { BadRequestError, ForbiddenError, NotFoundError } from './BaseErrors.ts'
 import type { ClubMembershipStatus, ClubRole } from '../model/ClubModels.ts';
 
 export class ClubNotFoundError extends NotFoundError {
-    constructor(clubName: string) {
-        super(`Клуб '${clubName}' не знайдено`, 'clubNotFound');
+    constructor(clubId: number) {
+        super(`Клуб з id ${clubId} не знайдено`, 'clubNotFound');
     }
 }
 

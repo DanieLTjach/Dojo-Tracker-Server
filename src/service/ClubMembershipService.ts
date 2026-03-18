@@ -1,36 +1,35 @@
 import {
     ClubMembershipAlreadyExistsError,
     ClubMembershipNotFoundError,
-    ClubNotFoundError,
     InvalidClubMembershipStateError
 } from '../error/ClubErrors.ts';
 import type { ClubMembership, ClubRole } from '../model/ClubModels.ts';
-import { ClubRepository } from '../repository/ClubRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
+import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
 
 export class ClubMembershipService {
-    private clubRepository: ClubRepository = new ClubRepository();
+    private clubService: ClubService = new ClubService();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
     private userService: UserService = new UserService();
 
     getMembers(clubId: number): ClubMembership[] {
-        this.validateClubExists(clubId);
+        this.clubService.validateClubExists(clubId);
         return this.membershipRepository.findMembersByClubId(clubId);
     }
 
     getActiveMembersByClubId(clubId: number): ClubMembership[] {
-        this.validateClubExists(clubId);
+        this.clubService.validateClubExists(clubId);
         return this.membershipRepository.findActiveMembersByClubId(clubId);
     }
 
     getPendingMembers(clubId: number): ClubMembership[] {
-        this.validateClubExists(clubId);
+        this.clubService.validateClubExists(clubId);
         return this.membershipRepository.findPendingMembersByClubId(clubId);
     }
 
     requestJoin(clubId: number, userId: number, modifiedBy: number): ClubMembership {
-        const clubName = this.validateClubExists(clubId);
+        const club = this.clubService.getClubById(clubId);
         this.userService.validateUserExistsById(userId);
 
         const existingMembership = this.membershipRepository.findMembership(clubId, userId);
@@ -39,7 +38,7 @@ export class ClubMembershipService {
                 return existingMembership;
             }
             if (existingMembership.status === 'ACTIVE') {
-                throw new ClubMembershipAlreadyExistsError(clubName, userId);
+                throw new ClubMembershipAlreadyExistsError(club.name, userId);
             }
             // INACTIVE — user wants to re-join, update status back to PENDING
             this.membershipRepository.updateMembershipStatus(clubId, userId, 'PENDING', modifiedBy);
@@ -61,7 +60,7 @@ export class ClubMembershipService {
     }
 
     leaveClub(clubId: number, userId: number): ClubMembership {
-        this.validateClubExists(clubId);
+        this.clubService.validateClubExists(clubId);
         this.validateMembershipExists(clubId, userId);
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'INACTIVE', userId);
@@ -69,7 +68,7 @@ export class ClubMembershipService {
     }
 
     activateMember(clubId: number, userId: number, modifiedBy: number): ClubMembership {
-        this.validateClubExists(clubId);
+        this.clubService.validateClubExists(clubId);
 
         const membership = this.getMembership(clubId, userId);
         if (membership.status !== 'PENDING') {
@@ -81,7 +80,7 @@ export class ClubMembershipService {
     }
 
     deactivateMember(clubId: number, userId: number, modifiedBy: number): ClubMembership {
-        this.validateClubExists(clubId);
+        this.clubService.validateClubExists(clubId);
         this.validateMembershipExists(clubId, userId);
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'INACTIVE', modifiedBy);
@@ -89,7 +88,7 @@ export class ClubMembershipService {
     }
 
     updateMemberRole(clubId: number, userId: number, role: ClubRole, modifiedBy: number): ClubMembership {
-        this.validateClubExists(clubId);
+        this.clubService.validateClubExists(clubId);
 
         const membership = this.getMembership(clubId, userId);
         if (membership.status !== 'ACTIVE') {
@@ -100,14 +99,6 @@ export class ClubMembershipService {
         return this.getMembership(clubId, userId);
     }
 
-    private validateClubExists(clubId: number): string {
-        const club = this.clubRepository.findClubById(clubId);
-        if (!club) {
-            throw new ClubNotFoundError(String(clubId));
-        }
-        return club.name;
-    }
-
     private validateMembershipExists(clubId: number, userId: number): void {
         this.getMembership(clubId, userId);
     }
@@ -115,8 +106,8 @@ export class ClubMembershipService {
     private getMembership(clubId: number, userId: number): ClubMembership {
         const membership = this.membershipRepository.findMembership(clubId, userId);
         if (!membership) {
-            const club = this.clubRepository.findClubById(clubId);
-            throw new ClubMembershipNotFoundError(club?.name ?? String(clubId), userId);
+            const club = this.clubService.getClubById(clubId);
+            throw new ClubMembershipNotFoundError(club.name, userId);
         }
         return membership;
     }

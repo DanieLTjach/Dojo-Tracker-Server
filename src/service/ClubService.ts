@@ -12,9 +12,13 @@ export class ClubService {
     getClubById(clubId: number): Club {
         const club = this.clubRepository.findClubById(clubId);
         if (!club) {
-            throw new ClubNotFoundError(String(clubId));
+            throw new ClubNotFoundError(clubId);
         }
         return club;
+    }
+
+    validateClubExists(clubId: number): void {
+        this.getClubById(clubId);
     }
 
     createClub(data: ClubData, modifiedBy: number): Club {
