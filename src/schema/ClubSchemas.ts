@@ -58,6 +58,14 @@ export const clubMembershipRequestJoinSchema = z.object({
     params: clubParamsSchema
 });
 
+export const clubMembershipLeaveSchema = z.object({
+    params: clubParamsSchema
+});
+
+export const clubMembershipGetActiveMembersSchema = z.object({
+    params: clubParamsSchema
+});
+
 export const clubMembershipActivateSchema = z.object({
     params: clubMembershipParamsSchema
 });

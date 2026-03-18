@@ -2,8 +2,10 @@ import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import {
     clubMembershipGetListSchema,
+    clubMembershipGetActiveMembersSchema,
     clubMembershipGetPendingListSchema,
     clubMembershipRequestJoinSchema,
+    clubMembershipLeaveSchema,
     clubMembershipActivateSchema,
     clubMembershipDeactivateSchema,
     clubMembershipUpdateSchema
@@ -20,7 +22,7 @@ export class ClubMembershipController {
     }
 
     getActiveMembers(req: Request, res: Response) {
-        const { params: { clubId } } = clubMembershipGetListSchema.parse(req);
+        const { params: { clubId } } = clubMembershipGetActiveMembersSchema.parse(req);
         const members = this.membershipService.getActiveMembersByClubId(clubId);
         return res.status(StatusCodes.OK).json(members);
     }
@@ -39,7 +41,7 @@ export class ClubMembershipController {
     }
 
     leaveClub(req: Request, res: Response) {
-        const { params: { clubId } } = clubMembershipRequestJoinSchema.parse(req);
+        const { params: { clubId } } = clubMembershipLeaveSchema.parse(req);
         const userId = req.user!.userId;
         const membership = this.membershipService.leaveClub(clubId, userId);
         return res.status(StatusCodes.OK).json(membership);
