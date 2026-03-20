@@ -3,7 +3,7 @@ import {
     ClubMembershipNotFoundError,
     InvalidClubMembershipStateError
 } from '../error/ClubErrors.ts';
-import type { ClubMembership, ClubRole } from '../model/ClubModels.ts';
+import type { ClubMembership, ClubMembershipStatusView, ClubRole } from '../model/ClubModels.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
@@ -26,6 +26,27 @@ export class ClubMembershipService {
     getPendingMembers(clubId: number): ClubMembership[] {
         this.clubService.validateClubExists(clubId);
         return this.membershipRepository.findPendingMembersByClubId(clubId);
+    }
+
+    getStatus(clubId: number, userId: number): ClubMembershipStatusView {
+        this.clubService.validateClubExists(clubId);
+
+        const user = this.userService.getUserById(userId);
+        const membership = this.membershipRepository.findMembership(clubId, userId);
+        const role = membership?.role ?? null;
+        const status = membership?.status ?? 'NONE';
+        const isClubManager = membership?.status === 'ACTIVE' && (membership.role === 'OWNER' || membership.role === 'MODERATOR');
+
+        return {
+            status,
+            role,
+            permissions: {
+                canJoin: membership === undefined || membership.status === 'INACTIVE',
+                canLeave: membership?.status === 'ACTIVE' || membership?.status === 'PENDING',
+                canEditClub: user.isAdmin || (membership?.status === 'ACTIVE' && membership.role === 'OWNER'),
+                canManageMembers: user.isAdmin || isClubManager
+            }
+        };
     }
 
     requestJoin(clubId: number, userId: number, modifiedBy: number): ClubMembership {
