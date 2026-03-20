@@ -1,11 +1,22 @@
 import { EventNotFoundError, GameRulesNotFoundError, CannotDeleteEventWithGamesError } from '../error/EventErrors.ts';
+import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
+import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { Event } from '../model/EventModels.ts';
+import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
+import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
+import { UserService } from './UserService.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
+    private clubRepository: ClubRepository = new ClubRepository();
+    private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
+    private userService: UserService = new UserService();
 
-    getAllEvents(): Event[] {
+    getAllEvents(clubId?: number): Event[] {
+        if (clubId !== undefined) {
+            return this.eventRepository.findAllEventsByClubId(clubId);
+        }
         return this.eventRepository.findAllEvents();
     }
 
@@ -25,8 +36,14 @@ export class EventService {
     }
 
     createEvent(data: EventData, modifiedBy: number): Event {
+        this.authorizeEventCreation(data.clubId, modifiedBy);
+
         if (!this.eventRepository.gameRulesExists(data.gameRulesId)) {
             throw new GameRulesNotFoundError(data.gameRulesId);
+        }
+
+        if (data.clubId !== null && data.clubId !== undefined && !this.clubRepository.clubExists(data.clubId)) {
+            throw new ClubNotFoundError(data.clubId!);
         }
 
         const now = new Date();
@@ -35,6 +52,7 @@ export class EventService {
             description: data.description ?? null,
             type: data.type,
             gameRules: data.gameRulesId,
+            clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
             createdAt: now,
@@ -46,10 +64,15 @@ export class EventService {
     }
 
     updateEvent(eventId: number, data: EventData, modifiedBy: number): Event {
-        this.validateEventExists(eventId);
+        const existingEvent = this.getEventById(eventId);
+        this.authorizeEventUpdate(existingEvent, data.clubId, modifiedBy);
 
         if (!this.eventRepository.gameRulesExists(data.gameRulesId)) {
             throw new GameRulesNotFoundError(data.gameRulesId);
+        }
+
+        if (data.clubId !== null && data.clubId !== undefined && !this.clubRepository.clubExists(data.clubId)) {
+            throw new ClubNotFoundError(data.clubId!);
         }
 
         const now = new Date();
@@ -59,6 +82,7 @@ export class EventService {
             description: data.description ?? null,
             type: data.type,
             gameRules: data.gameRulesId,
+            clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
             modifiedAt: now,
@@ -66,6 +90,42 @@ export class EventService {
         });
 
         return this.getEventById(eventId);
+    }
+
+    private authorizeEventCreation(clubId: number | null | undefined, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (clubId === null || clubId === undefined) {
+            throw new InsufficientPermissionsError();
+        }
+
+        const clubRole = this.membershipRepository.getUserClubRole(clubId, userId);
+        if (clubRole !== 'OWNER') {
+            throw new InsufficientClubPermissionsError('OWNER');
+        }
+    }
+
+    private authorizeEventUpdate(existingEvent: Event, requestedClubId: number | null | undefined, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (existingEvent.clubId === null) {
+            throw new InsufficientPermissionsError();
+        }
+
+        const clubRole = this.membershipRepository.getUserClubRole(existingEvent.clubId, userId);
+        if (clubRole !== 'OWNER') {
+            throw new InsufficientClubPermissionsError('OWNER');
+        }
+
+        if (requestedClubId !== existingEvent.clubId) {
+            throw new InsufficientPermissionsError();
+        }
     }
 
     deleteEvent(eventId: number): void {
@@ -84,6 +144,7 @@ export interface EventData {
     name: string;
     description?: string | null | undefined;
     type: string;
+    clubId?: number | null | undefined;
     dateFrom?: Date | null | undefined;
     dateTo?: Date | null | undefined;
     gameRulesId: number;

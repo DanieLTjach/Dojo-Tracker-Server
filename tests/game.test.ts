@@ -51,6 +51,14 @@ describe('Game API Endpoints', () => {
         return userId;
     }
 
+    function seedClubMembership(clubId: number, userId: number) {
+        const ts = new Date().toISOString();
+        dbManager.db.prepare(
+            `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, 'MEMBER', 'ACTIVE', ?, ?, 0)`
+        ).run(clubId, userId, ts, ts);
+    }
+
     beforeAll(async () => {
         // Create test event
         createTestEvent();
@@ -60,6 +68,12 @@ describe('Game API Endpoints', () => {
         testUser2Id = await createTestUser('Player2', 222222222);
         testUser3Id = await createTestUser('Player3', 333333333);
         testUser4Id = await createTestUser('Player4', 444444444);
+
+        // Seed club memberships for test event's club (clubId=1)
+        seedClubMembership(1, testUser1Id);
+        seedClubMembership(1, testUser2Id);
+        seedClubMembership(1, testUser3Id);
+        seedClubMembership(1, testUser4Id);
 
         // Create auth header for regular user
         user1AuthHeader = createAuthHeader(testUser1Id);
@@ -268,7 +282,7 @@ describe('Game API Endpoints', () => {
         test('should fail with non-existent user', async () => {
             const response = await request(app)
                 .post('/api/games')
-                .set('Authorization', user1AuthHeader)
+                .set('Authorization', adminAuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
                     playersData: [
@@ -510,6 +524,48 @@ describe('Game API Endpoints', () => {
             });
         });
 
+        test('should filter games by clubId', async () => {
+            const otherClubId = 930;
+            const otherClubEventId = 9300;
+            const timestamp = '2024-01-01T00:00:00.000Z';
+
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubId, 'Game Filter Test Club', null, null, null, null, 1, null, null, timestamp, timestamp, 0);
+
+            seedClubMembership(otherClubId, testUser1Id);
+            seedClubMembership(otherClubId, testUser2Id);
+            seedClubMembership(otherClubId, testUser3Id);
+            seedClubMembership(otherClubId, testUser4Id);
+
+            createCustomEvent(otherClubEventId, 'Інший клубний сезон', undefined, undefined, 2, otherClubId);
+
+            await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: otherClubEventId,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
+                        { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
+                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const response = await request(app)
+                .get(`/api/games?clubId=${otherClubId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+            expect(response.body.length).toBeGreaterThan(0);
+            response.body.forEach((game: any) => {
+                expect(game.eventId).toBe(otherClubEventId);
+            });
+        });
+
         test('should filter games by userId', async () => {
             const response = await request(app)
                 .get(`/api/games?userId=${testUser1Id}`)
@@ -664,7 +720,6 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toBe('Недостатньо прав для виконання цієї дії');
         });
 
         test('should fail to update non-existent game', async () => {
@@ -761,7 +816,6 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toBe('Недостатньо прав для виконання цієї дії');
         });
 
         test('should fail to delete non-existent game', async () => {

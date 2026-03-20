@@ -65,13 +65,26 @@ describe('User Stats API Endpoints', () => {
         return response.body.id;
     }
 
-    // Helper to create full test setup with 4 users and 4 games
+    function seedClubMembership(clubId: number, userId: number) {
+        const ts = new Date().toISOString();
+        dbManager.db.prepare(
+            `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, 'MEMBER', 'ACTIVE', ?, ?, 0)`
+        ).run(clubId, userId, ts, ts);
+    }
+
     async function createFullTestSetup() {
         const testUser1Id = await createTestUser('StatsPlayer1', 311111111);
         const testUser2Id = await createTestUser('StatsPlayer2', 322222222);
         const testUser3Id = await createTestUser('StatsPlayer3', 333333333);
         const testUser4Id = await createTestUser('StatsPlayer4', 344444444);
         const testUser5Id = await createTestUser('StatsPlayer5', 355555555);
+
+        seedClubMembership(1, testUser1Id);
+        seedClubMembership(1, testUser2Id);
+        seedClubMembership(1, testUser3Id);
+        seedClubMembership(1, testUser4Id);
+        seedClubMembership(1, testUser5Id);
 
         const user1AuthHeader = createAuthHeader(testUser1Id);
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { UserController } from '../controller/UserController.ts';
 import { withTransaction } from '../db/TransactionManagement.ts';
-import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
+import { requireAuth } from '../middleware/AuthMiddleware.ts';
 import profileRoutes from './ProfileRoutes.ts';
 
 const router = Router();
@@ -24,17 +24,14 @@ router.get(
 // Authenticated users - edit own profile or admin can edit any
 router.patch('/:id', requireAuth, withTransaction((req, res) => userController.editUser(req, res)));
 
-// Admin only - activation/deactivation
 router.post(
     '/:id/activate',
     requireAuth,
-    requireAdmin,
     withTransaction((req, res) => userController.updateUserActivationStatus(req, res, true))
 );
 router.post(
     '/:id/deactivate',
     requireAuth,
-    requireAdmin,
     withTransaction((req, res) => userController.updateUserActivationStatus(req, res, false))
 );
 

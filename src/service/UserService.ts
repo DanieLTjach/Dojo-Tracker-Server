@@ -15,10 +15,14 @@ import TelegramService from './TelegramSevice.ts';
 import config from '../../config/config.ts';
 import dedent from 'dedent';
 import { UserLogsTopic } from '../model/TelegramTopic.ts';
+import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
+import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
+import type { ClubRole } from '../model/ClubModels.ts';
 
 export class UserService {
 
     private userRepository: UserRepository = new UserRepository();
+    private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
 
     registerUser(
         userName: string,
@@ -46,8 +50,10 @@ export class UserService {
         return this.getUserByTelegramId(telegramId).status;
     }
 
-    getAllUsers(requestingUserId?: number): User[] {
-        const users = this.userRepository.findAllUsers();
+    getAllUsers(requestingUserId?: number, clubId?: number): User[] {
+        const users = clubId !== undefined
+            ? this.userRepository.findAllUsersByClubId(clubId)
+            : this.userRepository.findAllUsers();
         return users.map(user => this.applyProfileVisibility(user, requestingUserId));
     }
 
@@ -94,6 +100,7 @@ export class UserService {
 
     updateUserActivationStatus(userId: number, isActive: boolean, modifiedBy: number): User {
         this.validateUserExistsById(userId);
+        this.authorizeUserActivationChange(userId, isActive, modifiedBy);
 
         const oldUser = this.getUserById(userId);
         this.userRepository.updateUserStatus(userId, isActive, isActive ? 'ACTIVE' : 'INACTIVE', modifiedBy);
@@ -106,6 +113,25 @@ export class UserService {
         }
 
         return newUser;
+    }
+
+    private authorizeUserActivationChange(targetUserId: number, isActive: boolean, actingUserId: number): void {
+        const actingUser = this.getUserById(actingUserId);
+        if (actingUser.isAdmin) {
+            return;
+        }
+
+        const targetMemberships = this.membershipRepository.findActiveMembershipsByUserId(targetUserId);
+        const allowedRoles: ClubRole[] = isActive ? ['OWNER', 'MODERATOR'] : ['OWNER'];
+
+        const hasRequiredRoleInSharedClub = targetMemberships.some((membership) => {
+            const roleInClub = this.membershipRepository.getUserClubRole(membership.clubId, actingUserId);
+            return roleInClub !== undefined && allowedRoles.includes(roleInClub);
+        });
+
+        if (!hasRequiredRoleInSharedClub) {
+            throw new InsufficientPermissionsError();
+        }
     }
 
     validateUserIsAdmin(id: number, insufficientPermissionsError: () => ResponseStatusError): void {

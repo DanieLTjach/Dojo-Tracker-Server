@@ -8,8 +8,10 @@ export class EventRepository {
         return dbManager.db.prepare(`
             SELECT
                 e.*,
+
                 gr.id as gr_id,
                 gr.name as gr_name,
+                gr.clubId as gr_clubId,
                 gr.numberOfPlayers as gr_numberOfPlayers,
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
@@ -27,12 +29,40 @@ export class EventRepository {
         return this.findAllEventsStatement().all().map(eventWithGameRulesFromDBEntity);
     }
 
+    private findAllEventsByClubIdStatement(): Statement<{ clubId: number }, EventWithGameRulesDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT
+                e.*,
+
+                gr.id as gr_id,
+                gr.name as gr_name,
+                gr.clubId as gr_clubId,
+                gr.numberOfPlayers as gr_numberOfPlayers,
+                gr.uma as gr_uma,
+                gr.startingPoints as gr_startingPoints,
+                gr.startingRating as gr_startingRating,
+                gr.minimumGamesForRating as gr_minimumGamesForRating,
+                gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+            FROM event e
+            JOIN gameRules gr ON e.gameRules = gr.id
+            WHERE e.clubId = :clubId OR e.clubId IS NULL
+            ORDER BY e.createdAt DESC`
+        );
+    }
+
+    findAllEventsByClubId(clubId: number): Event[] {
+        return this.findAllEventsByClubIdStatement().all({ clubId }).map(eventWithGameRulesFromDBEntity);
+    }
+
     private findEventByIdStatement(): Statement<{ id: number }, EventWithGameRulesDBEntity> {
         return dbManager.db.prepare(`
             SELECT
                 e.*,
+
                 gr.id as gr_id,
                 gr.name as gr_name,
+                gr.clubId as gr_clubId,
                 gr.numberOfPlayers as gr_numberOfPlayers,
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
@@ -56,6 +86,7 @@ export class EventRepository {
         description: string | null;
         type: string;
         gameRules: number;
+        clubId: number | null;
         dateFrom: string | null;
         dateTo: string | null;
         createdAt: string;
@@ -63,8 +94,8 @@ export class EventRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, gameRules, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :gameRules, :dateFrom, :dateTo, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -86,6 +117,7 @@ export class EventRepository {
         description: string | null;
         type: string;
         gameRules: number;
+        clubId: number | null;
         dateFrom: string | null;
         dateTo: string | null;
         modifiedAt: string;
@@ -97,6 +129,7 @@ export class EventRepository {
                 description = :description,
                 type = :type,
                 gameRules = :gameRules,
+                clubId = :clubId,
                 dateFrom = :dateFrom,
                 dateTo = :dateTo,
                 modifiedAt = :modifiedAt,
@@ -146,6 +179,7 @@ export interface EventCreateParams {
     description: string | null;
     type: string;
     gameRules: number;
+    clubId: number | null;
     dateFrom: Date | null;
     dateTo: Date | null;
     createdAt: Date;
@@ -159,6 +193,7 @@ export interface EventUpdateParams {
     description: string | null;
     type: string;
     gameRules: number;
+    clubId: number | null;
     dateFrom: Date | null;
     dateTo: Date | null;
     modifiedAt: Date;
@@ -171,6 +206,7 @@ interface EventWithGameRulesDBEntity {
     description: string | null;
     type: string;
     gameRules: number;
+    clubId: number | null;
     dateFrom: string | null;
     dateTo: string | null;
     createdAt: string;
@@ -178,6 +214,7 @@ interface EventWithGameRulesDBEntity {
     modifiedBy: number;
     gr_id: number;
     gr_name: string;
+    gr_clubId: number | null;
     gr_numberOfPlayers: number;
     gr_uma: string;
     gr_startingPoints: number;
@@ -193,9 +230,11 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         name: dbEntity.name,
         description: dbEntity.description,
         type: dbEntity.type,
+        clubId: dbEntity.clubId,
         gameRules: {
             id: dbEntity.gr_id,
             name: dbEntity.gr_name,
+            clubId: dbEntity.gr_clubId,
             numberOfPlayers: dbEntity.gr_numberOfPlayers,
             uma: parseUma(dbEntity.gr_uma),
             startingPoints: dbEntity.gr_startingPoints,

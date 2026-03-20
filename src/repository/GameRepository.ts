@@ -120,6 +120,12 @@ export class GameRepository {
             params.push(filters.userId);
         }
 
+        if (filters.clubId !== undefined) {
+            query += ` JOIN event e ON g.eventId = e.id`;
+            conditions.push('e.clubId = ?');
+            params.push(filters.clubId);
+        }
+
         if (filters.dateFrom !== undefined) {
             conditions.push('g.createdAt >= ?');
             params.push(filters.dateFrom.toISOString());

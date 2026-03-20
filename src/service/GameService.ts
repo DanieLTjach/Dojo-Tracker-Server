@@ -22,6 +22,15 @@ import dedent from 'dedent';
 import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
 import { GameLogsTopic, RatingTopic } from '../model/TelegramTopic.ts';
+import { ClubRepository } from '../repository/ClubRepository.ts';
+import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
+import {
+    InsufficientClubPermissionsError,
+    YouHaveToBeClubMemberError,
+    YouNeedToBeModeratorToCreateGamesWithNonClubMembersError
+} from '../error/ClubErrors.ts';
+import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
+import type { ClubRole } from '../model/ClubModels.ts';
 
 export class GameService {
 
@@ -29,6 +38,8 @@ export class GameService {
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
+    private clubRepository: ClubRepository = new ClubRepository();
+    private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
 
     addGame(
         eventId: number,
@@ -48,6 +59,7 @@ export class GameService {
         }
 
         const event = this.eventService.getEventById(eventId);
+        this.authorizeGameCreation(event, playersData, createdBy);
         this.validatePlayers(playersData, event.gameRules);
         this.validateGameWithinEventDates(event, gameTimestamp, createdBy);
         this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
@@ -107,7 +119,13 @@ export class GameService {
         tournamentTableNumber: number | null
     ): GameWithPlayers {
         const oldGame = this.getGameById(gameId);
+        const oldEvent = this.eventService.getEventById(oldGame.eventId);
+        this.authorizeClubScopedAction(oldEvent.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
+
         const event = this.eventService.getEventById(eventId);
+        if (event.id !== oldEvent.id) {
+            this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
+        }
         this.validatePlayers(playersData, event.gameRules);
 
         const newGameTimestamp = createdAt ?? oldGame.createdAt;
@@ -127,12 +145,49 @@ export class GameService {
     deleteGame(gameId: number, deletedBy: number): void {
         const game = this.getGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
+        this.authorizeClubScopedAction(event.clubId, deletedBy, ['OWNER']);
+
         this.ratingService.deleteRatingChangesFromGame(game);
 
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.gameRepository.deleteGameById(gameId);
 
         this.logDeletedGame(game, event, deletedBy);
+    }
+
+    private authorizeGameCreation(event: Event, playersData: PlayerData[], createdBy: number): void {
+        const user = this.userService.getUserById(createdBy);
+        if (user.isAdmin || event.clubId === null) {
+            return;
+        }
+
+        const creatorRole = this.membershipRepository.getUserClubRole(event.clubId, createdBy);
+        if (!creatorRole) {
+            throw new YouHaveToBeClubMemberError();
+        }
+
+        if (creatorRole === 'MEMBER') {
+            const allPlayersInClub = playersData.every((player) => this.membershipRepository.getUserClubRole(event.clubId!, player.userId) !== undefined);
+            if (!allPlayersInClub) {
+                throw new YouNeedToBeModeratorToCreateGamesWithNonClubMembersError();
+            }
+        }
+    }
+
+    private authorizeClubScopedAction(clubId: number | null, userId: number, allowedRoles: ClubRole[]): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (clubId === null) {
+            throw new InsufficientPermissionsError();
+        }
+
+        const role = this.membershipRepository.getUserClubRole(clubId, userId);
+        if (role === undefined || !allowedRoles.includes(role)) {
+            throw new InsufficientClubPermissionsError(allowedRoles);
+        }
     }
 
     private logNewGame(game: GameWithPlayers, event: Event): void {
@@ -169,8 +224,9 @@ export class GameService {
         title: string,
         userLabel: string
     ): void {
+        const clubPrefix = this.buildClubPrefix(event);
         const user = this.userService.getUserById(userId);
-        const message = dedent`
+        const message = clubPrefix + dedent`
             <b>${title}</b>
 
             <b>Game ID:</b> <code>${game.id}</code>
@@ -240,7 +296,8 @@ export class GameService {
         }).join('\n\n');
 
         const createdByUser = this.userService.getUserById(createdBy);
-        const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
+        const clubPrefix = this.buildClubPrefix(event);
+        const message = clubPrefix + `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
             + `\nДодано <a href="${config.botUrl}?startapp=game_${game.id}">нову гру</a>`
             + ` користувачем ${this.generateUserProfileLink(createdByUser)}\n\n`
             + `${playerLines}`;
@@ -254,6 +311,19 @@ export class GameService {
 
     private generateUserProfileLink(user: User): string {
         return `<a href="${config.botUrl}?startapp=user_${user.id}"><b>${user.name}</b></a>`;
+    }
+
+    private buildClubPrefix(event: Event): string {
+        if (event.clubId === null) {
+            return '';
+        }
+
+        const club = this.clubRepository.findClubById(event.clubId);
+        if (club === undefined) {
+            return '';
+        }
+
+        return `[${club.name}] `;
     }
 
     private validateGameFilters(filters: GameFilters): void {

@@ -34,20 +34,22 @@ export function createAuthHeader(userId: number): string {
  * @param dateFrom - Event start date (optional)
  * @param dateTo - Event end date (optional)
  * @param gameRulesId - Game rules ID (defaults to 2)
+ * @param clubId - Club ID (null means global event)
  */
 export function createCustomEvent(
     id: number,
     name: string,
     dateFrom?: string,
     dateTo?: string,
-    gameRulesId: number = 2
+    gameRulesId: number = 2,
+    clubId: number | null = 1
 ): void {
     const timestamp = '2024-01-01T00:00:00.000Z';
     
     dbManager.db.prepare(
-        `INSERT INTO event (id, name, type, gameRules, dateFrom, dateTo, modifiedBy, createdAt, modifiedAt) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(id, name, 'SEASON', gameRulesId, dateFrom || null, dateTo || null, 0, timestamp, timestamp);
+        `INSERT INTO event (id, name, type, gameRules, clubId, dateFrom, dateTo, modifiedBy, createdAt, modifiedAt) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(id, name, 'SEASON', gameRulesId, clubId, dateFrom || null, dateTo || null, 0, timestamp, timestamp);
 }
 
 /**

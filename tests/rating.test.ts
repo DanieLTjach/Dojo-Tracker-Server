@@ -72,12 +72,24 @@ describe('Rating API Endpoints', () => {
         return await createGameSetupWithPoints([40000, 35000, 25000, 20000]);
     }
 
-    // Helper to create a complete game setup with 4 players
+    function seedClubMembership(clubId: number, userId: number) {
+        const ts = new Date().toISOString();
+        dbManager.db.prepare(
+            `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, 'MEMBER', 'ACTIVE', ?, ?, 0)`
+        ).run(clubId, userId, ts, ts);
+    }
+
     async function createGameSetupWithPoints(points: number[]) {
         const user1Id = await createTestUser('Player1', 1);
         const user2Id = await createTestUser('Player2', 2);
         const user3Id = await createTestUser('Player3', 3);
         const user4Id = await createTestUser('Player4', 4);
+
+        seedClubMembership(1, user1Id);
+        seedClubMembership(1, user2Id);
+        seedClubMembership(1, user3Id);
+        seedClubMembership(1, user4Id);
 
         const user1AuthHeader = createAuthHeader(user1Id);
 

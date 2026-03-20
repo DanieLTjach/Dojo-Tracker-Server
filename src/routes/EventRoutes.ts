@@ -28,7 +28,7 @@ router.get('/:eventId', requireAuth, withTransaction((req, res) => eventControll
  *
  * Authentication: Required (Admin only)
  */
-router.post('/', requireAuth, requireAdmin, withTransaction((req, res) => eventController.createEvent(req, res)));
+router.post('/', requireAuth, withTransaction((req, res) => eventController.createEvent(req, res)));
 
 /**
  * PUT /api/events/:eventId
@@ -36,7 +36,7 @@ router.post('/', requireAuth, requireAdmin, withTransaction((req, res) => eventC
  *
  * Authentication: Required (Admin only)
  */
-router.put('/:eventId', requireAuth, requireAdmin, withTransaction((req, res) => eventController.updateEvent(req, res)));
+router.put('/:eventId', requireAuth, withTransaction((req, res) => eventController.updateEvent(req, res)));
 
 /**
  * DELETE /api/events/:eventId

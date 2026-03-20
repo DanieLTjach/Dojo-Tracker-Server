@@ -29,6 +29,33 @@ export class UserRepository {
         return this.findAllUsersStatement().all().map(userWithProfileFromDBEntity);
     }
 
+    private findAllUsersByClubIdStatement(): Statement<{ clubId: number }, UserWithProfileDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT user.*,
+                p.firstNameEn as p_firstNameEn,
+                p.lastNameEn as p_lastNameEn,
+                p.emaNumber as p_emaNumber,
+                p.hideProfile as p_hideProfile
+            FROM user
+            JOIN clubMembership cm ON user.id = cm.userId
+            LEFT JOIN profile p ON user.id = p.userId
+            LEFT JOIN (
+                SELECT userId, MAX(game.createdAt) as lastGameDate
+                FROM userToGame
+                JOIN game ON userToGame.gameId = game.id
+                GROUP BY userId
+            ) lastGame ON user.id = lastGame.userId
+            WHERE user.id != 0
+                AND cm.clubId = :clubId
+                AND cm.status = 'ACTIVE'
+            ORDER BY lastGame.lastGameDate DESC NULLS LAST, user.id
+        `);
+    }
+
+    findAllUsersByClubId(clubId: number): User[] {
+        return this.findAllUsersByClubIdStatement().all({ clubId }).map(userWithProfileFromDBEntity);
+    }
+
     private findUserByIdStatement(): Statement<{ id: number }, UserWithProfileDBEntity> {
         return dbManager.db.prepare(`
             SELECT user.*,

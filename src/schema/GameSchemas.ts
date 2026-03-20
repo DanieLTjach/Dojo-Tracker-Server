@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { userIdParamSchema, userIdSchema } from './UserSchemas.ts';
 import { eventIdParamSchema, eventIdSchema } from './EventSchemas.ts';
+import { clubIdParamSchema } from './ClubSchemas.ts';
 import { dateSchema } from './CommonSchemas.ts';
 
 export const gameStartPlace = z.enum(['EAST', 'WEST', 'NORTH', 'SOUTH']);
@@ -46,6 +47,7 @@ export const gameGetListSchema = z.object({
         dateTo: dateSchema.optional(),
         userId: userIdParamSchema.optional(),
         eventId: eventIdParamSchema.optional(),
+        clubId: clubIdParamSchema.optional(),
         sortOrder: z.enum(['asc', 'desc']).optional(),
         limit: z.coerce.number().int().positive().optional(),
         offset: z.coerce.number().int().nonnegative().optional()
@@ -70,4 +72,3 @@ export const gameDeletionSchema = z.object({
         gameId: gameIdParamSchema
     })
 });
-

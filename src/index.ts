@@ -10,6 +10,7 @@ import eventRoutes from './routes/EventRoutes.ts';
 import gameRulesRoutes from './routes/GameRulesRoutes.ts';
 import ratingRoutes from './routes/RatingRoutes.ts';
 import userStatsRoutes from './routes/UserStatsRoutes.ts';
+import clubRoutes from './routes/ClubRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
 
 import LogService from './service/LogService.ts';
@@ -36,6 +37,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/game-rules', gameRulesRoutes);
 app.use('/api', ratingRoutes);
 app.use('/api/events', userStatsRoutes);
+app.use('/api/clubs', clubRoutes);
 
 app.use(handleErrors);
 

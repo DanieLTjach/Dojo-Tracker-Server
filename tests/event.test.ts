@@ -56,6 +56,7 @@ describe('Event API Endpoints', () => {
             expect(event).toHaveProperty('name');
             expect(event).toHaveProperty('description');
             expect(event).toHaveProperty('type');
+            expect(event).toHaveProperty('clubId');
             expect(event).toHaveProperty('gameRules');
             expect(event).toHaveProperty('dateFrom');
             expect(event).toHaveProperty('dateTo');
@@ -68,11 +69,43 @@ describe('Event API Endpoints', () => {
             expect(typeof event.gameRules).toBe('object');
             expect(event.gameRules).toHaveProperty('id');
             expect(event.gameRules).toHaveProperty('name');
+            expect(event.gameRules).toHaveProperty('clubId');
             expect(event.gameRules).toHaveProperty('numberOfPlayers');
             expect(event.gameRules).toHaveProperty('uma');
             expect(Array.isArray(event.gameRules.uma)).toBe(true);
             expect(event.gameRules).toHaveProperty('startingPoints');
             expect(event.gameRules).toHaveProperty('startingRating');
+        });
+
+        test('should filter events by clubId including global events', async () => {
+            const clubScopedEventId = 2101;
+            const globalEventId = 2102;
+            const otherClubEventId = 2103;
+            const otherClubId = 2;
+            const timestamp = '2024-01-01T00:00:00.000Z';
+
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubId, 'Test Club 2', null, null, null, null, 1, null, null, timestamp, timestamp, 0);
+
+            createCustomEvent(clubScopedEventId, 'Club Event', undefined, undefined, 1, 1);
+            createCustomEvent(globalEventId, 'Global Event', undefined, undefined, 1, null);
+            createCustomEvent(otherClubEventId, 'Other Club Event', undefined, undefined, 1, otherClubId);
+
+            const response = await request(app)
+                .get('/api/events?clubId=1')
+                .set('Authorization', adminAuthHeader);
+
+            deleteEventById(clubScopedEventId);
+            deleteEventById(globalEventId);
+            deleteEventById(otherClubEventId);
+            dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(otherClubId);
+
+            expect(response.status).toBe(200);
+            expect(response.body.some((event: { id: number }) => event.id === clubScopedEventId)).toBe(true);
+            expect(response.body.some((event: { id: number }) => event.id === globalEventId)).toBe(true);
+            expect(response.body.some((event: { id: number }) => event.id === otherClubEventId)).toBe(false);
         });
 
         test('should return events ordered by createdAt DESC', async () => {
@@ -121,6 +154,7 @@ describe('Event API Endpoints', () => {
             expect(response.body.name === null || typeof response.body.name === 'string').toBe(true);
             expect(response.body.description === null || typeof response.body.description === 'string').toBe(true);
             expect(typeof response.body.type).toBe('string');
+            expect(response.body.clubId === null || typeof response.body.clubId === 'number').toBe(true);
             expect(typeof response.body.gameRules).toBe('object');
             expect(response.body.dateFrom === null || typeof response.body.dateFrom === 'string').toBe(true);
             expect(response.body.dateTo === null || typeof response.body.dateTo === 'string').toBe(true);
@@ -140,6 +174,7 @@ describe('Event API Endpoints', () => {
             const gameRules = response.body.gameRules;
             expect(gameRules).toHaveProperty('id');
             expect(gameRules).toHaveProperty('name');
+            expect(gameRules).toHaveProperty('clubId');
             expect(gameRules).toHaveProperty('numberOfPlayers');
             expect(gameRules).toHaveProperty('uma');
             expect(gameRules).toHaveProperty('startingPoints');
@@ -236,6 +271,7 @@ describe('Event API Endpoints', () => {
             expect(response.body.name).toBe(createPayload.name);
             expect(response.body.type).toBe(createPayload.type);
             expect(response.body.gameRules.id).toBe(createPayload.gameRulesId);
+            expect(response.body.clubId).toBeNull();
         });
 
         test('should reject when not authenticated', async () => {
@@ -267,6 +303,14 @@ describe('Event API Endpoints', () => {
                 .send({ ...createPayload, gameRulesId: 99999 });
             expect(response.status).toBe(404);
         });
+
+        test('should return 404 when club does not exist', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 99999 });
+            expect(response.status).toBe(404);
+        });
     });
 
     describe('PUT /api/events/:eventId - Update Event (admin only)', () => {
@@ -275,6 +319,7 @@ describe('Event API Endpoints', () => {
             name: 'Updated Name',
             description: null,
             type: 'TOURNAMENT',
+            clubId: 1,
             gameRulesId: 1,
             dateFrom: '2026-04-01T00:00:00.000Z',
             dateTo: '2026-05-01T00:00:00.000Z'
@@ -299,6 +344,7 @@ describe('Event API Endpoints', () => {
             expect(response.body.type).toBe(updatePayload.type);
             expect(response.body.description).toBeNull();
             expect(response.body.gameRules.id).toBe(updatePayload.gameRulesId);
+            expect(response.body.clubId).toBe(updatePayload.clubId);
         });
 
         test('should reject when not authenticated', async () => {
@@ -330,6 +376,14 @@ describe('Event API Endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({ name: 'Missing required fields' });
             expect(response.status).toBe(400);
+        });
+
+        test('should return 404 when club does not exist', async () => {
+            const response = await request(app)
+                .put(`/api/events/${baseEventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ ...updatePayload, clubId: 99999 });
+            expect(response.status).toBe(404);
         });
     });
 
