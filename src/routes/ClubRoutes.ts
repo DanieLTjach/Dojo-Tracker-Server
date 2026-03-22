@@ -11,7 +11,6 @@ const membershipController = new ClubMembershipController();
 
 router.get('/', withTransaction((req, res) => clubController.getAllClubs(req, res)));
 router.get('/:clubId', withTransaction((req, res) => clubController.getClubById(req, res)));
-router.get('/:clubId/status', requireAuth, withTransaction((req, res) => membershipController.getStatus(req, res)));
 router.post('/', requireAuth, requireAdmin, withTransaction((req, res) => clubController.createClub(req, res)));
 router.put('/:clubId', requireAuth, requireClubRole('OWNER'), withTransaction((req, res) => clubController.updateClub(req, res)));
 router.delete('/:clubId', requireAuth, requireAdmin, withTransaction((req, res) => clubController.deleteClub(req, res)));

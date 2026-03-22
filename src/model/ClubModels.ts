@@ -3,8 +3,6 @@ export type ClubRole = typeof clubRoles[number];
 
 export const clubMembershipStatuses = ['PENDING', 'ACTIVE', 'INACTIVE'] as const;
 export type ClubMembershipStatus = typeof clubMembershipStatuses[number];
-export type ClubMembershipUiStatus = ClubMembershipStatus | 'NONE';
-
 export interface Club {
     id: number;
     name: string;
@@ -38,8 +36,9 @@ export interface ClubMembershipStatusPermissions {
     canManageMembers: boolean;
 }
 
-export interface ClubMembershipStatusView {
-    status: ClubMembershipUiStatus;
-    role: ClubRole | null;
+export interface UserClubMembership {
+    clubId: number;
+    role: ClubRole;
+    status: ClubMembershipStatus;
     permissions: ClubMembershipStatusPermissions;
 }

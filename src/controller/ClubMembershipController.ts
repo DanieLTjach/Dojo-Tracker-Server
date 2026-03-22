@@ -3,7 +3,6 @@ import { StatusCodes } from 'http-status-codes';
 import {
     clubMembershipGetListSchema,
     clubMembershipGetActiveMembersSchema,
-    clubMembershipGetStatusSchema,
     clubMembershipGetPendingListSchema,
     clubMembershipRequestJoinSchema,
     clubMembershipLeaveSchema,
@@ -28,11 +27,10 @@ export class ClubMembershipController {
         return res.status(StatusCodes.OK).json(members);
     }
 
-    getStatus(req: Request, res: Response) {
-        const { params: { clubId } } = clubMembershipGetStatusSchema.parse(req);
+    getCurrentUserClubs(req: Request, res: Response) {
         const userId = req.user!.userId;
-        const status = this.membershipService.getStatus(clubId, userId);
-        return res.status(StatusCodes.OK).json(status);
+        const clubs = this.membershipService.getCurrentUserClubs(userId);
+        return res.status(StatusCodes.OK).json(clubs);
     }
 
     getPendingMembers(req: Request, res: Response) {
