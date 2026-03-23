@@ -30,8 +30,6 @@ export interface ClubMembership {
 }
 
 export interface ClubMembershipStatusPermissions {
-    canJoin: boolean;
-    canLeave: boolean;
     canEditClub: boolean;
     canManageMembers: boolean;
 }

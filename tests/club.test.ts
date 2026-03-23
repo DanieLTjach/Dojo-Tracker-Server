@@ -209,8 +209,6 @@ describe('Club API Endpoints', () => {
                 role: 'MEMBER',
                 status: 'PENDING',
                 permissions: {
-                    canJoin: false,
-                    canLeave: true,
                     canEditClub: false,
                     canManageMembers: false
                 }
@@ -231,8 +229,6 @@ describe('Club API Endpoints', () => {
                 role: 'OWNER',
                 status: 'ACTIVE',
                 permissions: {
-                    canJoin: false,
-                    canLeave: true,
                     canEditClub: true,
                     canManageMembers: true
                 }
@@ -257,8 +253,6 @@ describe('Club API Endpoints', () => {
                 role: 'MODERATOR',
                 status: 'ACTIVE',
                 permissions: {
-                    canJoin: false,
-                    canLeave: true,
                     canEditClub: false,
                     canManageMembers: true
                 }
@@ -282,8 +276,6 @@ describe('Club API Endpoints', () => {
                 role: 'MEMBER',
                 status: 'ACTIVE',
                 permissions: {
-                    canJoin: false,
-                    canLeave: true,
                     canEditClub: false,
                     canManageMembers: false
                 }
@@ -310,8 +302,6 @@ describe('Club API Endpoints', () => {
                 role: 'MEMBER',
                 status: 'INACTIVE',
                 permissions: {
-                    canJoin: true,
-                    canLeave: false,
                     canEditClub: false,
                     canManageMembers: false
                 }
