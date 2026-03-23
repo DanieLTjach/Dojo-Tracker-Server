@@ -21,7 +21,7 @@ router.get(
     requireClubRole('OWNER', 'MODERATOR'),
     withTransaction((req, res) => membershipController.getMembers(req, res))
 );
-router.get('/:clubId/members/active', withTransaction((req, res) => membershipController.getActiveMembers(req, res)));
+router.get('/:clubId/members/active', requireAuth, withTransaction((req, res) => membershipController.getActiveMembers(req, res)));
 router.get(
     '/:clubId/members/pending',
     requireAuth,

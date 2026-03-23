@@ -40,8 +40,6 @@ export class ClubMembershipService {
                 role: membership.role,
                 status: membership.status,
                 permissions: {
-                    canJoin: membership.status === 'INACTIVE',
-                    canLeave: membership.status === 'ACTIVE' || membership.status === 'PENDING',
                     canEditClub: user.isAdmin || (membership.status === 'ACTIVE' && membership.role === 'OWNER'),
                     canManageMembers: user.isAdmin || isClubManager
                 }
