@@ -212,6 +212,27 @@ export class ClubMembershipRepository {
     findActiveMembershipsByUserId(userId: number): ClubMembership[] {
         return this.findMembershipsByUserIdAndStatusStatement().all({ userId, status: 'ACTIVE' }).map(clubMembershipFromDBEntity);
     }
+
+    private findMembershipsByUserIdStatement(): Statement<{ userId: number }, ClubMembershipDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT
+                cm.clubId,
+                cm.userId,
+                u.name as userName,
+                cm.role,
+                cm.status,
+                cm.createdAt,
+                cm.modifiedAt,
+                cm.modifiedBy
+            FROM clubMembership cm
+            JOIN user u ON cm.userId = u.id
+            WHERE cm.userId = :userId
+        `);
+    }
+
+    findMembershipsByUserId(userId: number): ClubMembership[] {
+        return this.findMembershipsByUserIdStatement().all({ userId }).map(clubMembershipFromDBEntity);
+    }
 }
 
 export interface ClubMembershipCreateParams {

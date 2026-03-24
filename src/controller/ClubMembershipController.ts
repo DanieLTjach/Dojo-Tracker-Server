@@ -27,6 +27,12 @@ export class ClubMembershipController {
         return res.status(StatusCodes.OK).json(members);
     }
 
+    getCurrentUserClubs(req: Request, res: Response) {
+        const userId = req.user!.userId;
+        const clubs = this.membershipService.getCurrentUserClubs(userId);
+        return res.status(StatusCodes.OK).json(clubs);
+    }
+
     getPendingMembers(req: Request, res: Response) {
         const { params: { clubId } } = clubMembershipGetPendingListSchema.parse(req);
         const members = this.membershipService.getPendingMembers(clubId);

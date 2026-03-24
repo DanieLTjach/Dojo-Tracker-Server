@@ -1,6 +1,7 @@
 import request from 'supertest';
 import express from 'express';
 import clubRoutes from '../src/routes/ClubRoutes.ts';
+import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
@@ -12,6 +13,7 @@ import { ClubMembershipService } from '../src/service/ClubMembershipService.ts';
 const app = express();
 app.use(express.json());
 app.use('/api/clubs', clubRoutes);
+app.use('/api/users', userRoutes);
 app.use(handleErrors);
 
 describe('Club API Endpoints', () => {
@@ -84,9 +86,10 @@ describe('Club API Endpoints', () => {
             expect(Array.isArray(response.body)).toBe(true);
         });
 
-        test('should require authentication', async () => {
+        test('should return clubs without authentication', async () => {
             const response = await request(app).get('/api/clubs');
-            expect(response.status).toBe(401);
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
         });
     });
 
@@ -168,6 +171,146 @@ describe('Club API Endpoints', () => {
             expect(response.status).toBe(404);
             expect(response.body).toHaveProperty('message');
             expect(response.body).toHaveProperty('errorCode');
+        });
+    });
+
+    describe('GET /api/users/current/clubs - Get current user club memberships', () => {
+        let clubId: number;
+
+        beforeEach(async () => {
+            clubId = await createClub('Integration Club Status');
+        });
+
+        afterEach(() => {
+            cleanupClub(clubId);
+        });
+
+        test('should return empty array for user without memberships', async () => {
+            const response = await request(app)
+                .get('/api/users/current/clubs')
+                .set('Authorization', nonAdminAuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toEqual([]);
+        });
+
+        test('should return PENDING membership after join request', async () => {
+            await request(app)
+                .post(`/api/clubs/${clubId}/join`)
+                .set('Authorization', memberAuthHeader);
+
+            const response = await request(app)
+                .get('/api/users/current/clubs')
+                .set('Authorization', memberAuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toEqual([{
+                clubId,
+                role: 'MEMBER',
+                status: 'PENDING',
+                permissions: {
+                    canEditClub: false,
+                    canManageMembers: false
+                }
+            }]);
+        });
+
+        test('should return ACTIVE owner permissions', async () => {
+            await setupOwner(clubId);
+
+            const response = await request(app)
+                .get('/api/users/current/clubs')
+                .set('Authorization', ownerAuthHeader);
+
+            expect(response.status).toBe(200);
+            const club = response.body.find((c: any) => c.clubId === clubId);
+            expect(club).toEqual({
+                clubId,
+                role: 'OWNER',
+                status: 'ACTIVE',
+                permissions: {
+                    canEditClub: true,
+                    canManageMembers: true
+                }
+            });
+        });
+
+        test('should return ACTIVE moderator permissions', async () => {
+            await request(app)
+                .post(`/api/clubs/${clubId}/join`)
+                .set('Authorization', nonAdminAuthHeader);
+            membershipService.activateMember(clubId, nonAdminId, SYSTEM_USER_ID);
+            membershipService.updateMemberRole(clubId, nonAdminId, 'MODERATOR', SYSTEM_USER_ID);
+
+            const response = await request(app)
+                .get('/api/users/current/clubs')
+                .set('Authorization', nonAdminAuthHeader);
+
+            expect(response.status).toBe(200);
+            const club = response.body.find((c: any) => c.clubId === clubId);
+            expect(club).toEqual({
+                clubId,
+                role: 'MODERATOR',
+                status: 'ACTIVE',
+                permissions: {
+                    canEditClub: false,
+                    canManageMembers: true
+                }
+            });
+        });
+
+        test('should return ACTIVE member permissions', async () => {
+            await request(app)
+                .post(`/api/clubs/${clubId}/join`)
+                .set('Authorization', memberAuthHeader);
+            membershipService.activateMember(clubId, memberId, SYSTEM_USER_ID);
+
+            const response = await request(app)
+                .get('/api/users/current/clubs')
+                .set('Authorization', memberAuthHeader);
+
+            expect(response.status).toBe(200);
+            const club = response.body.find((c: any) => c.clubId === clubId);
+            expect(club).toEqual({
+                clubId,
+                role: 'MEMBER',
+                status: 'ACTIVE',
+                permissions: {
+                    canEditClub: false,
+                    canManageMembers: false
+                }
+            });
+        });
+
+        test('should return INACTIVE with rejoin enabled', async () => {
+            await request(app)
+                .post(`/api/clubs/${clubId}/join`)
+                .set('Authorization', memberAuthHeader);
+            membershipService.activateMember(clubId, memberId, SYSTEM_USER_ID);
+            await request(app)
+                .post(`/api/clubs/${clubId}/leave`)
+                .set('Authorization', memberAuthHeader);
+
+            const response = await request(app)
+                .get('/api/users/current/clubs')
+                .set('Authorization', memberAuthHeader);
+
+            expect(response.status).toBe(200);
+            const club = response.body.find((c: any) => c.clubId === clubId);
+            expect(club).toEqual({
+                clubId,
+                role: 'MEMBER',
+                status: 'INACTIVE',
+                permissions: {
+                    canEditClub: false,
+                    canManageMembers: false
+                }
+            });
+        });
+
+        test('should require authentication', async () => {
+            const response = await request(app).get('/api/users/current/clubs');
+            expect(response.status).toBe(401);
         });
     });
 

@@ -149,8 +149,8 @@ export class UserRepository {
             telegramUsername,
             telegramId,
             modifiedBy: createdBy,
-            isActive: booleanToInteger(false),
-            status: 'PENDING',
+            isActive: booleanToInteger(true),
+            status: 'ACTIVE',
             timestamp: new Date().toISOString()
         }).lastInsertRowid);
     }

@@ -47,15 +47,9 @@ describe('User API Endpoints', () => {
             expect(response.body.name).toBe(userData.name);
             expect(response.body.telegramUsername).toBe(userData.telegramUsername);
             expect(response.body.telegramId).toBe(userData.telegramId);
-            expect(response.body.isActive).toBe(false);
-            expect(response.body.status).toBe('PENDING');
+            expect(response.body.isActive).toBe(true);
+            expect(response.body.status).toBe('ACTIVE');
             expect(response.body.isAdmin).toBe(false);
-
-            // Activate the user for subsequent tests
-            await request(app)
-                .post(`/api/users/${testUserId}/activate`)
-                .set('Authorization', adminAuthHeader)
-                .send({});
 
             regularUserAuthHeader = createAuthHeader(testUserId);
         });
@@ -77,15 +71,9 @@ describe('User API Endpoints', () => {
             expect(response.body.name).toBe(userData.name);
             expect(response.body.telegramUsername).toBeNull();
             expect(response.body.telegramId).toBe(userData.telegramId);
-            expect(response.body.isActive).toBe(false);
-            expect(response.body.status).toBe('PENDING');
+            expect(response.body.isActive).toBe(true);
+            expect(response.body.status).toBe('ACTIVE');
             expect(response.body.isAdmin).toBe(false);
-
-            // Activate the user for subsequent tests
-            await request(app)
-                .post(`/api/users/${testUserId}/activate`)
-                .set('Authorization', adminAuthHeader)
-                .send({});
 
             regularUserAuthHeader = createAuthHeader(testUserId);
         });
@@ -108,14 +96,8 @@ describe('User API Endpoints', () => {
             expect(response.body.name).toBe(userData.name);
             expect(response.body.telegramUsername).toBeNull();
             expect(response.body.telegramId).toBe(userData.telegramId);
-            expect(response.body.isActive).toBe(false);
+            expect(response.body.isActive).toBe(true);
             expect(response.body.isAdmin).toBe(false);
-
-            // Activate the user for subsequent tests
-            await request(app)
-                .post(`/api/users/${testUserId}/activate`)
-                .set('Authorization', adminAuthHeader)
-                .send({});
 
             regularUserAuthHeader = createAuthHeader(testUserId);
         });
