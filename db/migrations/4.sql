@@ -51,6 +51,11 @@ WHERE id != 0;
 
 ALTER TABLE event ADD COLUMN clubId INTEGER REFERENCES club(id);
 UPDATE event SET clubId = 1;
+ALTER TABLE event ADD COLUMN isCurrentRating BOOL NOT NULL DEFAULT false;
+
+CREATE UNIQUE INDEX idx_event_current_rating_per_club
+ON event(clubId)
+WHERE clubId IS NOT NULL AND isCurrentRating = 1;
 
 ALTER TABLE gameRules ADD COLUMN clubId INTEGER REFERENCES club(id);
 UPDATE gameRules SET clubId = 1;

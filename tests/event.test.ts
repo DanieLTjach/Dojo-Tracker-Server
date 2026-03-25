@@ -57,6 +57,7 @@ describe('Event API Endpoints', () => {
             expect(event).toHaveProperty('description');
             expect(event).toHaveProperty('type');
             expect(event).toHaveProperty('clubId');
+            expect(event).toHaveProperty('isCurrentRating');
             expect(event).toHaveProperty('gameRules');
             expect(event).toHaveProperty('dateFrom');
             expect(event).toHaveProperty('dateTo');
@@ -140,6 +141,7 @@ describe('Event API Endpoints', () => {
             expect(response.body).toHaveProperty('name');
             expect(response.body).toHaveProperty('description');
             expect(response.body).toHaveProperty('type');
+            expect(response.body).toHaveProperty('isCurrentRating');
             expect(response.body).toHaveProperty('gameRules');
         });
 
@@ -155,6 +157,7 @@ describe('Event API Endpoints', () => {
             expect(response.body.description === null || typeof response.body.description === 'string').toBe(true);
             expect(typeof response.body.type).toBe('string');
             expect(response.body.clubId === null || typeof response.body.clubId === 'number').toBe(true);
+            expect(typeof response.body.isCurrentRating).toBe('boolean');
             expect(typeof response.body.gameRules).toBe('object');
             expect(response.body.dateFrom === null || typeof response.body.dateFrom === 'string').toBe(true);
             expect(response.body.dateTo === null || typeof response.body.dateTo === 'string').toBe(true);
@@ -272,6 +275,54 @@ describe('Event API Endpoints', () => {
             expect(response.body.type).toBe(createPayload.type);
             expect(response.body.gameRules.id).toBe(createPayload.gameRulesId);
             expect(response.body.clubId).toBeNull();
+            expect(response.body.isCurrentRating).toBe(false);
+        });
+
+        test('should create current rating season for club when no other current season exists', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, isCurrentRating: true });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.clubId).toBe(1);
+            expect(response.body.isCurrentRating).toBe(true);
+        });
+
+        test('should reject current rating event without clubId', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, isCurrentRating: true });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('currentRatingEventMustBeClubScoped');
+        });
+
+        test('should reject current rating event for tournament', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', isCurrentRating: true });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('currentRatingEventMustBeSeason');
+        });
+
+        test('should reject second current rating season in same club', async () => {
+            createCustomEvent(2104, 'Existing Current Season', undefined, undefined, 1, 1, true);
+
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, isCurrentRating: true });
+
+            deleteEventById(2104);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('currentRatingEventAlreadyExists');
         });
 
         test('should reject when not authenticated', async () => {
@@ -345,6 +396,31 @@ describe('Event API Endpoints', () => {
             expect(response.body.description).toBeNull();
             expect(response.body.gameRules.id).toBe(updatePayload.gameRulesId);
             expect(response.body.clubId).toBe(updatePayload.clubId);
+            expect(response.body.isCurrentRating).toBe(false);
+        });
+
+        test('should update event to current rating season when club has no other one', async () => {
+            const response = await request(app)
+                .put(`/api/events/${baseEventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ ...updatePayload, type: 'SEASON', isCurrentRating: true });
+
+            expect(response.status).toBe(200);
+            expect(response.body.isCurrentRating).toBe(true);
+        });
+
+        test('should reject update when another current rating season exists in same club', async () => {
+            createCustomEvent(2105, 'Existing Current Season', undefined, undefined, 1, 1, true);
+
+            const response = await request(app)
+                .put(`/api/events/${baseEventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ ...updatePayload, type: 'SEASON', isCurrentRating: true });
+
+            deleteEventById(2105);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('currentRatingEventAlreadyExists');
         });
 
         test('should reject when not authenticated', async () => {

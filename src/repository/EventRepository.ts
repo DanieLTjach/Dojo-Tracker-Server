@@ -1,5 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
+import { booleanToInteger } from '../db/dbUtils.ts';
 import type { Event } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 
@@ -87,6 +88,7 @@ export class EventRepository {
         type: string;
         gameRules: number;
         clubId: number | null;
+        isCurrentRating: number;
         dateFrom: string | null;
         dateTo: string | null;
         createdAt: string;
@@ -94,8 +96,8 @@ export class EventRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, gameRules, clubId, isCurrentRating, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :gameRules, :clubId, :isCurrentRating, :dateFrom, :dateTo, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -103,6 +105,7 @@ export class EventRepository {
     createEvent(params: EventCreateParams): number {
         const result = this.createEventStatement().get({
             ...params,
+            isCurrentRating: booleanToInteger(params.isCurrentRating),
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             createdAt: params.createdAt.toISOString(),
@@ -118,6 +121,7 @@ export class EventRepository {
         type: string;
         gameRules: number;
         clubId: number | null;
+        isCurrentRating: number;
         dateFrom: string | null;
         dateTo: string | null;
         modifiedAt: string;
@@ -130,6 +134,7 @@ export class EventRepository {
                 type = :type,
                 gameRules = :gameRules,
                 clubId = :clubId,
+                isCurrentRating = :isCurrentRating,
                 dateFrom = :dateFrom,
                 dateTo = :dateTo,
                 modifiedAt = :modifiedAt,
@@ -141,10 +146,38 @@ export class EventRepository {
     updateEvent(params: EventUpdateParams): void {
         this.updateEventStatement().run({
             ...params,
+            isCurrentRating: booleanToInteger(params.isCurrentRating),
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             modifiedAt: params.modifiedAt.toISOString()
         });
+    }
+
+    private findCurrentRatingEventByClubIdStatement(): Statement<{ clubId: number }, EventWithGameRulesDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT
+                e.*,
+
+                gr.id as gr_id,
+                gr.name as gr_name,
+                gr.clubId as gr_clubId,
+                gr.numberOfPlayers as gr_numberOfPlayers,
+                gr.uma as gr_uma,
+                gr.startingPoints as gr_startingPoints,
+                gr.startingRating as gr_startingRating,
+                gr.minimumGamesForRating as gr_minimumGamesForRating,
+                gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+            FROM event e
+            JOIN gameRules gr ON e.gameRules = gr.id
+            WHERE e.clubId = :clubId AND e.isCurrentRating = 1
+            LIMIT 1`
+        );
+    }
+
+    findCurrentRatingEventByClubId(clubId: number): Event | undefined {
+        const eventDBEntity = this.findCurrentRatingEventByClubIdStatement().get({ clubId });
+        return eventDBEntity !== undefined ? eventWithGameRulesFromDBEntity(eventDBEntity) : undefined;
     }
 
     private deleteEventStatement(): Statement<{ id: number }, void> {
@@ -180,6 +213,7 @@ export interface EventCreateParams {
     type: string;
     gameRules: number;
     clubId: number | null;
+    isCurrentRating: boolean;
     dateFrom: Date | null;
     dateTo: Date | null;
     createdAt: Date;
@@ -194,6 +228,7 @@ export interface EventUpdateParams {
     type: string;
     gameRules: number;
     clubId: number | null;
+    isCurrentRating: boolean;
     dateFrom: Date | null;
     dateTo: Date | null;
     modifiedAt: Date;
@@ -207,6 +242,7 @@ interface EventWithGameRulesDBEntity {
     type: string;
     gameRules: number;
     clubId: number | null;
+    isCurrentRating: number;
     dateFrom: string | null;
     dateTo: string | null;
     createdAt: string;
@@ -231,6 +267,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         description: dbEntity.description,
         type: dbEntity.type,
         clubId: dbEntity.clubId,
+        isCurrentRating: dbEntity.isCurrentRating === 1,
         gameRules: {
             id: dbEntity.gr_id,
             name: dbEntity.gr_name,

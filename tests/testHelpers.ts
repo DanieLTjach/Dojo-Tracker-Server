@@ -42,14 +42,15 @@ export function createCustomEvent(
     dateFrom?: string,
     dateTo?: string,
     gameRulesId: number = 2,
-    clubId: number | null = 1
+    clubId: number | null = 1,
+    isCurrentRating: boolean = false
 ): void {
     const timestamp = '2024-01-01T00:00:00.000Z';
     
     dbManager.db.prepare(
-        `INSERT INTO event (id, name, type, gameRules, clubId, dateFrom, dateTo, modifiedBy, createdAt, modifiedAt) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(id, name, 'SEASON', gameRulesId, clubId, dateFrom || null, dateTo || null, 0, timestamp, timestamp);
+        `INSERT INTO event (id, name, type, gameRules, clubId, isCurrentRating, dateFrom, dateTo, modifiedBy, createdAt, modifiedAt) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(id, name, 'SEASON', gameRulesId, clubId, isCurrentRating ? 1 : 0, dateFrom || null, dateTo || null, 0, timestamp, timestamp);
 }
 
 /**

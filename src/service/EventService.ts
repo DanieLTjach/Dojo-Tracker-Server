@@ -1,4 +1,11 @@
-import { EventNotFoundError, GameRulesNotFoundError, CannotDeleteEventWithGamesError } from '../error/EventErrors.ts';
+import {
+    EventNotFoundError,
+    GameRulesNotFoundError,
+    CannotDeleteEventWithGamesError,
+    CurrentRatingEventAlreadyExistsError,
+    CurrentRatingEventMustBeClubScopedError,
+    CurrentRatingEventMustBeSeasonError
+} from '../error/EventErrors.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { Event } from '../model/EventModels.ts';
@@ -46,6 +53,8 @@ export class EventService {
             throw new ClubNotFoundError(data.clubId!);
         }
 
+        this.validateCurrentRatingEvent(data);
+
         const now = new Date();
         const eventId = this.eventRepository.createEvent({
             name: data.name,
@@ -53,6 +62,7 @@ export class EventService {
             type: data.type,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
+            isCurrentRating: data.isCurrentRating ?? false,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
             createdAt: now,
@@ -75,6 +85,8 @@ export class EventService {
             throw new ClubNotFoundError(data.clubId!);
         }
 
+        this.validateCurrentRatingEvent(data, eventId);
+
         const now = new Date();
         this.eventRepository.updateEvent({
             id: eventId,
@@ -83,6 +95,7 @@ export class EventService {
             type: data.type,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
+            isCurrentRating: data.isCurrentRating ?? false,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
             modifiedAt: now,
@@ -138,6 +151,25 @@ export class EventService {
 
         this.eventRepository.deleteEvent(eventId);
     }
+
+    private validateCurrentRatingEvent(data: EventData, excludedEventId?: number): void {
+        if (!data.isCurrentRating) {
+            return;
+        }
+
+        if (data.clubId === null || data.clubId === undefined) {
+            throw new CurrentRatingEventMustBeClubScopedError();
+        }
+
+        if (data.type !== 'SEASON') {
+            throw new CurrentRatingEventMustBeSeasonError();
+        }
+
+        const existingCurrentRatingEvent = this.eventRepository.findCurrentRatingEventByClubId(data.clubId);
+        if (existingCurrentRatingEvent && existingCurrentRatingEvent.id !== excludedEventId) {
+            throw new CurrentRatingEventAlreadyExistsError(data.clubId, existingCurrentRatingEvent.name);
+        }
+    }
 }
 
 export interface EventData {
@@ -145,6 +177,7 @@ export interface EventData {
     description?: string | null | undefined;
     type: string;
     clubId?: number | null | undefined;
+    isCurrentRating?: boolean | null | undefined;
     dateFrom?: Date | null | undefined;
     dateTo?: Date | null | undefined;
     gameRulesId: number;

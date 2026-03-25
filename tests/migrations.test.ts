@@ -160,10 +160,41 @@ describe('Database Migrations', () => {
     const gameRulesClubStats = db.prepare('SELECT COUNT(*) AS totalCount, COUNT(clubId) AS linkedCount, MIN(clubId) AS minClubId, MAX(clubId) AS maxClubId FROM gameRules').get() as Record<string, number>;
     expect(gameRulesClubStats).toEqual({ totalCount: 4, linkedCount: 4, minClubId: 1, maxClubId: 1 });
 
-    const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; notnull: number }>;
+    const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; notnull: number; type?: string; dflt_value?: string | null }>;
     const gameRulesColumns = db.prepare('PRAGMA table_info(gameRules)').all() as Array<{ name: string; notnull: number }>;
     expect(eventColumns.find(column => column.name === 'clubId')).toMatchObject({ name: 'clubId', notnull: 0 });
+    expect(eventColumns.find(column => column.name === 'isCurrentRating')).toMatchObject({
+      name: 'isCurrentRating',
+      type: 'BOOL',
+      notnull: 1,
+      dflt_value: 'false',
+    });
     expect(gameRulesColumns.find(column => column.name === 'clubId')).toMatchObject({ name: 'clubId', notnull: 0 });
+
+    const indexes = db.prepare('PRAGMA index_list(event)').all() as Array<{ name: string; unique: number; partial: number }>;
+    expect(indexes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'idx_event_current_rating_per_club', unique: 1, partial: 1 })
+    ]));
+
+    db.prepare(`
+      INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
+      VALUES (2, 'Test Club 2', NULL, NULL, NULL, NULL, 1, NULL, NULL, '2026-03-01T00:00:00.000Z', '2026-03-01T00:00:00.000Z', 0)
+    `).run();
+
+    db.prepare(`
+      INSERT INTO event (id, name, description, type, gameRules, clubId, isCurrentRating, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
+      VALUES
+        (9001, 'Current Season 1', NULL, 'SEASON', 1, 1, 1, NULL, NULL, '2026-03-01T00:00:00.000Z', '2026-03-01T00:00:00.000Z', 0),
+        (9002, 'Regular Season', NULL, 'SEASON', 1, 1, 0, NULL, NULL, '2026-03-02T00:00:00.000Z', '2026-03-02T00:00:00.000Z', 0),
+        (9003, 'Other Club Current Season', NULL, 'SEASON', 1, 2, 1, NULL, NULL, '2026-03-03T00:00:00.000Z', '2026-03-03T00:00:00.000Z', 0)
+    `).run();
+
+    expect(() => {
+      db.prepare(`
+        INSERT INTO event (id, name, description, type, gameRules, clubId, isCurrentRating, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
+        VALUES (9004, 'Conflicting Current Season', NULL, 'SEASON', 1, 1, 1, NULL, NULL, '2026-03-04T00:00:00.000Z', '2026-03-04T00:00:00.000Z', 0)
+      `).run();
+    }).toThrow();
 
     const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
     expect(foreignKeyViolations).toEqual([]);
