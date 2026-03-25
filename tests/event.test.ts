@@ -433,6 +433,21 @@ describe('Event API Endpoints', () => {
             expect(currentRatingEventId.currentRatingEventId).toBe(baseEventId);
         });
 
+        test('should unset current rating season on update', async () => {
+            dbManager.db.prepare('UPDATE club SET currentRatingEventId = ? WHERE id = ?').run(baseEventId, 1);
+
+            const response = await request(app)
+                .put(`/api/events/${baseEventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ ...updatePayload, type: 'SEASON', isCurrentRating: false });
+
+            const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+
+            expect(response.status).toBe(200);
+            expect(response.body.isCurrentRating).toBe(false);
+            expect(club.currentRatingEventId).toBeNull();
+        });
+
         test('should reject when not authenticated', async () => {
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
@@ -496,6 +511,20 @@ describe('Event API Endpoints', () => {
                 .get(`/api/events/${deletableEventId}`)
                 .set('Authorization', adminAuthHeader);
             expect(fetchResponse.status).toBe(404);
+        });
+
+        test('should clear club currentRatingEventId when deleting current rating event', async () => {
+            dbManager.db.prepare('UPDATE event SET clubId = 1 WHERE id = ?').run(deletableEventId);
+            dbManager.db.prepare('UPDATE club SET currentRatingEventId = ? WHERE id = ?').run(deletableEventId, 1);
+
+            const response = await request(app)
+                .delete(`/api/events/${deletableEventId}`)
+                .set('Authorization', adminAuthHeader);
+
+            const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+
+            expect(response.status).toBe(204);
+            expect(club.currentRatingEventId).toBeNull();
         });
 
         test('should reject when not authenticated', async () => {

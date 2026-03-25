@@ -150,12 +150,16 @@ export class EventService {
         }
     }
 
-    deleteEvent(eventId: number): void {
+    deleteEvent(eventId: number, modifiedBy: number): void {
         const event = this.getEventById(eventId);
 
         const gameCount = this.eventRepository.getGameCountForEvent(eventId);
         if (gameCount > 0) {
             throw new CannotDeleteEventWithGamesError(event.name, gameCount);
+        }
+
+        if (event.isCurrentRating && event.clubId !== null) {
+            this.clubRepository.updateCurrentRatingEvent(event.clubId, null, new Date(), modifiedBy);
         }
 
         this.eventRepository.deleteEvent(eventId);
@@ -183,8 +187,8 @@ export class EventService {
         modifiedAt: Date
     ): void {
         if (existingEvent?.clubId !== null && existingEvent?.clubId !== undefined && existingEvent.isCurrentRating) {
-            const clubStillPointsToThisEvent = existingEvent.clubId !== nextEventData.clubId || !nextEventData.isCurrentRating;
-            if (clubStillPointsToThisEvent) {
+            const shouldClearOldClub = existingEvent.clubId !== nextEventData.clubId || !nextEventData.isCurrentRating;
+            if (shouldClearOldClub) {
                 this.clubRepository.updateCurrentRatingEvent(existingEvent.clubId, null, modifiedAt, modifiedBy);
             }
         }
