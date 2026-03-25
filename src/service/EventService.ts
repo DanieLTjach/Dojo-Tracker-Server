@@ -53,7 +53,6 @@ export class EventService {
         }
 
         this.validateCurrentRatingEvent(data);
-        this.syncCurrentRatingEvent(data);
 
         const now = new Date();
         const eventId = this.eventRepository.createEvent({
@@ -62,13 +61,18 @@ export class EventService {
             type: data.type,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
-            isCurrentRating: data.isCurrentRating ?? false,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
             createdAt: now,
             modifiedAt: now,
             modifiedBy
         });
+
+        this.syncCurrentRatingEvent(undefined, {
+            ...data,
+            clubId: data.clubId ?? null,
+            isCurrentRating: data.isCurrentRating ?? false
+        }, eventId, modifiedBy, now);
 
         return this.getEventById(eventId);
     }
@@ -86,9 +90,14 @@ export class EventService {
         }
 
         this.validateCurrentRatingEvent(data);
-        this.syncCurrentRatingEvent(data, eventId);
 
         const now = new Date();
+        this.syncCurrentRatingEvent(existingEvent, {
+            ...data,
+            clubId: data.clubId ?? null,
+            isCurrentRating: data.isCurrentRating ?? false
+        }, eventId, modifiedBy, now);
+
         this.eventRepository.updateEvent({
             id: eventId,
             name: data.name,
@@ -96,7 +105,6 @@ export class EventService {
             type: data.type,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
-            isCurrentRating: data.isCurrentRating ?? false,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
             modifiedAt: now,
@@ -167,12 +175,23 @@ export class EventService {
         }
     }
 
-    private syncCurrentRatingEvent(data: EventData, excludedEventId?: number): void {
-        if (!data.isCurrentRating || data.clubId === null || data.clubId === undefined) {
-            return;
+    private syncCurrentRatingEvent(
+        existingEvent: Event | undefined,
+        nextEventData: Required<Pick<EventData, 'clubId' | 'isCurrentRating'>>,
+        eventId: number,
+        modifiedBy: number,
+        modifiedAt: Date
+    ): void {
+        if (existingEvent?.clubId !== null && existingEvent?.clubId !== undefined && existingEvent.isCurrentRating) {
+            const clubStillPointsToThisEvent = existingEvent.clubId !== nextEventData.clubId || !nextEventData.isCurrentRating;
+            if (clubStillPointsToThisEvent) {
+                this.clubRepository.updateCurrentRatingEvent(existingEvent.clubId, null, modifiedAt, modifiedBy);
+            }
         }
 
-        this.eventRepository.clearCurrentRatingEventByClubId(data.clubId, excludedEventId);
+        if (nextEventData.isCurrentRating && nextEventData.clubId !== null && nextEventData.clubId !== undefined) {
+            this.clubRepository.updateCurrentRatingEvent(nextEventData.clubId, eventId, modifiedAt, modifiedBy);
+        }
     }
 }
 

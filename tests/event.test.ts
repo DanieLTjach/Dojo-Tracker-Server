@@ -312,7 +312,8 @@ describe('Event API Endpoints', () => {
         });
 
         test('should replace previous current rating season in same club on create', async () => {
-            createCustomEvent(2104, 'Existing Current Season', undefined, undefined, 1, 1, true);
+            createCustomEvent(2104, 'Existing Current Season', undefined, undefined, 1, 1);
+            dbManager.db.prepare('UPDATE club SET currentRatingEventId = ? WHERE id = ?').run(2104, 1);
 
             const response = await request(app)
                 .post('/api/events')
@@ -321,13 +322,13 @@ describe('Event API Endpoints', () => {
 
             createdEventId = response.body.id;
 
-            const previousCurrentEvent = dbManager.db.prepare('SELECT isCurrentRating FROM event WHERE id = ?').get(2104) as { isCurrentRating: number };
+            const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
 
             deleteEventById(2104);
 
             expect(response.status).toBe(201);
             expect(response.body.isCurrentRating).toBe(true);
-            expect(previousCurrentEvent.isCurrentRating).toBe(0);
+            expect(currentRatingEventId.currentRatingEventId).toBe(response.body.id);
         });
 
         test('should reject when not authenticated', async () => {
@@ -415,20 +416,21 @@ describe('Event API Endpoints', () => {
         });
 
         test('should replace previous current rating season in same club on update', async () => {
-            createCustomEvent(2105, 'Existing Current Season', undefined, undefined, 1, 1, true);
+            createCustomEvent(2105, 'Existing Current Season', undefined, undefined, 1, 1);
+            dbManager.db.prepare('UPDATE club SET currentRatingEventId = ? WHERE id = ?').run(2105, 1);
 
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', adminAuthHeader)
                 .send({ ...updatePayload, type: 'SEASON', isCurrentRating: true });
 
-            const previousCurrentEvent = dbManager.db.prepare('SELECT isCurrentRating FROM event WHERE id = ?').get(2105) as { isCurrentRating: number };
+            const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
 
             deleteEventById(2105);
 
             expect(response.status).toBe(200);
             expect(response.body.isCurrentRating).toBe(true);
-            expect(previousCurrentEvent.isCurrentRating).toBe(0);
+            expect(currentRatingEventId.currentRatingEventId).toBe(baseEventId);
         });
 
         test('should reject when not authenticated', async () => {

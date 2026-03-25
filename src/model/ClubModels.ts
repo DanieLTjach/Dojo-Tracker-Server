@@ -13,6 +13,7 @@ export interface Club {
     isActive: boolean;
     ratingChatId: string | null;
     ratingTopicId: string | null;
+    currentRatingEventId: number | null;
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;
