@@ -32,12 +32,3 @@ export class CurrentRatingEventMustBeSeasonError extends BadRequestError {
         super('Поточним рейтинговим сезоном може бути лише подія типу SEASON', 'currentRatingEventMustBeSeason');
     }
 }
-
-export class CurrentRatingEventAlreadyExistsError extends BadRequestError {
-    constructor(clubId: number, eventName: string) {
-        super(
-            `У клубі з id ${clubId} вже є поточний рейтинговий сезон: "${eventName}"`,
-            'currentRatingEventAlreadyExists'
-        );
-    }
-}

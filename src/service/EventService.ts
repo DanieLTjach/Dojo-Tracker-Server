@@ -2,7 +2,6 @@ import {
     EventNotFoundError,
     GameRulesNotFoundError,
     CannotDeleteEventWithGamesError,
-    CurrentRatingEventAlreadyExistsError,
     CurrentRatingEventMustBeClubScopedError,
     CurrentRatingEventMustBeSeasonError
 } from '../error/EventErrors.ts';
@@ -54,6 +53,7 @@ export class EventService {
         }
 
         this.validateCurrentRatingEvent(data);
+        this.syncCurrentRatingEvent(data);
 
         const now = new Date();
         const eventId = this.eventRepository.createEvent({
@@ -85,7 +85,8 @@ export class EventService {
             throw new ClubNotFoundError(data.clubId!);
         }
 
-        this.validateCurrentRatingEvent(data, eventId);
+        this.validateCurrentRatingEvent(data);
+        this.syncCurrentRatingEvent(data, eventId);
 
         const now = new Date();
         this.eventRepository.updateEvent({
@@ -152,7 +153,7 @@ export class EventService {
         this.eventRepository.deleteEvent(eventId);
     }
 
-    private validateCurrentRatingEvent(data: EventData, excludedEventId?: number): void {
+    private validateCurrentRatingEvent(data: EventData): void {
         if (!data.isCurrentRating) {
             return;
         }
@@ -164,11 +165,14 @@ export class EventService {
         if (data.type !== 'SEASON') {
             throw new CurrentRatingEventMustBeSeasonError();
         }
+    }
 
-        const existingCurrentRatingEvent = this.eventRepository.findCurrentRatingEventByClubId(data.clubId);
-        if (existingCurrentRatingEvent && existingCurrentRatingEvent.id !== excludedEventId) {
-            throw new CurrentRatingEventAlreadyExistsError(data.clubId, existingCurrentRatingEvent.name);
+    private syncCurrentRatingEvent(data: EventData, excludedEventId?: number): void {
+        if (!data.isCurrentRating || data.clubId === null || data.clubId === undefined) {
+            return;
         }
+
+        this.eventRepository.clearCurrentRatingEventByClubId(data.clubId, excludedEventId);
     }
 }
 

@@ -180,6 +180,23 @@ export class EventRepository {
         return eventDBEntity !== undefined ? eventWithGameRulesFromDBEntity(eventDBEntity) : undefined;
     }
 
+    private clearCurrentRatingEventByClubIdStatement(): Statement<{ clubId: number; excludedEventId: number | null }, void> {
+        return dbManager.db.prepare(`
+            UPDATE event
+            SET isCurrentRating = 0
+            WHERE clubId = :clubId
+              AND isCurrentRating = 1
+              AND (:excludedEventId IS NULL OR id != :excludedEventId)
+        `);
+    }
+
+    clearCurrentRatingEventByClubId(clubId: number, excludedEventId?: number): void {
+        this.clearCurrentRatingEventByClubIdStatement().run({
+            clubId,
+            excludedEventId: excludedEventId ?? null
+        });
+    }
+
     private deleteEventStatement(): Statement<{ id: number }, void> {
         return dbManager.db.prepare(`
             DELETE FROM event WHERE id = :id

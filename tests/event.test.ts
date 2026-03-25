@@ -311,7 +311,7 @@ describe('Event API Endpoints', () => {
             expect(response.body.errorCode).toBe('currentRatingEventMustBeSeason');
         });
 
-        test('should reject second current rating season in same club', async () => {
+        test('should replace previous current rating season in same club on create', async () => {
             createCustomEvent(2104, 'Existing Current Season', undefined, undefined, 1, 1, true);
 
             const response = await request(app)
@@ -319,10 +319,15 @@ describe('Event API Endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({ ...createPayload, clubId: 1, isCurrentRating: true });
 
+            createdEventId = response.body.id;
+
+            const previousCurrentEvent = dbManager.db.prepare('SELECT isCurrentRating FROM event WHERE id = ?').get(2104) as { isCurrentRating: number };
+
             deleteEventById(2104);
 
-            expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('currentRatingEventAlreadyExists');
+            expect(response.status).toBe(201);
+            expect(response.body.isCurrentRating).toBe(true);
+            expect(previousCurrentEvent.isCurrentRating).toBe(0);
         });
 
         test('should reject when not authenticated', async () => {
@@ -409,7 +414,7 @@ describe('Event API Endpoints', () => {
             expect(response.body.isCurrentRating).toBe(true);
         });
 
-        test('should reject update when another current rating season exists in same club', async () => {
+        test('should replace previous current rating season in same club on update', async () => {
             createCustomEvent(2105, 'Existing Current Season', undefined, undefined, 1, 1, true);
 
             const response = await request(app)
@@ -417,10 +422,13 @@ describe('Event API Endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({ ...updatePayload, type: 'SEASON', isCurrentRating: true });
 
+            const previousCurrentEvent = dbManager.db.prepare('SELECT isCurrentRating FROM event WHERE id = ?').get(2105) as { isCurrentRating: number };
+
             deleteEventById(2105);
 
-            expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('currentRatingEventAlreadyExists');
+            expect(response.status).toBe(200);
+            expect(response.body.isCurrentRating).toBe(true);
+            expect(previousCurrentEvent.isCurrentRating).toBe(0);
         });
 
         test('should reject when not authenticated', async () => {
