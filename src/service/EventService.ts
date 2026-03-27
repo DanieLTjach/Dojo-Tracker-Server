@@ -68,11 +68,7 @@ export class EventService {
             modifiedBy
         });
 
-        this.syncCurrentRatingEvent(undefined, {
-            ...data,
-            clubId: data.clubId ?? null,
-            isCurrentRating: data.isCurrentRating ?? false
-        }, eventId, modifiedBy, now);
+        this.syncCurrentRatingEvent(undefined, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
 
         return this.getEventById(eventId);
     }
@@ -92,11 +88,7 @@ export class EventService {
         this.validateCurrentRatingEvent(data);
 
         const now = new Date();
-        this.syncCurrentRatingEvent(existingEvent, {
-            ...data,
-            clubId: data.clubId ?? null,
-            isCurrentRating: data.isCurrentRating ?? false
-        }, eventId, modifiedBy, now);
+        this.syncCurrentRatingEvent(existingEvent, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
 
         this.eventRepository.updateEvent({
             id: eventId,
@@ -181,20 +173,18 @@ export class EventService {
 
     private syncCurrentRatingEvent(
         existingEvent: Event | undefined,
-        nextEventData: Required<Pick<EventData, 'clubId' | 'isCurrentRating'>>,
+        newClubId: number | null,
+        newIsCurrentRating: boolean,
         eventId: number,
         modifiedBy: number,
         modifiedAt: Date
     ): void {
-        if (existingEvent?.clubId !== null && existingEvent?.clubId !== undefined && existingEvent.isCurrentRating) {
-            const shouldClearOldClub = existingEvent.clubId !== nextEventData.clubId || !nextEventData.isCurrentRating;
-            if (shouldClearOldClub) {
-                this.clubRepository.updateCurrentRatingEvent(existingEvent.clubId, null, modifiedAt, modifiedBy);
-            }
+        if (existingEvent?.isCurrentRating && existingEvent.clubId !== null && !newIsCurrentRating) {
+            this.clubRepository.updateCurrentRatingEvent(existingEvent.clubId, null, modifiedAt, modifiedBy);
         }
 
-        if (nextEventData.isCurrentRating && nextEventData.clubId !== null && nextEventData.clubId !== undefined) {
-            this.clubRepository.updateCurrentRatingEvent(nextEventData.clubId, eventId, modifiedAt, modifiedBy);
+        if (newIsCurrentRating && newClubId !== null) {
+            this.clubRepository.updateCurrentRatingEvent(newClubId, eventId, modifiedAt, modifiedBy);
         }
     }
 }

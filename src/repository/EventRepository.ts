@@ -238,7 +238,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         description: dbEntity.description,
         type: dbEntity.type,
         clubId: dbEntity.clubId,
-        isCurrentRating: dbEntity.isCurrentRating === 1,
+        isCurrentRating: Boolean(dbEntity.isCurrentRating),
         gameRules: {
             id: dbEntity.gr_id,
             name: dbEntity.gr_name,

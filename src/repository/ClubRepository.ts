@@ -161,7 +161,7 @@ export class ClubRepository {
     }
 
     private updateCurrentRatingEventStatement(): Statement<{
-        id: number;
+        clubId: number;
         currentRatingEventId: number | null;
         modifiedAt: string;
         modifiedBy: number;
@@ -171,13 +171,13 @@ export class ClubRepository {
             SET currentRatingEventId = :currentRatingEventId,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
-            WHERE id = :id
+            WHERE id = :clubId
         `);
     }
 
-    updateCurrentRatingEvent(id: number, currentRatingEventId: number | null, modifiedAt: Date, modifiedBy: number): void {
+    updateCurrentRatingEvent(clubId: number, currentRatingEventId: number | null, modifiedAt: Date, modifiedBy: number): void {
         this.updateCurrentRatingEventStatement().run({
-            id,
+            clubId,
             currentRatingEventId,
             modifiedAt: modifiedAt.toISOString(),
             modifiedBy
