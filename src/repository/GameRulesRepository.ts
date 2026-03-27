@@ -2,6 +2,7 @@ import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { GameRules } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
+import { parseUmaTieBreak } from '../util/EnumUtil.ts';
 
 export class GameRulesRepository {
     private findAllGameRulesStatement(): Statement<[], GameRulesDBEntity> {
@@ -16,7 +17,7 @@ export class GameRulesRepository {
                 startingRating,
                 minimumGamesForRating,
                 chomboPointsAfterUma,
-                umaTieBreakByWind
+                umaTieBreak
             FROM gameRules
             ORDER BY id ASC`
         );
@@ -38,7 +39,7 @@ export class GameRulesRepository {
                 startingRating,
                 minimumGamesForRating,
                 chomboPointsAfterUma,
-                umaTieBreakByWind
+                umaTieBreak
             FROM gameRules
             WHERE clubId = :clubId OR clubId IS NULL
             ORDER BY id ASC`
@@ -61,7 +62,7 @@ export class GameRulesRepository {
                 startingRating,
                 minimumGamesForRating,
                 chomboPointsAfterUma,
-                umaTieBreakByWind
+                umaTieBreak
             FROM gameRules
             WHERE id = :id`
         );
@@ -83,7 +84,7 @@ interface GameRulesDBEntity {
     startingRating: number;
     minimumGamesForRating: number;
     chomboPointsAfterUma: number | null;
-    umaTieBreakByWind: string;
+    umaTieBreak: string;
 }
 
 function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
@@ -97,6 +98,6 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         startingRating: dbEntity.startingRating,
         minimumGamesForRating: dbEntity.minimumGamesForRating,
         chomboPointsAfterUma: dbEntity.chomboPointsAfterUma,
-        umaTieBreakByWind: dbEntity.umaTieBreakByWind as 'WIND' | 'DIVIDE'
+        umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak)
     };
 }

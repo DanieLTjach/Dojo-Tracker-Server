@@ -1,13 +1,12 @@
 import z from 'zod';
-import { clubMembershipStatuses, clubRoles } from '../model/ClubModels.ts';
+import { ClubRole } from '../model/ClubModels.ts';
 import { userIdParamSchema } from './UserSchemas.ts';
 import { optionalTextFieldSchema, clubIdParamSchema } from './CommonSchemas.ts';
 
 export const clubIdSchema = z.number().int('Club ID must be an integer');
 export { clubIdParamSchema };
 
-export const clubRoleSchema = z.enum(clubRoles);
-export const clubMembershipStatusSchema = z.enum(clubMembershipStatuses);
+export const clubRoleSchema = z.enum(Object.values(ClubRole));
 
 const clubBodySchema = z.object({
     name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),

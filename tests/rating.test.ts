@@ -471,14 +471,14 @@ describe('Rating API Endpoints', () => {
         });
     });
 
-    describe('Wind tiebreak (umaTieBreakByWind = true)', () => {
+    describe('Wind tiebreak (umaTieBreak = WIND)', () => {
         const WIND_EVENT_ID = 2000;
         const WIND_GAME_RULES_ID = 100;
 
         function seedWindTieBreakGameRules() {
             const ts = new Date().toISOString();
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma, clubId, umaTieBreakByWind)
+                `INSERT OR IGNORE INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma, clubId, umaTieBreak)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(WIND_GAME_RULES_ID, 'Wind Tiebreak Rules', 4, '15,5,-5,-15', 30000, 1000, 0, null, 1, 'WIND');
             dbManager.db.prepare(

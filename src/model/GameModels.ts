@@ -1,3 +1,11 @@
+export const StartPlace = {
+    EAST: 'EAST',
+    SOUTH: 'SOUTH',
+    WEST: 'WEST',
+    NORTH: 'NORTH'
+} as const;
+
+export type StartPlace = typeof StartPlace[keyof typeof StartPlace];
 
 export interface Game {
     id: number;
@@ -16,7 +24,7 @@ export interface GamePlayer {
     telegramUsername: string | null;
     points: number;
     ratingChange: number;
-    startPlace: string | null;
+    startPlace: StartPlace | null;
     chomboCount: number;
 }
 
@@ -27,7 +35,7 @@ export interface GameWithPlayers extends Game {
 export interface PlayerData {
     userId: number;
     points: number;
-    startPlace?: string | undefined | null;
+    startPlace?: StartPlace | undefined | null;
     chomboCount?: number | undefined | null;
 }
 

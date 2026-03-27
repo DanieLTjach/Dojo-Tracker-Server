@@ -1,3 +1,9 @@
+export const UmaTieBreak = {
+    WIND: 'WIND',
+    DIVIDE: 'DIVIDE' 
+} as const;
+
+export type UmaTieBreak = typeof UmaTieBreak[keyof typeof UmaTieBreak];
 
 export interface GameRules {
     id: number;
@@ -9,7 +15,7 @@ export interface GameRules {
     startingRating: number;
     minimumGamesForRating: number;
     chomboPointsAfterUma: number | null;
-    umaTieBreakByWind: 'WIND' | 'DIVIDE';
+    umaTieBreak: UmaTieBreak;
 }
 
 export interface Event {

@@ -1,7 +1,8 @@
 import type { Statement } from 'better-sqlite3';
 import type { Game, GameFilters, GamePlayer } from '../model/GameModels.ts';
 import { dbManager } from '../db/dbInit.ts';
-import { normalizeRatingChange } from '../service/RatingService.ts';
+import { RATING_TO_POINTS_COEFFICIENT } from '../service/RatingService.ts';
+import { parseStartPlace } from '../util/EnumUtil.ts';
 
 export class GameRepository {
 
@@ -73,7 +74,7 @@ export class GameRepository {
         return gameDBEntity !== undefined ? gameFromDBEntity(gameDBEntity) : undefined;
     }
 
-    private findGamePlayersByGameIdStatement(): Statement<{ gameId: number }, GamePlayer> {
+    private findGamePlayersByGameIdStatement(): Statement<{ gameId: number }, GamePlayerDBEntity> {
         return dbManager.db.prepare(`
             SELECT u.name, u.telegramUsername, utg.*, urc.ratingChange
             FROM userToGame utg
@@ -85,7 +86,7 @@ export class GameRepository {
     }
 
     findGamePlayersByGameId(gameId: number): GamePlayer[] {
-        return this.findGamePlayersByGameIdStatement().all({ gameId }).map(normalizeRatingChange);
+        return this.findGamePlayersByGameIdStatement().all({ gameId }).map(gamePlayerFromDBEntity);
     }
 
     findGamePlayersByGameIds(gameIds: number[]): GamePlayer[] {
@@ -102,8 +103,8 @@ export class GameRepository {
             WHERE utg.gameId IN (${placeholders})
         `;
 
-        const statement: Statement<number[], GamePlayer> = dbManager.db.prepare(query);
-        return statement.all(...gameIds).map(normalizeRatingChange);
+        const statement: Statement<number[], GamePlayerDBEntity> = dbManager.db.prepare(query);
+        return statement.all(...gameIds).map(gamePlayerFromDBEntity);
     }
 
     findGames(filters: GameFilters): Game[] {
@@ -224,5 +225,24 @@ function gameFromDBEntity(dbEntity: GameDBEntity): Game {
         ...dbEntity,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt)
+    }
+}
+
+export interface GamePlayerDBEntity {
+    gameId: number;
+    userId: number;
+    name: string;
+    telegramUsername: string | null;
+    points: number;
+    ratingChange: number;
+    startPlace: string | null;
+    chomboCount: number;
+}
+
+function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
+    return {
+        ...dbEntity,
+        startPlace: dbEntity.startPlace !== null ? parseStartPlace(dbEntity.startPlace) : null,
+        ratingChange: dbEntity.ratingChange / RATING_TO_POINTS_COEFFICIENT
     }
 }

@@ -1,7 +1,7 @@
 import { booleanToInteger } from "../db/dbUtils.ts";
-import { UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
-import type { GameRules } from "../model/EventModels.ts";
-import type { GamePlayer, GameWithPlayers, PlayerData } from "../model/GameModels.ts";
+import { PleaseProvideStartPlaceForAllPlayersToResolveTie, UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
+import type { GameRules, UmaTieBreak } from "../model/EventModels.ts";
+import type { GameWithPlayers, PlayerData, StartPlace } from "../model/GameModels.ts";
 import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO, UserRatingWithPlace } from "../model/RatingModels.ts";
 import { RatingRepository } from "../repository/RatingRepository.ts";
 import { EventService } from "./EventService.ts";
@@ -23,7 +23,7 @@ export class RatingService {
             ...ur,
             place: standingsMap.get(ur.user.id) ?? null
         }));
-        result.sort((a, b) => 
+        result.sort((a, b) =>
             (booleanToInteger(b.minimumGamesPlayed) - booleanToInteger(a.minimumGamesPlayed))
             || (b.rating - a.rating)
             || (a.user.name.localeCompare(b.user.name))
@@ -59,8 +59,8 @@ export class RatingService {
         gameRules: GameRules
     ): void {
         const players = [...playersData];
-        players.sort((a, b) => b.points - a.points);
-        const umaWithTieBreaking = this.calculateUmaWithTieBreak(players, gameRules);
+        this.sortPlayersData(players, gameRules.umaTieBreak);
+        const uma = this.calculateUma(players, gameRules);
 
         for (const [index, playerData] of players.entries()) {
             const latestRatingChange = this.ratingRepository.findUserLatestRatingChangeBeforeDate(
@@ -70,7 +70,7 @@ export class RatingService {
 
             const gainedPoints = playerData.points - gameRules.startingPoints;
             const ratingChange = gainedPoints
-                + umaWithTieBreaking[index]! * RATING_TO_POINTS_COEFFICIENT
+                + uma[index]! * RATING_TO_POINTS_COEFFICIENT
                 - (gameRules.chomboPointsAfterUma ?? 0) * (playerData.chomboCount ?? 0);
             const newRating = currentRating + ratingChange;
 
@@ -112,45 +112,33 @@ export class RatingService {
         return userRatingChange;
     }
 
-    private calculateUmaWithTieBreak(players: PlayerData[], gameRules: GameRules): number[] {
-        if (gameRules.umaTieBreakByWind === 'WIND') {
-            return this.calculateUmaWithWindTieBreak(players, gameRules);
-        }
-        return this.calculateUmaWithAveraging(players.map(p => p.points), gameRules);
-    }
-
-    private calculateUmaWithWindTieBreak(players: PlayerData[], gameRules: GameRules): number[] {
-        const uma = this.resolveDynamicUma(players.map(p => p.points), gameRules);
-        const newUma = new Array(gameRules.numberOfPlayers);
-
-        const pointsToIndices = new Map<number, number[]>();
-        for (const [i, p] of players.entries()) {
-            if (!pointsToIndices.has(p.points)) pointsToIndices.set(p.points, []);
-            pointsToIndices.get(p.points)!.push(i);
-        }
-
-        for (const indices of pointsToIndices.values()) {
-            if (indices.length === 1) {
-                newUma[indices[0]!] = uma[indices[0]!];
-            } else {
-                const sorted = [...indices].sort((a, b) => {
-                    const wa = WIND_PRIORITY[players[a]!.startPlace ?? ''] ?? 99;
-                    const wb = WIND_PRIORITY[players[b]!.startPlace ?? ''] ?? 99;
-                    return wa - wb;
-                });
-                const umaSlice = indices.map(i => uma[i]!).sort((a, b) => b - a);
-                for (const [rank, idx] of sorted.entries()) {
-                    newUma[idx] = umaSlice[rank]!;
-                }
+    private sortPlayersData(playersData: PlayerData[], umaTieBreak: UmaTieBreak) {
+        if (umaTieBreak === 'WIND') {
+            if (new Set(playersData.map(p => p.points)).size < playersData.length) {
+                this.validatePlayersDataHasStartPlace(playersData);
             }
+            playersData.sort((a, b) => b.points - a.points || WIND_ORDER[a.startPlace!] - WIND_ORDER[b.startPlace!]);
+        } else {
+            playersData.sort((a, b) => b.points - a.points);
         }
-
-        return newUma;
     }
 
-    private calculateUmaWithAveraging(playerPoints: number[], gameRules: GameRules): number[] {
-        const uma = this.resolveDynamicUma(playerPoints, gameRules);
+    private validatePlayersDataHasStartPlace(playersData: PlayerData[]): void {
+        if (playersData.some(p => !p.startPlace)) {
+            throw new PleaseProvideStartPlaceForAllPlayersToResolveTie();
+        }
+    }
 
+    private calculateUma(players: PlayerData[], gameRules: GameRules): number[] {
+        const playerPoints = players.map(p => p.points);
+        let uma = this.resolveDynamicUma(playerPoints, gameRules);
+        if (gameRules.umaTieBreak === 'DIVIDE') {
+            uma = this.averageUma(uma, playerPoints, gameRules);
+        }
+        return uma;
+    }
+
+    private averageUma(uma: number[], playerPoints: number[], gameRules: GameRules): number[] {
         const pointsToIndices = new Map();
         for (const [index, points] of playerPoints.entries()) {
             if (!pointsToIndices.has(points)) {
@@ -229,7 +217,7 @@ export class RatingService {
 
 export const RATING_TO_POINTS_COEFFICIENT: number = 1000;
 
-const WIND_PRIORITY: Record<string, number> = {
+const WIND_ORDER: Record<StartPlace, number> = {
     EAST: 0, SOUTH: 1, WEST: 2, NORTH: 3
 };
 
@@ -243,11 +231,4 @@ function normalizeUserRatingChange(userRatingChange: UserRatingChangeShortDTO): 
 
 function normalizeRatingSnapshot(ratingSnapshot: RatingSnapshot): RatingSnapshot {
     return { ...ratingSnapshot, rating: ratingSnapshot.rating / RATING_TO_POINTS_COEFFICIENT };
-}
-
-export function normalizeRatingChange(gamePlayer: GamePlayer): GamePlayer {
-    return {
-        ...gamePlayer,
-        ratingChange: gamePlayer.ratingChange / RATING_TO_POINTS_COEFFICIENT
-    };
 }

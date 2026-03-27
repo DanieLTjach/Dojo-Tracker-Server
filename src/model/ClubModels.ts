@@ -1,8 +1,20 @@
-export const clubRoles = ['OWNER', 'MODERATOR', 'MEMBER'] as const;
-export type ClubRole = typeof clubRoles[number];
 
-export const clubMembershipStatuses = ['PENDING', 'ACTIVE', 'INACTIVE'] as const;
-export type ClubMembershipStatus = typeof clubMembershipStatuses[number];
+export const ClubRole = {
+    OWNER: 'OWNER',
+    MODERATOR: 'MODERATOR',
+    MEMBER: 'MEMBER'
+} as const;
+
+export type ClubRole = typeof ClubRole[keyof typeof ClubRole];
+
+export const ClubMembershipStatus = {
+    PENDING: 'PENDING',
+    ACTIVE: 'ACTIVE',
+    INACTIVE: 'INACTIVE'
+} as const;
+
+export type ClubMembershipStatus = typeof ClubMembershipStatus[keyof typeof ClubMembershipStatus];
+
 export interface Club {
     id: number;
     name: string;

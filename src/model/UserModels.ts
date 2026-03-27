@@ -1,6 +1,12 @@
 import type { Profile } from './ProfileModels.ts';
 
-export type UserStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE';
+export const UserStatus = {
+    PENDING: 'PENDING',
+    ACTIVE: 'ACTIVE',
+    INACTIVE: 'INACTIVE'
+} as const;
+
+export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
 
 export interface User {
     id: number;
