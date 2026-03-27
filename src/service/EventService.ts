@@ -179,7 +179,7 @@ export class EventService {
         modifiedBy: number,
         modifiedAt: Date
     ): void {
-        if (existingEvent?.isCurrentRating && existingEvent.clubId !== null && !newIsCurrentRating) {
+        if (existingEvent?.isCurrentRating && existingEvent.clubId !== null) {
             this.clubRepository.updateCurrentRatingEvent(existingEvent.clubId, null, modifiedAt, modifiedBy);
         }
 
