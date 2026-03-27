@@ -34,7 +34,8 @@ export class EventController {
 
     deleteEvent(req: Request, res: Response) {
         const { params: { eventId } } = eventDeleteSchema.parse(req);
-        this.eventService.deleteEvent(eventId);
+        const userId = req.user!.userId;
+        this.eventService.deleteEvent(eventId, userId);
         return res.status(StatusCodes.NO_CONTENT).send();
     }
 }

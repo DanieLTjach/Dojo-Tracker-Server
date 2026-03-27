@@ -20,3 +20,15 @@ export class CannotDeleteEventWithGamesError extends BadRequestError {
         );
     }
 }
+
+export class CurrentRatingEventMustBeClubScopedError extends BadRequestError {
+    constructor() {
+        super('Поточний рейтинговий сезон можна встановити лише для клубної події', 'currentRatingEventMustBeClubScoped');
+    }
+}
+
+export class CurrentRatingEventMustBeSeasonError extends BadRequestError {
+    constructor() {
+        super('Поточним рейтинговим сезоном може бути лише подія типу SEASON', 'currentRatingEventMustBeSeason');
+    }
+}

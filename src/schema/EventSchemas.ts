@@ -17,6 +17,7 @@ const eventSchema = z.object({
     name: z.string().min(1, "Name is required").max(100, "Name must be 100 characters or less"),
     description: z.string().max(500, "Description must be 500 characters or less").nullish(),
     type: eventTypeEnum,
+    isCurrentRating: z.boolean().nullish(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int("gameRulesId must be an integer"),

@@ -8,6 +8,7 @@ export class EventRepository {
         return dbManager.db.prepare(`
             SELECT
                 e.*,
+                CASE WHEN c.currentRatingEventId = e.id THEN 1 ELSE 0 END as isCurrentRating,
 
                 gr.id as gr_id,
                 gr.name as gr_name,
@@ -21,6 +22,7 @@ export class EventRepository {
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
+            LEFT JOIN club c ON e.clubId = c.id
             ORDER BY e.createdAt DESC`
         );
     }
@@ -33,6 +35,7 @@ export class EventRepository {
         return dbManager.db.prepare(`
             SELECT
                 e.*,
+                CASE WHEN c.currentRatingEventId = e.id THEN 1 ELSE 0 END as isCurrentRating,
 
                 gr.id as gr_id,
                 gr.name as gr_name,
@@ -46,6 +49,7 @@ export class EventRepository {
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
+            LEFT JOIN club c ON e.clubId = c.id
             WHERE e.clubId = :clubId OR e.clubId IS NULL
             ORDER BY e.createdAt DESC`
         );
@@ -59,6 +63,7 @@ export class EventRepository {
         return dbManager.db.prepare(`
             SELECT
                 e.*,
+                CASE WHEN c.currentRatingEventId = e.id THEN 1 ELSE 0 END as isCurrentRating,
 
                 gr.id as gr_id,
                 gr.name as gr_name,
@@ -72,6 +77,7 @@ export class EventRepository {
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
+            LEFT JOIN club c ON e.clubId = c.id
             WHERE e.id = :id`
         );
     }
@@ -207,6 +213,7 @@ interface EventWithGameRulesDBEntity {
     type: string;
     gameRules: number;
     clubId: number | null;
+    isCurrentRating: number;
     dateFrom: string | null;
     dateTo: string | null;
     createdAt: string;
@@ -231,6 +238,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         description: dbEntity.description,
         type: dbEntity.type,
         clubId: dbEntity.clubId,
+        isCurrentRating: Boolean(dbEntity.isCurrentRating),
         gameRules: {
             id: dbEntity.gr_id,
             name: dbEntity.gr_name,

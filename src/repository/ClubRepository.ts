@@ -16,6 +16,7 @@ export class ClubRepository {
                 isActive,
                 ratingChatId,
                 ratingTopicId,
+                currentRatingEventId,
                 createdAt,
                 modifiedAt,
                 modifiedBy
@@ -40,6 +41,7 @@ export class ClubRepository {
                 isActive,
                 ratingChatId,
                 ratingTopicId,
+                currentRatingEventId,
                 createdAt,
                 modifiedAt,
                 modifiedBy
@@ -65,6 +67,7 @@ export class ClubRepository {
                 isActive,
                 ratingChatId,
                 ratingTopicId,
+                currentRatingEventId,
                 createdAt,
                 modifiedAt,
                 modifiedBy
@@ -157,6 +160,30 @@ export class ClubRepository {
         this.deleteClubStatement().run({ id });
     }
 
+    private updateCurrentRatingEventStatement(): Statement<{
+        clubId: number;
+        currentRatingEventId: number | null;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE club
+            SET currentRatingEventId = :currentRatingEventId,
+                modifiedAt = :modifiedAt,
+                modifiedBy = :modifiedBy
+            WHERE id = :clubId
+        `);
+    }
+
+    updateCurrentRatingEvent(clubId: number, currentRatingEventId: number | null, modifiedAt: Date, modifiedBy: number): void {
+        this.updateCurrentRatingEventStatement().run({
+            clubId,
+            currentRatingEventId,
+            modifiedAt: modifiedAt.toISOString(),
+            modifiedBy
+        });
+    }
+
     private clubExistsStatement(): Statement<{ id: number }, { found: number }> {
         return dbManager.db.prepare(`
             SELECT 1 as found
@@ -208,6 +235,7 @@ interface ClubDBEntity {
     isActive: number;
     ratingChatId: string | null;
     ratingTopicId: string | null;
+    currentRatingEventId: number | null;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
@@ -224,6 +252,7 @@ function clubFromDBEntity(dbEntity: ClubDBEntity): Club {
         isActive: Boolean(dbEntity.isActive),
         ratingChatId: dbEntity.ratingChatId,
         ratingTopicId: dbEntity.ratingTopicId,
+        currentRatingEventId: dbEntity.currentRatingEventId,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy

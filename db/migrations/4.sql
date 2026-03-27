@@ -51,6 +51,7 @@ WHERE id != 0;
 
 ALTER TABLE event ADD COLUMN clubId INTEGER REFERENCES club(id);
 UPDATE event SET clubId = 1;
+ALTER TABLE club ADD COLUMN currentRatingEventId INTEGER REFERENCES event(id);
 
 ALTER TABLE gameRules ADD COLUMN clubId INTEGER REFERENCES club(id);
 UPDATE gameRules SET clubId = 1;

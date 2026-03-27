@@ -17,6 +17,7 @@ export interface Event {
     description: string | null;
     type: string;
     clubId: number | null;
+    isCurrentRating: boolean;
     gameRules: GameRules;
     dateFrom: Date | null;
     dateTo: Date | null;

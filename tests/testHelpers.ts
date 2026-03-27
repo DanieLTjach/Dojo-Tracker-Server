@@ -70,5 +70,6 @@ export function createTestEvent(): void {
  * Deletes an event by id (useful for cleaning up test-created events).
  */
 export function deleteEventById(eventId: number): void {
+    dbManager.db.prepare('UPDATE club SET currentRatingEventId = NULL WHERE currentRatingEventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
 }

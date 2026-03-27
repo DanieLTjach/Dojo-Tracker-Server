@@ -76,6 +76,7 @@ describe('Database Migrations', () => {
       isActive: 1,
       ratingChatId: null,
       ratingTopicId: null,
+      currentRatingEventId: null,
       createdAt: '2026-01-01T00:00:00.000Z',
       modifiedAt: '2026-01-01T00:00:00.000Z',
       modifiedBy: 0,
@@ -100,6 +101,7 @@ describe('Database Migrations', () => {
       { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
       { name: 'modifiedAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
       { name: 'modifiedBy', type: 'INTEGER', notnull: 1, dflt_value: null },
+      { name: 'currentRatingEventId', type: 'INTEGER', notnull: 0, dflt_value: null },
     ]);
 
     const roles = db.prepare('SELECT role FROM clubRole ORDER BY role').all() as Array<{ role: string }>;
@@ -160,10 +162,39 @@ describe('Database Migrations', () => {
     const gameRulesClubStats = db.prepare('SELECT COUNT(*) AS totalCount, COUNT(clubId) AS linkedCount, MIN(clubId) AS minClubId, MAX(clubId) AS maxClubId FROM gameRules').get() as Record<string, number>;
     expect(gameRulesClubStats).toEqual({ totalCount: 4, linkedCount: 4, minClubId: 1, maxClubId: 1 });
 
-    const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; notnull: number }>;
+    const clubColumnsAfterMigration = db.prepare('PRAGMA table_info(club)').all() as Array<{ name: string; notnull: number; type?: string; dflt_value?: string | null }>;
+    const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; notnull: number; type?: string; dflt_value?: string | null }>;
     const gameRulesColumns = db.prepare('PRAGMA table_info(gameRules)').all() as Array<{ name: string; notnull: number }>;
     expect(eventColumns.find(column => column.name === 'clubId')).toMatchObject({ name: 'clubId', notnull: 0 });
+    expect(clubColumnsAfterMigration.find(column => column.name === 'currentRatingEventId')).toMatchObject({
+      name: 'currentRatingEventId',
+      type: 'INTEGER',
+      notnull: 0,
+      dflt_value: null,
+    });
     expect(gameRulesColumns.find(column => column.name === 'clubId')).toMatchObject({ name: 'clubId', notnull: 0 });
+
+    db.prepare(`
+      INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
+      VALUES (2, 'Test Club 2', NULL, NULL, NULL, NULL, 1, NULL, NULL, '2026-03-01T00:00:00.000Z', '2026-03-01T00:00:00.000Z', 0)
+    `).run();
+
+    db.prepare(`
+      INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
+      VALUES
+        (9001, 'Current Season 1', NULL, 'SEASON', 1, 1, NULL, NULL, '2026-03-01T00:00:00.000Z', '2026-03-01T00:00:00.000Z', 0),
+        (9002, 'Regular Season', NULL, 'SEASON', 1, 1, NULL, NULL, '2026-03-02T00:00:00.000Z', '2026-03-02T00:00:00.000Z', 0),
+        (9003, 'Other Club Current Season', NULL, 'SEASON', 1, 2, NULL, NULL, '2026-03-03T00:00:00.000Z', '2026-03-03T00:00:00.000Z', 0)
+    `).run();
+
+    db.prepare('UPDATE club SET currentRatingEventId = ? WHERE id = ?').run(9001, 1);
+    db.prepare('UPDATE club SET currentRatingEventId = ? WHERE id = ?').run(9003, 2);
+
+    const currentRatingEventLinks = db.prepare('SELECT id, currentRatingEventId FROM club ORDER BY id').all() as Array<Record<string, unknown>>;
+    expect(currentRatingEventLinks).toEqual([
+      { id: 1, currentRatingEventId: 9001 },
+      { id: 2, currentRatingEventId: 9003 }
+    ]);
 
     const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
     expect(foreignKeyViolations).toEqual([]);
