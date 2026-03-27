@@ -1,7 +1,7 @@
 import { booleanToInteger } from "../db/dbUtils.ts";
-import { UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
-import type { GameRules } from "../model/EventModels.ts";
-import type { GamePlayer, GameWithPlayers, PlayerData } from "../model/GameModels.ts";
+import { PleaseProvideStartPlaceForAllPlayersToResolveTie, UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
+import type { GameRules, UmaTieBreak } from "../model/EventModels.ts";
+import type { GameWithPlayers, PlayerData, StartPlace } from "../model/GameModels.ts";
 import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO, UserRatingWithPlace } from "../model/RatingModels.ts";
 import { RatingRepository } from "../repository/RatingRepository.ts";
 import { EventService } from "./EventService.ts";
@@ -23,7 +23,7 @@ export class RatingService {
             ...ur,
             place: standingsMap.get(ur.user.id) ?? null
         }));
-        result.sort((a, b) => 
+        result.sort((a, b) =>
             (booleanToInteger(b.minimumGamesPlayed) - booleanToInteger(a.minimumGamesPlayed))
             || (b.rating - a.rating)
             || (a.user.name.localeCompare(b.user.name))
@@ -59,8 +59,8 @@ export class RatingService {
         gameRules: GameRules
     ): void {
         const players = [...playersData];
-        players.sort((a, b) => b.points - a.points);
-        const umaWithTieBreaking = this.calculateUmaWithAveraging(players.map(p => p.points), gameRules);
+        this.sortPlayersData(players, gameRules.umaTieBreak);
+        const uma = this.calculateUma(players, gameRules);
 
         for (const [index, playerData] of players.entries()) {
             const latestRatingChange = this.ratingRepository.findUserLatestRatingChangeBeforeDate(
@@ -70,7 +70,7 @@ export class RatingService {
 
             const gainedPoints = playerData.points - gameRules.startingPoints;
             const ratingChange = gainedPoints
-                + umaWithTieBreaking[index]! * RATING_TO_POINTS_COEFFICIENT
+                + uma[index]! * RATING_TO_POINTS_COEFFICIENT
                 - (gameRules.chomboPointsAfterUma ?? 0) * (playerData.chomboCount ?? 0);
             const newRating = currentRating + ratingChange;
 
@@ -112,9 +112,33 @@ export class RatingService {
         return userRatingChange;
     }
 
-    private calculateUmaWithAveraging(playerPoints: number[], gameRules: GameRules): number[] {
-        const uma = this.resolveDynamicUma(playerPoints, gameRules);
+    private sortPlayersData(playersData: PlayerData[], umaTieBreak: UmaTieBreak) {
+        if (umaTieBreak === 'WIND') {
+            if (new Set(playersData.map(p => p.points)).size < playersData.length) {
+                this.validatePlayersDataHasStartPlace(playersData);
+            }
+            playersData.sort((a, b) => b.points - a.points || WIND_ORDER[a.startPlace!] - WIND_ORDER[b.startPlace!]);
+        } else {
+            playersData.sort((a, b) => b.points - a.points);
+        }
+    }
 
+    private validatePlayersDataHasStartPlace(playersData: PlayerData[]): void {
+        if (playersData.some(p => !p.startPlace)) {
+            throw new PleaseProvideStartPlaceForAllPlayersToResolveTie();
+        }
+    }
+
+    private calculateUma(players: PlayerData[], gameRules: GameRules): number[] {
+        const playerPoints = players.map(p => p.points);
+        let uma = this.resolveDynamicUma(playerPoints, gameRules);
+        if (gameRules.umaTieBreak === 'DIVIDE') {
+            uma = this.averageUma(uma, playerPoints, gameRules);
+        }
+        return uma;
+    }
+
+    private averageUma(uma: number[], playerPoints: number[], gameRules: GameRules): number[] {
         const pointsToIndices = new Map();
         for (const [index, points] of playerPoints.entries()) {
             if (!pointsToIndices.has(points)) {
@@ -193,6 +217,10 @@ export class RatingService {
 
 export const RATING_TO_POINTS_COEFFICIENT: number = 1000;
 
+const WIND_ORDER: Record<StartPlace, number> = {
+    EAST: 0, SOUTH: 1, WEST: 2, NORTH: 3
+};
+
 function normalizeUserRating(userRating: UserRating): UserRating {
     return { ...userRating, rating: userRating.rating / RATING_TO_POINTS_COEFFICIENT };
 }
@@ -203,11 +231,4 @@ function normalizeUserRatingChange(userRatingChange: UserRatingChangeShortDTO): 
 
 function normalizeRatingSnapshot(ratingSnapshot: RatingSnapshot): RatingSnapshot {
     return { ...ratingSnapshot, rating: ratingSnapshot.rating / RATING_TO_POINTS_COEFFICIENT };
-}
-
-export function normalizeRatingChange(gamePlayer: GamePlayer): GamePlayer {
-    return {
-        ...gamePlayer,
-        ratingChange: gamePlayer.ratingChange / RATING_TO_POINTS_COEFFICIENT
-    };
 }

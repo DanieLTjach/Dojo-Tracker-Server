@@ -2,6 +2,7 @@ import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { GameRules } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
+import { parseUmaTieBreak } from '../util/EnumUtil.ts';
 
 export class GameRulesRepository {
     private findAllGameRulesStatement(): Statement<[], GameRulesDBEntity> {
@@ -15,7 +16,8 @@ export class GameRulesRepository {
                 startingPoints,
                 startingRating,
                 minimumGamesForRating,
-                chomboPointsAfterUma
+                chomboPointsAfterUma,
+                umaTieBreak
             FROM gameRules
             ORDER BY id ASC`
         );
@@ -36,7 +38,8 @@ export class GameRulesRepository {
                 startingPoints,
                 startingRating,
                 minimumGamesForRating,
-                chomboPointsAfterUma
+                chomboPointsAfterUma,
+                umaTieBreak
             FROM gameRules
             WHERE clubId = :clubId OR clubId IS NULL
             ORDER BY id ASC`
@@ -58,7 +61,8 @@ export class GameRulesRepository {
                 startingPoints,
                 startingRating,
                 minimumGamesForRating,
-                chomboPointsAfterUma
+                chomboPointsAfterUma,
+                umaTieBreak
             FROM gameRules
             WHERE id = :id`
         );
@@ -80,6 +84,7 @@ interface GameRulesDBEntity {
     startingRating: number;
     minimumGamesForRating: number;
     chomboPointsAfterUma: number | null;
+    umaTieBreak: string;
 }
 
 function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
@@ -92,6 +97,7 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         startingPoints: dbEntity.startingPoints,
         startingRating: dbEntity.startingRating,
         minimumGamesForRating: dbEntity.minimumGamesForRating,
-        chomboPointsAfterUma: dbEntity.chomboPointsAfterUma
+        chomboPointsAfterUma: dbEntity.chomboPointsAfterUma,
+        umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak)
     };
 }

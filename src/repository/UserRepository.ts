@@ -2,6 +2,7 @@ import type { Statement } from 'better-sqlite3';
 import type { User, UserStatus } from '../model/UserModels.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
+import { parseUserStatus } from '../util/EnumUtil.ts';
 
 export class UserRepository {
 
@@ -221,7 +222,7 @@ interface UserWithProfileDBEntity {
     telegramId: number | null;
     isAdmin: number;
     isActive: number;
-    status: UserStatus;
+    status: string;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: string;
@@ -239,7 +240,7 @@ function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
         telegramId: dbEntity.telegramId,
         isAdmin: Boolean(dbEntity.isAdmin),
         isActive: Boolean(dbEntity.isActive),
-        status: dbEntity.status,
+        status: parseUserStatus(dbEntity.status),
         profile: dbEntity.p_hideProfile !== null ? {
             userId: dbEntity.id,
             firstNameEn: dbEntity.p_firstNameEn,

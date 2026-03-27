@@ -55,3 +55,5 @@ ALTER TABLE club ADD COLUMN currentRatingEventId INTEGER REFERENCES event(id);
 
 ALTER TABLE gameRules ADD COLUMN clubId INTEGER REFERENCES club(id);
 UPDATE gameRules SET clubId = 1;
+
+ALTER TABLE gameRules ADD COLUMN umaTieBreak TEXT NOT NULL DEFAULT 'DIVIDE';

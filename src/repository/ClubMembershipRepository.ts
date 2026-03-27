@@ -1,6 +1,7 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { ClubMembership, ClubMembershipStatus, ClubRole } from '../model/ClubModels.ts';
+import { parseClubMembershipStatus, parseClubRole } from '../util/EnumUtil.ts';
 
 export class ClubMembershipRepository {
     private findMembersByClubIdStatement(): Statement<{ clubId: number }, ClubMembershipDBEntity> {
@@ -176,7 +177,7 @@ export class ClubMembershipRepository {
         this.deleteMembershipStatement().run({ clubId, userId });
     }
 
-    private getUserClubRoleStatement(): Statement<{ clubId: number; userId: number; status: ClubMembershipStatus }, { role: ClubRole }> {
+    private getUserClubRoleStatement(): Statement<{ clubId: number; userId: number; status: ClubMembershipStatus }, { role: string }> {
         return dbManager.db.prepare(`
             SELECT role
             FROM clubMembership
@@ -188,7 +189,7 @@ export class ClubMembershipRepository {
 
     getUserClubRole(clubId: number, userId: number): ClubRole | undefined {
         const result = this.getUserClubRoleStatement().get({ clubId, userId, status: 'ACTIVE' });
-        return result?.role;
+        return result !== undefined? parseClubRole(result.role) : undefined;
     }
 
     private findMembershipsByUserIdAndStatusStatement(): Statement<{ userId: number; status: ClubMembershipStatus }, ClubMembershipDBEntity> {
@@ -258,8 +259,8 @@ interface ClubMembershipDBEntity {
     clubId: number;
     userId: number;
     userName: string;
-    role: ClubRole;
-    status: ClubMembershipStatus;
+    role: string;
+    status: string;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
@@ -270,8 +271,8 @@ function clubMembershipFromDBEntity(dbEntity: ClubMembershipDBEntity): ClubMembe
         clubId: dbEntity.clubId,
         userId: dbEntity.userId,
         userName: dbEntity.userName,
-        role: dbEntity.role,
-        status: dbEntity.status,
+        role: parseClubRole(dbEntity.role),
+        status: parseClubMembershipStatus(dbEntity.status),
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy
