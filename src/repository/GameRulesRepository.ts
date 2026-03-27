@@ -15,7 +15,8 @@ export class GameRulesRepository {
                 startingPoints,
                 startingRating,
                 minimumGamesForRating,
-                chomboPointsAfterUma
+                chomboPointsAfterUma,
+                umaTieBreakByWind
             FROM gameRules
             ORDER BY id ASC`
         );
@@ -36,7 +37,8 @@ export class GameRulesRepository {
                 startingPoints,
                 startingRating,
                 minimumGamesForRating,
-                chomboPointsAfterUma
+                chomboPointsAfterUma,
+                umaTieBreakByWind
             FROM gameRules
             WHERE clubId = :clubId OR clubId IS NULL
             ORDER BY id ASC`
@@ -58,7 +60,8 @@ export class GameRulesRepository {
                 startingPoints,
                 startingRating,
                 minimumGamesForRating,
-                chomboPointsAfterUma
+                chomboPointsAfterUma,
+                umaTieBreakByWind
             FROM gameRules
             WHERE id = :id`
         );
@@ -80,6 +83,7 @@ interface GameRulesDBEntity {
     startingRating: number;
     minimumGamesForRating: number;
     chomboPointsAfterUma: number | null;
+    umaTieBreakByWind: number;
 }
 
 function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
@@ -92,6 +96,7 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         startingPoints: dbEntity.startingPoints,
         startingRating: dbEntity.startingRating,
         minimumGamesForRating: dbEntity.minimumGamesForRating,
-        chomboPointsAfterUma: dbEntity.chomboPointsAfterUma
+        chomboPointsAfterUma: dbEntity.chomboPointsAfterUma,
+        umaTieBreakByWind: Boolean(dbEntity.umaTieBreakByWind)
     };
 }

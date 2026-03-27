@@ -60,7 +60,7 @@ export class RatingService {
     ): void {
         const players = [...playersData];
         players.sort((a, b) => b.points - a.points);
-        const umaWithTieBreaking = this.calculateUmaWithAveraging(players.map(p => p.points), gameRules);
+        const umaWithTieBreaking = this.calculateUmaWithTieBreak(players, gameRules);
 
         for (const [index, playerData] of players.entries()) {
             const latestRatingChange = this.ratingRepository.findUserLatestRatingChangeBeforeDate(
@@ -110,6 +110,42 @@ export class RatingService {
             throw new UserRatingChangeInGameNotFound(userId, gameId);
         }
         return userRatingChange;
+    }
+
+    private calculateUmaWithTieBreak(players: PlayerData[], gameRules: GameRules): number[] {
+        if (gameRules.umaTieBreakByWind) {
+            return this.calculateUmaWithWindTieBreak(players, gameRules);
+        }
+        return this.calculateUmaWithAveraging(players.map(p => p.points), gameRules);
+    }
+
+    private calculateUmaWithWindTieBreak(players: PlayerData[], gameRules: GameRules): number[] {
+        const uma = this.resolveDynamicUma(players.map(p => p.points), gameRules);
+        const newUma = new Array(gameRules.numberOfPlayers);
+
+        const pointsToIndices = new Map<number, number[]>();
+        for (const [i, p] of players.entries()) {
+            if (!pointsToIndices.has(p.points)) pointsToIndices.set(p.points, []);
+            pointsToIndices.get(p.points)!.push(i);
+        }
+
+        for (const indices of pointsToIndices.values()) {
+            if (indices.length === 1) {
+                newUma[indices[0]!] = uma[indices[0]!];
+            } else {
+                const sorted = [...indices].sort((a, b) => {
+                    const wa = WIND_PRIORITY[players[a]!.startPlace ?? ''] ?? 99;
+                    const wb = WIND_PRIORITY[players[b]!.startPlace ?? ''] ?? 99;
+                    return wa - wb;
+                });
+                const umaSlice = indices.map(i => uma[i]!).sort((a, b) => b - a);
+                for (const [rank, idx] of sorted.entries()) {
+                    newUma[idx] = umaSlice[rank]!;
+                }
+            }
+        }
+
+        return newUma;
     }
 
     private calculateUmaWithAveraging(playerPoints: number[], gameRules: GameRules): number[] {
@@ -192,6 +228,10 @@ export class RatingService {
 }
 
 export const RATING_TO_POINTS_COEFFICIENT: number = 1000;
+
+const WIND_PRIORITY: Record<string, number> = {
+    EAST: 0, SOUTH: 1, WEST: 2, NORTH: 3
+};
 
 function normalizeUserRating(userRating: UserRating): UserRating {
     return { ...userRating, rating: userRating.rating / RATING_TO_POINTS_COEFFICIENT };

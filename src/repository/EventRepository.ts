@@ -18,6 +18,7 @@ export class EventRepository {
                 gr.startingRating as gr_startingRating,
                 gr.minimumGamesForRating as gr_minimumGamesForRating,
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
+                gr.umaTieBreakByWind as gr_umaTieBreakByWind,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
@@ -43,6 +44,7 @@ export class EventRepository {
                 gr.startingRating as gr_startingRating,
                 gr.minimumGamesForRating as gr_minimumGamesForRating,
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
+                gr.umaTieBreakByWind as gr_umaTieBreakByWind,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
@@ -69,6 +71,7 @@ export class EventRepository {
                 gr.startingRating as gr_startingRating,
                 gr.minimumGamesForRating as gr_minimumGamesForRating,
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
+                gr.umaTieBreakByWind as gr_umaTieBreakByWind,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
@@ -221,6 +224,7 @@ interface EventWithGameRulesDBEntity {
     gr_startingRating: number;
     gr_minimumGamesForRating: number;
     gr_chomboPointsAfterUma: number | null;
+    gr_umaTieBreakByWind: number;
     gameCount: number;
 }
 
@@ -240,7 +244,8 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             startingPoints: dbEntity.gr_startingPoints,
             startingRating: dbEntity.gr_startingRating,
             minimumGamesForRating: dbEntity.gr_minimumGamesForRating,
-            chomboPointsAfterUma: dbEntity.gr_chomboPointsAfterUma
+            chomboPointsAfterUma: dbEntity.gr_chomboPointsAfterUma,
+            umaTieBreakByWind: Boolean(dbEntity.gr_umaTieBreakByWind)
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,

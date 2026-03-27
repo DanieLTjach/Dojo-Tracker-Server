@@ -9,6 +9,7 @@ export interface GameRules {
     startingRating: number;
     minimumGamesForRating: number;
     chomboPointsAfterUma: number | null;
+    umaTieBreakByWind: boolean;
 }
 
 export interface Event {

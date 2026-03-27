@@ -470,4 +470,117 @@ describe('Rating API Endpoints', () => {
             }
         });
     });
+
+    describe('Wind tiebreak (umaTieBreakByWind = true)', () => {
+        const WIND_EVENT_ID = 2000;
+        const WIND_GAME_RULES_ID = 100;
+
+        function seedWindTieBreakGameRules() {
+            const ts = new Date().toISOString();
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma, clubId, umaTieBreakByWind)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(WIND_GAME_RULES_ID, 'Wind Tiebreak Rules', 4, '15,5,-5,-15', 30000, 1000, 0, null, 1, 1);
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO event (id, name, type, gameRules, clubId, dateFrom, dateTo, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(WIND_EVENT_ID, 'Wind Tiebreak Season', 'SEASON', WIND_GAME_RULES_ID, 1,
+                '2024-01-01T00:00:00.000Z', '2026-12-31T23:59:59.999Z', 0, ts, ts);
+        }
+
+        async function createWindGame(authHeader: string, playersData: any[]): Promise<number> {
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', authHeader)
+                .send({ eventId: WIND_EVENT_ID, playersData });
+            expect(response.status).toBe(201);
+            return response.body.id;
+        }
+
+        async function createWindGameSetup(points: number[]) {
+            seedWindTieBreakGameRules();
+            const user1Id = await createTestUser('WPlayer1', 11);
+            const user2Id = await createTestUser('WPlayer2', 12);
+            const user3Id = await createTestUser('WPlayer3', 13);
+            const user4Id = await createTestUser('WPlayer4', 14);
+            seedClubMembership(1, user1Id);
+            seedClubMembership(1, user2Id);
+            seedClubMembership(1, user3Id);
+            seedClubMembership(1, user4Id);
+            const user1AuthHeader = createAuthHeader(user1Id);
+            const gameId = await createWindGame(user1AuthHeader, [
+                { userId: user1Id, points: points[0], startPlace: 'EAST' },
+                { userId: user2Id, points: points[1], startPlace: 'SOUTH' },
+                { userId: user3Id, points: points[2], startPlace: 'WEST' },
+                { userId: user4Id, points: points[3], startPlace: 'NORTH' }
+            ]);
+            return { user1Id, user2Id, user3Id, user4Id, user1AuthHeader, gameId };
+        }
+
+        test('No tie - wind tiebreak has no effect', async () => {
+            const { gameId, user1AuthHeader } = await createWindGameSetup([40000, 35000, 25000, 20000]);
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            // uma [15, 5, -5, -15], no ties
+            const expectedRatingChange: Record<number, number> = {
+                1: 25, // 10 + 15
+                2: 10, // 5 + 5
+                3: -10, // -5 - 5
+                4: -25  // -10 - 15
+            };
+            for (const player of response.body.players) {
+                expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
+            }
+        });
+
+        test('Two players tied - East beats South', async () => {
+            // User1 (EAST) and User2 (SOUTH) are tied at 34000
+            // uma positions 0 and 1 = [15, 5]; East gets 15, South gets 5 (no averaging)
+            const { gameId, user1AuthHeader, user1Id, user2Id, user3Id, user4Id } =
+                await createWindGameSetup([34000, 34000, 28000, 24000]);
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            // uma [15, 5, -5, -15]; tied at positions 0&1 → East=15, South=5
+            const expectedRatingChange: Record<number, number> = {
+                [user1Id]: 19, // 4 + 15  (EAST)
+                [user2Id]: 9,  // 4 + 5   (SOUTH)
+                [user3Id]: -7, // -2 - 5
+                [user4Id]: -21 // -6 - 15
+            };
+            for (const player of response.body.players) {
+                expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
+            }
+        });
+
+        test('Three players tied - distributed by wind priority', async () => {
+            // User1 (EAST), User2 (SOUTH), User3 (WEST) all tied at 32000
+            // uma positions 0,1,2 = [15, 5, -5]; East=15, South=5, West=-5
+            const { gameId, user1AuthHeader, user1Id, user2Id, user3Id, user4Id } =
+                await createWindGameSetup([32000, 32000, 32000, 24000]);
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            // uma [15, 5, -5, -15]; tied at positions 0,1,2 → East=15, South=5, West=-5
+            const expectedRatingChange: Record<number, number> = {
+                [user1Id]: 17,  // 2 + 15  (EAST)
+                [user2Id]: 7,   // 2 + 5   (SOUTH)
+                [user3Id]: -3,  // 2 - 5   (WEST)
+                [user4Id]: -21  // -6 - 15
+            };
+            for (const player of response.body.players) {
+                expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
+            }
+        });
+    });
 });
