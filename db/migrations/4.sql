@@ -54,3 +54,5 @@ UPDATE event SET clubId = 1;
 
 ALTER TABLE gameRules ADD COLUMN clubId INTEGER REFERENCES club(id);
 UPDATE gameRules SET clubId = 1;
+
+ALTER TABLE gameRules ADD COLUMN umaTieBreakByWind BOOL NOT NULL DEFAULT false;

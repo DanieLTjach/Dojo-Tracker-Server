@@ -1,1 +1,0 @@
-ALTER TABLE gameRules ADD COLUMN umaTieBreakByWind BOOL NOT NULL DEFAULT false;
