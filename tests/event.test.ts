@@ -448,6 +448,35 @@ describe('Event API Endpoints', () => {
             expect(club.currentRatingEventId).toBeNull();
         });
 
+        test('should clear old club pointer when current rating event moves to another club', async () => {
+            const ts = new Date().toISOString();
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO club (id, name, isActive, createdAt, modifiedAt, modifiedBy)
+                 VALUES (2, 'Club 2', 1, ?, ?, 0)`
+            ).run(ts, ts);
+
+            // Event starts as current rating of club 1
+            dbManager.db.prepare('UPDATE club SET currentRatingEventId = ? WHERE id = ?').run(baseEventId, 1);
+
+            // Move event to club 2, keep isCurrentRating = true
+            const response = await request(app)
+                .put(`/api/events/${baseEventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ ...updatePayload, clubId: 2, type: 'SEASON', isCurrentRating: true });
+
+            const club1 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+            const club2 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(2) as { currentRatingEventId: number | null };
+
+            dbManager.db.prepare('UPDATE club SET currentRatingEventId = NULL WHERE id = ?').run(2);
+            dbManager.db.prepare('UPDATE event SET clubId = 1 WHERE id = ?').run(baseEventId);
+            dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(2);
+
+            expect(response.status).toBe(200);
+            expect(response.body.isCurrentRating).toBe(true);
+            expect(club1.currentRatingEventId).toBeNull();
+            expect(club2.currentRatingEventId).toBe(baseEventId);
+        });
+
         test('should reject when not authenticated', async () => {
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
