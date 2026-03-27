@@ -480,7 +480,7 @@ describe('Rating API Endpoints', () => {
             dbManager.db.prepare(
                 `INSERT OR IGNORE INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma, clubId, umaTieBreakByWind)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(WIND_GAME_RULES_ID, 'Wind Tiebreak Rules', 4, '15,5,-5,-15', 30000, 1000, 0, null, 1, 1);
+            ).run(WIND_GAME_RULES_ID, 'Wind Tiebreak Rules', 4, '15,5,-5,-15', 30000, 1000, 0, null, 1, 'WIND');
             dbManager.db.prepare(
                 `INSERT OR IGNORE INTO event (id, name, type, gameRules, clubId, dateFrom, dateTo, modifiedBy, createdAt, modifiedAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`

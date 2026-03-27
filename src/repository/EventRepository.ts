@@ -224,7 +224,7 @@ interface EventWithGameRulesDBEntity {
     gr_startingRating: number;
     gr_minimumGamesForRating: number;
     gr_chomboPointsAfterUma: number | null;
-    gr_umaTieBreakByWind: number;
+    gr_umaTieBreakByWind: string;
     gameCount: number;
 }
 
@@ -245,7 +245,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             startingRating: dbEntity.gr_startingRating,
             minimumGamesForRating: dbEntity.gr_minimumGamesForRating,
             chomboPointsAfterUma: dbEntity.gr_chomboPointsAfterUma,
-            umaTieBreakByWind: Boolean(dbEntity.gr_umaTieBreakByWind)
+            umaTieBreakByWind: dbEntity.gr_umaTieBreakByWind as 'WIND' | 'DIVIDE'
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,

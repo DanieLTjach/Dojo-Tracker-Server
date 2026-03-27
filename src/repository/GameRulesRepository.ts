@@ -83,7 +83,7 @@ interface GameRulesDBEntity {
     startingRating: number;
     minimumGamesForRating: number;
     chomboPointsAfterUma: number | null;
-    umaTieBreakByWind: number;
+    umaTieBreakByWind: string;
 }
 
 function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
@@ -97,6 +97,6 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         startingRating: dbEntity.startingRating,
         minimumGamesForRating: dbEntity.minimumGamesForRating,
         chomboPointsAfterUma: dbEntity.chomboPointsAfterUma,
-        umaTieBreakByWind: Boolean(dbEntity.umaTieBreakByWind)
+        umaTieBreakByWind: dbEntity.umaTieBreakByWind as 'WIND' | 'DIVIDE'
     };
 }

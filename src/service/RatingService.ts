@@ -113,7 +113,7 @@ export class RatingService {
     }
 
     private calculateUmaWithTieBreak(players: PlayerData[], gameRules: GameRules): number[] {
-        if (gameRules.umaTieBreakByWind) {
+        if (gameRules.umaTieBreakByWind === 'WIND') {
             return this.calculateUmaWithWindTieBreak(players, gameRules);
         }
         return this.calculateUmaWithAveraging(players.map(p => p.points), gameRules);
