@@ -137,18 +137,27 @@ export class ClubRepository {
         });
     }
 
-    private updateClubStatusStatement(): Statement<{ id: number, isActive: number }, void> {
+    private updateClubStatusStatement(): Statement<{
+        id: number;
+        isActive: number;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, void> {
         return dbManager.db.prepare(`
             UPDATE club
-            SET isActive = :isActive
+            SET isActive = :isActive,
+                modifiedAt = :modifiedAt,
+                modifiedBy = :modifiedBy
             WHERE id = :id
         `);
     }
 
-    updateClubStatus(id: number, isActive: boolean): void {
+    updateClubStatus(id: number, isActive: boolean, modifiedBy: number, modifiedAt: Date): void {
         this.updateClubStatusStatement().run({
             id,
-            isActive: booleanToInteger(isActive)
+            isActive: booleanToInteger(isActive),
+            modifiedBy,
+            modifiedAt: modifiedAt.toISOString()
         });
     }
 

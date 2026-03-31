@@ -10,8 +10,8 @@ import type { User } from '../model/UserModels.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
-import TelegramMessageService from './TelegramMessageService.ts';
-
+import TelegramMessageService from './TelegramMessageService.ts';import LogService from './LogService.ts';
+import { globalClubLogsTopic } from '../model/TelegramTopic.ts';
 export class ClubMembershipService {
     private clubService: ClubService = new ClubService();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
@@ -77,14 +77,18 @@ export class ClubMembershipService {
             modifiedBy
         });
 
-        return this.getMembership(clubId, userId);
+        const newMembership = this.getMembership(clubId, userId);
+        this.logJoinRequest(newMembership, userId);
+        return newMembership;
     }
 
     leaveClub(clubId: number, userId: number): ClubMembership {
         this.clubService.validateClubExists(clubId);
+        const membership = this.getMembership(clubId, userId);
         this.validateMembershipExists(clubId, userId);
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'INACTIVE', userId);
+        this.logLeftClub(membership, userId);
         return this.getMembership(clubId, userId);
     }
 
@@ -99,27 +103,33 @@ export class ClubMembershipService {
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifiedBy);
         this.notifyUserAddedToClub(user, club);
-        return this.getMembership(clubId, userId);
+        const newMembership = this.getMembership(clubId, userId);
+        this.logMemberActivated(newMembership, modifiedBy);
+        return newMembership;
     }
 
     deactivateMember(clubId: number, userId: number, modifiedBy: number): ClubMembership {
         this.clubService.validateClubExists(clubId);
+        const membership = this.getMembership(clubId, userId);
         this.validateMembershipExists(clubId, userId);
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'INACTIVE', modifiedBy);
+        this.logMemberDeactivated(membership, modifiedBy);
         return this.getMembership(clubId, userId);
     }
 
     updateMemberRole(clubId: number, userId: number, role: ClubRole, modifiedBy: number): ClubMembership {
         this.clubService.validateClubExists(clubId);
 
-        const membership = this.getMembership(clubId, userId);
-        if (membership.status !== 'ACTIVE') {
-            throw new InvalidClubMembershipStateError('змінити роль', membership.status, ['ACTIVE']);
+        const oldMembership = this.getMembership(clubId, userId);
+        if (oldMembership.status !== 'ACTIVE') {
+            throw new InvalidClubMembershipStateError('змінити роль', oldMembership.status, ['ACTIVE']);
         }
 
         this.membershipRepository.updateMembershipRole(clubId, userId, role, modifiedBy);
-        return this.getMembership(clubId, userId);
+        const newMembership = this.getMembership(clubId, userId);
+        this.logMemberRoleChanged(oldMembership, newMembership, modifiedBy);
+        return newMembership;
     }
 
     private validateMembershipExists(clubId: number, userId: number): void {
@@ -147,6 +157,72 @@ export class ClubMembershipService {
             <a href="${config.botUrl}">Відкрити додаток</a>
         `;
         void TelegramMessageService.sendDirectMessage(user.telegramId!, message);
+    }
+
+    private logJoinRequest(membership: ClubMembership, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        const message = dedent`
+            <b>🔔 Club Join Request</b>
+
+            <b>Club:</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
+            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>Status:</b> ${membership.status}
+        `;
+        LogService.logInfo(message, globalClubLogsTopic);
+    }
+
+    private logLeftClub(membership: ClubMembership, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        const message = dedent`
+            <b>🚪 Member Left Club</b>
+
+            <b>Club:</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
+            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>Previous Role:</b> ${membership.role}
+        `;
+        LogService.logInfo(message, globalClubLogsTopic);
+    }
+
+    private logMemberActivated(membership: ClubMembership, modifiedBy: number): void {
+        const user = this.userService.getUserById(membership.userId);
+        const modifier = this.userService.getUserById(modifiedBy);
+        const message = dedent`
+            <b>✅ Member Approved</b>
+
+            <b>Club:</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
+            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>Role:</b> ${membership.role}
+            <b>Approved by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+        `;
+        LogService.logInfo(message, globalClubLogsTopic);
+    }
+
+    private logMemberDeactivated(membership: ClubMembership, modifiedBy: number): void {
+        const user = this.userService.getUserById(membership.userId);
+        const modifier = this.userService.getUserById(modifiedBy);
+        const message = dedent`
+            <b>❌ Member Removed</b>
+
+            <b>Club:</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
+            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>Previous Role:</b> ${membership.role}
+            <b>Removed by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+        `;
+        LogService.logInfo(message, globalClubLogsTopic);
+    }
+
+    private logMemberRoleChanged(oldMembership: ClubMembership, newMembership: ClubMembership, modifiedBy: number): void {
+        const user = this.userService.getUserById(newMembership.userId);
+        const modifier = this.userService.getUserById(modifiedBy);
+        const message = dedent`
+            <b>🔄 Member Role Changed</b>
+
+            <b>Club:</b> ${newMembership.clubName} <code>(ID: ${newMembership.clubId})</code>
+            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>Role:</b> ${oldMembership.role} → ${newMembership.role}
+            <b>Changed by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+        `;
+        LogService.logInfo(message, globalClubLogsTopic);
     }
 }
 

@@ -132,7 +132,7 @@ describe('Club and Membership repositories', () => {
         const allClubs = clubRepository.findAllClubs();
         expect(allClubs.some(club => club.id === clubId)).toBe(true);
 
-        clubRepository.updateClubStatus(clubId, false);
+        clubRepository.updateClubStatus(clubId, false, TEST_USER_A_ID, new Date());
         const deleted = clubRepository.findClubById(clubId);
         expect(deleted).toBeDefined();
         expect(deleted).toMatchObject({

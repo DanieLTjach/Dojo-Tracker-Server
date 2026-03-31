@@ -12,6 +12,7 @@ interface Config {
     globalErrorLogsTopicId: number | undefined;
     globalUserLogsTopicId: number | undefined;
     globalGameLogsTopicId: number | undefined;
+    globalClubLogsTopicId: number | undefined;
     tournamentMode: boolean;
     tournamentUserId: number | undefined;
 }
@@ -62,6 +63,7 @@ const config: Config = {
     globalErrorLogsTopicId: tryParseIntEnvVariable("GLOBAL_ERROR_LOGS_TOPIC_ID"),
     globalUserLogsTopicId: tryParseIntEnvVariable("GLOBAL_USER_LOGS_TOPIC_ID"),
     globalGameLogsTopicId: tryParseIntEnvVariable("GLOBAL_GAME_LOGS_TOPIC_ID"),
+    globalClubLogsTopicId: tryParseIntEnvVariable("GLOBAL_CLUB_LOGS_TOPIC_ID"),
     tournamentMode,
     tournamentUserId: tournamentMode ? (tryParseIntEnvVariable("TOURNAMENT_USER_ID") || 1) : undefined
 };

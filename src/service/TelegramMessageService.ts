@@ -45,6 +45,7 @@ function getSendingOptionsForTopicType(topicType: TelegramTopicType): SendMessag
             };
         case TelegramTopicType.GAME_LOGS:
         case TelegramTopicType.USER_LOGS:
+        case TelegramTopicType.CLUB_LOGS:
         case TelegramTopicType.ERROR_LOGS:
             return { parse_mode: 'HTML' };
     }

@@ -191,7 +191,7 @@ describe('ClubService and MembershipService', () => {
 
         it('deleteClub throws ClubNotFoundError for missing club', () => {
             expect(() => {
-                clubService.deleteClub(999998);
+                clubService.deleteClub(999998, 0);
             }).toThrow(ClubNotFoundError);
         });
     });

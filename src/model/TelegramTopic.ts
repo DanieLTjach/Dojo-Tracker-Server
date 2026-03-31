@@ -10,7 +10,8 @@ export type ClubTelegramTopicType = typeof ClubTelegramTopicType[keyof typeof Cl
 
 export const TelegramTopicType = {
     ...ClubTelegramTopicType,
-    ERROR_LOGS: 'ERROR_LOGS'
+    ERROR_LOGS: 'ERROR_LOGS',
+    CLUB_LOGS: 'CLUB_LOGS'
 } as const;
 
 export type TelegramTopicType = typeof TelegramTopicType[keyof typeof TelegramTopicType];
@@ -33,6 +34,13 @@ export const globalGameLogsTopic: TelegramTopic | null =
         type: TelegramTopicType.GAME_LOGS,
         chatId: config.globalLogsChatId,
         topicId: config.globalGameLogsTopicId
+    } : null;
+
+export const globalClubLogsTopic: TelegramTopic | null =
+    config.globalLogsChatId !== undefined ? {
+        type: TelegramTopicType.CLUB_LOGS,
+        chatId: config.globalLogsChatId,
+        topicId: config.globalClubLogsTopicId
     } : null;
 
 export const globalErrorLogsTopic: TelegramTopic | null =
