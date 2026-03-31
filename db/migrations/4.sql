@@ -16,8 +16,16 @@ CREATE TABLE club (
     description TEXT,
     contactInfo TEXT,
     isActive BOOL NOT NULL DEFAULT true,
-    ratingChatId TEXT,
-    ratingTopicId TEXT,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
+    modifiedBy INTEGER NOT NULL REFERENCES user(id)
+);
+
+CREATE TABLE clubTelegramTopics (
+    clubId INTEGER PRIMARY KEY REFERENCES club(id),
+    rating TEXT,
+    userLogs TEXT,
+    gameLogs TEXT,
     createdAt TIMESTAMP NOT NULL,
     modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
@@ -34,8 +42,8 @@ CREATE TABLE clubMembership (
     PRIMARY KEY (clubId, userId)
 );
 
-INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
-VALUES (1, 'Japan Dojo', NULL, NULL, NULL, NULL, 1, NULL, NULL, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0);
+INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+VALUES (1, 'Japan Dojo', NULL, NULL, NULL, NULL, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0);
 
 INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
 SELECT

@@ -14,9 +14,7 @@ const clubBodySchema = z.object({
     city: optionalTextFieldSchema,
     description: optionalTextFieldSchema,
     contactInfo: optionalTextFieldSchema,
-    isActive: z.boolean().nullish(),
-    ratingChatId: optionalTextFieldSchema,
-    ratingTopicId: optionalTextFieldSchema
+    isActive: z.boolean().nullish()
 });
 
 const clubParamsSchema = z.object({

@@ -110,9 +110,9 @@ describe('Permissions matrix integration specification', () => {
     function insertClub(clubId: number, name: string): void {
         const timestamp = nextTimestamp();
         dbManager.db.prepare(
-            `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).run(clubId, name, null, null, null, null, 1, null, null, timestamp, timestamp, SYSTEM_USER_ID);
+            `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).run(clubId, name, null, null, null, null, 1, timestamp, timestamp, SYSTEM_USER_ID);
     }
 
     function cleanupClub(clubId: number): void {
@@ -199,8 +199,6 @@ describe('Permissions matrix integration specification', () => {
         description: string | null;
         contactInfo: string | null;
         isActive: boolean;
-        ratingChatId: string | null;
-        ratingTopicId: string | null;
     } {
         return {
             name: `Permissions Matrix Club Updated ${nextId()}`,
@@ -209,8 +207,6 @@ describe('Permissions matrix integration specification', () => {
             description: null,
             contactInfo: null,
             isActive: true,
-            ratingChatId: null,
-            ratingTopicId: null
         };
     }
 
@@ -1278,7 +1274,7 @@ describe('Permissions matrix integration specification', () => {
                 .send({
                     name: 'Permissions Matrix Club B',
                     address: null, city: null, description: null, contactInfo: null,
-                    isActive: true, ratingChatId: null, ratingTopicId: null
+                    isActive: true
                 });
             expect(res.status).toBe(403);
         });
@@ -1320,7 +1316,7 @@ describe('Permissions matrix integration specification', () => {
                 .send({
                     name: 'Permissions Matrix Club B',
                     address: null, city: null, description: null, contactInfo: null,
-                    isActive: true, ratingChatId: null, ratingTopicId: null
+                    isActive: true
                 });
             expect(res.status).toBe(200);
         });
@@ -1352,7 +1348,7 @@ describe('Permissions matrix integration specification', () => {
                 .send({
                     name: 'Permissions Matrix Test Club',
                     address: null, city: null, description: null, contactInfo: null,
-                    isActive: true, ratingChatId: null, ratingTopicId: null
+                    isActive: true
                 });
             expect(res.status).toBe(403);
         });

@@ -1,7 +1,7 @@
 import config from '../../config/config.ts';
-import { ErrorLogsTopic } from '../model/TelegramTopic.ts';
+import { globalErrorLogsTopic } from '../model/TelegramTopic.ts';
 import type { TelegramTopic } from '../model/TelegramTopic.ts';
-import TelegramService from './TelegramSevice.ts';
+import TelegramMessageService from './TelegramMessageService.ts';
 import escapeHtml from 'escape-html';
 
 interface LogMessage {
@@ -25,18 +25,22 @@ class LogService {
         await this.flushQueue();
     }
 
-    logInfo(message: string, topic: TelegramTopic) {
+    logInfo(message: string, topic: TelegramTopic | null) {
         console.log(message);
-        this.messageQueue.push({ message, topic });
+        if (topic !== null) {
+            this.messageQueue.push({ message, topic });
+        }
     }
 
-    logError(message: string, error: Error | null = null) {
+    logError(message: string, error: unknown = null) {
         console.error(message, error);
-        const errorDetails = error ? `${escapeHtml(error.message)}\n<pre>${escapeHtml(error.stack || '')}</pre>` : '';
-        this.messageQueue.push({
-            message: `<b>❌ ERROR</b>\n${escapeHtml(message)} ${errorDetails}`,
-            topic: ErrorLogsTopic
-        });
+        if (globalErrorLogsTopic !== null) {
+            const errorDetails = error instanceof Error ? `${escapeHtml(error.message)}\n<pre>${escapeHtml(error.stack || '')}</pre>` : '';
+            this.messageQueue.push({
+                message: `<b>❌ ERROR</b>\n${escapeHtml(message)} ${errorDetails}`,
+                topic: globalErrorLogsTopic
+            });
+        }
     }
 
     private async processQueue() {
@@ -72,7 +76,7 @@ class LogService {
     }
 
     private async sendMessageToTelegram(message: LogMessage): Promise<void> {
-        await TelegramService.sendMessage(message.message, message.topic);
+        await TelegramMessageService.sendMessage(message.message, message.topic);
     }
 }
 

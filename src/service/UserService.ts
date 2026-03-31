@@ -11,18 +11,18 @@ import {
 import type { User, UserStatus } from '../model/UserModels.ts';
 import { ResponseStatusError } from '../error/BaseErrors.ts';
 import LogService from './LogService.ts';
-import TelegramService from './TelegramSevice.ts';
-import config from '../../config/config.ts';
 import dedent from 'dedent';
-import { UserLogsTopic } from '../model/TelegramTopic.ts';
+import { globalUserLogsTopic } from '../model/TelegramTopic.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
+import { ClubService } from './ClubService.ts';
 
 export class UserService {
 
     private userRepository: UserRepository = new UserRepository();
-    private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
+    private clubMembershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
+    private clubService: ClubService = new ClubService();
 
     registerUser(
         userName: string,
@@ -63,6 +63,10 @@ export class UserService {
             throw new UserNotFoundById(id);
         }
         return this.applyProfileVisibility(user, requestingUserId);
+    }
+
+    getOptionalUserByTelegramId(telegramId: number): User | undefined {
+        return this.userRepository.findUserByTelegramId(telegramId);
     }
 
     getUserByTelegramId(telegramId: number, requestingUserId?: number): User {
@@ -108,10 +112,6 @@ export class UserService {
         const newUser = this.getUserById(userId);
         this.logActivationStatusChanged(oldUser, newUser, modifiedBy);
 
-        if (isActive && newUser.telegramId) {
-            this.notifyUserActivated(newUser);
-        }
-
         return newUser;
     }
 
@@ -121,11 +121,11 @@ export class UserService {
             return;
         }
 
-        const targetMemberships = this.membershipRepository.findActiveMembershipsByUserId(targetUserId);
+        const targetMemberships = this.clubMembershipRepository.findActiveMembershipsByUserId(targetUserId);
         const allowedRoles: ClubRole[] = isActive ? ['OWNER', 'MODERATOR'] : ['OWNER'];
 
         const hasRequiredRoleInSharedClub = targetMemberships.some((membership) => {
-            const roleInClub = this.membershipRepository.getUserClubRole(membership.clubId, actingUserId);
+            const roleInClub = this.clubMembershipRepository.getUserClubRole(membership.clubId, actingUserId);
             return roleInClub !== undefined && allowedRoles.includes(roleInClub);
         });
 
@@ -217,7 +217,7 @@ export class UserService {
             <b>Telegram ID:</b> <code>${user.telegramId || 'N/A'}</code>
             <b>Registered by:</b> ${creator.name} <code>(ID: ${creator.id})</code>
         `;
-        LogService.logInfo(message, UserLogsTopic);
+        this.logMessageToUserLogsTopics(message, user);
     }
 
     private logEditedUser(oldUser: User, newUser: User, modifiedBy: number): void {
@@ -230,16 +230,7 @@ export class UserService {
             <b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}
             <b>Edited by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
-        LogService.logInfo(message, UserLogsTopic);
-    }
-
-    private notifyUserActivated(user: User): void {
-        const message = dedent`
-            <b>Ваш акаунт було активовано!</b>
-
-            Тепер ви можете користуватися додатком. <a href="${config.botUrl}">Відкрити</a>
-        `;
-        TelegramService.sendDirectMessage(user.telegramId!, message);
+        this.logMessageToUserLogsTopics(message, newUser);
     }
 
     private logActivationStatusChanged(oldUser: User, newUser: User, modifiedBy: number): void {
@@ -256,6 +247,13 @@ export class UserService {
             <b>Status:</b> ${oldUser.status} → ${newUser.status}
             <b>Updated by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
-        LogService.logInfo(message, UserLogsTopic);
+        this.logMessageToUserLogsTopics(message, newUser);
+    }
+
+    private logMessageToUserLogsTopics(message: string, user: User) {
+        this.clubMembershipRepository.findActiveMembershipsByUserId(user.id).forEach(clubMembership => {
+            LogService.logInfo(message, this.clubService.getClubTelegramTopics(clubMembership.clubId).userLogs);
+        });
+        LogService.logInfo(message, globalUserLogsTopic);
     }
 }

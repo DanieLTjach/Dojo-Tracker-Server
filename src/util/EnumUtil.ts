@@ -2,6 +2,7 @@ import { InternalServerError } from "../error/BaseErrors.ts";
 import { ClubMembershipStatus, ClubRole } from "../model/ClubModels.ts";
 import { UmaTieBreak } from "../model/EventModels.ts";
 import { StartPlace } from "../model/GameModels.ts";
+import { ClubTelegramTopicType } from "../model/TelegramTopic.ts";
 import { UserStatus } from "../model/UserModels.ts";
 
 class EnumParsingError extends InternalServerError {
@@ -42,4 +43,8 @@ export function parseStartPlace(value: string): StartPlace {
 
 export function parseUmaTieBreak(value: string): UmaTieBreak {
     return parseEnumValue('UmaTieBreak', UmaTieBreak, value);
+}
+
+export function parseClubTelegramTopicType(value: string): ClubTelegramTopicType {
+    return parseEnumValue('ClubTelegramTopicType', ClubTelegramTopicType, value);
 }

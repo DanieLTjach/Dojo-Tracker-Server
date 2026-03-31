@@ -86,9 +86,9 @@ describe('Event API Endpoints', () => {
             const timestamp = '2024-01-01T00:00:00.000Z';
 
             dbManager.db.prepare(
-                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(otherClubId, 'Test Club 2', null, null, null, null, 1, null, null, timestamp, timestamp, 0);
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubId, 'Test Club 2', null, null, null, null, 1, timestamp, timestamp, 0);
 
             createCustomEvent(clubScopedEventId, 'Club Event', undefined, undefined, 1, 1);
             createCustomEvent(globalEventId, 'Global Event', undefined, undefined, 1, null);

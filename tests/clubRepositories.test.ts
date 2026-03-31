@@ -81,8 +81,6 @@ describe('Club and Membership repositories', () => {
             description: 'Repository test club',
             contactInfo: '@repo_club',
             isActive: true,
-            ratingChatId: '-10012345',
-            ratingTopicId: '77',
             createdAt,
             modifiedBy: SYSTEM_USER_ID
         });
@@ -97,8 +95,6 @@ describe('Club and Membership repositories', () => {
             description: 'Repository test club',
             contactInfo: '@repo_club',
             isActive: true,
-            ratingChatId: '-10012345',
-            ratingTopicId: '77',
             modifiedBy: SYSTEM_USER_ID
         });
         expect(byId!.createdAt).toEqual(createdAt);
@@ -115,9 +111,7 @@ describe('Club and Membership repositories', () => {
             city: 'Lviv',
             description: null,
             contactInfo: 'updated-contact',
-            isActive: false,
-            ratingChatId: null,
-            ratingTopicId: null,
+            isActive: true,
             modifiedAt: new Date('2026-03-10T11:00:00.000Z'),
             modifiedBy: TEST_USER_A_ID
         });
@@ -131,18 +125,26 @@ describe('Club and Membership repositories', () => {
             city: 'Lviv',
             description: null,
             contactInfo: 'updated-contact',
-            isActive: false,
-            ratingChatId: null,
-            ratingTopicId: null,
+            isActive: true,
             modifiedBy: TEST_USER_A_ID
         });
 
         const allClubs = clubRepository.findAllClubs();
         expect(allClubs.some(club => club.id === clubId)).toBe(true);
 
-        clubRepository.deleteClub(clubId);
-        expect(clubRepository.findClubById(clubId)).toBeUndefined();
-        expect(clubRepository.clubExists(clubId)).toBe(false);
+        clubRepository.updateClubStatus(clubId, false);
+        const deleted = clubRepository.findClubById(clubId);
+        expect(deleted).toBeDefined();
+        expect(deleted).toMatchObject({
+            id: clubId,
+            name: 'Repo Test Club Alpha Updated',
+            address: null,
+            city: 'Lviv',
+            description: null,
+            contactInfo: 'updated-contact',
+            isActive: false,
+            modifiedBy: TEST_USER_A_ID
+        });
     });
 
     it('MembershipRepository creates, filters, updates and deletes membership rows', () => {
@@ -153,8 +155,6 @@ describe('Club and Membership repositories', () => {
             description: null,
             contactInfo: null,
             isActive: true,
-            ratingChatId: null,
-            ratingTopicId: null,
             createdAt: new Date('2026-03-11T10:00:00.000Z'),
             modifiedBy: SYSTEM_USER_ID
         });

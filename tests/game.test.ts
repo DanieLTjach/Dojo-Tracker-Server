@@ -530,9 +530,9 @@ describe('Game API Endpoints', () => {
             const timestamp = '2024-01-01T00:00:00.000Z';
 
             dbManager.db.prepare(
-                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(otherClubId, 'Game Filter Test Club', null, null, null, null, 1, null, null, timestamp, timestamp, 0);
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubId, 'Game Filter Test Club', null, null, null, null, 1, timestamp, timestamp, 0);
 
             seedClubMembership(otherClubId, testUser1Id);
             seedClubMembership(otherClubId, testUser2Id);

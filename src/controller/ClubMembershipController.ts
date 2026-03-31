@@ -29,7 +29,7 @@ export class ClubMembershipController {
 
     getCurrentUserClubs(req: Request, res: Response) {
         const userId = req.user!.userId;
-        const clubs = this.membershipService.getCurrentUserClubs(userId);
+        const clubs = this.membershipService.getUserClubMemberships(userId);
         return res.status(StatusCodes.OK).json(clubs);
     }
 

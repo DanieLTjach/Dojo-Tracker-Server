@@ -1,5 +1,7 @@
 import { ClubNameAlreadyExistsError, ClubNotFoundError } from '../error/ClubErrors.ts';
-import type { Club } from '../model/ClubModels.ts';
+import type { Club, ClubTelegramTopics } from '../model/ClubModels.ts';
+import { ClubTelegramTopicType } from '../model/TelegramTopic.ts';
+import type { TelegramTopic } from '../model/TelegramTopic.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
 
 export class ClubService {
@@ -7,6 +9,10 @@ export class ClubService {
 
     getAllClubs(): Club[] {
         return this.clubRepository.findAllClubs();
+    }
+
+    getAllActiveClubs(): Club[] {
+        return this.getAllClubs().filter(club => club.isActive);
     }
 
     getClubById(clubId: number): Club {
@@ -35,8 +41,6 @@ export class ClubService {
             description: data.description ?? null,
             contactInfo: data.contactInfo ?? null,
             isActive: data.isActive ?? true,
-            ratingChatId: data.ratingChatId ?? null,
-            ratingTopicId: data.ratingTopicId ?? null,
             createdAt: now,
             modifiedBy
         });
@@ -61,8 +65,6 @@ export class ClubService {
             description: data.description ?? null,
             contactInfo: data.contactInfo ?? null,
             isActive: data.isActive ?? true,
-            ratingChatId: data.ratingChatId ?? null,
-            ratingTopicId: data.ratingTopicId ?? null,
             modifiedAt: now,
             modifiedBy
         });
@@ -72,7 +74,37 @@ export class ClubService {
 
     deleteClub(clubId: number): void {
         this.getClubById(clubId);
-        this.clubRepository.deleteClub(clubId);
+        this.clubRepository.updateClubStatus(clubId, false);
+    }
+
+    getClubTelegramTopics(clubId: number): ClubTelegramTopics {
+        return this.clubRepository.getClubTelegramTopics(clubId) ?? {
+            rating: null,
+            userLogs: null,
+            gameLogs: null
+        };
+    }
+
+    setClubTelegramTopics(clubId: number, topics: ClubTelegramTopics, modifiedBy: number) {
+        return this.clubRepository.setClubTelegramTopics(clubId, topics, new Date(), modifiedBy);
+    }
+}
+
+export function updateClubTelegramTopic(
+    topics: ClubTelegramTopics,
+    topicType: ClubTelegramTopicType,
+    chatId: number,
+    topicId: number | undefined
+): ClubTelegramTopics {
+    const telegramTopic: TelegramTopic = { type: topicType, chatId, topicId };
+
+    switch (topicType) {
+        case ClubTelegramTopicType.RATING:
+            return { ...topics, rating: telegramTopic };
+        case ClubTelegramTopicType.USER_LOGS:
+            return { ...topics, userLogs: telegramTopic };
+        case ClubTelegramTopicType.GAME_LOGS:
+            return { ...topics, gameLogs: telegramTopic };
     }
 }
 
@@ -83,6 +115,4 @@ export interface ClubData {
     description?: string | null | undefined;
     contactInfo?: string | null | undefined;
     isActive?: boolean | null | undefined;
-    ratingChatId?: string | null | undefined;
-    ratingTopicId?: string | null | undefined;
 }

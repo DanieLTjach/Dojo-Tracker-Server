@@ -74,8 +74,6 @@ describe('Database Migrations', () => {
       description: null,
       contactInfo: null,
       isActive: 1,
-      ratingChatId: null,
-      ratingTopicId: null,
       currentRatingEventId: null,
       createdAt: '2026-01-01T00:00:00.000Z',
       modifiedAt: '2026-01-01T00:00:00.000Z',
@@ -96,8 +94,6 @@ describe('Database Migrations', () => {
       { name: 'description', type: 'TEXT', notnull: 0, dflt_value: null },
       { name: 'contactInfo', type: 'TEXT', notnull: 0, dflt_value: null },
       { name: 'isActive', type: 'BOOL', notnull: 1, dflt_value: 'true' },
-      { name: 'ratingChatId', type: 'TEXT', notnull: 0, dflt_value: null },
-      { name: 'ratingTopicId', type: 'TEXT', notnull: 0, dflt_value: null },
       { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
       { name: 'modifiedAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
       { name: 'modifiedBy', type: 'INTEGER', notnull: 1, dflt_value: null },
@@ -175,8 +171,8 @@ describe('Database Migrations', () => {
     expect(gameRulesColumns.find(column => column.name === 'clubId')).toMatchObject({ name: 'clubId', notnull: 0 });
 
     db.prepare(`
-      INSERT INTO club (id, name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
-      VALUES (2, 'Test Club 2', NULL, NULL, NULL, NULL, 1, NULL, NULL, '2026-03-01T00:00:00.000Z', '2026-03-01T00:00:00.000Z', 0)
+      INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+      VALUES (2, 'Test Club 2', NULL, NULL, NULL, NULL, 1, '2026-03-01T00:00:00.000Z', '2026-03-01T00:00:00.000Z', 0)
     `).run();
 
     db.prepare(`

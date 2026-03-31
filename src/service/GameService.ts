@@ -21,9 +21,7 @@ import LogService from './LogService.ts';
 import dedent from 'dedent';
 import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
-import { GameLogsTopic, RatingTopic } from '../model/TelegramTopic.ts';
-import { ClubRepository } from '../repository/ClubRepository.ts';
-import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
+import { globalGameLogsTopic } from '../model/TelegramTopic.ts';
 import {
     InsufficientClubPermissionsError,
     YouHaveToBeClubMemberError,
@@ -31,6 +29,8 @@ import {
 } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
+import { ClubService } from './ClubService.ts';
+import { ClubMembershipService } from './ClubMembershipService.ts';
 
 export class GameService {
 
@@ -38,8 +38,8 @@ export class GameService {
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
-    private clubRepository: ClubRepository = new ClubRepository();
-    private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
+    private clubService: ClubService = new ClubService();
+    private clubMembershipService: ClubMembershipService = new ClubMembershipService();
 
     addGame(
         eventId: number,
@@ -161,13 +161,13 @@ export class GameService {
             return;
         }
 
-        const creatorRole = this.membershipRepository.getUserClubRole(event.clubId, createdBy);
+        const creatorRole = this.clubMembershipService.getUserClubRole(event.clubId, createdBy);
         if (!creatorRole) {
             throw new YouHaveToBeClubMemberError();
         }
 
         if (creatorRole === 'MEMBER') {
-            const allPlayersInClub = playersData.every((player) => this.membershipRepository.getUserClubRole(event.clubId!, player.userId) !== undefined);
+            const allPlayersInClub = playersData.every((player) => this.clubMembershipService.getUserClubRole(event.clubId!, player.userId) !== undefined);
             if (!allPlayersInClub) {
                 throw new YouNeedToBeModeratorToCreateGamesWithNonClubMembersError();
             }
@@ -184,7 +184,7 @@ export class GameService {
             throw new InsufficientPermissionsError();
         }
 
-        const role = this.membershipRepository.getUserClubRole(clubId, userId);
+        const role = this.clubMembershipService.getUserClubRole(clubId, userId);
         if (role === undefined || !allowedRoles.includes(role)) {
             throw new InsufficientClubPermissionsError(allowedRoles);
         }
@@ -210,7 +210,7 @@ export class GameService {
         ` + this.printPlayersLog(oldGame.players) + dedent`
             \n\n<b>Players (After):</b>\n
         ` + this.printPlayersLog(newGame.players);
-        LogService.logInfo(message, GameLogsTopic);
+        this.logMessageToGameLogsTopics(message, event);
     }
 
     private logDeletedGame(game: GameWithPlayers, event: Event, deletedBy: number): void {
@@ -224,9 +224,8 @@ export class GameService {
         title: string,
         userLabel: string
     ): void {
-        const clubPrefix = this.buildClubPrefix(event);
         const user = this.userService.getUserById(userId);
-        const message = clubPrefix + dedent`
+        const message = dedent`
             <b>${title}</b>
 
             <b>Game ID:</b> <code>${game.id}</code>
@@ -236,7 +235,17 @@ export class GameService {
 
             <b>Players:</b>\n
         ` + this.printPlayersLog(game.players);
-        LogService.logInfo(message, GameLogsTopic);
+        this.logMessageToGameLogsTopics(message, event);
+    }
+
+    private logMessageToGameLogsTopics(message: string, event: Event) {
+        let clubPrefix = '';
+        if (event.clubId !== null) {
+            const club = this.clubService.getClubById(event.clubId);
+            clubPrefix = `<b>${club.name} club</b>\n `;
+            LogService.logInfo(message, this.clubService.getClubTelegramTopics(event.clubId).gameLogs);
+        }
+        LogService.logInfo(clubPrefix + message, globalGameLogsTopic);
     }
 
     private printPlayersLog(players: GamePlayer[]): string {
@@ -296,13 +305,14 @@ export class GameService {
         }).join('\n\n');
 
         const createdByUser = this.userService.getUserById(createdBy);
-        const clubPrefix = this.buildClubPrefix(event);
-        const message = clubPrefix + `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
+        const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
             + `\nДодано <a href="${config.botUrl}?startapp=game_${game.id}">нову гру</a>`
             + ` користувачем ${this.generateUserProfileLink(createdByUser)}\n\n`
             + `${playerLines}`;
 
-        LogService.logInfo(message, RatingTopic);
+        if (event.clubId !== null) {
+            LogService.logInfo(message, this.clubService.getClubTelegramTopics(event.clubId).rating);
+        }
     }
 
     private signedNumberToString(num: number): string {
@@ -311,19 +321,6 @@ export class GameService {
 
     private generateUserProfileLink(user: User): string {
         return `<a href="${config.botUrl}?startapp=user_${user.id}"><b>${user.name}</b></a>`;
-    }
-
-    private buildClubPrefix(event: Event): string {
-        if (event.clubId === null) {
-            return '';
-        }
-
-        const club = this.clubRepository.findClubById(event.clubId);
-        if (club === undefined) {
-            return '';
-        }
-
-        return `[${club.name}] `;
     }
 
     private validateGameFilters(filters: GameFilters): void {

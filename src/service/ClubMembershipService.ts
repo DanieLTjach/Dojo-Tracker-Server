@@ -1,12 +1,16 @@
+import dedent from 'dedent';
+import config from '../../config/config.ts';
 import {
     ClubMembershipAlreadyExistsError,
     ClubMembershipNotFoundError,
     InvalidClubMembershipStateError
 } from '../error/ClubErrors.ts';
-import type { ClubMembership, ClubRole, UserClubMembership } from '../model/ClubModels.ts';
+import type { Club, ClubMembership, ClubRole, UserClubMembership } from '../model/ClubModels.ts';
+import type { User } from '../model/UserModels.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
+import TelegramMessageService from './TelegramMessageService.ts';
 
 export class ClubMembershipService {
     private clubService: ClubService = new ClubService();
@@ -28,23 +32,21 @@ export class ClubMembershipService {
         return this.membershipRepository.findPendingMembersByClubId(clubId);
     }
 
-    getCurrentUserClubs(userId: number): UserClubMembership[] {
+    getUserClubRole(clubId: number, userId: number): ClubRole | undefined {
+        return this.membershipRepository.getUserClubRole(clubId, userId);
+    }
+
+    getUserClubMembership(clubId: number, userId: number): UserClubMembership | undefined {
+        const user = this.userService.getUserById(userId);
+        const membership = this.membershipRepository.findMembership(clubId, userId);
+        return membership !== undefined ? buildUserClubMembership(membership, user) : undefined;
+    }
+
+    getUserClubMemberships(userId: number): UserClubMembership[] {
         const user = this.userService.getUserById(userId);
         const memberships = this.membershipRepository.findMembershipsByUserId(userId);
 
-        return memberships.map((membership) => {
-            const isClubManager = membership.status === 'ACTIVE' && (membership.role === 'OWNER' || membership.role === 'MODERATOR');
-
-            return {
-                clubId: membership.clubId,
-                role: membership.role,
-                status: membership.status,
-                permissions: {
-                    canEditClub: user.isAdmin || (membership.status === 'ACTIVE' && membership.role === 'OWNER'),
-                    canManageMembers: user.isAdmin || isClubManager
-                }
-            };
-        });
+        return memberships.map((membership) => buildUserClubMembership(membership, user));
     }
 
     requestJoin(clubId: number, userId: number, modifiedBy: number): ClubMembership {
@@ -87,7 +89,8 @@ export class ClubMembershipService {
     }
 
     activateMember(clubId: number, userId: number, modifiedBy: number): ClubMembership {
-        this.clubService.validateClubExists(clubId);
+        const user = this.userService.getUserById(userId);
+        const club = this.clubService.getClubById(clubId);
 
         const membership = this.getMembership(clubId, userId);
         if (membership.status !== 'PENDING') {
@@ -95,6 +98,7 @@ export class ClubMembershipService {
         }
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifiedBy);
+        this.notifyUserAddedToClub(user, club);
         return this.getMembership(clubId, userId);
     }
 
@@ -130,4 +134,33 @@ export class ClubMembershipService {
         }
         return membership;
     }
+
+    private notifyUserAddedToClub(user: User, club: Club): void {
+        if (user.telegramId === null) {
+            return;
+        }
+
+        const message = dedent`
+            <b>Ваc додано до клубу ${club.name}!</b>
+
+            Тепер ви є повноцінним членом клубу та можете додавати нові ігри.
+            <a href="${config.botUrl}">Відкрити додаток</a>
+        `;
+        void TelegramMessageService.sendDirectMessage(user.telegramId!, message);
+    }
+}
+
+function buildUserClubMembership(membership: ClubMembership, user: User): UserClubMembership {
+    const isClubManager = membership.status === 'ACTIVE' && (membership.role === 'OWNER' || membership.role === 'MODERATOR');
+
+    return {
+        clubId: membership.clubId,
+        clubName: membership.clubName,
+        role: membership.role,
+        status: membership.status,
+        permissions: {
+            canEditClub: user.isAdmin || (membership.status === 'ACTIVE' && membership.role === 'OWNER'),
+            canManageMembers: user.isAdmin || isClubManager
+        }
+    };
 }

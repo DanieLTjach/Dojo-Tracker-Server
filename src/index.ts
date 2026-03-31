@@ -15,6 +15,7 @@ import { handleErrors } from './middleware/ErrorHandling.ts';
 
 import LogService from './service/LogService.ts';
 import { dbManager } from './db/dbInit.ts';
+import TelegramCommandService from './service/TelegramCommandService.ts';
 
 const app = express();
 app.use(express.json());
@@ -48,6 +49,8 @@ app.listen(config.port, (error?: Error) => {
         console.log(`Server is running on port ${config.port}`);
     }
 });
+
+TelegramCommandService.init();
 
 async function shutdown() {
     await LogService.shutdown();
