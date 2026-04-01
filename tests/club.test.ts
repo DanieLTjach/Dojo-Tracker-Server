@@ -176,9 +176,10 @@ describe('Club API Endpoints', () => {
 
     describe('GET /api/users/current/clubs - Get current user club memberships', () => {
         let clubId: number;
+        const clubName = 'Integration Club Status';
 
         beforeEach(async () => {
-            clubId = await createClub('Integration Club Status');
+            clubId = await createClub(clubName);
         });
 
         afterEach(() => {
@@ -206,6 +207,7 @@ describe('Club API Endpoints', () => {
             expect(response.status).toBe(200);
             expect(response.body).toEqual([{
                 clubId,
+                clubName,
                 role: 'MEMBER',
                 status: 'PENDING',
                 permissions: {
@@ -226,6 +228,7 @@ describe('Club API Endpoints', () => {
             const club = response.body.find((c: any) => c.clubId === clubId);
             expect(club).toEqual({
                 clubId,
+                clubName,
                 role: 'OWNER',
                 status: 'ACTIVE',
                 permissions: {
@@ -250,6 +253,7 @@ describe('Club API Endpoints', () => {
             const club = response.body.find((c: any) => c.clubId === clubId);
             expect(club).toEqual({
                 clubId,
+                clubName,
                 role: 'MODERATOR',
                 status: 'ACTIVE',
                 permissions: {
@@ -273,6 +277,7 @@ describe('Club API Endpoints', () => {
             const club = response.body.find((c: any) => c.clubId === clubId);
             expect(club).toEqual({
                 clubId,
+                clubName,
                 role: 'MEMBER',
                 status: 'ACTIVE',
                 permissions: {
@@ -299,6 +304,7 @@ describe('Club API Endpoints', () => {
             const club = response.body.find((c: any) => c.clubId === clubId);
             expect(club).toEqual({
                 clubId,
+                clubName,
                 role: 'MEMBER',
                 status: 'INACTIVE',
                 permissions: {
@@ -335,9 +341,7 @@ describe('Club API Endpoints', () => {
                     city: 'Lviv',
                     description: 'Updated',
                     contactInfo: '+380...',
-                    isActive: true,
-                    ratingChatId: null,
-                    ratingTopicId: null
+                    isActive: true
                 });
 
             expect(response.status).toBe(200);
@@ -369,7 +373,7 @@ describe('Club API Endpoints', () => {
                 .get(`/api/clubs/${clubId}`)
                 .set('Authorization', adminAuthHeader);
 
-            expect(getResponse.status).toBe(404);
+            expect(getResponse.body.isActive).toBe(false);
         });
     });
 

@@ -22,9 +22,7 @@ describe('ClubSchemas', () => {
                 city: '  Kyiv  ',
                 description: '  Test club  ',
                 contactInfo: '  @dojo  ',
-                isActive: true,
-                ratingChatId: '  -100123  ',
-                ratingTopicId: '  42  '
+                isActive: true
             }
         });
 
@@ -40,9 +38,7 @@ describe('ClubSchemas', () => {
             city: 'Kyiv',
             description: 'Test club',
             contactInfo: '@dojo',
-            isActive: true,
-            ratingChatId: '-100123',
-            ratingTopicId: '42'
+            isActive: true
         });
         expect(params.params.clubId).toBe(7);
     });

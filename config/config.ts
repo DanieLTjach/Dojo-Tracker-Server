@@ -8,12 +8,11 @@ interface Config {
     frontendUrl: string;
     botUrl: string;
     botToken: string;
-    adminChatId: number | undefined;
-    errorLogsTopicId: number | undefined;
-    userLogsTopicId: number | undefined;
-    gameLogsTopicId: number | undefined;
-    ratingChatId: number | undefined;
-    ratingTopicId: number | undefined;
+    globalLogsChatId: number | undefined;
+    globalErrorLogsTopicId: number | undefined;
+    globalUserLogsTopicId: number | undefined;
+    globalGameLogsTopicId: number | undefined;
+    globalClubLogsTopicId: number | undefined;
     tournamentMode: boolean;
     tournamentUserId: number | undefined;
 }
@@ -40,19 +39,11 @@ function tryParseIntEnvVariable(varName: string): number | undefined {
 
 const env = getRequiredStringEnvVariable("NODE_ENV");
 
-const adminChatId = tryParseIntEnvVariable("ADMIN_CHAT_ID");
-const ratingChatId = tryParseIntEnvVariable("RATING_CHAT_ID");
-const ratingTopicId = tryParseIntEnvVariable("RATING_TOPIC_ID");
+const globalLogsChatId = tryParseIntEnvVariable("GLOBAL_LOGS_CHAT_ID");
 
 if (env === 'production') {
-    if (adminChatId === undefined) {
-        throw new Error("ADMIN_CHAT_ID environment variable is required in production");
-    }
-    if (ratingChatId === undefined) {
-        throw new Error("RATING_CHAT_ID environment variable is required in production");
-    }
-    if (ratingTopicId === undefined) {
-        throw new Error("RATING_TOPIC_ID environment variable is required in production");
+    if (globalLogsChatId === undefined) {
+        throw new Error("GLOBAL_LOGS_CHAT_ID environment variable is required in production");
     }
 }
 
@@ -68,12 +59,11 @@ const config: Config = {
     authInitDataValiditySeconds: tryParseIntEnvVariable("AUTH_INIT_DATA_VALIDITY_SECONDS") || 3600,
     frontendUrl: getRequiredStringEnvVariable("FRONTEND_URL"),
     botUrl: getRequiredStringEnvVariable("BOT_URL"),
-    adminChatId,
-    errorLogsTopicId: tryParseIntEnvVariable("ERROR_LOGS_TOPIC_ID"),
-    userLogsTopicId: tryParseIntEnvVariable("USER_LOGS_TOPIC_ID"),
-    gameLogsTopicId: tryParseIntEnvVariable("GAME_LOGS_TOPIC_ID"),
-    ratingChatId,
-    ratingTopicId,
+    globalLogsChatId: globalLogsChatId,
+    globalErrorLogsTopicId: tryParseIntEnvVariable("GLOBAL_ERROR_LOGS_TOPIC_ID"),
+    globalUserLogsTopicId: tryParseIntEnvVariable("GLOBAL_USER_LOGS_TOPIC_ID"),
+    globalGameLogsTopicId: tryParseIntEnvVariable("GLOBAL_GAME_LOGS_TOPIC_ID"),
+    globalClubLogsTopicId: tryParseIntEnvVariable("GLOBAL_CLUB_LOGS_TOPIC_ID"),
     tournamentMode,
     tournamentUserId: tournamentMode ? (tryParseIntEnvVariable("TOURNAMENT_USER_ID") || 1) : undefined
 };

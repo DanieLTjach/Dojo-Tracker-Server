@@ -33,7 +33,8 @@ export class ClubController {
 
     deleteClub(req: Request, res: Response) {
         const { params: { clubId } } = clubDeleteSchema.parse(req);
-        this.clubService.deleteClub(clubId);
+        const userId = req.user!.userId;
+        this.clubService.deleteClub(clubId, userId);
         return res.status(StatusCodes.NO_CONTENT).send();
     }
 }

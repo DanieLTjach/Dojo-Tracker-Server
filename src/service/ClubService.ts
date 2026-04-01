@@ -1,12 +1,22 @@
 import { ClubNameAlreadyExistsError, ClubNotFoundError } from '../error/ClubErrors.ts';
-import type { Club } from '../model/ClubModels.ts';
+import type { Club, ClubTelegramTopics } from '../model/ClubModels.ts';
+import { ClubTelegramTopicType, globalClubLogsTopic } from '../model/TelegramTopic.ts';
+import type { TelegramTopic } from '../model/TelegramTopic.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
+import LogService from './LogService.ts';
+import dedent from 'dedent';
+import { UserRepository } from '../repository/UserRepository.ts';
 
 export class ClubService {
     private clubRepository: ClubRepository = new ClubRepository();
+    private userRepository: UserRepository = new UserRepository();
 
     getAllClubs(): Club[] {
         return this.clubRepository.findAllClubs();
+    }
+
+    getAllActiveClubs(): Club[] {
+        return this.getAllClubs().filter(club => club.isActive);
     }
 
     getClubById(clubId: number): Club {
@@ -35,17 +45,17 @@ export class ClubService {
             description: data.description ?? null,
             contactInfo: data.contactInfo ?? null,
             isActive: data.isActive ?? true,
-            ratingChatId: data.ratingChatId ?? null,
-            ratingTopicId: data.ratingTopicId ?? null,
             createdAt: now,
             modifiedBy
         });
 
-        return this.getClubById(clubId);
+        const newClub = this.getClubById(clubId);
+        this.logCreatedClub(newClub, modifiedBy);
+        return newClub;
     }
 
     updateClub(clubId: number, data: ClubData, modifiedBy: number): Club {
-        this.getClubById(clubId);
+        const oldClub = this.getClubById(clubId);
 
         const existingClub = this.clubRepository.findClubByName(data.name);
         if (existingClub && existingClub.id !== clubId) {
@@ -61,18 +71,95 @@ export class ClubService {
             description: data.description ?? null,
             contactInfo: data.contactInfo ?? null,
             isActive: data.isActive ?? true,
-            ratingChatId: data.ratingChatId ?? null,
-            ratingTopicId: data.ratingTopicId ?? null,
             modifiedAt: now,
             modifiedBy
         });
 
-        return this.getClubById(clubId);
+        const newClub = this.getClubById(clubId);
+        this.logEditedClub(oldClub, newClub, modifiedBy);
+        return newClub;
     }
 
-    deleteClub(clubId: number): void {
-        this.getClubById(clubId);
-        this.clubRepository.deleteClub(clubId);
+    deleteClub(clubId: number, deletedBy: number): void {
+        const club = this.getClubById(clubId);
+        this.clubRepository.updateClubStatus(clubId, false, deletedBy, new Date());
+        this.logDeletedClub(club, deletedBy);
+    }
+
+    getClubTelegramTopics(clubId: number): ClubTelegramTopics {
+        return this.clubRepository.getClubTelegramTopics(clubId) ?? {
+            rating: null,
+            userLogs: null,
+            gameLogs: null
+        };
+    }
+
+    setClubTelegramTopics(clubId: number, topics: ClubTelegramTopics, modifiedBy: number) {
+        return this.clubRepository.setClubTelegramTopics(clubId, topics, new Date(), modifiedBy);
+    }
+
+    private logCreatedClub(club: Club, createdBy: number): void {
+        const creator = this.userRepository.findUserById(createdBy);
+        const message = dedent`
+            <b>🏛️ New Club Created</b>
+
+            <b>Club ID:</b> <code>${club.id}</code>
+            <b>Name:</b> ${club.name}
+            <b>City:</b> ${club.city || 'N/A'}
+            <b>Address:</b> ${club.address || 'N/A'}
+            <b>Description:</b> ${club.description || 'N/A'}
+            <b>Contact Info:</b> ${club.contactInfo || 'N/A'}
+            <b>Created by:</b> ${creator?.name} <code>(ID: ${creator?.id})</code>
+        `;
+        LogService.logInfo(message, globalClubLogsTopic);
+    }
+
+    private logEditedClub(oldClub: Club, newClub: Club, modifiedBy: number): void {
+        const modifier = this.userRepository.findUserById(modifiedBy);
+        const message = dedent`
+            <b>✏️ Club Edited</b>
+
+            <b>Club ID:</b> <code>${newClub.id}</code>
+            <b>Name:</b> ${oldClub.name} → ${newClub.name}
+            <b>City:</b> ${oldClub.city || 'N/A'} → ${newClub.city || 'N/A'}
+            <b>Address:</b> ${oldClub.address || 'N/A'} → ${newClub.address || 'N/A'}
+            <b>Description:</b> ${oldClub.description || 'N/A'} → ${newClub.description || 'N/A'}
+            <b>Contact Info:</b> ${oldClub.contactInfo || 'N/A'} → ${newClub.contactInfo || 'N/A'}
+            <b>Is Active:</b> ${oldClub.isActive} → ${newClub.isActive}
+            <b>Edited by:</b> ${modifier?.name} <code>(ID: ${modifier?.id})</code>
+        `;
+        LogService.logInfo(message, globalClubLogsTopic);
+    }
+
+    private logDeletedClub(club: Club, deletedBy: number): void {
+        const deleter = this.userRepository.findUserById(deletedBy);
+        const message = dedent`
+            <b>🗑️ Club Deleted (deactivated)</b>
+
+            <b>Club ID:</b> <code>${club.id}</code>
+            <b>Name:</b> ${club.name}
+            <b>City:</b> ${club.city || 'N/A'}
+            <b>Deleted by:</b> ${deleter?.name} <code>(ID: ${deleter?.id})</code>
+        `;
+        LogService.logInfo(message, globalClubLogsTopic);
+    }
+}
+
+export function updateClubTelegramTopic(
+    topics: ClubTelegramTopics,
+    topicType: ClubTelegramTopicType,
+    chatId: number,
+    topicId: number | undefined
+): ClubTelegramTopics {
+    const telegramTopic: TelegramTopic = { type: topicType, chatId, topicId };
+
+    switch (topicType) {
+        case ClubTelegramTopicType.RATING:
+            return { ...topics, rating: telegramTopic };
+        case ClubTelegramTopicType.USER_LOGS:
+            return { ...topics, userLogs: telegramTopic };
+        case ClubTelegramTopicType.GAME_LOGS:
+            return { ...topics, gameLogs: telegramTopic };
     }
 }
 
@@ -83,6 +170,4 @@ export interface ClubData {
     description?: string | null | undefined;
     contactInfo?: string | null | undefined;
     isActive?: boolean | null | undefined;
-    ratingChatId?: string | null | undefined;
-    ratingTopicId?: string | null | undefined;
 }

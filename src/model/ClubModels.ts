@@ -1,3 +1,4 @@
+import type { TelegramTopic } from "./TelegramTopic.ts";
 
 export const ClubRole = {
     OWNER: 'OWNER',
@@ -23,16 +24,21 @@ export interface Club {
     description: string | null;
     contactInfo: string | null;
     isActive: boolean;
-    ratingChatId: string | null;
-    ratingTopicId: string | null;
     currentRatingEventId: number | null;
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;
 }
 
+export interface ClubTelegramTopics {
+    rating: TelegramTopic | null;
+    userLogs: TelegramTopic | null;
+    gameLogs: TelegramTopic | null;
+}
+
 export interface ClubMembership {
     clubId: number;
+    clubName: string;
     userId: number;
     userName: string;
     role: ClubRole;
@@ -42,14 +48,15 @@ export interface ClubMembership {
     modifiedBy: number;
 }
 
-export interface ClubMembershipStatusPermissions {
+export interface ClubPermissions {
     canEditClub: boolean;
     canManageMembers: boolean;
 }
 
 export interface UserClubMembership {
     clubId: number;
+    clubName: string;
     role: ClubRole;
     status: ClubMembershipStatus;
-    permissions: ClubMembershipStatusPermissions;
+    permissions: ClubPermissions;
 }

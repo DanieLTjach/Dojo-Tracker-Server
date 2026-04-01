@@ -118,9 +118,7 @@ function createServiceTestClub(): number {
         city: null,
         description: null,
         contactInfo: null,
-        isActive: true,
-        ratingChatId: null,
-        ratingTopicId: null
+        isActive: true
     }, SYSTEM_USER_ID);
     return created.id;
 }
@@ -148,9 +146,7 @@ describe('ClubService and MembershipService', () => {
                 city: 'Kyiv',
                 description: 'A club for service tests',
                 contactInfo: '@club_service',
-                isActive: true,
-                ratingChatId: '-100777',
-                ratingTopicId: '17'
+                isActive: true
             }, SYSTEM_USER_ID);
 
             expect(club.id).toBeGreaterThan(0);
@@ -165,9 +161,7 @@ describe('ClubService and MembershipService', () => {
                 city: null,
                 description: null,
                 contactInfo: null,
-                isActive: true,
-                ratingChatId: null,
-                ratingTopicId: null
+                isActive: true
             }, SYSTEM_USER_ID);
 
             expect(() => {
@@ -177,9 +171,7 @@ describe('ClubService and MembershipService', () => {
                     city: null,
                     description: null,
                     contactInfo: null,
-                    isActive: true,
-                    ratingChatId: null,
-                    ratingTopicId: null
+                    isActive: true
                 }, SYSTEM_USER_ID);
             }).toThrow(ClubNameAlreadyExistsError);
         });
@@ -192,16 +184,14 @@ describe('ClubService and MembershipService', () => {
                     city: null,
                     description: null,
                     contactInfo: null,
-                    isActive: true,
-                    ratingChatId: null,
-                    ratingTopicId: null
+                    isActive: true
                 }, SYSTEM_USER_ID);
             }).toThrow(ClubNotFoundError);
         });
 
         it('deleteClub throws ClubNotFoundError for missing club', () => {
             expect(() => {
-                clubService.deleteClub(999998);
+                clubService.deleteClub(999998, 0);
             }).toThrow(ClubNotFoundError);
         });
     });

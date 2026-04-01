@@ -1,7 +1,7 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
-import type { Club } from '../model/ClubModels.ts';
+import type { Club, ClubTelegramTopics } from '../model/ClubModels.ts';
 
 export class ClubRepository {
     private findAllClubsStatement(): Statement<[], ClubDBEntity> {
@@ -14,8 +14,6 @@ export class ClubRepository {
                 description,
                 contactInfo,
                 isActive,
-                ratingChatId,
-                ratingTopicId,
                 currentRatingEventId,
                 createdAt,
                 modifiedAt,
@@ -39,8 +37,6 @@ export class ClubRepository {
                 description,
                 contactInfo,
                 isActive,
-                ratingChatId,
-                ratingTopicId,
                 currentRatingEventId,
                 createdAt,
                 modifiedAt,
@@ -65,8 +61,6 @@ export class ClubRepository {
                 description,
                 contactInfo,
                 isActive,
-                ratingChatId,
-                ratingTopicId,
                 currentRatingEventId,
                 createdAt,
                 modifiedAt,
@@ -88,15 +82,13 @@ export class ClubRepository {
         description: string | null;
         contactInfo: string | null;
         isActive: number;
-        ratingChatId: string | null;
-        ratingTopicId: string | null;
         createdAt: string;
         modifiedAt: string;
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO club (name, address, city, description, contactInfo, isActive, ratingChatId, ratingTopicId, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :address, :city, :description, :contactInfo, :isActive, :ratingChatId, :ratingTopicId, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO club (name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :address, :city, :description, :contactInfo, :isActive, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -120,8 +112,6 @@ export class ClubRepository {
         description: string | null;
         contactInfo: string | null;
         isActive: number;
-        ratingChatId: string | null;
-        ratingTopicId: string | null;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
@@ -133,8 +123,6 @@ export class ClubRepository {
                 description = :description,
                 contactInfo = :contactInfo,
                 isActive = :isActive,
-                ratingChatId = :ratingChatId,
-                ratingTopicId = :ratingTopicId,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
             WHERE id = :id
@@ -149,15 +137,28 @@ export class ClubRepository {
         });
     }
 
-    private deleteClubStatement(): Statement<{ id: number }, void> {
+    private updateClubStatusStatement(): Statement<{
+        id: number;
+        isActive: number;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, void> {
         return dbManager.db.prepare(`
-            DELETE FROM club
+            UPDATE club
+            SET isActive = :isActive,
+                modifiedAt = :modifiedAt,
+                modifiedBy = :modifiedBy
             WHERE id = :id
         `);
     }
 
-    deleteClub(id: number): void {
-        this.deleteClubStatement().run({ id });
+    updateClubStatus(id: number, isActive: boolean, modifiedBy: number, modifiedAt: Date): void {
+        this.updateClubStatusStatement().run({
+            id,
+            isActive: booleanToInteger(isActive),
+            modifiedBy,
+            modifiedAt: modifiedAt.toISOString()
+        });
     }
 
     private updateCurrentRatingEventStatement(): Statement<{
@@ -196,6 +197,53 @@ export class ClubRepository {
         const result = this.clubExistsStatement().get({ id });
         return result !== undefined;
     }
+
+    private getClubTelegramTopicsStatement(): Statement<{ clubId: number }, ClubTelegramTopicsDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT
+                rating,
+                userLogs,
+                gameLogs
+            FROM clubTelegramTopics
+            WHERE clubId = :clubId
+        `);
+    }
+
+    getClubTelegramTopics(clubId: number): ClubTelegramTopics | undefined {
+        const dbEntity = this.getClubTelegramTopicsStatement().get({ clubId });
+        return dbEntity !== undefined ? clubTelegramTopicsFromDBEntity(dbEntity) : undefined;
+    }
+
+    private setClubTelegramTopicsStatement(): Statement<{
+        clubId: number;
+        rating: string | null;
+        userLogs: string | null;
+        gameLogs: string | null;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, void> {
+        return dbManager.db.prepare(`
+            INSERT INTO clubTelegramTopics (clubId, rating, userLogs, gameLogs, createdAt, modifiedAt, modifiedBy)
+            VALUES (:clubId, :rating, :userLogs, :gameLogs, :modifiedAt, :modifiedAt, :modifiedBy)
+            ON CONFLICT(clubId) DO UPDATE SET
+                rating = :rating,
+                userLogs = :userLogs,
+                gameLogs = :gameLogs,
+                modifiedAt = :modifiedAt,
+                modifiedBy = :modifiedBy
+        `);
+    }
+
+    setClubTelegramTopics(clubId: number, topics: ClubTelegramTopics, modifiedAt: Date, modifiedBy: number): void {
+        this.setClubTelegramTopicsStatement().run({
+            clubId,
+            rating: topics.rating ? JSON.stringify(topics.rating) : null,
+            userLogs: topics.userLogs ? JSON.stringify(topics.userLogs) : null,
+            gameLogs: topics.gameLogs ? JSON.stringify(topics.gameLogs) : null,
+            modifiedAt: modifiedAt.toISOString(),
+            modifiedBy
+        });
+    }
 }
 
 export interface ClubCreateParams {
@@ -205,8 +253,6 @@ export interface ClubCreateParams {
     description: string | null;
     contactInfo: string | null;
     isActive: boolean;
-    ratingChatId: string | null;
-    ratingTopicId: string | null;
     createdAt: Date;
     modifiedBy: number;
 }
@@ -219,8 +265,6 @@ export interface ClubUpdateParams {
     description: string | null;
     contactInfo: string | null;
     isActive: boolean;
-    ratingChatId: string | null;
-    ratingTopicId: string | null;
     modifiedAt: Date;
     modifiedBy: number;
 }
@@ -233,9 +277,16 @@ interface ClubDBEntity {
     description: string | null;
     contactInfo: string | null;
     isActive: number;
-    ratingChatId: string | null;
-    ratingTopicId: string | null;
     currentRatingEventId: number | null;
+    createdAt: string;
+    modifiedAt: string;
+    modifiedBy: number;
+}
+
+interface ClubTelegramTopicsDBEntity {
+    rating: string | null;
+    userLogs: string | null;
+    gameLogs: string | null;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
@@ -250,11 +301,17 @@ function clubFromDBEntity(dbEntity: ClubDBEntity): Club {
         description: dbEntity.description,
         contactInfo: dbEntity.contactInfo,
         isActive: Boolean(dbEntity.isActive),
-        ratingChatId: dbEntity.ratingChatId,
-        ratingTopicId: dbEntity.ratingTopicId,
         currentRatingEventId: dbEntity.currentRatingEventId,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy
     };
+}
+
+function clubTelegramTopicsFromDBEntity(dbEntity: ClubTelegramTopicsDBEntity): ClubTelegramTopics {
+    return {
+        rating: dbEntity.rating ? JSON.parse(dbEntity.rating) : null,
+        userLogs: dbEntity.userLogs ? JSON.parse(dbEntity.userLogs) : null,
+        gameLogs: dbEntity.gameLogs ? JSON.parse(dbEntity.gameLogs) : null
+    }
 }

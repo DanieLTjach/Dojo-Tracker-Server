@@ -8,6 +8,7 @@ export class ClubMembershipRepository {
         return dbManager.db.prepare(`
             SELECT
                 cm.clubId,
+                c.name as clubName,
                 cm.userId,
                 u.name as userName,
                 cm.role,
@@ -16,6 +17,7 @@ export class ClubMembershipRepository {
                 cm.modifiedAt,
                 cm.modifiedBy
             FROM clubMembership cm
+            JOIN club c ON cm.clubId = c.id
             JOIN user u ON cm.userId = u.id
             LEFT JOIN (
                 SELECT userId, MAX(game.createdAt) as lastGameDate
@@ -36,6 +38,7 @@ export class ClubMembershipRepository {
         return dbManager.db.prepare(`
             SELECT
                 cm.clubId,
+                c.name as clubName,
                 cm.userId,
                 u.name as userName,
                 cm.role,
@@ -44,6 +47,7 @@ export class ClubMembershipRepository {
                 cm.modifiedAt,
                 cm.modifiedBy
             FROM clubMembership cm
+            JOIN club c ON cm.clubId = c.id
             JOIN user u ON cm.userId = u.id
             LEFT JOIN (
                 SELECT userId, MAX(game.createdAt) as lastGameDate
@@ -69,6 +73,7 @@ export class ClubMembershipRepository {
         return dbManager.db.prepare(`
             SELECT
                 cm.clubId,
+                c.name as clubName,
                 cm.userId,
                 u.name as userName,
                 cm.role,
@@ -77,6 +82,7 @@ export class ClubMembershipRepository {
                 cm.modifiedAt,
                 cm.modifiedBy
             FROM clubMembership cm
+            JOIN club c ON cm.clubId = c.id
             JOIN user u ON cm.userId = u.id
             WHERE cm.clubId = :clubId
               AND cm.userId = :userId`
@@ -196,6 +202,7 @@ export class ClubMembershipRepository {
         return dbManager.db.prepare(`
             SELECT
                 cm.clubId,
+                c.name as clubName,
                 cm.userId,
                 u.name as userName,
                 cm.role,
@@ -204,6 +211,7 @@ export class ClubMembershipRepository {
                 cm.modifiedAt,
                 cm.modifiedBy
             FROM clubMembership cm
+            JOIN club c ON cm.clubId = c.id
             JOIN user u ON cm.userId = u.id
             WHERE cm.userId = :userId
               AND cm.status = :status
@@ -218,6 +226,7 @@ export class ClubMembershipRepository {
         return dbManager.db.prepare(`
             SELECT
                 cm.clubId,
+                c.name as clubName,
                 cm.userId,
                 u.name as userName,
                 cm.role,
@@ -226,6 +235,7 @@ export class ClubMembershipRepository {
                 cm.modifiedAt,
                 cm.modifiedBy
             FROM clubMembership cm
+            JOIN club c ON cm.clubId = c.id
             JOIN user u ON cm.userId = u.id
             WHERE cm.userId = :userId
         `);
@@ -257,6 +267,7 @@ export interface ClubMembershipUpdateParams {
 
 interface ClubMembershipDBEntity {
     clubId: number;
+    clubName: string;
     userId: number;
     userName: string;
     role: string;
@@ -269,6 +280,7 @@ interface ClubMembershipDBEntity {
 function clubMembershipFromDBEntity(dbEntity: ClubMembershipDBEntity): ClubMembership {
     return {
         clubId: dbEntity.clubId,
+        clubName: dbEntity.clubName,
         userId: dbEntity.userId,
         userName: dbEntity.userName,
         role: parseClubRole(dbEntity.role),
