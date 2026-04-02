@@ -56,7 +56,8 @@ export class RatingService {
         gameTimestamp: Date,
         playersData: PlayerData[],
         eventId: number,
-        gameRules: GameRules
+        gameRules: GameRules,
+        startingRating: number
     ): void {
         const players = [...playersData];
         this.sortPlayersData(players, gameRules.umaTieBreak);
@@ -66,7 +67,7 @@ export class RatingService {
             const latestRatingChange = this.ratingRepository.findUserLatestRatingChangeBeforeDate(
                 playerData.userId, eventId, gameTimestamp
             );
-            const currentRating = latestRatingChange?.rating ?? gameRules.startingRating * RATING_TO_POINTS_COEFFICIENT;
+            const currentRating = latestRatingChange?.rating ?? startingRating * RATING_TO_POINTS_COEFFICIENT;
 
             const gainedPoints = playerData.points - gameRules.startingPoints;
             const ratingChange = gainedPoints

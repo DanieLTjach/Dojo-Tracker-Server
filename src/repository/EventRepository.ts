@@ -17,8 +17,6 @@ export class EventRepository {
                 gr.numberOfPlayers as gr_numberOfPlayers,
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
-                gr.startingRating as gr_startingRating,
-                gr.minimumGamesForRating as gr_minimumGamesForRating,
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
@@ -45,8 +43,6 @@ export class EventRepository {
                 gr.numberOfPlayers as gr_numberOfPlayers,
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
-                gr.startingRating as gr_startingRating,
-                gr.minimumGamesForRating as gr_minimumGamesForRating,
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
@@ -74,8 +70,6 @@ export class EventRepository {
                 gr.numberOfPlayers as gr_numberOfPlayers,
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
-                gr.startingRating as gr_startingRating,
-                gr.minimumGamesForRating as gr_minimumGamesForRating,
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
@@ -99,13 +93,15 @@ export class EventRepository {
         clubId: number | null;
         dateFrom: string | null;
         dateTo: string | null;
+        startingRating: number;
+        minimumGamesForRating: number;
         createdAt: string;
         modifiedAt: string;
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -116,7 +112,9 @@ export class EventRepository {
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             createdAt: params.createdAt.toISOString(),
-            modifiedAt: params.modifiedAt.toISOString()
+            modifiedAt: params.modifiedAt.toISOString(),
+            startingRating: params.startingRating,
+            minimumGamesForRating: params.minimumGamesForRating
         });
         return result!.id;
     }
@@ -130,6 +128,8 @@ export class EventRepository {
         clubId: number | null;
         dateFrom: string | null;
         dateTo: string | null;
+        startingRating: number;
+        minimumGamesForRating: number;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
@@ -142,6 +142,8 @@ export class EventRepository {
                 clubId = :clubId,
                 dateFrom = :dateFrom,
                 dateTo = :dateTo,
+                startingRating = :startingRating,
+                minimumGamesForRating = :minimumGamesForRating,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
             WHERE id = :id
@@ -153,7 +155,9 @@ export class EventRepository {
             ...params,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
-            modifiedAt: params.modifiedAt.toISOString()
+            modifiedAt: params.modifiedAt.toISOString(),
+            startingRating: params.startingRating,
+            minimumGamesForRating: params.minimumGamesForRating
         });
     }
 
@@ -192,6 +196,8 @@ export interface EventCreateParams {
     clubId: number | null;
     dateFrom: Date | null;
     dateTo: Date | null;
+    startingRating: number;
+    minimumGamesForRating: number;
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;
@@ -206,6 +212,8 @@ export interface EventUpdateParams {
     clubId: number | null;
     dateFrom: Date | null;
     dateTo: Date | null;
+    startingRating: number;
+    minimumGamesForRating: number;
     modifiedAt: Date;
     modifiedBy: number;
 }
@@ -218,6 +226,8 @@ interface EventWithGameRulesDBEntity {
     gameRules: number;
     clubId: number | null;
     isCurrentRating: number;
+    startingRating: number;
+    minimumGamesForRating: number;
     dateFrom: string | null;
     dateTo: string | null;
     createdAt: string;
@@ -229,8 +239,6 @@ interface EventWithGameRulesDBEntity {
     gr_numberOfPlayers: number;
     gr_uma: string;
     gr_startingPoints: number;
-    gr_startingRating: number;
-    gr_minimumGamesForRating: number;
     gr_chomboPointsAfterUma: number | null;
     gr_umaTieBreak: string;
     gameCount: number;
@@ -244,6 +252,8 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         type: dbEntity.type,
         clubId: dbEntity.clubId,
         isCurrentRating: Boolean(dbEntity.isCurrentRating),
+        startingRating: dbEntity.startingRating,
+        minimumGamesForRating: dbEntity.minimumGamesForRating,
         gameRules: {
             id: dbEntity.gr_id,
             name: dbEntity.gr_name,
@@ -251,8 +261,6 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             numberOfPlayers: dbEntity.gr_numberOfPlayers,
             uma: parseUma(dbEntity.gr_uma),
             startingPoints: dbEntity.gr_startingPoints,
-            startingRating: dbEntity.gr_startingRating,
-            minimumGamesForRating: dbEntity.gr_minimumGamesForRating,
             chomboPointsAfterUma: dbEntity.gr_chomboPointsAfterUma,
             umaTieBreak: parseUmaTieBreak(dbEntity.gr_umaTieBreak)
         },

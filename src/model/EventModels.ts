@@ -12,8 +12,6 @@ export interface GameRules {
     numberOfPlayers: number;
     uma: number[] | number[][];
     startingPoints: number;
-    startingRating: number;
-    minimumGamesForRating: number;
     chomboPointsAfterUma: number | null;
     umaTieBreak: UmaTieBreak;
 }
@@ -26,6 +24,8 @@ export interface Event {
     clubId: number | null;
     isCurrentRating: boolean;
     gameRules: GameRules;
+    startingRating: number;
+    minimumGamesForRating: number;
     dateFrom: Date | null;
     dateTo: Date | null;
     gameCount: number;

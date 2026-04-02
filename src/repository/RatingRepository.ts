@@ -40,7 +40,7 @@ export class RatingRepository {
     private findAllUsersCurrentRatingStatement(): Statement<{ eventId: number }, UserRatingDBEntity> {
         return dbManager.db.prepare(`
             SELECT u.id as userId, u.name as userName, urc.rating as rating, gc.gamesPlayed as gamesPlayed,
-                   CASE WHEN gc.gamesPlayed >= gr.minimumGamesForRating THEN 1 ELSE 0 END as minimumGamesPlayed
+                   CASE WHEN gc.gamesPlayed >= e.minimumGamesForRating THEN 1 ELSE 0 END as minimumGamesPlayed
             FROM (
                 SELECT userId,
                         rating,
@@ -50,7 +50,6 @@ export class RatingRepository {
             ) urc
             JOIN user u ON urc.userId = u.id
             JOIN event e ON e.id = :eventId
-            JOIN gameRules gr ON e.gameRules = gr.id
             JOIN (
                 SELECT utg.userId, COUNT(DISTINCT utg.gameId) as gamesPlayed
                 FROM userToGame utg

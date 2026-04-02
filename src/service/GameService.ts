@@ -68,7 +68,7 @@ export class GameService {
 
         const newGameId = this.gameRepository.createGame(eventId, createdBy, gameTimestamp, tournamentHanchanNumber, tournamentTableNumber);
         this.addPlayersToGame(newGameId, playersData, createdBy);
-        this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules);
+        this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules, event.startingRating);
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
 
@@ -135,7 +135,7 @@ export class GameService {
         this.addPlayersToGame(gameId, playersData, modifiedBy);
 
         this.ratingService.deleteRatingChangesFromGame(oldGame);
-        this.ratingService.addRatingChangesFromGame(gameId, newGameTimestamp, playersData, eventId, event.gameRules);
+        this.ratingService.addRatingChangesFromGame(gameId, newGameTimestamp, playersData, eventId, event.gameRules, event.startingRating);
 
         const updatedGame = this.getGameById(gameId);
         this.logEditedGame(oldGame, updatedGame, event, modifiedBy);
