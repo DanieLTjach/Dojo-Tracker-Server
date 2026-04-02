@@ -146,16 +146,16 @@ describe('Permissions matrix integration specification', () => {
         clubId: number | null
     ): void {
         dbManager.db.prepare(
-            `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma, clubId)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).run(gameRulesId, name, numberOfPlayers, '15,0,-15', startingPoints, 1000, 0, null, clubId);
+            `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).run(gameRulesId, name, numberOfPlayers, '15,0,-15', startingPoints, null, clubId);
     }
 
     function insertEvent(eventId: number, name: string, clubId: number | null, gameRulesId: number): void {
         const timestamp = nextTimestamp();
         dbManager.db.prepare(
-            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, minimumGamesForRating, startingRating, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).run(
             eventId,
             name,
@@ -165,6 +165,8 @@ describe('Permissions matrix integration specification', () => {
             clubId,
             null,
             null,
+            0,
+            1000,
             timestamp,
             timestamp,
             SYSTEM_USER_ID

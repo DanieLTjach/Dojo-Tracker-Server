@@ -36,8 +36,6 @@ describe('Game Rules API Endpoints', () => {
             expect(gr).toHaveProperty('numberOfPlayers');
             expect(gr).toHaveProperty('uma');
             expect(gr).toHaveProperty('startingPoints');
-            expect(gr).toHaveProperty('startingRating');
-            expect(gr).toHaveProperty('minimumGamesForRating');
             expect(gr).toHaveProperty('chomboPointsAfterUma');
         });
 
@@ -84,19 +82,19 @@ describe('Game Rules API Endpoints', () => {
             ).run(otherClubId, 'Game Rules Test Club 2', null, null, null, null, 1, timestamp, timestamp, 0);
 
             dbManager.db.prepare(
-                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(clubRuleId, 'Club Rule', clubId, 4, '15,5,-5,-15', 30000, 1000, 0, null);
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubRuleId, 'Club Rule', clubId, 4, '15,5,-5,-15', 30000, null);
 
             dbManager.db.prepare(
-                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(globalRuleId, 'Global Rule', null, 4, '15,5,-5,-15', 30000, 1000, 0, null);
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(globalRuleId, 'Global Rule', null, 4, '15,5,-5,-15', 30000, null);
 
             dbManager.db.prepare(
-                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(otherClubRuleId, 'Other Club Rule', otherClubId, 4, '15,5,-5,-15', 30000, 1000, 0, null);
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(otherClubRuleId, 'Other Club Rule', otherClubId, 4, '15,5,-5,-15', 30000, null);
 
             const response = await request(app)
                 .get(`/api/game-rules?clubId=${clubId}`)
