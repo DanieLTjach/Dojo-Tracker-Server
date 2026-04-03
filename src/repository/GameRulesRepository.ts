@@ -14,8 +14,6 @@ export class GameRulesRepository {
                 numberOfPlayers,
                 uma,
                 startingPoints,
-                startingRating,
-                minimumGamesForRating,
                 chomboPointsAfterUma,
                 umaTieBreak
             FROM gameRules
@@ -36,8 +34,6 @@ export class GameRulesRepository {
                 numberOfPlayers,
                 uma,
                 startingPoints,
-                startingRating,
-                minimumGamesForRating,
                 chomboPointsAfterUma,
                 umaTieBreak
             FROM gameRules
@@ -59,8 +55,6 @@ export class GameRulesRepository {
                 numberOfPlayers,
                 uma,
                 startingPoints,
-                startingRating,
-                minimumGamesForRating,
                 chomboPointsAfterUma,
                 umaTieBreak
             FROM gameRules
@@ -81,8 +75,6 @@ interface GameRulesDBEntity {
     numberOfPlayers: number;
     uma: string;
     startingPoints: number;
-    startingRating: number;
-    minimumGamesForRating: number;
     chomboPointsAfterUma: number | null;
     umaTieBreak: string;
 }
@@ -95,8 +87,6 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         numberOfPlayers: dbEntity.numberOfPlayers,
         uma: parseUma(dbEntity.uma),
         startingPoints: dbEntity.startingPoints,
-        startingRating: dbEntity.startingRating,
-        minimumGamesForRating: dbEntity.minimumGamesForRating,
         chomboPointsAfterUma: dbEntity.chomboPointsAfterUma,
         umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak)
     };

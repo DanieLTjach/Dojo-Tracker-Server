@@ -63,6 +63,8 @@ export class EventService {
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
+            startingRating: data.startingRating,
+            minimumGamesForRating: data.minimumGamesForRating,
             createdAt: now,
             modifiedAt: now,
             modifiedBy
@@ -99,6 +101,8 @@ export class EventService {
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
+            startingRating: data.startingRating,
+            minimumGamesForRating: data.minimumGamesForRating,
             modifiedAt: now,
             modifiedBy
         });
@@ -198,4 +202,6 @@ export interface EventData {
     dateFrom?: Date | null | undefined;
     dateTo?: Date | null | undefined;
     gameRulesId: number;
+    startingRating: number;
+    minimumGamesForRating: number;
 }

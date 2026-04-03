@@ -478,14 +478,14 @@ describe('Rating API Endpoints', () => {
         function seedWindTieBreakGameRules() {
             const ts = new Date().toISOString();
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma, clubId, umaTieBreak)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(WIND_GAME_RULES_ID, 'Wind Tiebreak Rules', 4, '15,5,-5,-15', 30000, 1000, 0, null, 1, 'WIND');
+                `INSERT OR IGNORE INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId, umaTieBreak)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(WIND_GAME_RULES_ID, 'Wind Tiebreak Rules', 4, '15,5,-5,-15', 30000, null, 1, 'WIND');
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO event (id, name, type, gameRules, clubId, dateFrom, dateTo, modifiedBy, createdAt, modifiedAt)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                `INSERT OR IGNORE INTO event (id, name, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(WIND_EVENT_ID, 'Wind Tiebreak Season', 'SEASON', WIND_GAME_RULES_ID, 1,
-                '2024-01-01T00:00:00.000Z', '2026-12-31T23:59:59.999Z', 0, ts, ts);
+                '2024-01-01T00:00:00.000Z', '2026-12-31T23:59:59.999Z', 1000, 0, 0, ts, ts);
         }
 
         async function createWindGame(authHeader: string, playersData: any[]): Promise<number> {

@@ -75,7 +75,7 @@ describe('Event API Endpoints', () => {
             expect(event.gameRules).toHaveProperty('uma');
             expect(Array.isArray(event.gameRules.uma)).toBe(true);
             expect(event.gameRules).toHaveProperty('startingPoints');
-            expect(event.gameRules).toHaveProperty('startingRating');
+            expect(event).toHaveProperty('startingRating');
         });
 
         test('should filter events by clubId including global events', async () => {
@@ -181,14 +181,14 @@ describe('Event API Endpoints', () => {
             expect(gameRules).toHaveProperty('numberOfPlayers');
             expect(gameRules).toHaveProperty('uma');
             expect(gameRules).toHaveProperty('startingPoints');
-            expect(gameRules).toHaveProperty('startingRating');
+            expect(response.body).toHaveProperty('startingRating');
 
             expect(typeof gameRules.id).toBe('number');
             expect(typeof gameRules.name).toBe('string');
             expect(typeof gameRules.numberOfPlayers).toBe('number');
             expect(Array.isArray(gameRules.uma)).toBe(true);
             expect(typeof gameRules.startingPoints).toBe('number');
-            expect(typeof gameRules.startingRating).toBe('number');
+            expect(typeof response.body.startingRating).toBe('number');
         });
 
         test('should parse uma as 2D array of numbers in game rules', async () => {

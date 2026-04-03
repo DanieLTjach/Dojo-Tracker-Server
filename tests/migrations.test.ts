@@ -156,7 +156,7 @@ describe('Database Migrations', () => {
     expect(eventClubStats).toEqual({ totalCount: 5, linkedCount: 5, minClubId: 1, maxClubId: 1 });
 
     const gameRulesClubStats = db.prepare('SELECT COUNT(*) AS totalCount, COUNT(clubId) AS linkedCount, MIN(clubId) AS minClubId, MAX(clubId) AS maxClubId FROM gameRules').get() as Record<string, number>;
-    expect(gameRulesClubStats).toEqual({ totalCount: 4, linkedCount: 4, minClubId: 1, maxClubId: 1 });
+    expect(gameRulesClubStats).toEqual({ totalCount: 6, linkedCount: 3, minClubId: 1, maxClubId: 1 });
 
     const clubColumnsAfterMigration = db.prepare('PRAGMA table_info(club)').all() as Array<{ name: string; notnull: number; type?: string; dflt_value?: string | null }>;
     const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; notnull: number; type?: string; dflt_value?: string | null }>;

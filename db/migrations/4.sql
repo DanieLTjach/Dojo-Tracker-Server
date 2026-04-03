@@ -65,3 +65,20 @@ ALTER TABLE gameRules ADD COLUMN clubId INTEGER REFERENCES club(id);
 UPDATE gameRules SET clubId = 1;
 
 ALTER TABLE gameRules ADD COLUMN umaTieBreak TEXT NOT NULL DEFAULT 'DIVIDE';
+
+-- Add global Mahjong Soul rules (clubId NULL = not tied to any club)
+INSERT INTO gameRules (name, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma, clubId, umaTieBreak) VALUES
+    ('Mahjong Soul', 4, '15,5,-5,-15', 25000, 0, 0, NULL, NULL, 'WIND'),
+    ('Mahjong Soul Sanma', 3, '15,0,-15', 35000, 0, 0, NULL, NULL, 'WIND');
+
+-- Fix EMA 2025: startingPoints should be 0, chomboPointsAfterUma 20000, and it is a global rule (no club)
+UPDATE gameRules SET startingPoints = 0, chomboPointsAfterUma = 20000, clubId = NULL WHERE id = 4;
+
+-- Move minimumGamesForRating and startingRating from gameRules to event (per-event config)
+ALTER TABLE event ADD COLUMN minimumGamesForRating INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE event ADD COLUMN startingRating INTEGER NOT NULL DEFAULT 0;
+UPDATE event SET
+    minimumGamesForRating = (SELECT gr.minimumGamesForRating FROM gameRules gr WHERE gr.id = event.gameRules),
+    startingRating = (SELECT gr.startingRating FROM gameRules gr WHERE gr.id = event.gameRules);
+ALTER TABLE gameRules DROP COLUMN minimumGamesForRating;
+ALTER TABLE gameRules DROP COLUMN startingRating;
