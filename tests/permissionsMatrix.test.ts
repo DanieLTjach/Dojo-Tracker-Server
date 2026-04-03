@@ -237,8 +237,6 @@ describe('Permissions matrix integration specification', () => {
         numberOfPlayers: number;
         uma: number[];
         startingPoints: number;
-        startingRating: number;
-        minimumGamesForRating: number;
         clubId: number;
     } {
         return {
@@ -246,8 +244,6 @@ describe('Permissions matrix integration specification', () => {
             numberOfPlayers: 4,
             uma: [15, 5, -5, -15],
             startingPoints: 30000,
-            startingRating: 1000,
-            minimumGamesForRating: 0,
             clubId
         };
     }

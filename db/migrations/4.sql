@@ -68,8 +68,8 @@ ALTER TABLE gameRules ADD COLUMN umaTieBreak TEXT NOT NULL DEFAULT 'DIVIDE';
 
 -- Add global Mahjong Soul rules (clubId NULL = not tied to any club)
 INSERT INTO gameRules (name, numberOfPlayers, uma, startingPoints, startingRating, minimumGamesForRating, chomboPointsAfterUma, clubId, umaTieBreak) VALUES
-    ('Mahjong Soul', 4, '15,5,-5,-15', 30000, 0, 0, NULL, NULL, 'DIVIDE'),
-    ('Mahjong Soul Sanma', 3, '15,0,-15', 35000, 0, 0, NULL, NULL, 'DIVIDE');
+    ('Mahjong Soul', 4, '15,5,-5,-15', 25000, 0, 0, NULL, NULL, 'WIND'),
+    ('Mahjong Soul Sanma', 3, '15,0,-15', 35000, 0, 0, NULL, NULL, 'WIND');
 
 -- Fix EMA 2025: startingPoints should be 0, chomboPointsAfterUma 20000, and it is a global rule (no club)
 UPDATE gameRules SET startingPoints = 0, chomboPointsAfterUma = 20000, clubId = NULL WHERE id = 4;

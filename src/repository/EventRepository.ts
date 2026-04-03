@@ -112,9 +112,7 @@ export class EventRepository {
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             createdAt: params.createdAt.toISOString(),
-            modifiedAt: params.modifiedAt.toISOString(),
-            startingRating: params.startingRating,
-            minimumGamesForRating: params.minimumGamesForRating
+            modifiedAt: params.modifiedAt.toISOString()
         });
         return result!.id;
     }
@@ -155,9 +153,7 @@ export class EventRepository {
             ...params,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
-            modifiedAt: params.modifiedAt.toISOString(),
-            startingRating: params.startingRating,
-            minimumGamesForRating: params.minimumGamesForRating
+            modifiedAt: params.modifiedAt.toISOString()
         });
     }
 
