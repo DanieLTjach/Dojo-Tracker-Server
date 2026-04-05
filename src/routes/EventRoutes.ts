@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { EventController } from '../controller/EventController.ts';
-import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
+import { requireAuth } from '../middleware/AuthMiddleware.ts';
 
 const router = Router();
 const eventController = new EventController();
@@ -42,8 +42,8 @@ router.put('/:eventId', requireAuth, withTransaction((req, res) => eventControll
  * DELETE /api/events/:eventId
  * Delete an event (only if it has no games)
  *
- * Authentication: Required (Admin only)
+ * Authentication: Required (Admin or Club Owner)
  */
-router.delete('/:eventId', requireAuth, requireAdmin, withTransaction((req, res) => eventController.deleteEvent(req, res)));
+router.delete('/:eventId', requireAuth, withTransaction((req, res) => eventController.deleteEvent(req, res)));
 
 export default router;

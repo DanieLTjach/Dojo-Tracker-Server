@@ -148,6 +148,7 @@ export class EventService {
 
     deleteEvent(eventId: number, modifiedBy: number): void {
         const event = this.getEventById(eventId);
+        this.authorizeEventDeletion(event, modifiedBy);
 
         const gameCount = this.eventRepository.getGameCountForEvent(eventId);
         if (gameCount > 0) {
@@ -159,6 +160,22 @@ export class EventService {
         }
 
         this.eventRepository.deleteEvent(eventId);
+    }
+
+    private authorizeEventDeletion(event: Event, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (event.clubId === null) {
+            throw new InsufficientPermissionsError();
+        }
+
+        const clubRole = this.membershipRepository.getUserClubRole(event.clubId, userId);
+        if (clubRole !== 'OWNER') {
+            throw new InsufficientClubPermissionsError('OWNER');
+        }
     }
 
     private validateCurrentRatingEvent(data: EventData): void {
