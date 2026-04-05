@@ -198,19 +198,45 @@ export class GameService {
         const user = this.userService.getUserById(modifiedBy);
 
         const oldEvent = this.eventService.getEventById(oldGame.eventId);
-        const message = dedent`
+        const changes: string[] = [];
+        if (oldEvent.id !== event.id) {
+            changes.push(`<b>Event:</b> ${oldEvent.name} <code>(ID: ${oldEvent.id})</code> → ${event.name} <code>(ID: ${event.id})</code>`);
+        }
+        if (oldGame.createdAt.toISOString() !== newGame.createdAt.toISOString()) {
+            changes.push(`<b>Timestamp:</b> <code>${oldGame.createdAt.toISOString()}</code> → <code>${newGame.createdAt.toISOString()}</code>`);
+        }
+
+        const playersChanged = this.havePlayersChanged(oldGame.players, newGame.players);
+
+        let message = dedent`
             <b>✏️ Game Edited</b>
 
             <b>Game ID:</b> <code>${newGame.id}</code>
-            <b>Event:</b> ${oldEvent.name} <code>(ID: ${oldEvent.id})</code> → ${event.name} <code>(ID: ${event.id})</code>
-            <b>Timestamp:</b> <code>${oldGame.createdAt.toISOString()}</code> → <code>${newGame.createdAt.toISOString()}</code>
-            <b>Edited by:</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
+        `;
 
-            <b>Players (Before):</b>\n
-        ` + this.printPlayersLog(oldGame.players) + dedent`
-            \n\n<b>Players (After):</b>\n
-        ` + this.printPlayersLog(newGame.players);
+        if (changes.length > 0) {
+            message += '\n' + changes.join('\n');
+        }
+
+        message += `\n<b>Edited by:</b> ${user.name} <code>(ID: ${user.id})</code>`;
+
+        if (playersChanged) {
+            message += `\n\n<b>Players (Before):</b>\n` + this.printPlayersLog(oldGame.players);
+            message += `\n\n<b>Players (After):</b>\n` + this.printPlayersLog(newGame.players);
+        }
+
         this.logMessageToGameLogsTopics(message, event);
+    }
+
+    private havePlayersChanged(oldPlayers: GamePlayer[], newPlayers: GamePlayer[]): boolean {
+        if (oldPlayers.length !== newPlayers.length) return true;
+        const oldSorted = [...oldPlayers].sort((a, b) => a.userId - b.userId);
+        const newSorted = [...newPlayers].sort((a, b) => a.userId - b.userId);
+        return oldSorted.some((old, i) => {
+            const n = newSorted[i]!;
+            return old.userId !== n.userId || old.points !== n.points || old.startPlace !== n.startPlace || old.chomboCount !== n.chomboCount;
+        });
     }
 
     private logDeletedGame(game: GameWithPlayers, event: Event, deletedBy: number): void {
@@ -306,7 +332,7 @@ export class GameService {
 
         const createdByUser = this.userService.getUserById(createdBy);
         const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
-            + `\nДодано <a href="${config.botUrl}?startapp=game_${game.id}">нову гру</a>`
+            + `\nДодано <a href="${config.botUrl}?startapp=game_${game.id}"><b>нову гру</b></a>`
             + ` користувачем ${this.generateUserProfileLink(createdByUser)}\n\n`
             + `${playerLines}`;
 

@@ -222,14 +222,23 @@ export class UserService {
 
     private logEditedUser(oldUser: User, newUser: User, modifiedBy: number): void {
         const modifier = this.getUserById(modifiedBy);
-        const message = dedent`
+        const changes: string[] = [];
+        if (oldUser.name !== newUser.name) {
+            changes.push(`<b>Name:</b> ${oldUser.name} → ${newUser.name}`);
+        }
+        if (oldUser.telegramUsername !== newUser.telegramUsername) {
+            changes.push(`<b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}`);
+        }
+
+        let message = dedent`
             <b>✏️ User Edited</b>
 
             <b>User ID:</b> <code>${newUser.id}</code>
-            <b>Name:</b> ${oldUser.name} → ${newUser.name}
-            <b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}
-            <b>Edited by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
+        if (changes.length > 0) {
+            message += '\n' + changes.join('\n');
+        }
+        message += `\n<b>Edited by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>`;
         this.logMessageToUserLogsTopics(message, newUser);
     }
 
