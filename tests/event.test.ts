@@ -517,8 +517,28 @@ describe('Event API Endpoints', () => {
         });
     });
 
-    describe('DELETE /api/events/:eventId - Delete Event (admin only)', () => {
+    describe('DELETE /api/events/:eventId - Delete Event', () => {
         const deletableEventId = 2002;
+        const clubOwnerUserId = 88001;
+        let clubOwnerAuthHeader: string;
+
+        beforeAll(() => {
+            const timestamp = '2024-01-01T00:00:00.000Z';
+            dbManager.db.prepare(
+                `INSERT INTO user (id, telegramUsername, telegramId, name, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubOwnerUserId, '@clubowner_event', 88888801, 'ClubOwnerEventUser', timestamp, timestamp, 0, 1, 0, 'ACTIVE');
+            dbManager.db.prepare(
+                `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(1, clubOwnerUserId, 'OWNER', 'ACTIVE', timestamp, timestamp, 0);
+            clubOwnerAuthHeader = createAuthHeader(clubOwnerUserId);
+        });
+
+        afterAll(() => {
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE userId = ?').run(clubOwnerUserId);
+            dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(clubOwnerUserId);
+        });
 
         beforeEach(() => {
             createCustomEvent(deletableEventId, 'Event To Delete');
@@ -529,7 +549,7 @@ describe('Event API Endpoints', () => {
             deleteEventById(deletableEventId);
         });
 
-        test('should delete event and return 204', async () => {
+        test('should delete event as admin and return 204', async () => {
             const response = await request(app)
                 .delete(`/api/events/${deletableEventId}`)
                 .set('Authorization', adminAuthHeader);
@@ -540,6 +560,59 @@ describe('Event API Endpoints', () => {
                 .get(`/api/events/${deletableEventId}`)
                 .set('Authorization', adminAuthHeader);
             expect(fetchResponse.status).toBe(404);
+        });
+
+        test('should delete event as club owner and return 204', async () => {
+            const response = await request(app)
+                .delete(`/api/events/${deletableEventId}`)
+                .set('Authorization', clubOwnerAuthHeader);
+
+            expect(response.status).toBe(204);
+
+            const fetchResponse = await request(app)
+                .get(`/api/events/${deletableEventId}`)
+                .set('Authorization', adminAuthHeader);
+            expect(fetchResponse.status).toBe(404);
+        });
+
+        test('should reject club owner deleting event from another club', async () => {
+            const otherClubEventId = 2003;
+            const otherClubId = 99;
+            const timestamp = '2024-01-01T00:00:00.000Z';
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, isActive, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?)`
+            ).run(otherClubId, 'Other Club For Delete Test', 1, timestamp, timestamp, 0);
+            createCustomEvent(otherClubEventId, 'Other Club Event', undefined, undefined, 2, otherClubId);
+
+            const response = await request(app)
+                .delete(`/api/events/${otherClubEventId}`)
+                .set('Authorization', clubOwnerAuthHeader);
+
+            deleteEventById(otherClubEventId);
+            dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(otherClubId);
+
+            expect(response.status).toBe(403);
+        });
+
+        test('should reject non-owner club member deleting event', async () => {
+            const response = await request(app)
+                .delete(`/api/events/${deletableEventId}`)
+                .set('Authorization', nonAdminAuthHeader);
+            expect(response.status).toBe(403);
+        });
+
+        test('should reject deleting global event as non-admin', async () => {
+            const globalEventId = 2004;
+            createCustomEvent(globalEventId, 'Global Event To Delete', undefined, undefined, 2, null);
+
+            const response = await request(app)
+                .delete(`/api/events/${globalEventId}`)
+                .set('Authorization', clubOwnerAuthHeader);
+
+            deleteEventById(globalEventId);
+
+            expect(response.status).toBe(403);
         });
 
         test('should clear club currentRatingEventId when deleting current rating event', async () => {
@@ -559,13 +632,6 @@ describe('Event API Endpoints', () => {
         test('should reject when not authenticated', async () => {
             const response = await request(app).delete(`/api/events/${deletableEventId}`);
             expect(response.status).toBe(401);
-        });
-
-        test('should reject when not admin', async () => {
-            const response = await request(app)
-                .delete(`/api/events/${deletableEventId}`)
-                .set('Authorization', nonAdminAuthHeader);
-            expect(response.status).toBe(403);
         });
 
         test('should return 404 for missing event', async () => {
