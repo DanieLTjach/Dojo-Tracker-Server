@@ -116,18 +116,25 @@ export class ClubService {
 
     private logEditedClub(oldClub: Club, newClub: Club, modifiedBy: number): void {
         const modifier = this.userRepository.findUserById(modifiedBy);
-        const message = dedent`
+        const changes: string[] = [];
+
+        if (oldClub.name !== newClub.name) changes.push(`<b>Name:</b> ${oldClub.name} → ${newClub.name}`);
+        if (oldClub.city !== newClub.city) changes.push(`<b>City:</b> ${oldClub.city || 'N/A'} → ${newClub.city || 'N/A'}`);
+        if (oldClub.address !== newClub.address) changes.push(`<b>Address:</b> ${oldClub.address || 'N/A'} → ${newClub.address || 'N/A'}`);
+        if (oldClub.description !== newClub.description) changes.push(`<b>Description:</b> ${oldClub.description || 'N/A'} → ${newClub.description || 'N/A'}`);
+        if (oldClub.contactInfo !== newClub.contactInfo) changes.push(`<b>Contact Info:</b> ${oldClub.contactInfo || 'N/A'} → ${newClub.contactInfo || 'N/A'}`);
+        if (oldClub.isActive !== newClub.isActive) changes.push(`<b>Is Active:</b> ${oldClub.isActive} → ${newClub.isActive}`);
+
+        let message = dedent`
             <b>✏️ Club Edited</b>
 
             <b>Club ID:</b> <code>${newClub.id}</code>
-            <b>Name:</b> ${oldClub.name} → ${newClub.name}
-            <b>City:</b> ${oldClub.city || 'N/A'} → ${newClub.city || 'N/A'}
-            <b>Address:</b> ${oldClub.address || 'N/A'} → ${newClub.address || 'N/A'}
-            <b>Description:</b> ${oldClub.description || 'N/A'} → ${newClub.description || 'N/A'}
-            <b>Contact Info:</b> ${oldClub.contactInfo || 'N/A'} → ${newClub.contactInfo || 'N/A'}
-            <b>Is Active:</b> ${oldClub.isActive} → ${newClub.isActive}
-            <b>Edited by:</b> ${modifier?.name} <code>(ID: ${modifier?.id})</code>
+            <b>Name:</b> ${newClub.name}
         `;
+        if (changes.length > 0) {
+            message += '\n' + changes.join('\n');
+        }
+        message += `\n<b>Edited by:</b> ${modifier?.name} <code>(ID: ${modifier?.id})</code>`;
         LogService.logInfo(message, globalClubLogsTopic);
     }
 
