@@ -6,7 +6,7 @@ import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent, createTelegramInitData } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -36,14 +36,13 @@ describe('Rating API Endpoints', () => {
 
     // Helper to create test users
     async function createTestUser(name: string, telegramId: number): Promise<number> {
+        const initData = createTelegramInitData(telegramId, name.toLowerCase());
+
         const response = await request(app)
             .post('/api/users')
             .set('Authorization', adminAuthHeader)
-            .send({
-                name,
-                telegramUsername: `@${name.toLowerCase()}`,
-                telegramId
-            });
+            .query(initData)
+            .send({ name });
         expect(response.status).toBe(201);
         const userId = response.body.id;
 

@@ -4,7 +4,7 @@ import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, createTelegramInitData } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -30,23 +30,20 @@ describe('User API Endpoints', () => {
 
     describe('POST /api/users', () => {
         it('should register a new user', async () => {
-            const userData = {
-                name: 'Test User',
-                telegramUsername: '@testuser',
-                telegramId: 456456456
-            };
+            const initData = createTelegramInitData(456456456, 'testuser');
 
             const response = await request(app)
                 .post('/api/users')
-                .send(userData)
+                .query(initData)
+                .send({ name: 'Test User' })
                 .expect(201);
 
             testUserId = response.body.id;
 
             expect(response.body).toHaveProperty('id');
-            expect(response.body.name).toBe(userData.name);
-            expect(response.body.telegramUsername).toBe(userData.telegramUsername);
-            expect(response.body.telegramId).toBe(userData.telegramId);
+            expect(response.body.name).toBe('Test User');
+            expect(response.body.telegramUsername).toBe('@testuser');
+            expect(response.body.telegramId).toBe(456456456);
             expect(response.body.isActive).toBe(true);
             expect(response.body.status).toBe('ACTIVE');
             expect(response.body.isAdmin).toBe(false);
@@ -55,22 +52,20 @@ describe('User API Endpoints', () => {
         });
 
         it('should register a new user without telegram username', async () => {
-            const userData = {
-                name: 'Test User without telegram username',
-                telegramId: 456456457
-            };
+            const initData = createTelegramInitData(456456457); // No username provided
 
             const response = await request(app)
                 .post('/api/users')
-                .send(userData)
+                .query(initData)
+                .send({ name: 'Test User without telegram username' })
                 .expect(201);
 
             testUserId = response.body.id;
 
             expect(response.body).toHaveProperty('id');
-            expect(response.body.name).toBe(userData.name);
+            expect(response.body.name).toBe('Test User without telegram username');
             expect(response.body.telegramUsername).toBeNull();
-            expect(response.body.telegramId).toBe(userData.telegramId);
+            expect(response.body.telegramId).toBe(456456457);
             expect(response.body.isActive).toBe(true);
             expect(response.body.status).toBe('ACTIVE');
             expect(response.body.isAdmin).toBe(false);
@@ -78,132 +73,86 @@ describe('User API Endpoints', () => {
             regularUserAuthHeader = createAuthHeader(testUserId);
         });
 
-        it('should register a new user with null telegram username', async () => {
-            const userData = {
-                name: 'Test User with null telegram username',
-                telegramUsername: null,
-                telegramId: 456456458
-            };
-
-            const response = await request(app)
-                .post('/api/users')
-                .send(userData)
-                .expect(201);
-
-            testUserId = response.body.id;
-
-            expect(response.body).toHaveProperty('id');
-            expect(response.body.name).toBe(userData.name);
-            expect(response.body.telegramUsername).toBeNull();
-            expect(response.body.telegramId).toBe(userData.telegramId);
-            expect(response.body.isActive).toBe(true);
-            expect(response.body.isAdmin).toBe(false);
-
-            regularUserAuthHeader = createAuthHeader(testUserId);
-        });
-
         it('should register a new user (admin authenticated via JWT)', async () => {
-            const userData = {
-                name: 'Test User 2',
-                telegramUsername: '@testuser2',
-                telegramId: 789789789
-            };
+            const initData = createTelegramInitData(789789789, 'testuser2');
 
             const response = await request(app)
                 .post('/api/users')
                 .set('Authorization', adminAuthHeader)
-                .send(userData)
+                .query(initData)
+                .send({ name: 'Test User 2' })
                 .expect(201);
 
             testUser2Id = response.body.id;
             expect(response.body).toHaveProperty('id');
-            expect(response.body.name).toBe(userData.name);
+            expect(response.body.name).toBe('Test User 2');
         });
 
         it('should fail when name is missing', async () => {
-            const userData = {
-                telegramUsername: '@testuser3',
-                telegramId: 111222333
-            };
+            const initData = createTelegramInitData(111222333, 'testuser3');
 
             const response = await request(app)
                 .post('/api/users')
-                .send(userData);
+                .query(initData)
+                .send({});
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBe('Invalid request data');
         });
 
-        it('should fail when telegram username does not start with @', async () => {
-            const userData = {
-                name: 'Test User 3',
-                telegramUsername: 'testuser3',
-                telegramId: 111222333
-            };
-
+        it('should fail when telegram init data is missing', async () => {
             const response = await request(app)
                 .post('/api/users')
-                .send(userData);
+                .send({ name: 'Test User 4' });
 
-            expect(response.status).toBe(400);
-            expect(response.body.error).toBe('Invalid request data');
+            expect(response.status).toBe(401);
+            expect(response.body.message).toContain('Missing hash parameter');
         });
 
-        it('should fail when telegram ID is not a number', async () => {
-            const userData = {
-                name: 'Test User 4',
-                telegramUsername: '@testuser4',
-                telegramId: 'not-a-number'
-            };
+        it('should fail when telegram init data hash is invalid', async () => {
+            const initData = createTelegramInitData(111222334, 'testuser4');
+            initData['hash'] = 'invalid_hash'; // Corrupt the hash
 
             const response = await request(app)
                 .post('/api/users')
-                .send(userData);
+                .query(initData)
+                .send({ name: 'Test User 4' });
 
-            expect(response.status).toBe(400);
-            expect(response.body.error).toBe('Invalid request data');
+            expect(response.status).toBe(401);
+            expect(response.body.message).toContain('Hash mismatch');
         });
 
         it('should fail when registering duplicate telegram username', async () => {
-            const userData = {
-                name: 'Unique Name',
-                telegramUsername: '@testuser',
-                telegramId: 999888777
-            };
+            const initData = createTelegramInitData(999888777, 'testuser');
 
             const response = await request(app)
                 .post('/api/users')
-                .send(userData);
+                .query(initData)
+                .send({ name: 'Unique Name' });
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe("Telegram юзернейм '@testuser' вже зайнятий іншим користувачем");
         });
 
         it('should fail when name already taken', async () => {
-            const userData = {
-                name: 'Test User',
-                telegramUsername: '@newuser',
-                telegramId: 555666777
-            };
+            const initData = createTelegramInitData(555666777, 'newuser');
 
             const response = await request(app)
                 .post('/api/users')
-                .send(userData);
+                .query(initData)
+                .send({ name: 'Test User' });
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe("Ім'я 'Test User' вже зайняте іншим користувачем");
         });
 
         it('should fail when telegram ID already exists', async () => {
-            const userData = {
-                name: 'Different Name',
-                telegramUsername: '@differentuser',
-                telegramId: 456456456
-            };
+            const initData = createTelegramInitData(456456456, 'differentuser');
 
             const response = await request(app)
                 .post('/api/users')
-                .send(userData);
+                .query(initData)
+                .send({ name: 'Different Name' });
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe('Користувач з Telegram id 456456456 вже існує');

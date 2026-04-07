@@ -94,6 +94,18 @@ export class AuthService {
      * @throws InvalidInitDataError if user ID is missing or invalid
      */
     extractTelegramId(params: Record<string, string>): number {
+        const telegramUser = this.extractTelegramUser(params);
+        return telegramUser.id;
+    }
+
+    /**
+     * Extracts full Telegram user data from the 'user' parameter in initData.
+     *
+     * @param params - Query parameters from initData
+     * @returns Telegram user object
+     * @throws InvalidInitDataError if user data is missing or invalid
+     */
+    extractTelegramUser(params: Record<string, string>): TelegramUser {
         const userParam = params['user'];
         if (!userParam) {
             throw new InvalidInitDataError('Missing user parameter');
@@ -106,7 +118,7 @@ export class AuthService {
             throw new InvalidInitDataError('Invalid user ID in user parameter');
         }
 
-        return telegramId;
+        return telegramUser;
     }
 
     private parseJsonForInitData<T>(json: string, errorMessage: string): T {

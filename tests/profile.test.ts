@@ -4,7 +4,7 @@ import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, createTelegramInitData } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -26,9 +26,11 @@ describe('Profile API Endpoints', () => {
 
     beforeAll(async () => {
         // Register and activate test user
+        const initData1 = createTelegramInitData(100100100, 'profiletest');
         const res1 = await request(app)
             .post('/api/users')
-            .send({ name: 'Profile Test User', telegramUsername: '@profiletest', telegramId: 100100100 })
+            .query(initData1)
+            .send({ name: 'Profile Test User' })
             .expect(201);
         testUserId = res1.body.id;
 
@@ -39,9 +41,11 @@ describe('Profile API Endpoints', () => {
         regularUserAuthHeader = createAuthHeader(testUserId);
 
         // Register and activate second test user
+        const initData2 = createTelegramInitData(200200200, 'profiletest2');
         const res2 = await request(app)
             .post('/api/users')
-            .send({ name: 'Profile Test User 2', telegramUsername: '@profiletest2', telegramId: 200200200 })
+            .query(initData2)
+            .send({ name: 'Profile Test User 2' })
             .expect(201);
         testUser2Id = res2.body.id;
 

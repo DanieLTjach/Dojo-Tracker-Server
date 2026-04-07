@@ -13,9 +13,7 @@ export const userIdParamSchema = z.coerce.number().int("User ID must be an integ
 
 export const userRegistrationSchema = z.object({
     body: z.object({
-        name: userNameSchema,
-        telegramUsername: telegramUsernameSchema.nullish(),
-        telegramId: telegramIdParamSchema
+        name: userNameSchema
     })
 });
 
