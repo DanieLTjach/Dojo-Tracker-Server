@@ -1,10 +1,11 @@
 import request from 'supertest';
 import express from 'express';
 import gameRoutes from '../src/routes/GameRoutes.ts';
+import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent, createCustomEvent } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent, createCustomEvent, createTelegramInitData } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -28,18 +29,16 @@ describe('Game API Endpoints', () => {
     async function createTestUser(name: string, telegramId: number): Promise<number> {
         const userApp = express();
         userApp.use(express.json());
-        const userRoutes = (await import('../src/routes/UserRoutes.ts')).default;
         userApp.use('/api/users', userRoutes);
         userApp.use(handleErrors);
+
+        const initData = createTelegramInitData(telegramId, name.toLowerCase());
 
         const response = await request(userApp)
             .post('/api/users')
             .set('Authorization', adminAuthHeader)
-            .send({
-                name,
-                telegramUsername: `@${name.toLowerCase()}`,
-                telegramId
-            });
+            .query(initData)
+            .send({ name });
 
         const userId = response.body.id;
 

@@ -3,6 +3,7 @@ import type { SignOptions } from 'jsonwebtoken';
 import type { DecodedToken } from '../src/model/AuthModels.ts';
 import config from '../config/config.ts';
 import { dbManager } from '../src/db/dbInit.ts';
+import { HashUtil } from '../src/util/HashUtil.ts';
 
 /**
  * Generates a JWT token for testing purposes.
@@ -72,4 +73,44 @@ export function createTestEvent(): void {
 export function deleteEventById(eventId: number): void {
     dbManager.db.prepare('UPDATE club SET currentRatingEventId = NULL WHERE currentRatingEventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+}
+
+/**
+ * Creates valid Telegram init data for testing purposes.
+ * Follows the same validation algorithm as AuthService.validateInitData.
+ * @param telegramId - Telegram user ID
+ * @param username - Telegram username (without @ prefix)
+ * @returns Object with query parameters for init data
+ */
+export function createTelegramInitData(telegramId: number, username?: string): Record<string, string> {
+    const authDate = Math.floor(Date.now() / 1000); // Current timestamp in seconds
+    
+    const userObj: any = { id: telegramId };
+    if (username) {
+        userObj.username = username;
+    }
+    const userParam = JSON.stringify(userObj);
+    
+    // Create params without hash (sorted alphabetically for data-check-string)
+    const params: Record<string, string> = {
+        auth_date: authDate.toString(),
+        user: userParam
+    };
+    
+    // Create data-check-string (all params sorted alphabetically)
+    const dataCheckString = Object.entries(params)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n');
+    
+    // Calculate secret key: HMAC-SHA256(bot_token, "WebAppData")
+    const secretKey = HashUtil.hmac(config.botToken, 'WebAppData');
+    
+    // Calculate hash: HMAC-SHA256(data_check_string, secret_key)
+    const hash = HashUtil.hmac(dataCheckString, secretKey).toString('hex');
+    
+    // Add hash to params
+    params['hash'] = hash;
+    
+    return params;
 }

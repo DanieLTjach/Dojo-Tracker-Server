@@ -18,9 +18,17 @@ export class UserController {
     private authService: AuthService = new AuthService();
 
     registerUser(req: Request, res: Response) {
-        const { name, telegramUsername, telegramId } = userRegistrationSchema.parse(req).body;
+        const { body: { name } } = userRegistrationSchema.parse(req);
+        const initDataParams = req.query as Record<string, string>;
+
+        this.authService.validateInitData(initDataParams);
+        
+        const telegramUser = this.authService.extractTelegramUser(initDataParams);
+        const telegramId = telegramUser.id;
+        const telegramUsername = telegramUser.username ? `@${telegramUser.username}` : undefined;
+
         const createdBy = req.user?.userId ?? SYSTEM_USER_ID;
-        const newUser = this.userService.registerUser(name, telegramUsername ?? undefined, telegramId, createdBy);
+        const newUser = this.userService.registerUser(name, telegramUsername, telegramId, createdBy);
         return res.status(StatusCodes.CREATED).json(newUser);
     }
 
