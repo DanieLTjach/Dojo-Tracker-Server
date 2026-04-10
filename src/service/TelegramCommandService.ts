@@ -416,7 +416,7 @@ class TelegramCommandService {
         });
     }
 
-    private handleSendPollConfirmCallback(ctx: TelegramCallbackQueryContext) {
+    private async handleSendPollConfirmCallback(ctx: TelegramCallbackQueryContext) {
         const clubId = parseInt(ctx.match[1]!);
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
@@ -428,7 +428,7 @@ class TelegramCommandService {
         }
 
         try {
-            PollSchedulerService.sendPollNow(pollConfig);
+            await PollSchedulerService.sendPollNow(pollConfig);
             ctx.reply('✅ Опитування відправлено!');
         } catch (error) {
             ctx.reply('❌ Помилка: переконайтеся, що топік для опитувань встановлено через /set_topic');
