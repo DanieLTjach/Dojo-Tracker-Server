@@ -1,5 +1,5 @@
 ALTER TABLE clubTelegramTopics ADD COLUMN clubLogs TEXT;
-ALTER TABLE clubTelegramTopics ADD COLUMN poll TEXT;
+ALTER TABLE clubTelegramTopics ADD COLUMN main TEXT;
 
 CREATE TABLE clubPollConfig (
     clubId INTEGER PRIMARY KEY REFERENCES club(id),

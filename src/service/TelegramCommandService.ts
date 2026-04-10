@@ -350,7 +350,7 @@ class TelegramCommandService {
             + `📝 ${club.name}\n`
             + `📅 Дні подій: ${daysText}\n`
             + `📤 Відправка: ${DAY_NAMES_SHORT[sendDay]} о ${sendTime}\n\n`
-            + `Не забудьте встановити топік для опитувань через /set_topic → 📊 Опитування`
+            + `Не забудьте встановити основний топік через /set_topic → 📌 Основний`
         );
     }
 
@@ -431,7 +431,7 @@ class TelegramCommandService {
             await PollSchedulerService.sendPollNow(pollConfig);
             ctx.reply('✅ Опитування відправлено!');
         } catch (error) {
-            ctx.reply('❌ Помилка: переконайтеся, що топік для опитувань встановлено через /set_topic');
+            ctx.reply('❌ Помилка: переконайтеся, що основний топік встановлено через /set_topic');
         }
     }
 
@@ -522,8 +522,8 @@ function clubTelegramTopicDescription(topicType: ClubTelegramTopicType): string 
             return '🀄 Логи ігр';
         case ClubTelegramTopicType.CLUB_LOGS:
             return '🏛️ Логи клубу';
-        case ClubTelegramTopicType.POLL:
-            return '📊 Опитування';
+        case ClubTelegramTopicType.MAIN:
+            return '📌 Основний';
     }
 }
 
@@ -537,8 +537,8 @@ function clubTelegramTopicUpdatedSuccessfullyText(topicType: ClubTelegramTopicTy
             return 'Топік для логів ігр успішно встановлено!';
         case ClubTelegramTopicType.CLUB_LOGS:
             return 'Топік для логів клубу успішно встановлено!';
-        case ClubTelegramTopicType.POLL:
-            return 'Топік для опитувань успішно встановлено!';
+        case ClubTelegramTopicType.MAIN:
+            return 'Основний топік успішно встановлено!';
     }
 }
 

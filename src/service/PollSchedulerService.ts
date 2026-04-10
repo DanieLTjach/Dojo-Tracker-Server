@@ -54,18 +54,18 @@ class PollSchedulerService {
     }
 
     async sendPollNow(config: ClubPollConfig) {
-        const pollTopic = this.clubService.getClubTelegramTopics(config.clubId).poll;
+        const pollTopic = this.clubService.getClubTelegramTopics(config.clubId).main;
         if (pollTopic === null) {
-            throw new Error(`No poll topic configured for club ${config.clubId}`);
+            throw new Error(`No main topic configured for club ${config.clubId}`);
         }
 
         await this.sendTelegramPoll(pollTopic, this.buildPollTitle(config), this.buildPollOptions(config));
     }
 
     private sendScheduledPoll(config: ClubPollConfig) {
-        const pollTopic = this.clubService.getClubTelegramTopics(config.clubId).poll;
+        const pollTopic = this.clubService.getClubTelegramTopics(config.clubId).main;
         if (pollTopic === null) {
-            console.warn(`No poll topic configured for club ${config.clubId}, skipping poll`);
+            console.warn(`No main topic configured for club ${config.clubId}, skipping poll`);
             return;
         }
 
