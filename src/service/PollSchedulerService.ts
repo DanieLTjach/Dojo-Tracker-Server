@@ -45,6 +45,21 @@ class PollSchedulerService {
         }
     }
 
+    sendPollNow(config: ClubPollConfig) {
+        const pollTopic = this.clubService.getClubTelegramTopics(config.clubId).poll;
+        if (pollTopic === null) {
+            throw new Error(`No poll topic configured for club ${config.clubId}`);
+        }
+
+        const options = this.buildPollOptions(config);
+        void this.sendTelegramPoll(pollTopic, config.pollTitle, options);
+    }
+
+    getPreview(config: ClubPollConfig): string {
+        const options = this.buildPollOptions(config);
+        return `📊 <b>${config.pollTitle}</b>\n\n` + options.map(o => `◻️ ${o}`).join('\n');
+    }
+
     private sendPoll(config: ClubPollConfig) {
         const pollTopic = this.clubService.getClubTelegramTopics(config.clubId).poll;
         if (pollTopic === null) {
@@ -53,11 +68,10 @@ class PollSchedulerService {
         }
 
         const options = this.buildPollOptions(config);
-
         void this.sendTelegramPoll(pollTopic, config.pollTitle, options);
     }
 
-    private buildPollOptions(config: ClubPollConfig): string[] {
+    buildPollOptions(config: ClubPollConfig): string[] {
         const options: string[] = [];
 
         // Calculate upcoming dates for each event day

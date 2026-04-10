@@ -13,6 +13,7 @@ import { ClubTelegramTopicType } from "../model/TelegramTopic.ts";
 import { parseClubTelegramTopicType } from "../util/EnumUtil.ts";
 import { PollRepository } from "../repository/PollRepository.ts";
 import type { ClubPollConfig } from "../model/PollModels.ts";
+import PollSchedulerService from "./PollSchedulerService.ts";
 
 type TelegramCommandContext = Context<{
     message: Update.New & Update.NonChannel & Message.TextMessage;
@@ -66,6 +67,16 @@ class TelegramCommandService {
         });
         telegramBot.action(/poll_disable_(\d+)/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollDisableCallback.bind(this));
+        });
+
+        telegramBot.command('preview_poll', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handlePreviewPollCommand.bind(this));
+        });
+        telegramBot.command('send_poll', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handleSendPollCommand.bind(this));
+        });
+        telegramBot.action(/send_poll_confirm_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleSendPollConfirmCallback.bind(this));
         });
 
         telegramBot.launch(() => {
@@ -320,6 +331,66 @@ class TelegramCommandService {
             ? '✅ Опитування увімкнено!'
             : '❌ Опитування вимкнено!'
         );
+    }
+
+    // ── Preview & Send poll handlers ──
+
+    private handlePreviewPollCommand(ctx: TelegramCommandContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubData = this.getUserOwnedClubData(user);
+
+        for (const club of clubData) {
+            const pollConfig = this.pollRepository.findConfigByClubId(club.clubId);
+            if (pollConfig) {
+                const preview = PollSchedulerService.getPreview(pollConfig);
+                ctx.replyWithHTML(preview);
+                return;
+            }
+        }
+
+        ctx.reply('Немає налаштованих опитувань. Використайте /set_poll');
+    }
+
+    private handleSendPollCommand(ctx: TelegramCommandContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubData = this.getUserOwnedClubData(user);
+
+        const clubsWithPolls = clubData.filter(club =>
+            this.pollRepository.findConfigByClubId(club.clubId) !== undefined
+        );
+
+        if (clubsWithPolls.length === 0) {
+            ctx.reply('Немає налаштованих опитувань. Використайте /set_poll');
+            return;
+        }
+
+        ctx.reply('Відправити опитування зараз?', {
+            reply_markup: {
+                inline_keyboard: clubsWithPolls.map(club => ([{
+                    text: `📊 ${club.clubName}`,
+                    callback_data: `send_poll_confirm_${club.clubId}`
+                }]))
+            }
+        });
+    }
+
+    private handleSendPollConfirmCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const pollConfig = this.pollRepository.findConfigByClubId(clubId);
+        if (!pollConfig) {
+            ctx.reply('Опитування не налаштовано для цього клубу.');
+            return;
+        }
+
+        try {
+            PollSchedulerService.sendPollNow(pollConfig);
+            ctx.reply('✅ Опитування відправлено!');
+        } catch (error) {
+            ctx.reply('❌ Помилка: переконайтеся, що топік для опитувань встановлено через /set_topic');
+        }
     }
 
     private getUserByTelegramId(userTelegramId: number): User {
