@@ -32,6 +32,10 @@ class TelegramCommandService {
     private pollRepository: PollRepository = new PollRepository();
 
     init() {
+        telegramBot.command('help', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handleHelpCommand.bind(this));
+        });
+
         telegramBot.command('set_topic', (ctx) => {
             this.executeWithErrorHandling(ctx, this.handleSetTopicCommand.bind(this));
         });
@@ -79,11 +83,42 @@ class TelegramCommandService {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleSendPollConfirmCallback.bind(this));
         });
 
+        telegramBot.telegram.setMyCommands([
+            { command: 'help', description: 'Показати список команд' },
+            { command: 'post_app_link', description: 'Опублікувати посилання на додаток' },
+            { command: 'set_topic', description: 'Встановити топік для сповіщень' },
+            { command: 'set_poll', description: 'Налаштувати опитування для клубу' },
+            { command: 'preview_poll', description: 'Попередній перегляд опитування' },
+            { command: 'send_poll', description: 'Відправити опитування зараз' },
+        ]);
+
         telegramBot.launch(() => {
             console.log('Telegram bot started');
         }).catch(error => {
             LogService.logError('Telegram bot error: ', error);
         });
+    }
+
+    private handleHelpCommand(ctx: TelegramCommandContext) {
+        this.getUserByTelegramId(ctx.from.id); // validates user is registered
+
+        ctx.replyWithHTML(
+            `📋 <b>Доступні команди</b>\n`
+            + `\n`
+            + `<b>Загальні:</b>\n`
+            + `<code>/help</code> — Показати список команд\n`
+            + `<code>/post_app_link</code> — Опублікувати посилання на додаток\n`
+            + `\n`
+            + `<b>Опитування:</b>\n`
+            + `<code>/set_poll</code> — Налаштувати опитування для клубу\n`
+            + `<code>/preview_poll</code> — Попередній перегляд опитування\n`
+            + `<code>/send_poll</code> — Відправити опитування зараз\n`
+            + `\n`
+            + `<b>Налаштування (в топіку групи):</b>\n`
+            + `<code>/set_topic</code> — Встановити топік для сповіщень\n`
+            + `\n`
+            + `ℹ️ Більшість команд доступні лише адміністраторам клубу.`
+        );
     }
 
     private handlePostAppLinkCommand(ctx: TelegramCommandContext) {
