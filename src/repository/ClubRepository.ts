@@ -204,7 +204,8 @@ export class ClubRepository {
                 rating,
                 userLogs,
                 gameLogs,
-                clubLogs
+                clubLogs,
+                poll
             FROM clubTelegramTopics
             WHERE clubId = :clubId
         `);
@@ -221,17 +222,19 @@ export class ClubRepository {
         userLogs: string | null;
         gameLogs: string | null;
         clubLogs: string | null;
+        poll: string | null;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO clubTelegramTopics (clubId, rating, userLogs, gameLogs, clubLogs, createdAt, modifiedAt, modifiedBy)
-            VALUES (:clubId, :rating, :userLogs, :gameLogs, :clubLogs, :modifiedAt, :modifiedAt, :modifiedBy)
+            INSERT INTO clubTelegramTopics (clubId, rating, userLogs, gameLogs, clubLogs, poll, createdAt, modifiedAt, modifiedBy)
+            VALUES (:clubId, :rating, :userLogs, :gameLogs, :clubLogs, :poll, :modifiedAt, :modifiedAt, :modifiedBy)
             ON CONFLICT(clubId) DO UPDATE SET
                 rating = :rating,
                 userLogs = :userLogs,
                 gameLogs = :gameLogs,
                 clubLogs = :clubLogs,
+                poll = :poll,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
         `);
@@ -244,6 +247,7 @@ export class ClubRepository {
             userLogs: topics.userLogs ? JSON.stringify(topics.userLogs) : null,
             gameLogs: topics.gameLogs ? JSON.stringify(topics.gameLogs) : null,
             clubLogs: topics.clubLogs ? JSON.stringify(topics.clubLogs) : null,
+            poll: topics.poll ? JSON.stringify(topics.poll) : null,
             modifiedAt: modifiedAt.toISOString(),
             modifiedBy
         });
@@ -292,6 +296,7 @@ interface ClubTelegramTopicsDBEntity {
     userLogs: string | null;
     gameLogs: string | null;
     clubLogs: string | null;
+    poll: string | null;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
@@ -318,6 +323,7 @@ function clubTelegramTopicsFromDBEntity(dbEntity: ClubTelegramTopicsDBEntity): C
         rating: dbEntity.rating ? JSON.parse(dbEntity.rating) : null,
         userLogs: dbEntity.userLogs ? JSON.parse(dbEntity.userLogs) : null,
         gameLogs: dbEntity.gameLogs ? JSON.parse(dbEntity.gameLogs) : null,
-        clubLogs: dbEntity.clubLogs ? JSON.parse(dbEntity.clubLogs) : null
+        clubLogs: dbEntity.clubLogs ? JSON.parse(dbEntity.clubLogs) : null,
+        poll: dbEntity.poll ? JSON.parse(dbEntity.poll) : null
     }
 }
