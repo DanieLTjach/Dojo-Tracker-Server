@@ -51,7 +51,7 @@ class TelegramCommandService {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleSetTopicCallback.bind(this));
         });
 
-        telegramBot.command('set_poll', (ctx) => {
+        telegramBot.command('setup_poll', (ctx) => {
             this.executeWithErrorHandling(ctx, this.handleSetPollCommand.bind(this));
         });
         telegramBot.action(/poll_club_(\d+)/, async (ctx) => {
@@ -87,7 +87,7 @@ class TelegramCommandService {
             { command: 'help', description: 'Показати список команд' },
             { command: 'post_app_link', description: 'Опублікувати посилання на додаток' },
             { command: 'set_topic', description: 'Встановити топік для сповіщень' },
-            { command: 'set_poll', description: 'Налаштувати опитування для клубу' },
+            { command: 'setup_poll', description: 'Налаштувати опитування для клубу' },
             { command: 'preview_poll', description: 'Попередній перегляд опитування' },
             { command: 'send_poll', description: 'Відправити опитування зараз' },
         ]);
@@ -113,7 +113,7 @@ class TelegramCommandService {
                 + `<code>/post_app_link</code> — Опублікувати посилання на додаток\n`
                 + `\n`
                 + `<b>Опитування:</b>\n`
-                + `<code>/set_poll</code> — Налаштувати опитування для клубу\n`
+                + `<code>/setup_poll</code> — Налаштувати опитування для клубу\n`
                 + `<code>/preview_poll</code> — Попередній перегляд опитування\n`
                 + `<code>/send_poll</code> — Відправити опитування зараз\n`
                 + `\n`
@@ -373,20 +373,24 @@ class TelegramCommandService {
 
     // ── Preview & Send poll handlers ──
 
-    private handlePreviewPollCommand(ctx: TelegramCommandContext) {
+    private async handlePreviewPollCommand(ctx: TelegramCommandContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
         for (const club of clubData) {
             const pollConfig = this.pollRepository.findConfigByClubId(club.clubId);
             if (pollConfig) {
-                const preview = PollSchedulerService.getPreview(pollConfig);
-                ctx.replyWithHTML(preview);
+                const title = PollSchedulerService.buildPollTitle(pollConfig);
+                const options = PollSchedulerService.buildPollOptions(pollConfig);
+                await ctx.sendPoll(title, options, {
+                    is_anonymous: false,
+                    allows_multiple_answers: true,
+                });
                 return;
             }
         }
 
-        ctx.reply('Немає налаштованих опитувань. Використайте /set_poll');
+        await ctx.reply('Немає налаштованих опитувань. Використайте /setup_poll');
     }
 
     private handleSendPollCommand(ctx: TelegramCommandContext) {
@@ -398,7 +402,7 @@ class TelegramCommandService {
         );
 
         if (clubsWithPolls.length === 0) {
-            ctx.reply('Немає налаштованих опитувань. Використайте /set_poll');
+            ctx.reply('Немає налаштованих опитувань. Використайте /setup_poll');
             return;
         }
 

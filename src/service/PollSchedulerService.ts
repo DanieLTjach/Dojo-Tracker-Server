@@ -9,13 +9,19 @@ import LogService from './LogService.ts';
 const KYIV_TIMEZONE = 'Europe/Kyiv';
 
 const DAY_NAMES_UK: Record<number, string> = {
-    0: 'неділя',
-    1: 'понеділок',
-    2: 'вівторок',
-    3: 'середа',
-    4: 'четвер',
-    5: 'п\'ятниця',
-    6: 'субота'
+    0: 'Неділя',
+    1: 'Понеділок',
+    2: 'Вівторок',
+    3: 'Середа',
+    4: 'Четвер',
+    5: 'П\'ятниця',
+    6: 'Субота'
+};
+
+const MONTH_NAMES_UK_GENITIVE: Record<number, string> = {
+    0: 'січня', 1: 'лютого', 2: 'березня', 3: 'квітня',
+    4: 'травня', 5: 'червня', 6: 'липня', 7: 'серпня',
+    8: 'вересня', 9: 'жовтня', 10: 'листопада', 11: 'грудня'
 };
 
 class PollSchedulerService {
@@ -51,13 +57,9 @@ class PollSchedulerService {
             throw new Error(`No poll topic configured for club ${config.clubId}`);
         }
 
+        const title = this.buildPollTitle(config);
         const options = this.buildPollOptions(config);
-        void this.sendTelegramPoll(pollTopic, config.pollTitle, options);
-    }
-
-    getPreview(config: ClubPollConfig): string {
-        const options = this.buildPollOptions(config);
-        return `📊 <b>${config.pollTitle}</b>\n\n` + options.map(o => `◻️ ${o}`).join('\n');
+        void this.sendTelegramPoll(pollTopic, title, options);
     }
 
     private sendPoll(config: ClubPollConfig) {
@@ -67,26 +69,29 @@ class PollSchedulerService {
             return;
         }
 
+        const title = this.buildPollTitle(config);
         const options = this.buildPollOptions(config);
-        void this.sendTelegramPoll(pollTopic, config.pollTitle, options);
+        void this.sendTelegramPoll(pollTopic, title, options);
+    }
+
+    buildPollTitle(config: ClubPollConfig): string {
+        const now = new Date(new Date().toLocaleString('en-US', { timeZone: KYIV_TIMEZONE }));
+        const dates = config.eventDays.map(day => getNextDayOfWeek(now, day));
+        dates.sort((a, b) => a.getTime() - b.getTime());
+
+        const days = dates.map(d => d.getDate());
+        const month = MONTH_NAMES_UK_GENITIVE[dates[0]!.getMonth()]!;
+
+        return `🀄 Маджонг ${days.join(', ')} ${month}`;
     }
 
     buildPollOptions(config: ClubPollConfig): string[] {
-        const options: string[] = [];
-
-        // Calculate upcoming dates for each event day
         const now = new Date(new Date().toLocaleString('en-US', { timeZone: KYIV_TIMEZONE }));
-
-        for (const eventDay of config.eventDays) {
-            const date = getNextDayOfWeek(now, eventDay);
-            const dayName = DAY_NAMES_UK[eventDay] ?? '';
-            const formattedDate = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}`;
-            options.push(`Буду ${formattedDate} ${dayName}`);
-        }
-
-        // Add extra options
+        const sortedDays = [...config.eventDays].sort((a, b) =>
+            getNextDayOfWeek(now, a).getTime() - getNextDayOfWeek(now, b).getTime()
+        );
+        const options: string[] = sortedDays.map(day => DAY_NAMES_UK[day] ?? '');
         options.push(...config.extraOptions);
-
         return options;
     }
 
@@ -103,12 +108,12 @@ class PollSchedulerService {
     }
 }
 
-/** Returns the next occurrence of the given day of week (1-7 days ahead, never today) */
+/** Returns the next occurrence of the given day of week (0-6 days ahead, including today) */
 function getNextDayOfWeek(from: Date, targetDay: number): Date {
     const result = new Date(from);
     const currentDay = from.getDay();
     let daysUntil = targetDay - currentDay;
-    if (daysUntil <= 0) {
+    if (daysUntil < 0) {
         daysUntil += 7;
     }
     result.setDate(result.getDate() + daysUntil);
