@@ -11,6 +11,8 @@ import { dbManager } from "../db/dbInit.ts";
 import { ClubService, updateClubTelegramTopic } from "./ClubService.ts";
 import { ClubTelegramTopicType } from "../model/TelegramTopic.ts";
 import { parseClubTelegramTopicType } from "../util/EnumUtil.ts";
+import { PollRepository } from "../repository/PollRepository.ts";
+import type { ClubPollConfig } from "../model/PollModels.ts";
 
 type TelegramCommandContext = Context<{
     message: Update.New & Update.NonChannel & Message.TextMessage;
@@ -26,6 +28,7 @@ class TelegramCommandService {
     private userService: UserService = new UserService();
     private clubService: ClubService = new ClubService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
+    private pollRepository: PollRepository = new PollRepository();
 
     init() {
         telegramBot.command('set_topic', (ctx) => {
@@ -41,6 +44,28 @@ class TelegramCommandService {
         });
         telegramBot.action(/set_topic_([A-Z_]+)_(\d+)(?:_(-?\d+))?/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleSetTopicCallback.bind(this));
+        });
+
+        telegramBot.command('set_poll', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handleSetPollCommand.bind(this));
+        });
+        telegramBot.action(/poll_club_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollSelectClubCallback.bind(this));
+        });
+        telegramBot.action(/poll_day_(\d+)_(\d+)_(.*)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollToggleDayCallback.bind(this));
+        });
+        telegramBot.action(/poll_days_done_(\d+)_(.+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollDaysDoneCallback.bind(this));
+        });
+        telegramBot.action(/poll_send_(\d+)_([^_]+)_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollSendDayCallback.bind(this));
+        });
+        telegramBot.action(/poll_time_(\d+)_([^_]+)_(\d+)_(.+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollTimeCallback.bind(this));
+        });
+        telegramBot.action(/poll_disable_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollDisableCallback.bind(this));
         });
 
         telegramBot.launch(() => {
@@ -116,6 +141,185 @@ class TelegramCommandService {
         })();
 
         ctx.reply(clubTelegramTopicUpdatedSuccessfullyText(topicType));
+    }
+
+    // ── Poll wizard handlers ──
+
+    private handleSetPollCommand(ctx: TelegramCommandContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubData = this.getUserOwnedClubData(user);
+
+        ctx.reply('📊 Налаштування опитування.\nВиберіть клуб:', {
+            reply_markup: {
+                inline_keyboard: clubData.map(club => ([{
+                    text: club.clubName,
+                    callback_data: `poll_club_${club.clubId}`
+                }]))
+            }
+        });
+    }
+
+    private handlePollSelectClubCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const existingConfig = this.pollRepository.findConfigByClubId(clubId);
+        if (existingConfig) {
+            const club = this.clubService.getClubById(clubId);
+            const daysText = existingConfig.eventDays.map(d => DAY_NAMES_SHORT[d]).join(', ');
+            const sendDayText = DAY_NAMES_SHORT[existingConfig.sendDay];
+            ctx.reply(
+                `📊 Опитування для <b>${club.name}</b> вже налаштовано:\n\n`
+                + `📝 ${existingConfig.pollTitle}\n`
+                + `📅 Дні подій: ${daysText}\n`
+                + `📤 Відправка: ${sendDayText} о ${existingConfig.sendTime}\n`
+                + `${existingConfig.isActive ? '✅ Активне' : '❌ Вимкнене'}`,
+                {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '🔄 Переналаштувати', callback_data: `poll_day_${clubId}_-1_` }],
+                            existingConfig.isActive
+                                ? [{ text: '❌ Вимкнути', callback_data: `poll_disable_${clubId}` }]
+                                : [{ text: '✅ Увімкнути', callback_data: `poll_disable_${clubId}` }]
+                        ]
+                    }
+                }
+            );
+            return;
+        }
+
+        this.showDaySelector(ctx, clubId, '');
+    }
+
+    private handlePollToggleDayCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const toggleDay = parseInt(ctx.match[2]!);
+        let selectedDays = ctx.match[3]! === '' ? [] : ctx.match[3]!.split(',').map(Number);
+
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        // Toggle the day
+        if (toggleDay >= 0) {
+            if (selectedDays.includes(toggleDay)) {
+                selectedDays = selectedDays.filter(d => d !== toggleDay);
+            } else {
+                selectedDays.push(toggleDay);
+                selectedDays.sort((a, b) => a - b);
+            }
+        }
+
+        this.showDaySelector(ctx, clubId, selectedDays.join(','));
+    }
+
+    private showDaySelector(ctx: TelegramCallbackQueryContext, clubId: number, daysStr: string) {
+        const selectedDays = daysStr === '' ? [] : daysStr.split(',').map(Number);
+
+        const dayButtons = ALL_DAYS.map(day => ({
+            text: (selectedDays.includes(day) ? '✅ ' : '⬜ ') + DAY_NAMES_SHORT[day],
+            callback_data: `poll_day_${clubId}_${day}_${daysStr}`
+        }));
+
+        const keyboard = [
+            dayButtons.slice(0, 4),
+            dayButtons.slice(4, 7),
+            ...(selectedDays.length > 0
+                ? [[{ text: '➡️ Далі', callback_data: `poll_days_done_${clubId}_${daysStr}` }]]
+                : [])
+        ];
+
+        ctx.reply('Виберіть дні подій (натисніть щоб обрати/зняти):', {
+            reply_markup: { inline_keyboard: keyboard }
+        });
+    }
+
+    private handlePollDaysDoneCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const daysStr = ctx.match[2]!;
+
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const dayButtons = ALL_DAYS.map(day => ([{
+            text: DAY_NAMES_SHORT[day]!,
+            callback_data: `poll_send_${clubId}_${daysStr}_${day}`
+        }]));
+
+        ctx.reply('В який день тижня відправляти опитування?', {
+            reply_markup: { inline_keyboard: dayButtons }
+        });
+    }
+
+    private handlePollSendDayCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const daysStr = ctx.match[2]!;
+        const sendDay = parseInt(ctx.match[3]!);
+
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const timeOptions = ['09:00', '10:00', '12:00', '14:00', '16:00', '18:00'];
+        const timeButtons = timeOptions.map(time => ([{
+            text: time,
+            callback_data: `poll_time_${clubId}_${daysStr}_${sendDay}_${time}`
+        }]));
+
+        ctx.reply('О котрій годині відправляти? (час Києва)', {
+            reply_markup: { inline_keyboard: timeButtons }
+        });
+    }
+
+    private handlePollTimeCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const daysStr = ctx.match[2]!;
+        const sendDay = parseInt(ctx.match[3]!);
+        const sendTime = ctx.match[4]!;
+
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const club = this.clubService.getClubById(clubId);
+        const eventDays = daysStr.split(',').map(Number);
+
+        const pollConfig: ClubPollConfig = {
+            clubId,
+            pollTitle: club.name,
+            eventDays,
+            sendDay,
+            sendTime,
+            extraOptions: ['Результати 👀', 'У цей раз я пас'],
+            isActive: true
+        };
+
+        this.pollRepository.upsertConfig(pollConfig, user.id);
+
+        const daysText = eventDays.map(d => DAY_NAMES_SHORT[d]).join(', ');
+        ctx.reply(
+            `✅ Опитування налаштовано!\n\n`
+            + `📝 ${club.name}\n`
+            + `📅 Дні подій: ${daysText}\n`
+            + `📤 Відправка: ${DAY_NAMES_SHORT[sendDay]} о ${sendTime}\n\n`
+            + `Не забудьте встановити топік для опитувань через /set_topic → 📊 Опитування`
+        );
+    }
+
+    private handlePollDisableCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const existingConfig = this.pollRepository.findConfigByClubId(clubId);
+        if (!existingConfig) return;
+
+        const newConfig = { ...existingConfig, isActive: !existingConfig.isActive };
+        this.pollRepository.upsertConfig(newConfig, user.id);
+
+        ctx.reply(newConfig.isActive
+            ? '✅ Опитування увімкнено!'
+            : '❌ Опитування вимкнено!'
+        );
     }
 
     private getUserByTelegramId(userTelegramId: number): User {
@@ -218,5 +422,11 @@ function clubTelegramTopicUpdatedSuccessfullyText(topicType: ClubTelegramTopicTy
             return 'Топік для опитувань успішно встановлено!';
     }
 }
+
+const ALL_DAYS = [1, 2, 3, 4, 5, 6, 0]; // Mon-Sun
+
+const DAY_NAMES_SHORT: Record<number, string> = {
+    0: 'Нд', 1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб'
+};
 
 export default new TelegramCommandService();
