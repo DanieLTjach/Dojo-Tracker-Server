@@ -52,7 +52,7 @@ class TelegramCommandService {
         telegramBot.action(/poll_club_(\d+)/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollSelectClubCallback.bind(this));
         });
-        telegramBot.action(/poll_day_(\d+)_(\d+)_(.*)/, async (ctx) => {
+        telegramBot.action(/poll_day_(\d+)_(-?\d+)_(.*)/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollToggleDayCallback.bind(this));
         });
         telegramBot.action(/poll_days_done_(\d+)_(.+)/, async (ctx) => {
@@ -266,7 +266,7 @@ class TelegramCommandService {
             callback_data: `poll_time_${clubId}_${daysStr}_${sendDay}_${time}`
         }]));
 
-        ctx.reply('О котрій годині відправляти? (час Києва)', {
+        ctx.reply('О котрій годині відправляти? (за київським часом)', {
             reply_markup: { inline_keyboard: timeButtons }
         });
     }
@@ -289,7 +289,7 @@ class TelegramCommandService {
             eventDays,
             sendDay,
             sendTime,
-            extraOptions: ['Результати 👀', 'У цей раз я пас'],
+            extraOptions: ['Результати 👀'],
             isActive: true
         };
 
