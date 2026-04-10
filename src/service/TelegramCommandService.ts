@@ -100,25 +100,28 @@ class TelegramCommandService {
     }
 
     private handleHelpCommand(ctx: TelegramCommandContext) {
-        this.getUserByTelegramId(ctx.from.id); // validates user is registered
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const isClubAdmin = this.isUserClubAdmin(user);
 
-        ctx.replyWithHTML(
-            `📋 <b>Доступні команди</b>\n`
+        let text = `📋 <b>Доступні команди</b>\n`
             + `\n`
-            + `<b>Загальні:</b>\n`
-            + `<code>/help</code> — Показати список команд\n`
-            + `<code>/post_app_link</code> — Опублікувати посилання на додаток\n`
-            + `\n`
-            + `<b>Опитування:</b>\n`
-            + `<code>/set_poll</code> — Налаштувати опитування для клубу\n`
-            + `<code>/preview_poll</code> — Попередній перегляд опитування\n`
-            + `<code>/send_poll</code> — Відправити опитування зараз\n`
-            + `\n`
-            + `<b>Налаштування (в топіку групи):</b>\n`
-            + `<code>/set_topic</code> — Встановити топік для сповіщень\n`
-            + `\n`
-            + `ℹ️ Більшість команд доступні лише адміністраторам клубу.`
-        );
+            + `<code>/help</code> — Показати список команд\n`;
+
+        if (isClubAdmin) {
+            text += `\n`
+                + `<b>Адміністрування:</b>\n`
+                + `<code>/post_app_link</code> — Опублікувати посилання на додаток\n`
+                + `\n`
+                + `<b>Опитування:</b>\n`
+                + `<code>/set_poll</code> — Налаштувати опитування для клубу\n`
+                + `<code>/preview_poll</code> — Попередній перегляд опитування\n`
+                + `<code>/send_poll</code> — Відправити опитування зараз\n`
+                + `\n`
+                + `<b>Налаштування (в топіку групи):</b>\n`
+                + `<code>/set_topic</code> — Встановити топік для сповіщень\n`;
+        }
+
+        ctx.replyWithHTML(text);
     }
 
     private handlePostAppLinkCommand(ctx: TelegramCommandContext) {
@@ -441,6 +444,12 @@ class TelegramCommandService {
         if (membership === undefined || !membership.permissions.canEditClub) {
             throw new UserNotClubOwnerTelegramError();
         }
+    }
+
+    private isUserClubAdmin(user: User): boolean {
+        if (user.isAdmin) return true;
+        return this.clubMembershipService.getUserClubMemberships(user.id)
+            .some(membership => membership.permissions.canEditClub);
     }
 
     private getUserOwnedClubData(user: User): ClubData[] {
