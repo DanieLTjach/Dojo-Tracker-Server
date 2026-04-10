@@ -34,6 +34,7 @@ export interface ClubTelegramTopics {
     rating: TelegramTopic | null;
     userLogs: TelegramTopic | null;
     gameLogs: TelegramTopic | null;
+    clubLogs: TelegramTopic | null;
 }
 
 export interface ClubMembership {

@@ -203,7 +203,8 @@ export class ClubRepository {
             SELECT
                 rating,
                 userLogs,
-                gameLogs
+                gameLogs,
+                clubLogs
             FROM clubTelegramTopics
             WHERE clubId = :clubId
         `);
@@ -219,16 +220,18 @@ export class ClubRepository {
         rating: string | null;
         userLogs: string | null;
         gameLogs: string | null;
+        clubLogs: string | null;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO clubTelegramTopics (clubId, rating, userLogs, gameLogs, createdAt, modifiedAt, modifiedBy)
-            VALUES (:clubId, :rating, :userLogs, :gameLogs, :modifiedAt, :modifiedAt, :modifiedBy)
+            INSERT INTO clubTelegramTopics (clubId, rating, userLogs, gameLogs, clubLogs, createdAt, modifiedAt, modifiedBy)
+            VALUES (:clubId, :rating, :userLogs, :gameLogs, :clubLogs, :modifiedAt, :modifiedAt, :modifiedBy)
             ON CONFLICT(clubId) DO UPDATE SET
                 rating = :rating,
                 userLogs = :userLogs,
                 gameLogs = :gameLogs,
+                clubLogs = :clubLogs,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
         `);
@@ -240,6 +243,7 @@ export class ClubRepository {
             rating: topics.rating ? JSON.stringify(topics.rating) : null,
             userLogs: topics.userLogs ? JSON.stringify(topics.userLogs) : null,
             gameLogs: topics.gameLogs ? JSON.stringify(topics.gameLogs) : null,
+            clubLogs: topics.clubLogs ? JSON.stringify(topics.clubLogs) : null,
             modifiedAt: modifiedAt.toISOString(),
             modifiedBy
         });
@@ -287,6 +291,7 @@ interface ClubTelegramTopicsDBEntity {
     rating: string | null;
     userLogs: string | null;
     gameLogs: string | null;
+    clubLogs: string | null;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
@@ -312,6 +317,7 @@ function clubTelegramTopicsFromDBEntity(dbEntity: ClubTelegramTopicsDBEntity): C
     return {
         rating: dbEntity.rating ? JSON.parse(dbEntity.rating) : null,
         userLogs: dbEntity.userLogs ? JSON.parse(dbEntity.userLogs) : null,
-        gameLogs: dbEntity.gameLogs ? JSON.parse(dbEntity.gameLogs) : null
+        gameLogs: dbEntity.gameLogs ? JSON.parse(dbEntity.gameLogs) : null,
+        clubLogs: dbEntity.clubLogs ? JSON.parse(dbEntity.clubLogs) : null
     }
 }

@@ -90,7 +90,8 @@ export class ClubService {
         return this.clubRepository.getClubTelegramTopics(clubId) ?? {
             rating: null,
             userLogs: null,
-            gameLogs: null
+            gameLogs: null,
+            clubLogs: null
         };
     }
 
@@ -167,6 +168,8 @@ export function updateClubTelegramTopic(
             return { ...topics, userLogs: telegramTopic };
         case ClubTelegramTopicType.GAME_LOGS:
             return { ...topics, gameLogs: telegramTopic };
+        case ClubTelegramTopicType.CLUB_LOGS:
+            return { ...topics, clubLogs: telegramTopic };
     }
 }
 
