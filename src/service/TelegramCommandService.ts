@@ -178,6 +178,8 @@ function clubTelegramTopicDescription(topicType: ClubTelegramTopicType): string 
             return '👤 Логи користувачів';
         case ClubTelegramTopicType.GAME_LOGS:
             return '🀄 Логи ігр';
+        case ClubTelegramTopicType.CLUB_LOGS:
+            return '🏛️ Логи клубу';
     }
 }
 
@@ -189,6 +191,8 @@ function clubTelegramTopicUpdatedSuccessfullyText(topicType: ClubTelegramTopicTy
             return 'Топік для логів користувачів успішно встановлено!';
         case ClubTelegramTopicType.GAME_LOGS:
             return 'Топік для логів ігр успішно встановлено!';
+        case ClubTelegramTopicType.CLUB_LOGS:
+            return 'Топік для логів клубу успішно встановлено!';
     }
 }
 
