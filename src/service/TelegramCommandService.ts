@@ -54,10 +54,10 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.getUserOwnedClubData(user); // validates user is club owner/admin
 
-        ctx.reply('🀄 Japan Dojo Tracker\nНатисніть кнопку, щоб відкрити додаток', {
+        ctx.replyWithHTML('🀄 <b>Japan Dojo Tracker</b>\nНатисніть кнопку, щоб відкрити додаток', {
             reply_markup: {
                 inline_keyboard: [[{
-                    text: '📱 Відкрити додаток',
+                    text: '📱 Відкрити',
                     url: config.botUrl
                 }]]
             }
