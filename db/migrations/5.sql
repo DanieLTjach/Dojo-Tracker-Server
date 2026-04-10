@@ -8,7 +8,7 @@ CREATE TABLE clubPollConfig (
     sendDay INTEGER NOT NULL,
     sendTime TEXT NOT NULL,
     extraOptions TEXT,
-    isActive INTEGER NOT NULL DEFAULT 1,
+    isActive BOOL NOT NULL DEFAULT true,
     createdAt TIMESTAMP NOT NULL,
     modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)

@@ -69,6 +69,12 @@ class TelegramCommandService {
         telegramBot.action(/poll_time_(\d+)_([^_]+)_(\d+)_(.+)/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollTimeCallback.bind(this));
         });
+        telegramBot.action(/poll_extra_(\d+)_([^_]+)_(\d+)_([^_]+)_(\d+)_(.*)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollToggleExtraCallback.bind(this));
+        });
+        telegramBot.action(/poll_extras_done_(\d+)_([^_]+)_(\d+)_([^_]+)_(.*)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollExtrasDoneCallback.bind(this));
+        });
         telegramBot.action(/poll_disable_(\d+)/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollDisableCallback.bind(this));
         });
@@ -223,6 +229,7 @@ class TelegramCommandService {
                 + `📝 ${existingConfig.pollTitle}\n`
                 + `📅 Дні подій: ${daysText}\n`
                 + `📤 Відправка: ${sendDayText} о ${existingConfig.sendTime}\n`
+                + `📋 Додаткові: ${existingConfig.extraOptions.length > 0 ? existingConfig.extraOptions.join(', ') : 'немає'}\n`
                 + `${existingConfig.isActive ? '✅ Активне' : '❌ Вимкнене'}`,
                 {
                     parse_mode: 'HTML',
@@ -329,8 +336,66 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
 
+        // Only "Результати 👀" selected by default
+        this.showExtraOptionsSelector(ctx, clubId, daysStr, sendDay, sendTime, '0');
+    }
+
+    private handlePollToggleExtraCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const daysStr = ctx.match[2]!;
+        const sendDay = parseInt(ctx.match[3]!);
+        const sendTime = ctx.match[4]!;
+        const toggleIndex = parseInt(ctx.match[5]!);
+        let selectedExtras = ctx.match[6]! === '' ? [] : ctx.match[6]!.split(',').map(Number);
+
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        if (selectedExtras.includes(toggleIndex)) {
+            selectedExtras = selectedExtras.filter(i => i !== toggleIndex);
+        } else {
+            selectedExtras.push(toggleIndex);
+            selectedExtras.sort((a, b) => a - b);
+        }
+
+        this.showExtraOptionsSelector(ctx, clubId, daysStr, sendDay, sendTime, selectedExtras.join(','));
+    }
+
+    private showExtraOptionsSelector(
+        ctx: TelegramCallbackQueryContext,
+        clubId: number, daysStr: string, sendDay: number, sendTime: string, extrasStr: string
+    ) {
+        const selectedExtras = extrasStr === '' ? [] : extrasStr.split(',').map(Number);
+
+        const extraButtons = EXTRA_OPTION_PRESETS.map((option, index) => ([{
+            text: (selectedExtras.includes(index) ? '✅ ' : '⬜ ') + option,
+            callback_data: `poll_extra_${clubId}_${daysStr}_${sendDay}_${sendTime}_${index}_${extrasStr}`
+        }]));
+
+        ctx.reply('Виберіть додаткові варіанти для опитування:', {
+            reply_markup: {
+                inline_keyboard: [
+                    ...extraButtons,
+                    [{ text: '➡️ Зберегти', callback_data: `poll_extras_done_${clubId}_${daysStr}_${sendDay}_${sendTime}_${extrasStr}` }]
+                ]
+            }
+        });
+    }
+
+    private handlePollExtrasDoneCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const daysStr = ctx.match[2]!;
+        const sendDay = parseInt(ctx.match[3]!);
+        const sendTime = ctx.match[4]!;
+        const extrasStr = ctx.match[5]!;
+
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
         const club = this.clubService.getClubById(clubId);
         const eventDays = daysStr.split(',').map(Number);
+        const selectedExtras = extrasStr === '' ? [] : extrasStr.split(',').map(Number);
+        const extraOptions = selectedExtras.map(i => EXTRA_OPTION_PRESETS[i]!);
 
         const pollConfig: ClubPollConfig = {
             clubId,
@@ -338,18 +403,20 @@ class TelegramCommandService {
             eventDays,
             sendDay,
             sendTime,
-            extraOptions: ['Результати 👀'],
+            extraOptions,
             isActive: true
         };
 
         this.pollRepository.upsertConfig(pollConfig, user.id);
 
         const daysText = eventDays.map(d => DAY_NAMES_SHORT[d]).join(', ');
+        const extrasText = extraOptions.length > 0 ? extraOptions.join(', ') : 'немає';
         ctx.reply(
             `✅ Опитування налаштовано!\n\n`
             + `📝 ${club.name}\n`
             + `📅 Дні подій: ${daysText}\n`
-            + `📤 Відправка: ${DAY_NAMES_SHORT[sendDay]} о ${sendTime}\n\n`
+            + `📤 Відправка: ${DAY_NAMES_SHORT[sendDay]} о ${sendTime}\n`
+            + `📋 Додаткові: ${extrasText}\n\n`
             + `Не забудьте встановити основний топік через /set_topic → 📌 Основний`
         );
     }
@@ -547,5 +614,12 @@ const ALL_DAYS = [1, 2, 3, 4, 5, 6, 0]; // Mon-Sun
 const DAY_NAMES_SHORT: Record<number, string> = {
     0: 'Нд', 1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб'
 };
+
+const EXTRA_OPTION_PRESETS = [
+    'Результати 👀',
+    'У цей раз я пас 🙅',
+    'Під питанням 🤔',
+    'Запізнюся ⏰'
+];
 
 export default new TelegramCommandService();
