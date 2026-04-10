@@ -1,4 +1,5 @@
 import { Context } from "telegraf";
+import config from "../../config/config.ts";
 import { TelegramReplyError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from "../error/TelegramErrors.ts";
 import { ClubMembershipService } from "./ClubMembershipService.ts";
 import LogService from "./LogService.ts";
@@ -31,6 +32,10 @@ class TelegramCommandService {
             this.executeWithErrorHandling(ctx, this.handleSetTopicCommand.bind(this));
         });
 
+        telegramBot.command('post_app_link', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handlePostAppLinkCommand.bind(this));
+        });
+
         telegramBot.action(/select_topic_type_(\d+)(?:_(-?\d+))?/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleSelectTopicTypeCallback.bind(this));
         });
@@ -42,6 +47,20 @@ class TelegramCommandService {
             console.log('Telegram bot started');
         }).catch(error => {
             LogService.logError('Telegram bot error: ', error);
+        });
+    }
+
+    private handlePostAppLinkCommand(ctx: TelegramCommandContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.getUserOwnedClubData(user); // validates user is club owner/admin
+
+        ctx.reply('🀄 Japan Dojo Tracker\nНатисніть кнопку, щоб відкрити додаток', {
+            reply_markup: {
+                inline_keyboard: [[{
+                    text: '📱 Відкрити додаток',
+                    url: config.botUrl
+                }]]
+            }
         });
     }
 
