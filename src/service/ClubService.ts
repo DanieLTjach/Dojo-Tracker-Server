@@ -99,6 +99,14 @@ export class ClubService {
         return this.clubRepository.setClubTelegramTopics(clubId, topics, new Date(), modifiedBy);
     }
 
+    private logClubEvent(clubId: number, message: string): void {
+        LogService.logInfo(message, globalClubLogsTopic);
+        const clubLogsTopic = this.getClubTelegramTopics(clubId).clubLogs;
+        if (clubLogsTopic !== null) {
+            LogService.logInfo(message, clubLogsTopic);
+        }
+    }
+
     private logCreatedClub(club: Club, createdBy: number): void {
         const creator = this.userRepository.findUserById(createdBy);
         const message = dedent`
@@ -112,7 +120,7 @@ export class ClubService {
             <b>Contact Info:</b> ${club.contactInfo || 'N/A'}
             <b>Created by:</b> ${creator?.name} <code>(ID: ${creator?.id})</code>
         `;
-        LogService.logInfo(message, globalClubLogsTopic);
+        this.logClubEvent(club.id, message);
     }
 
     private logEditedClub(oldClub: Club, newClub: Club, modifiedBy: number): void {
@@ -136,7 +144,7 @@ export class ClubService {
             message += '\n' + changes.join('\n');
         }
         message += `\n<b>Edited by:</b> ${modifier?.name} <code>(ID: ${modifier?.id})</code>`;
-        LogService.logInfo(message, globalClubLogsTopic);
+        this.logClubEvent(newClub.id, message);
     }
 
     private logDeletedClub(club: Club, deletedBy: number): void {
@@ -149,7 +157,7 @@ export class ClubService {
             <b>City:</b> ${club.city || 'N/A'}
             <b>Deleted by:</b> ${deleter?.name} <code>(ID: ${deleter?.id})</code>
         `;
-        LogService.logInfo(message, globalClubLogsTopic);
+        this.logClubEvent(club.id, message);
     }
 }
 
