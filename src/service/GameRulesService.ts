@@ -1,12 +1,21 @@
 import { GameRulesRepository } from '../repository/GameRulesRepository.ts';
 import { GameRulesNotFoundError } from '../error/EventErrors.ts';
-import type { GameRules } from '../model/EventModels.ts';
+import type { GameRules, GameRulesDetails } from '../model/EventModels.ts';
+import { UserService } from './UserService.ts';
+import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
+import { ClubRole } from '../model/ClubModels.ts';
+import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
+import { InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 
 export class GameRulesService {
     private gameRulesRepository: GameRulesRepository;
+    private userService: UserService;
+    private clubMembershipRepository: ClubMembershipRepository;
 
     constructor() {
         this.gameRulesRepository = new GameRulesRepository();
+        this.userService = new UserService();
+        this.clubMembershipRepository = new ClubMembershipRepository();
     }
 
     getAllGameRules(clubId?: number): GameRules[] {
@@ -22,5 +31,28 @@ export class GameRulesService {
             throw new GameRulesNotFoundError(id);
         }
         return gameRules;
+    }
+
+    updateGameRulesDetails(id: number, details: GameRulesDetails | null, userId: number): GameRules {
+        const gameRules = this.getGameRulesById(id);
+        this.ensureCanUpdateGameRules(gameRules, userId);
+        this.gameRulesRepository.updateGameRulesDetails(id, details);
+        return this.getGameRulesById(id);
+    }
+
+    private ensureCanUpdateGameRules(gameRules: GameRules, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (gameRules.clubId === null) {
+            throw new InsufficientPermissionsError();
+        }
+
+        const role = this.clubMembershipRepository.getUserClubRole(gameRules.clubId, userId);
+        if (role !== ClubRole.OWNER) {
+            throw new InsufficientClubPermissionsError(ClubRole.OWNER);
+        }
     }
 }

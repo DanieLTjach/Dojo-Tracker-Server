@@ -1,6 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
-import type { GameRules } from '../model/EventModels.ts';
+import type { GameRules, GameRulesDetails } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
 
@@ -15,7 +15,8 @@ export class GameRulesRepository {
                 uma,
                 startingPoints,
                 chomboPointsAfterUma,
-                umaTieBreak
+                umaTieBreak,
+                details
             FROM gameRules
             ORDER BY id ASC`
         );
@@ -35,7 +36,8 @@ export class GameRulesRepository {
                 uma,
                 startingPoints,
                 chomboPointsAfterUma,
-                umaTieBreak
+                umaTieBreak,
+                details
             FROM gameRules
             WHERE clubId = :clubId OR clubId IS NULL
             ORDER BY id ASC`
@@ -56,7 +58,8 @@ export class GameRulesRepository {
                 uma,
                 startingPoints,
                 chomboPointsAfterUma,
-                umaTieBreak
+                umaTieBreak,
+                details
             FROM gameRules
             WHERE id = :id`
         );
@@ -65,6 +68,21 @@ export class GameRulesRepository {
     findGameRulesById(id: number): GameRules | undefined {
         const dbEntity = this.findGameRulesByIdStatement().get({ id });
         return dbEntity !== undefined ? gameRulesFromDBEntity(dbEntity) : undefined;
+    }
+
+    private updateGameRulesDetailsStatement(): Statement<{ id: number; details: string | null }, void> {
+        return dbManager.db.prepare(`
+            UPDATE gameRules
+            SET details = :details
+            WHERE id = :id
+        `);
+    }
+
+    updateGameRulesDetails(id: number, details: GameRulesDetails | null): void {
+        this.updateGameRulesDetailsStatement().run({
+            id,
+            details: details ? JSON.stringify(details) : null
+        });
     }
 }
 
@@ -77,6 +95,7 @@ interface GameRulesDBEntity {
     startingPoints: number;
     chomboPointsAfterUma: number | null;
     umaTieBreak: string;
+    details: string | null;
 }
 
 function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
@@ -88,6 +107,11 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         uma: parseUma(dbEntity.uma),
         startingPoints: dbEntity.startingPoints,
         chomboPointsAfterUma: dbEntity.chomboPointsAfterUma,
-        umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak)
+        umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak),
+        details: parseGameRulesDetails(dbEntity.details)
     };
+}
+
+function parseGameRulesDetails(details: string | null): GameRulesDetails | null {
+    return details ? JSON.parse(details) : null;
 }

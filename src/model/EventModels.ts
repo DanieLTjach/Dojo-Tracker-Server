@@ -5,6 +5,26 @@ export const UmaTieBreak = {
 
 export type UmaTieBreak = typeof UmaTieBreak[keyof typeof UmaTieBreak];
 
+export interface GameRulesTooltip {
+    label: string;
+    content: string;
+}
+
+export interface GameRulesDetails {
+    type: 'table' | 'text';
+    link?: {
+        url: string;
+        label: string;
+    } | undefined;
+    table?: {
+        headers: string[];
+        rows: string[][];
+        rowTooltips?: (GameRulesTooltip | null)[] | undefined;
+    } | undefined;
+    text?: string | undefined;
+    tooltips?: GameRulesTooltip[] | undefined;
+}
+
 export interface GameRules {
     id: number;
     name: string;
@@ -14,6 +34,7 @@ export interface GameRules {
     startingPoints: number;
     chomboPointsAfterUma: number | null;
     umaTieBreak: UmaTieBreak;
+    details: GameRulesDetails | null;
 }
 
 export interface Event {

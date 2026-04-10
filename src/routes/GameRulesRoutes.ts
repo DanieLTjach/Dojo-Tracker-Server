@@ -22,4 +22,12 @@ router.get('/', requireAuth, withTransaction((req, res) => gameRulesController.g
  */
 router.get('/:id', requireAuth, withTransaction((req, res) => gameRulesController.getGameRulesById(req, res)));
 
+/**
+ * PUT /api/game-rules/:id/details
+ * Update game rules details
+ *
+ * Authentication: Required
+ */
+router.put('/:id/details', requireAuth, withTransaction((req, res) => gameRulesController.updateGameRulesDetails(req, res)));
+
 export default router;
