@@ -4,7 +4,8 @@ export const ClubTelegramTopicType = {
     RATING: 'RATING',
     USER_LOGS: 'USER_LOGS',
     GAME_LOGS: 'GAME_LOGS',
-    CLUB_LOGS: 'CLUB_LOGS'
+    CLUB_LOGS: 'CLUB_LOGS',
+    MAIN: 'MAIN'
 } as const;
 
 export type ClubTelegramTopicType = typeof ClubTelegramTopicType[keyof typeof ClubTelegramTopicType];

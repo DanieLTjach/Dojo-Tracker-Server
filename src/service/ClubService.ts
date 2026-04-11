@@ -91,7 +91,8 @@ export class ClubService {
             rating: null,
             userLogs: null,
             gameLogs: null,
-            clubLogs: null
+            clubLogs: null,
+            main: null
         };
     }
 
@@ -178,6 +179,8 @@ export function updateClubTelegramTopic(
             return { ...topics, gameLogs: telegramTopic };
         case ClubTelegramTopicType.CLUB_LOGS:
             return { ...topics, clubLogs: telegramTopic };
+        case ClubTelegramTopicType.MAIN:
+            return { ...topics, main: telegramTopic };
     }
 }
 
