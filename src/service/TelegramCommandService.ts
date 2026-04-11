@@ -151,6 +151,7 @@ class TelegramCommandService {
             await this.executeWithErrorHandling(ctx, () => telegramGameRulesService.handleDocumentUpload(ctx));
         });
 
+
         telegramBot.telegram.setMyCommands([
             { command: 'help', description: 'Показати список команд' },
             { command: 'post_app_link', description: 'Опублікувати посилання на додаток' },
