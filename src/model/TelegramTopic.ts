@@ -3,15 +3,16 @@ import config from "../../config/config.ts";
 export const ClubTelegramTopicType = {
     RATING: 'RATING',
     USER_LOGS: 'USER_LOGS',
-    GAME_LOGS: 'GAME_LOGS'
+    GAME_LOGS: 'GAME_LOGS',
+    CLUB_LOGS: 'CLUB_LOGS',
+    MAIN: 'MAIN'
 } as const;
 
 export type ClubTelegramTopicType = typeof ClubTelegramTopicType[keyof typeof ClubTelegramTopicType];
 
 export const TelegramTopicType = {
     ...ClubTelegramTopicType,
-    ERROR_LOGS: 'ERROR_LOGS',
-    CLUB_LOGS: 'CLUB_LOGS'
+    ERROR_LOGS: 'ERROR_LOGS'
 } as const;
 
 export type TelegramTopicType = typeof TelegramTopicType[keyof typeof TelegramTopicType];

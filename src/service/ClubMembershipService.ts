@@ -159,6 +159,14 @@ export class ClubMembershipService {
         void TelegramMessageService.sendDirectMessage(user.telegramId!, message);
     }
 
+    private logClubEvent(clubId: number, message: string): void {
+        LogService.logInfo(message, globalClubLogsTopic);
+        const clubLogsTopic = this.clubService.getClubTelegramTopics(clubId).clubLogs;
+        if (clubLogsTopic !== null) {
+            LogService.logInfo(message, clubLogsTopic);
+        }
+    }
+
     private logJoinRequest(membership: ClubMembership, userId: number): void {
         const user = this.userService.getUserById(userId);
         const message = dedent`
@@ -168,7 +176,7 @@ export class ClubMembershipService {
             <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
             <b>Status:</b> ${membership.status}
         `;
-        LogService.logInfo(message, globalClubLogsTopic);
+        this.logClubEvent(membership.clubId, message);
     }
 
     private logLeftClub(membership: ClubMembership, userId: number): void {
@@ -180,7 +188,7 @@ export class ClubMembershipService {
             <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
             <b>Previous Role:</b> ${membership.role}
         `;
-        LogService.logInfo(message, globalClubLogsTopic);
+        this.logClubEvent(membership.clubId, message);
     }
 
     private logMemberActivated(membership: ClubMembership, modifiedBy: number): void {
@@ -194,7 +202,7 @@ export class ClubMembershipService {
             <b>Role:</b> ${membership.role}
             <b>Approved by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
-        LogService.logInfo(message, globalClubLogsTopic);
+        this.logClubEvent(membership.clubId, message);
     }
 
     private logMemberDeactivated(membership: ClubMembership, modifiedBy: number): void {
@@ -208,7 +216,7 @@ export class ClubMembershipService {
             <b>Previous Role:</b> ${membership.role}
             <b>Removed by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
-        LogService.logInfo(message, globalClubLogsTopic);
+        this.logClubEvent(membership.clubId, message);
     }
 
     private logMemberRoleChanged(oldMembership: ClubMembership, newMembership: ClubMembership, modifiedBy: number): void {
@@ -222,7 +230,7 @@ export class ClubMembershipService {
             <b>Role:</b> ${oldMembership.role} → ${newMembership.role}
             <b>Changed by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
-        LogService.logInfo(message, globalClubLogsTopic);
+        this.logClubEvent(newMembership.clubId, message);
     }
 }
 

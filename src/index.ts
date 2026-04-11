@@ -16,6 +16,7 @@ import { handleErrors } from './middleware/ErrorHandling.ts';
 import LogService from './service/LogService.ts';
 import { dbManager } from './db/dbInit.ts';
 import TelegramCommandService from './service/TelegramCommandService.ts';
+import PollSchedulerService from './service/PollSchedulerService.ts';
 
 const app = express();
 app.use(express.json());
@@ -51,6 +52,7 @@ app.listen(config.port, (error?: Error) => {
 });
 
 TelegramCommandService.init();
+PollSchedulerService.init();
 
 async function shutdown() {
     await LogService.shutdown();
