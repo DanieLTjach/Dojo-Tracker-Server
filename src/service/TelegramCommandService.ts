@@ -249,7 +249,7 @@ class TelegramCommandService {
     private handlePollToggleDayCallback(ctx: TelegramCallbackQueryContext) {
         const clubId = parseInt(ctx.match[1]!);
         const toggleDay = parseInt(ctx.match[2]!);
-        let selectedDays = ctx.match[3]! === '' ? [] : ctx.match[3]!.split(',').map(Number);
+        let selectedDays = parseNumberList(ctx.match[3]!);
 
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
@@ -268,7 +268,7 @@ class TelegramCommandService {
     }
 
     private showDaySelector(ctx: TelegramCallbackQueryContext, clubId: number, daysStr: string) {
-        const selectedDays = daysStr === '' ? [] : daysStr.split(',').map(Number);
+        const selectedDays = parseNumberList(daysStr);
 
         const dayButtons = ALL_DAYS.map(day => ({
             text: (selectedDays.includes(day) ? '✅ ' : '⬜ ') + DAY_NAMES_SHORT[day],
@@ -343,7 +343,7 @@ class TelegramCommandService {
         const sendDay = parseInt(ctx.match[3]!);
         const sendTime = ctx.match[4]!;
         const toggleIndex = parseInt(ctx.match[5]!);
-        let selectedExtras = ctx.match[6]! === '' ? [] : ctx.match[6]!.split(',').map(Number);
+        let selectedExtras = parseNumberList(ctx.match[6]!);
 
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
@@ -362,7 +362,7 @@ class TelegramCommandService {
         ctx: TelegramCallbackQueryContext,
         clubId: number, daysStr: string, sendDay: number, sendTime: string, extrasStr: string
     ) {
-        const selectedExtras = extrasStr === '' ? [] : extrasStr.split(',').map(Number);
+        const selectedExtras = parseNumberList(extrasStr);
 
         const extraButtons = EXTRA_OPTION_PRESETS.map((option, index) => ([{
             text: (selectedExtras.includes(index) ? '✅ ' : '⬜ ') + option,
@@ -391,8 +391,7 @@ class TelegramCommandService {
 
         const club = this.clubService.getClubById(clubId);
         const eventDays = daysStr.split(',').map(Number);
-        const selectedExtras = extrasStr === '' ? [] : extrasStr.split(',').map(Number);
-        const extraOptions = selectedExtras.map(i => EXTRA_OPTION_PRESETS[i]!);
+        const extraOptions = parseNumberList(extrasStr).map(i => EXTRA_OPTION_PRESETS[i]!);
 
         const pollConfig: ClubPollConfig = {
             clubId,
@@ -574,6 +573,10 @@ class TelegramCommandService {
     private getMessageTopicId(message: Message.TextMessage): number | undefined {
         return message.is_topic_message ? message.message_thread_id : undefined;
     }
+}
+
+function parseNumberList(str: string): number[] {
+    return str === '' ? [] : str.split(',').map(Number);
 }
 
 function clubTelegramTopicDescription(topicType: ClubTelegramTopicType): string {
