@@ -37,7 +37,7 @@ describe('getNextDayOfWeek', () => {
     });
 
     test('Sunday from Wednesday is +4 days', () => {
-        const result = getNextDayOfWeek(wednesday, 0); // Sunday
+        const result = getNextDayOfWeek(wednesday, 7); // Sunday
         expect(result.getDate()).toBe(12);
     });
 

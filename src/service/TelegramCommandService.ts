@@ -636,10 +636,10 @@ function clubTelegramTopicUpdatedSuccessfullyText(topicType: ClubTelegramTopicTy
     }
 }
 
-const ALL_DAYS = [1, 2, 3, 4, 5, 6, 0]; // Mon-Sun
+const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7]; // Mon-Sun
 
 const DAY_NAMES_SHORT: Record<number, string> = {
-    0: 'Нд', 1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб'
+    1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб', 7: 'Нд'
 };
 
 const EXTRA_OPTION_PRESETS = [

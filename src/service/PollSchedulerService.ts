@@ -41,7 +41,7 @@ class PollSchedulerService {
 
     private checkAndSendPolls() {
         const now = nowInKyiv();
-        const currentDay = now.getDay();
+        const currentDay = jsToIsoDay(now.getDay());
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
         const configs = this.pollRepository.findAllActiveConfigs();
@@ -65,7 +65,7 @@ class PollSchedulerService {
     private sendScheduledPoll(config: ClubPollConfig) {
         const pollTopic = this.clubService.getClubTelegramTopics(config.clubId).main;
         if (pollTopic === null) {
-            console.warn(`No main topic configured for club ${config.clubId}, skipping poll`);
+            LogService.logError(`No main topic configured for club ${config.clubId}, skipping poll`);
             return;
         }
 
@@ -108,10 +108,15 @@ class PollSchedulerService {
     }
 }
 
-/** Returns the next occurrence of the given day of week (0-6 days ahead, including today) */
+/** Converts JS day (0=Sunday) to ISO day (7=Sunday, 1=Monday) */
+function jsToIsoDay(jsDay: number): number {
+    return jsDay === 0 ? 7 : jsDay;
+}
+
+/** Returns the next occurrence of the given ISO day of week (1=Mon, 7=Sun), 0-6 days ahead including today */
 export function getNextDayOfWeek(from: Date, targetDay: number): Date {
     const result = new Date(from);
-    const currentDay = from.getDay();
+    const currentDay = jsToIsoDay(from.getDay());
     let daysUntil = targetDay - currentDay;
     if (daysUntil < 0) {
         daysUntil += 7;
