@@ -92,7 +92,7 @@ class TelegramCommandService {
         telegramBot.telegram.setMyCommands([
             { command: 'help', description: 'Показати список команд' },
             { command: 'post_app_link', description: 'Опублікувати посилання на додаток' },
-            { command: 'set_topic', description: 'Встановити топік для сповіщень' },
+            { command: 'set_topic', description: 'Налаштувати сповіщення в поточному топіку' },
             { command: 'setup_poll', description: 'Налаштувати опитування для клубу' },
             { command: 'preview_poll', description: 'Попередній перегляд опитування' },
             { command: 'send_poll', description: 'Відправити опитування зараз' },
@@ -123,8 +123,8 @@ class TelegramCommandService {
                 + `<code>/preview_poll</code> — Попередній перегляд опитування\n`
                 + `<code>/send_poll</code> — Відправити опитування зараз\n`
                 + `\n`
-                + `<b>Налаштування (в топіку групи):</b>\n`
-                + `<code>/set_topic</code> — Встановити топік для сповіщень\n`;
+                + `<b>Сповіщення:</b>\n`
+                + `<code>/set_topic</code> — Налаштувати сповіщення в поточному топіку\n`;
         }
 
         ctx.replyWithHTML(text);
