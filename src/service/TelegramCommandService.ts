@@ -75,8 +75,8 @@ class TelegramCommandService {
         telegramBot.action(/poll_extras_done_(\d+)_([^_]+)_(\d+)_([^_]+)_(.*)/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollExtrasDoneCallback.bind(this));
         });
-        telegramBot.action(/poll_disable_(\d+)/, async (ctx) => {
-            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollDisableCallback.bind(this));
+        telegramBot.action(/poll_toggle_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePollToggleCallback.bind(this));
         });
 
         telegramBot.command('preview_poll', (ctx) => {
@@ -217,33 +217,33 @@ class TelegramCommandService {
         this.validateUserCanEditClub(user, clubId);
 
         const existingConfig = this.pollRepository.findConfigByClubId(clubId);
-        if (existingConfig) {
-            const club = this.clubService.getClubById(clubId);
-            const daysText = existingConfig.eventDays.map(d => DAY_NAMES_SHORT[d]).join(', ');
-            const sendDayText = DAY_NAMES_SHORT[existingConfig.sendDay];
-            ctx.reply(
-                `📊 Опитування для <b>${club.name}</b> вже налаштовано:\n\n`
-                + `📝 ${existingConfig.pollTitle}\n`
-                + `📅 Дні подій: ${daysText}\n`
-                + `📤 Відправка: ${sendDayText} о ${existingConfig.sendTime}\n`
-                + `📋 Додаткові: ${existingConfig.extraOptions.length > 0 ? existingConfig.extraOptions.join(', ') : 'немає'}\n`
-                + `${existingConfig.isActive ? '✅ Активне' : '❌ Вимкнене'}`,
-                {
-                    parse_mode: 'HTML',
-                    reply_markup: {
-                        inline_keyboard: [
-                            [{ text: '🔄 Переналаштувати', callback_data: `poll_day_${clubId}_-1_` }],
-                            existingConfig.isActive
-                                ? [{ text: '❌ Вимкнути', callback_data: `poll_disable_${clubId}` }]
-                                : [{ text: '✅ Увімкнути', callback_data: `poll_disable_${clubId}` }]
-                        ]
-                    }
-                }
-            );
+        if (!existingConfig) {
+            this.showDaySelector(ctx, clubId, '');
             return;
         }
 
-        this.showDaySelector(ctx, clubId, '');
+        const club = this.clubService.getClubById(clubId);
+        const daysText = existingConfig.eventDays.map(d => DAY_NAMES_SHORT[d]).join(', ');
+        const sendDayText = DAY_NAMES_SHORT[existingConfig.sendDay];
+        ctx.reply(
+            `📊 Опитування для <b>${club.name}</b> вже налаштовано:\n\n`
+            + `📝 ${existingConfig.pollTitle}\n`
+            + `📅 Дні подій: ${daysText}\n`
+            + `📤 Відправка: ${sendDayText} о ${existingConfig.sendTime}\n`
+            + `📋 Додаткові: ${existingConfig.extraOptions.length > 0 ? existingConfig.extraOptions.join(', ') : 'немає'}\n`
+            + `${existingConfig.isActive ? '✅ Активне' : '❌ Вимкнене'}`,
+            {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '🔄 Переналаштувати', callback_data: `poll_day_${clubId}_-1_` }],
+                        existingConfig.isActive
+                            ? [{ text: '❌ Вимкнути', callback_data: `poll_toggle_${clubId}` }]
+                            : [{ text: '✅ Увімкнути', callback_data: `poll_toggle_${clubId}` }]
+                    ]
+                }
+            }
+        );
     }
 
     private handlePollToggleDayCallback(ctx: TelegramCallbackQueryContext) {
@@ -418,7 +418,7 @@ class TelegramCommandService {
         );
     }
 
-    private handlePollDisableCallback(ctx: TelegramCallbackQueryContext) {
+    private handlePollToggleCallback(ctx: TelegramCallbackQueryContext) {
         const clubId = parseInt(ctx.match[1]!);
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
