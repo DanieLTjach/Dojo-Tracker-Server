@@ -59,9 +59,9 @@ class TelegramGameRulesService {
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: '📥 Завантажити правила', callback_data: 'gr_menu_dl' }],
-                        [{ text: '📤 Завантажити нові', callback_data: 'gr_menu_upload' }],
+                        [{ text: '📤 Додати нові правила', callback_data: 'gr_menu_upload' }],
                         [{ text: '✏️ Оновити правила', callback_data: 'gr_menu_update' }],
-                        [{ text: '🗑 Видалити деталі', callback_data: 'gr_menu_delete' }],
+                        [{ text: '🗑 Видалити правила', callback_data: 'gr_menu_delete' }],
                     ]
                 }
             }
