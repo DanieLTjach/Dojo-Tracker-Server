@@ -284,13 +284,22 @@ class TelegramGameRulesService {
         });
     }
 
-    handleUpdateRules(ctx: TelegramCallbackQueryContext) {
+    async handleUpdateRules(ctx: TelegramCallbackQueryContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         const rulesId = parseInt(ctx.match[1]!);
         const rules = this.gameRulesService.getGameRulesById(rulesId);
 
         if (rules.clubId !== null) {
             this.validateUserCanEditClub(user, rules.clubId);
+        }
+
+        // Send existing file so user can download and edit it
+        if (rules.details !== null) {
+            const buffer = Buffer.from(JSON.stringify(rules.details, null, 2), 'utf-8');
+            await ctx.replyWithDocument(
+                { source: buffer, filename: `${rules.name}.json` },
+                { caption: '📎 Поточна версія — завантажте, відредагуйте та надішліть назад' }
+            );
         }
 
         this.pendingUploads.set(ctx.from.id, {
@@ -300,7 +309,7 @@ class TelegramGameRulesService {
             timestamp: Date.now()
         });
 
-        ctx.reply(`Надішліть .json файл з оновленими деталями для "${rules.name}". У вас є 5 хвилин.`);
+        ctx.reply(`Надішліть JSON файл з оновленими деталями для "${rules.name}". У вас є 5 хвилин.`);
     }
 
     // ── Flow E: Document Upload Handler ──
@@ -354,15 +363,7 @@ class TelegramGameRulesService {
 
             const newDetails = result.data as GameRulesDetails;
 
-            // For updates: send old version as backup
             const existingRules = this.gameRulesService.getGameRulesById(pending.gameRulesId);
-            if (existingRules.details !== null) {
-                const oldBuffer = Buffer.from(JSON.stringify(existingRules.details, null, 2), 'utf-8');
-                await ctx.replyWithDocument(
-                    { source: oldBuffer, filename: `${pending.gameRulesName}-old.json` },
-                    { caption: '📎 Попередня версія (бекап)' }
-                );
-            }
 
             // Build diff summary
             const summary = buildDiffSummary(existingRules.details, newDetails);
@@ -371,7 +372,7 @@ class TelegramGameRulesService {
             pending.parsedDetails = newDetails;
 
             ctx.replyWithHTML(
-                `📋 <b>Зміни для "${pending.gameRulesName}":</b>\n${summary}`,
+                `📖 <b>Зміни для "${pending.gameRulesName}":</b>\n${summary}`,
                 {
                     reply_markup: {
                         inline_keyboard: [
@@ -550,53 +551,63 @@ class TelegramGameRulesService {
 
 // ── Diff Summary ──
 
+function buildDiffSection(title: string, added: string[], changed: string[], removed: string[]): string | null {
+    if (added.length === 0 && changed.length === 0 && removed.length === 0) return null;
+
+    const lines: string[] = [`<b>${title}</b>`];
+    if (added.length > 0) {
+        lines.push(`\n🟢 Додано:`);
+        added.forEach(name => lines.push(`  • ${name}`));
+    }
+    if (changed.length > 0) {
+        lines.push(`\n🟡 Змінено:`);
+        changed.forEach(name => lines.push(`  • ${name}`));
+    }
+    if (removed.length > 0) {
+        lines.push(`\n🔴 Видалено:`);
+        removed.forEach(name => lines.push(`  • ${name}`));
+    }
+    return lines.join('\n');
+}
+
 function buildDiffSummary(oldDetails: GameRulesDetails | null, newDetails: GameRulesDetails): string {
     if (oldDetails === null) {
-        const lines: string[] = [];
-        lines.push(`• Правил: ${newDetails.rules.length}`);
-        if (newDetails.links?.length) lines.push(`• Посилань: ${newDetails.links.length}`);
-        const tooltipCount = newDetails.rules.filter(r => r.tooltip).length;
-        if (tooltipCount > 0) lines.push(`• Підказок: ${tooltipCount}`);
-        return lines.join('\n');
+        return `<b>📋 Правила</b>\n\n🟢 Додано:\n` + newDetails.rules.map(r => `  • ${r.rule}`).join('\n');
     }
 
-    const lines: string[] = [];
+    const sections: string[] = [];
 
-    // Links
-    const oldLinkCount = oldDetails.links?.length ?? 0;
-    const newLinkCount = newDetails.links?.length ?? 0;
-    if (oldLinkCount !== newLinkCount) {
-        lines.push(`• Посилань: ${oldLinkCount} → ${newLinkCount}`);
-    } else if (JSON.stringify(oldDetails.links) !== JSON.stringify(newDetails.links)) {
-        lines.push(`• Посилання: змінено`);
+    // ── Rules diff ──
+    const oldRuleMap = new Map(oldDetails.rules.map(r => [r.rule, r]));
+    const newRuleMap = new Map(newDetails.rules.map(r => [r.rule, r]));
+
+    const rulesSection = buildDiffSection(
+        '📋 Правила',
+        newDetails.rules.filter(r => !oldRuleMap.has(r.rule)).map(r => r.rule),
+        newDetails.rules.filter(r => { const old = oldRuleMap.get(r.rule); return old && JSON.stringify(old) !== JSON.stringify(r); }).map(r => r.rule),
+        oldDetails.rules.filter(r => !newRuleMap.has(r.rule)).map(r => r.rule),
+    );
+    if (rulesSection) sections.push(rulesSection);
+
+    // ── Links diff ──
+    const oldLinks = oldDetails.links ?? [];
+    const newLinks = newDetails.links ?? [];
+    const oldLinkMap = new Map(oldLinks.map(l => [l.url, l]));
+    const newLinkMap = new Map(newLinks.map(l => [l.url, l]));
+
+    const linksSection = buildDiffSection(
+        '🔗 Посилання',
+        newLinks.filter(l => !oldLinkMap.has(l.url)).map(l => l.label),
+        newLinks.filter(l => { const old = oldLinkMap.get(l.url); return old && old.label !== l.label; }).map(l => l.label),
+        oldLinks.filter(l => !newLinkMap.has(l.url)).map(l => l.label),
+    );
+    if (linksSection) sections.push(linksSection);
+
+    if (sections.length === 0) {
+        return '✨ Змін не виявлено';
     }
 
-    // Rules
-    const oldRuleCount = oldDetails.rules.length;
-    const newRuleCount = newDetails.rules.length;
-    if (oldRuleCount !== newRuleCount) {
-        lines.push(`• Правил: ${oldRuleCount} → ${newRuleCount}`);
-    } else {
-        const modifiedRules = oldDetails.rules.filter((r, i) =>
-            JSON.stringify(r) !== JSON.stringify(newDetails.rules[i])
-        ).length;
-        if (modifiedRules > 0) {
-            lines.push(`• Змінено правил: ${modifiedRules}`);
-        }
-    }
-
-    // Tooltips
-    const oldTooltipCount = oldDetails.rules.filter(r => r.tooltip).length;
-    const newTooltipCount = newDetails.rules.filter(r => r.tooltip).length;
-    if (oldTooltipCount !== newTooltipCount) {
-        lines.push(`• Підказок: ${oldTooltipCount} → ${newTooltipCount}`);
-    }
-
-    if (lines.length === 0) {
-        lines.push('• Змін не виявлено');
-    }
-
-    return lines.join('\n');
+    return sections.join('\n\n');
 }
 
 export default new TelegramGameRulesService();
