@@ -515,12 +515,14 @@ class TelegramCommandService {
             return;
         }
 
-        try {
-            await PollSchedulerService.sendPollNow(pollConfig);
-            ctx.reply('✅ Опитування відправлено!');
-        } catch (error) {
-            ctx.reply('❌ Помилка: переконайтеся, що основний топік встановлено через /set_topic');
+        const mainTopic = this.clubService.getClubTelegramTopics(clubId).main;
+        if (mainTopic === null) {
+            ctx.reply('❌ Основний топік не встановлено. Використайте /set_topic → 📌 Основний');
+            return;
         }
+
+        await PollSchedulerService.sendPollNow(pollConfig);
+        ctx.reply('✅ Опитування відправлено!');
     }
 
     private getUserByTelegramId(userTelegramId: number): User {
