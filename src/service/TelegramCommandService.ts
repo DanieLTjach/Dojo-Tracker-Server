@@ -82,6 +82,9 @@ class TelegramCommandService {
         telegramBot.command('preview_poll', (ctx) => {
             this.executeWithErrorHandling(ctx, this.handlePreviewPollCommand.bind(this));
         });
+        telegramBot.action(/preview_poll_confirm_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handlePreviewPollConfirmCallback.bind(this));
+        });
         telegramBot.command('send_poll', (ctx) => {
             this.executeWithErrorHandling(ctx, this.handleSendPollCommand.bind(this));
         });
@@ -436,24 +439,46 @@ class TelegramCommandService {
 
     // ── Preview & Send poll handlers ──
 
-    private async handlePreviewPollCommand(ctx: TelegramCommandContext) {
+    private handlePreviewPollCommand(ctx: TelegramCommandContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        for (const club of clubData) {
-            const pollConfig = this.pollRepository.findConfigByClubId(club.clubId);
-            if (pollConfig) {
-                const title = PollSchedulerService.buildPollTitle(pollConfig);
-                const options = PollSchedulerService.buildPollOptions(pollConfig);
-                await ctx.sendPoll(title, options, {
-                    is_anonymous: false,
-                    allows_multiple_answers: true,
-                });
-                return;
-            }
+        const clubsWithPolls = clubData.filter(club =>
+            this.pollRepository.findConfigByClubId(club.clubId) !== undefined
+        );
+
+        if (clubsWithPolls.length === 0) {
+            ctx.reply('Немає налаштованих опитувань. Використайте /setup_poll');
+            return;
         }
 
-        await ctx.reply('Немає налаштованих опитувань. Використайте /setup_poll');
+        ctx.reply('Попередній перегляд опитування:', {
+            reply_markup: {
+                inline_keyboard: clubsWithPolls.map(club => ([{
+                    text: `📊 ${club.clubName}`,
+                    callback_data: `preview_poll_confirm_${club.clubId}`
+                }]))
+            }
+        });
+    }
+
+    private async handlePreviewPollConfirmCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const pollConfig = this.pollRepository.findConfigByClubId(clubId);
+        if (!pollConfig) {
+            ctx.reply('Опитування не налаштовано для цього клубу.');
+            return;
+        }
+
+        const title = PollSchedulerService.buildPollTitle(pollConfig);
+        const options = PollSchedulerService.buildPollOptions(pollConfig);
+        await ctx.sendPoll(title, options, {
+            is_anonymous: false,
+            allows_multiple_answers: true,
+        });
     }
 
     private handleSendPollCommand(ctx: TelegramCommandContext) {
