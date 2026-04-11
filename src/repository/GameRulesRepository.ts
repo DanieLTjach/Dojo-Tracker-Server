@@ -84,6 +84,45 @@ export class GameRulesRepository {
             details: details ? JSON.stringify(details) : null
         });
     }
+
+    private findAllGlobalGameRulesStatement(): Statement<[], GameRulesDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak, details
+            FROM gameRules
+            WHERE clubId IS NULL
+            ORDER BY id ASC`
+        );
+    }
+
+    findAllGlobalGameRules(): GameRules[] {
+        return this.findAllGlobalGameRulesStatement().all().map(gameRulesFromDBEntity);
+    }
+
+    private findAllGameRulesWithDetailsByClubIdStatement(): Statement<{ clubId: number }, GameRulesDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak, details
+            FROM gameRules
+            WHERE clubId = :clubId AND details IS NOT NULL
+            ORDER BY id ASC`
+        );
+    }
+
+    findAllGameRulesWithDetailsByClubId(clubId: number): GameRules[] {
+        return this.findAllGameRulesWithDetailsByClubIdStatement().all({ clubId }).map(gameRulesFromDBEntity);
+    }
+
+    private findAllGameRulesWithoutDetailsByClubIdStatement(): Statement<{ clubId: number }, GameRulesDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak, details
+            FROM gameRules
+            WHERE clubId = :clubId AND details IS NULL
+            ORDER BY id ASC`
+        );
+    }
+
+    findAllGameRulesWithoutDetailsByClubId(clubId: number): GameRules[] {
+        return this.findAllGameRulesWithoutDetailsByClubIdStatement().all({ clubId }).map(gameRulesFromDBEntity);
+    }
 }
 
 interface GameRulesDBEntity {

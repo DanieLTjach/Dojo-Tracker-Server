@@ -40,6 +40,18 @@ export class GameRulesService {
         return this.getGameRulesById(id);
     }
 
+    getGlobalGameRules(): GameRules[] {
+        return this.gameRulesRepository.findAllGlobalGameRules();
+    }
+
+    getGameRulesWithDetailsByClubId(clubId: number): GameRules[] {
+        return this.gameRulesRepository.findAllGameRulesWithDetailsByClubId(clubId);
+    }
+
+    getGameRulesWithoutDetailsByClubId(clubId: number): GameRules[] {
+        return this.gameRulesRepository.findAllGameRulesWithoutDetailsByClubId(clubId);
+    }
+
     private ensureCanUpdateGameRules(gameRules: GameRules, userId: number): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {

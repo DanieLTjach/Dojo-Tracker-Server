@@ -5,7 +5,7 @@ import { ClubMembershipService } from "./ClubMembershipService.ts";
 import LogService from "./LogService.ts";
 import { telegramBot } from "./TelegramBot.ts";
 import { UserService } from "./UserService.ts";
-import type { CallbackQuery, Message, Update } from "telegraf/types";
+import type { Message, Update } from "telegraf/types";
 import type { User } from "../model/UserModels.ts";
 import { dbManager } from "../db/dbInit.ts";
 import { ClubService, updateClubTelegramTopic } from "./ClubService.ts";
@@ -14,15 +14,8 @@ import { parseClubTelegramTopicType } from "../util/EnumUtil.ts";
 import { PollRepository } from "../repository/PollRepository.ts";
 import type { ClubPollConfig } from "../model/PollModels.ts";
 import PollSchedulerService from "./PollSchedulerService.ts";
-
-type TelegramCommandContext = Context<{
-    message: Update.New & Update.NonChannel & Message.TextMessage;
-    update_id: number;
-}>;
-
-type TelegramCallbackQueryContext = Context<Update.CallbackQueryUpdate<CallbackQuery>> & { match: RegExpExecArray; };
-
-type ClubData = { clubId: number; clubName: string };
+import type { TelegramCommandContext, TelegramCallbackQueryContext, ClubData } from "../model/TelegramTypes.ts";
+import telegramGameRulesService from "./TelegramGameRulesService.ts";
 
 class TelegramCommandService {
 
@@ -92,6 +85,72 @@ class TelegramCommandService {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleSendPollConfirmCallback.bind(this));
         });
 
+        // ── Game rules commands ──
+        telegramBot.command('game_rules', (ctx) => {
+            this.executeWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleGameRulesCommand(ctx));
+        });
+        telegramBot.action('gr_menu_dl', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDownloadMenu(ctx));
+        });
+        telegramBot.action('gr_dl_cat_my', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDownloadCategoryMy(ctx));
+        });
+        telegramBot.action('gr_dl_cat_global', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDownloadCategoryGlobal(ctx));
+        });
+        telegramBot.action('gr_dl_cat_other', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDownloadCategoryOther(ctx));
+        });
+        telegramBot.action('gr_dl_template', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDownloadTemplate(ctx));
+        });
+        telegramBot.action(/gr_dl_club_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDownloadClub(ctx));
+        });
+        telegramBot.action(/gr_dl_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDownloadRules(ctx));
+        });
+        telegramBot.action('gr_menu_upload', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleUploadMenu(ctx));
+        });
+        telegramBot.action(/gr_up_club_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleUploadClub(ctx));
+        });
+        telegramBot.action(/gr_up_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleUploadRules(ctx));
+        });
+        telegramBot.action('gr_menu_update', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleUpdateMenu(ctx));
+        });
+        telegramBot.action(/gr_upd_club_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleUpdateClub(ctx));
+        });
+        telegramBot.action(/gr_upd_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleUpdateRules(ctx));
+        });
+        telegramBot.action(/gr_confirm_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleConfirm(ctx));
+        });
+        telegramBot.action('gr_cancel', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCancel(ctx));
+        });
+        telegramBot.action('gr_menu_delete', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDeleteMenu(ctx));
+        });
+        telegramBot.action(/gr_del_club_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDeleteClub(ctx));
+        });
+        telegramBot.action(/gr_del_confirm_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDeleteConfirm(ctx));
+        });
+        telegramBot.action(/gr_del_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDeleteRules(ctx));
+        });
+        telegramBot.on('document', async (ctx) => {
+            if (!telegramGameRulesService.hasPendingUpload(ctx.from.id)) return;
+            await this.executeWithErrorHandling(ctx, () => telegramGameRulesService.handleDocumentUpload(ctx));
+        });
+
         telegramBot.telegram.setMyCommands([
             { command: 'help', description: 'Показати список команд' },
             { command: 'post_app_link', description: 'Опублікувати посилання на додаток' },
@@ -99,6 +158,7 @@ class TelegramCommandService {
             { command: 'setup_poll', description: 'Налаштувати опитування для клубу' },
             { command: 'preview_poll', description: 'Попередній перегляд опитування' },
             { command: 'send_poll', description: 'Відправити опитування зараз' },
+            { command: 'game_rules', description: 'Керувати правилами гри' },
         ]);
 
         telegramBot.launch(() => {
@@ -125,6 +185,9 @@ class TelegramCommandService {
                 + `<code>/setup_poll</code> — Налаштувати опитування для клубу\n`
                 + `<code>/preview_poll</code> — Попередній перегляд опитування\n`
                 + `<code>/send_poll</code> — Відправити опитування зараз\n`
+                + `\n`
+                + `<b>Правила гри:</b>\n`
+                + `<code>/game_rules</code> — Керувати правилами гри\n`
                 + `\n`
                 + `<b>Сповіщення:</b>\n`
                 + `<code>/set_topic</code> — Налаштувати сповіщення в поточному топіку\n`;
