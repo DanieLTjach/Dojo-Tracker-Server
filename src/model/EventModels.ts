@@ -10,19 +10,20 @@ export interface GameRulesTooltip {
     content: string;
 }
 
+export interface GameRulesDetailsLink {
+    url: string;
+    label: string;
+}
+
+export interface GameRulesDetailsRule {
+    rule: string;
+    value: string;
+    tooltip?: GameRulesTooltip | undefined;
+}
+
 export interface GameRulesDetails {
-    type: 'table' | 'text';
-    link?: {
-        url: string;
-        label: string;
-    } | undefined;
-    table?: {
-        headers: string[];
-        rows: string[][];
-        rowTooltips?: (GameRulesTooltip | null)[] | undefined;
-    } | undefined;
-    text?: string | undefined;
-    tooltips?: GameRulesTooltip[] | undefined;
+    links?: GameRulesDetailsLink[] | undefined;
+    rules: GameRulesDetailsRule[];
 }
 
 export interface GameRules {

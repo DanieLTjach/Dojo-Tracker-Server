@@ -23,21 +23,14 @@ interface PendingUpload {
 const PENDING_UPLOAD_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 const BASE_TEMPLATE: GameRulesDetails = {
-    type: "table",
-    link: { url: "https://example.com", label: "Повні правила (необов'язково)" },
-    table: {
-        headers: ["Правило", "Значення"],
-        rows: [
-            ["Кількість гравців", "4"],
-            ["Стартові очки", "25,000"],
-            ["Ума", "15 / 5 / -5 / -15"]
-        ],
-        rowTooltips: [
-            null,
-            null,
-            { label: "Ума", content: "Розподіл бонусних очок за місце:\n1-й: +15\n2-й: +5\n3-й: -5\n4-й: -15" }
-        ]
-    }
+    links: [
+        { url: "https://example.com", label: "Повні правила (необов'язково)" }
+    ],
+    rules: [
+        { rule: "Кількість гравців", value: "4" },
+        { rule: "Стартові очки", value: "25,000" },
+        { rule: "Ума", value: "15 / 5 / -5 / -15", tooltip: { label: "Ума", content: "Розподіл бонусних очок за місце:\n1-й: +15\n2-й: +5\n3-й: -5\n4-й: -15" } }
+    ]
 };
 
 class TelegramGameRulesService {
@@ -560,97 +553,43 @@ class TelegramGameRulesService {
 function buildDiffSummary(oldDetails: GameRulesDetails | null, newDetails: GameRulesDetails): string {
     if (oldDetails === null) {
         const lines: string[] = [];
-        lines.push(`• Тип: ${newDetails.type}`);
-        if (newDetails.link) lines.push(`• Посилання: ${newDetails.link.label}`);
-        if (newDetails.type === 'table' && newDetails.table) {
-            lines.push(`• Рядків: ${newDetails.table.rows.length}`);
-            const tooltipCount = newDetails.table.rowTooltips?.filter(t => t !== null).length ?? 0;
-            if (tooltipCount > 0) lines.push(`• Підказок: ${tooltipCount}`);
-        }
-        if (newDetails.type === 'text' && newDetails.text) {
-            lines.push(`• Текст: ${newDetails.text.length} символів`);
-        }
+        lines.push(`• Правил: ${newDetails.rules.length}`);
+        if (newDetails.links?.length) lines.push(`• Посилань: ${newDetails.links.length}`);
+        const tooltipCount = newDetails.rules.filter(r => r.tooltip).length;
+        if (tooltipCount > 0) lines.push(`• Підказок: ${tooltipCount}`);
         return lines.join('\n');
     }
 
     const lines: string[] = [];
 
-    // Type changed
-    if (oldDetails.type !== newDetails.type) {
-        lines.push(`• Тип: ${oldDetails.type} → ${newDetails.type}`);
-    }
-
-    // Link
-    const oldLink = oldDetails.link;
-    const newLink = newDetails.link;
-    if (!oldLink && newLink) {
-        lines.push(`• Посилання: додано`);
-    } else if (oldLink && !newLink) {
-        lines.push(`• Посилання: видалено`);
-    } else if (oldLink && newLink && (oldLink.url !== newLink.url || oldLink.label !== newLink.label)) {
+    // Links
+    const oldLinkCount = oldDetails.links?.length ?? 0;
+    const newLinkCount = newDetails.links?.length ?? 0;
+    if (oldLinkCount !== newLinkCount) {
+        lines.push(`• Посилань: ${oldLinkCount} → ${newLinkCount}`);
+    } else if (JSON.stringify(oldDetails.links) !== JSON.stringify(newDetails.links)) {
         lines.push(`• Посилання: змінено`);
     }
 
-    // Table comparison
-    if (newDetails.type === 'table' && newDetails.table) {
-        const oldTable = oldDetails.type === 'table' ? oldDetails.table : undefined;
-        if (!oldTable) {
-            lines.push(`• Таблиця: додано (${newDetails.table.rows.length} рядків)`);
-        } else {
-            // Headers
-            if (JSON.stringify(oldTable.headers) !== JSON.stringify(newDetails.table.headers)) {
-                lines.push(`• Заголовки: змінено`);
-            }
-
-            // Rows
-            const oldRowCount = oldTable.rows.length;
-            const newRowCount = newDetails.table.rows.length;
-            if (oldRowCount !== newRowCount) {
-                lines.push(`• Рядків: ${oldRowCount} → ${newRowCount}`);
-            } else {
-                const modifiedRows = oldTable.rows.filter((row, i) =>
-                    JSON.stringify(row) !== JSON.stringify(newDetails.table!.rows[i])
-                ).length;
-                if (modifiedRows > 0) {
-                    lines.push(`• Змінено рядків: ${modifiedRows}`);
-                }
-            }
-
-            // Tooltips
-            const oldTooltipCount = oldTable.rowTooltips?.filter(t => t !== null).length ?? 0;
-            const newTooltipCount = newDetails.table.rowTooltips?.filter(t => t !== null).length ?? 0;
-            if (oldTooltipCount !== newTooltipCount) {
-                lines.push(`• Підказок: ${oldTooltipCount} → ${newTooltipCount}`);
-            } else if (JSON.stringify(oldTable.rowTooltips) !== JSON.stringify(newDetails.table.rowTooltips)) {
-                lines.push(`• Підказки: змінено`);
-            }
+    // Rules
+    const oldRuleCount = oldDetails.rules.length;
+    const newRuleCount = newDetails.rules.length;
+    if (oldRuleCount !== newRuleCount) {
+        lines.push(`• Правил: ${oldRuleCount} → ${newRuleCount}`);
+    } else {
+        const modifiedRules = oldDetails.rules.filter((r, i) =>
+            JSON.stringify(r) !== JSON.stringify(newDetails.rules[i])
+        ).length;
+        if (modifiedRules > 0) {
+            lines.push(`• Змінено правил: ${modifiedRules}`);
         }
     }
 
-    // Text comparison
-    if (newDetails.type === 'text') {
-        const oldText = oldDetails.type === 'text' ? oldDetails.text : undefined;
-        if (!oldText && newDetails.text) {
-            lines.push(`• Текст: додано`);
-        } else if (oldText && !newDetails.text) {
-            lines.push(`• Текст: видалено`);
-        } else if (oldText !== newDetails.text) {
-            lines.push(`• Текст: змінено`);
-        }
-
-        // Tooltips for text type
-        const oldTooltips = oldDetails.type === 'text' ? oldDetails.tooltips : undefined;
-        if (!oldTooltips && newDetails.tooltips) {
-            lines.push(`• Підказки: додано (${newDetails.tooltips.length})`);
-        } else if (oldTooltips && !newDetails.tooltips) {
-            lines.push(`• Підказки: видалено`);
-        } else if (oldTooltips && newDetails.tooltips) {
-            if (oldTooltips.length !== newDetails.tooltips.length) {
-                lines.push(`• Підказок: ${oldTooltips.length} → ${newDetails.tooltips.length}`);
-            } else if (JSON.stringify(oldTooltips) !== JSON.stringify(newDetails.tooltips)) {
-                lines.push(`• Підказки: змінено`);
-            }
-        }
+    // Tooltips
+    const oldTooltipCount = oldDetails.rules.filter(r => r.tooltip).length;
+    const newTooltipCount = newDetails.rules.filter(r => r.tooltip).length;
+    if (oldTooltipCount !== newTooltipCount) {
+        lines.push(`• Підказок: ${oldTooltipCount} → ${newTooltipCount}`);
     }
 
     if (lines.length === 0) {
