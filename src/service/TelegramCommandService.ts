@@ -131,9 +131,6 @@ class TelegramCommandService {
     }
 
     private handlePostAppLinkCommand(ctx: TelegramCommandContext) {
-        const user = this.getUserByTelegramId(ctx.from.id);
-        this.getUserOwnedClubData(user); // validates user is club owner/admin
-
         ctx.replyWithHTML('🀄 <b>Japan Dojo Tracker</b>\nНатисніть кнопку, щоб відкрити додаток', {
             reply_markup: {
                 inline_keyboard: [[{
