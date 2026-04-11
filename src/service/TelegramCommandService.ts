@@ -111,13 +111,34 @@ class TelegramCommandService {
             await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleDownloadRules(ctx));
         });
         telegramBot.action('gr_menu_upload', async (ctx) => {
-            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleUploadMenu(ctx));
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCreateMenu(ctx));
         });
-        telegramBot.action(/gr_up_club_(\d+)/, async (ctx) => {
-            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleUploadClub(ctx));
+        telegramBot.action(/gr_create_club_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCreateClub(ctx));
         });
-        telegramBot.action(/gr_up_(\d+)/, async (ctx) => {
-            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleUploadRules(ctx));
+        telegramBot.action(/gr_create_players_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCreatePlayers(ctx));
+        });
+        telegramBot.action(/gr_create_pts_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCreatePoints(ctx));
+        });
+        telegramBot.action(/gr_create_uma_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCreateUma(ctx));
+        });
+        telegramBot.action(/gr_create_tiebreak_(WIND|DIVIDE)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCreateTiebreak(ctx));
+        });
+        telegramBot.action(/gr_create_chombo_(none|\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCreateChombo(ctx));
+        });
+        telegramBot.action('gr_create_confirm', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCreateConfirm(ctx));
+        });
+        telegramBot.action('gr_create_cancel', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCreateCancel(ctx));
+        });
+        telegramBot.action('gr_create_skip_details', async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleCreateSkipDetails(ctx));
         });
         telegramBot.action('gr_menu_update', async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, (ctx) => telegramGameRulesService.handleUpdateMenu(ctx));
@@ -149,6 +170,11 @@ class TelegramCommandService {
         telegramBot.on('document', async (ctx) => {
             if (!telegramGameRulesService.hasPendingUpload(ctx.from.id)) return;
             await this.executeWithErrorHandling(ctx, () => telegramGameRulesService.handleDocumentUpload(ctx));
+        });
+        telegramBot.on('text', async (ctx) => {
+            if (ctx.message.text.startsWith('/')) return;
+            if (!telegramGameRulesService.hasPendingCreation(ctx.from.id)) return;
+            await this.executeWithErrorHandling(ctx, () => { telegramGameRulesService.handleCreateNameInput(ctx); });
         });
 
 

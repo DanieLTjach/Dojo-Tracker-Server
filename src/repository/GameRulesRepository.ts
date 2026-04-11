@@ -123,6 +123,28 @@ export class GameRulesRepository {
     findAllGameRulesWithoutDetailsByClubId(clubId: number): GameRules[] {
         return this.findAllGameRulesWithoutDetailsByClubIdStatement().all({ clubId }).map(gameRulesFromDBEntity);
     }
+
+    private insertGameRulesStatement(): Statement<InsertGameRulesParams, void> {
+        return dbManager.db.prepare(`
+            INSERT INTO gameRules (name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak, clubId)
+            VALUES (:name, :numberOfPlayers, :uma, :startingPoints, :chomboPointsAfterUma, :umaTieBreak, :clubId)
+        `);
+    }
+
+    insertGameRules(params: InsertGameRulesParams): number {
+        const result = this.insertGameRulesStatement().run(params);
+        return Number(result.lastInsertRowid);
+    }
+}
+
+export interface InsertGameRulesParams {
+    name: string;
+    numberOfPlayers: number;
+    uma: string;
+    startingPoints: number;
+    chomboPointsAfterUma: number | null;
+    umaTieBreak: string;
+    clubId: number;
 }
 
 interface GameRulesDBEntity {

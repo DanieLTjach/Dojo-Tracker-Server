@@ -1,4 +1,4 @@
-import { GameRulesRepository } from '../repository/GameRulesRepository.ts';
+import { GameRulesRepository, type InsertGameRulesParams } from '../repository/GameRulesRepository.ts';
 import { GameRulesNotFoundError } from '../error/EventErrors.ts';
 import type { GameRules, GameRulesDetails } from '../model/EventModels.ts';
 import { UserService } from './UserService.ts';
@@ -50,6 +50,22 @@ export class GameRulesService {
 
     getGameRulesWithoutDetailsByClubId(clubId: number): GameRules[] {
         return this.gameRulesRepository.findAllGameRulesWithoutDetailsByClubId(clubId);
+    }
+
+    createGameRules(params: InsertGameRulesParams, userId: number): GameRules {
+        this.ensureCanCreateForClub(params.clubId, userId);
+        const newId = this.gameRulesRepository.insertGameRules(params);
+        return this.getGameRulesById(newId);
+    }
+
+    private ensureCanCreateForClub(clubId: number, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) return;
+
+        const role = this.clubMembershipRepository.getUserClubRole(clubId, userId);
+        if (role !== ClubRole.OWNER) {
+            throw new InsufficientClubPermissionsError(ClubRole.OWNER);
+        }
     }
 
     private ensureCanUpdateGameRules(gameRules: GameRules, userId: number): void {

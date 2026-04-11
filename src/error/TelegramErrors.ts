@@ -16,3 +16,9 @@ export class UserNotClubOwnerTelegramError extends TelegramReplyError {
         super('Ви повинні бути власником клубу, щоб виконати цю дію');
     }
 }
+
+export class TelegramPendingCreationMissingError extends TelegramReplyError {
+    constructor() {
+        super('Сесію створення правил не знайдено або вона закінчилася. Спробуйте ще раз: /game_rules');
+    }
+}
