@@ -1,13 +1,14 @@
 import { Context } from "telegraf";
 import type { Message, Update } from "telegraf/types";
-import { TelegramPendingCreationMissingError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from "../error/TelegramErrors.ts";
+import { CannotDeleteGameRulesInUseTelegramError, TelegramPendingCreationMissingError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from "../error/TelegramErrors.ts";
+import { CannotDeleteGameRulesInUseError } from "../error/EventErrors.ts";
 import { ClubMembershipService } from "./ClubMembershipService.ts";
 import { ClubService } from "./ClubService.ts";
 import { GameRulesService } from "./GameRulesService.ts";
 import { UserService } from "./UserService.ts";
 import LogService from "./LogService.ts";
 import type { TelegramCommandContext, TelegramCallbackQueryContext, ClubData } from "../model/TelegramTypes.ts";
-import type { GameRulesDetails } from "../model/EventModels.ts";
+import type { GameRules, GameRulesDetails, GameRulesDetailsRule } from "../model/EventModels.ts";
 import { gameRulesDetailsSchema } from "../schema/GameRulesSchemas.ts";
 import type { User } from "../model/UserModels.ts";
 import { ClubRole } from "../model/ClubModels.ts";
@@ -20,11 +21,11 @@ interface PendingUpload {
     timestamp: number;
 }
 
-type CreationStep = 'name' | 'players' | 'points' | 'uma' | 'tiebreak' | 'chombo' | 'confirm';
+type WizardStep = 'name' | 'players' | 'points' | 'uma' | 'tiebreak' | 'chombo' | 'confirm';
 
-interface PendingCreation {
+interface WizardState {
     clubId: number;
-    step: CreationStep;
+    step: WizardStep;
     name?: string;
     numberOfPlayers?: number;
     startingPoints?: number;
@@ -35,8 +36,12 @@ interface PendingCreation {
     timestamp: number;
 }
 
-const PENDING_UPLOAD_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const PENDING_CREATION_TTL_MS = 10 * 60 * 1000; // 10 minutes
+interface PendingEdit extends WizardState {
+    gameRulesId: number;
+}
+
+const PENDING_UPLOAD_TTL_MS = 5 * 60 * 1000;
+const PENDING_WIZARD_TTL_MS = 10 * 60 * 1000;
 
 interface UmaPreset {
     label: string;
@@ -56,16 +61,63 @@ function umaPresetsFor(numberOfPlayers: number): UmaPreset[] {
     return numberOfPlayers === 3 ? UMA_PRESETS_3P : UMA_PRESETS_4P;
 }
 
-const BASE_TEMPLATE: GameRulesDetails = {
-    links: [
-        { url: "https://example.com", label: "Повні правила (необов'язково)" }
-    ],
-    rules: [
-        { rule: "Кількість гравців", value: "4" },
-        { rule: "Стартові очки", value: "25,000" },
-        { rule: "Ума", value: "15 / 5 / -5 / -15", tooltip: { label: "Ума", content: "Розподіл бонусних очок за місце:\n1-й: +15\n2-й: +5\n3-й: -5\n4-й: -15" } }
-    ]
-};
+export function buildBaseDetails(params: {
+    numberOfPlayers: number;
+    startingPoints: number;
+    umaLabel: string;
+    umaTieBreak: string;
+    chomboPointsAfterUma: number | null;
+}): GameRulesDetails {
+    const umaValues = params.umaLabel;
+    const umaTooltipParts = umaValues.split(' / ');
+    const umaTooltipContent = umaTooltipParts
+        .map((v, i) => `${i + 1}-й: ${v.startsWith('-') ? v : '+' + v}`)
+        .join('\n');
+
+    const rules: GameRulesDetailsRule[] = [
+        { rule: "Кількість гравців", value: String(params.numberOfPlayers) },
+        { rule: "Стартові очки", value: formatNumber(params.startingPoints) },
+        {
+            rule: "Ума",
+            value: umaValues,
+            tooltip: { label: "Ума", content: `Розподіл бонусних очок за місце:\n${umaTooltipContent}` }
+        },
+        {
+            rule: "Рівні ума",
+            value: params.umaTieBreak === 'WIND' ? 'За вітром' : 'Ділити порівну'
+        }
+    ];
+
+    if (params.chomboPointsAfterUma !== null) {
+        rules.push({
+            rule: "Чомбо",
+            value: `${formatNumber(params.chomboPointsAfterUma)} після ума`
+        });
+    }
+
+    return { rules };
+}
+
+function formatNumber(n: number): string {
+    return n === 0 ? '0' : n.toLocaleString('uk-UA');
+}
+
+function formatPointsLabel(points: number): string {
+    const labels: Record<number, string> = { 0: '0 (EMA)', 25000: '25,000', 30000: '30,000', 35000: '35,000' };
+    return labels[points] ?? String(points);
+}
+
+function findUmaPresetLabel(umaString: string, numberOfPlayers: number): string {
+    const presets = umaPresetsFor(numberOfPlayers);
+    return presets.find(p => p.value === umaString)?.label ?? umaString;
+}
+
+function umaToString(uma: number[] | number[][]): string {
+    if (Array.isArray(uma[0])) {
+        return (uma as number[][]).map(row => row.join(',')).join(';');
+    }
+    return (uma as number[]).join(',');
+}
 
 class TelegramGameRulesService {
     private userService = new UserService();
@@ -73,7 +125,8 @@ class TelegramGameRulesService {
     private clubMembershipService = new ClubMembershipService();
     private gameRulesService = new GameRulesService();
     private pendingUploads = new Map<number, PendingUpload>();
-    private pendingCreations = new Map<number, PendingCreation>();
+    private pendingCreations = new Map<number, WizardState>();
+    private pendingEdits = new Map<number, PendingEdit>();
 
     // ── Entry Point ──
 
@@ -87,8 +140,10 @@ class TelegramGameRulesService {
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: '📥 Завантажити правила', callback_data: 'gr_menu_dl' }],
-                        [{ text: '📤 Додати нові правила', callback_data: 'gr_menu_upload' }],
-                        [{ text: '✏️ Оновити правила', callback_data: 'gr_menu_update' }],
+                        [{ text: '👁 Переглянути правила', callback_data: 'gr_menu_view' }],
+                        [{ text: '➕ Створити правила', callback_data: 'gr_menu_create' }],
+                        [{ text: '✏️ Оновити правила', callback_data: 'gr_menu_edit' }],
+                        [{ text: '📝 Оновити деталі', callback_data: 'gr_menu_details' }],
                         [{ text: '🗑 Видалити правила', callback_data: 'gr_menu_delete' }],
                     ]
                 }
@@ -96,7 +151,7 @@ class TelegramGameRulesService {
         );
     }
 
-    // ── Flow B: Download ──
+    // ── Flow: Download ──
 
     handleDownloadMenu(ctx: TelegramCallbackQueryContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
@@ -108,7 +163,6 @@ class TelegramGameRulesService {
                     [{ text: '🏠 Мої клуби', callback_data: 'gr_dl_cat_my' }],
                     [{ text: '🌐 Глобальні правила', callback_data: 'gr_dl_cat_global' }],
                     [{ text: '🏘 Інші клуби', callback_data: 'gr_dl_cat_other' }],
-                    [{ text: '📄 Базовий шаблон', callback_data: 'gr_dl_template' }],
                 ]
             }
         });
@@ -175,16 +229,6 @@ class TelegramGameRulesService {
         });
     }
 
-    async handleDownloadTemplate(ctx: TelegramCallbackQueryContext) {
-        this.getUserByTelegramId(ctx.from.id);
-
-        const buffer = Buffer.from(JSON.stringify(BASE_TEMPLATE, null, 2), 'utf-8');
-        await ctx.replyWithDocument({
-            source: buffer,
-            filename: 'game-rules-template.json'
-        });
-    }
-
     handleDownloadClub(ctx: TelegramCallbackQueryContext) {
         this.getUserByTelegramId(ctx.from.id);
 
@@ -224,7 +268,77 @@ class TelegramGameRulesService {
         });
     }
 
-    // ── Flow C: Create Game Rules Wizard ──
+    // ── Flow: View ──
+
+    handleViewMenu(ctx: TelegramCallbackQueryContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubs = this.getUserOwnedClubData(user);
+
+        ctx.reply('Оберіть клуб:', {
+            reply_markup: {
+                inline_keyboard: clubs.map(club => ([{
+                    text: club.clubName,
+                    callback_data: `gr_view_club_${club.clubId}`
+                }]))
+            }
+        });
+    }
+
+    handleViewClub(ctx: TelegramCallbackQueryContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubId = parseInt(ctx.match[1]!);
+        this.validateUserCanEditClub(user, clubId);
+
+        const rules = this.getClubRules(clubId);
+
+        if (rules.length === 0) {
+            ctx.reply('Правил для цього клубу не знайдено.');
+            return;
+        }
+
+        ctx.reply('Оберіть правила для перегляду:', {
+            reply_markup: {
+                inline_keyboard: rules.map(r => ([{
+                    text: r.name,
+                    callback_data: `gr_view_${r.id}`
+                }]))
+            }
+        });
+    }
+
+    async handleViewRules(ctx: TelegramCallbackQueryContext) {
+        this.getUserByTelegramId(ctx.from.id);
+
+        const rulesId = parseInt(ctx.match[1]!);
+        const rules = this.gameRulesService.getGameRulesById(rulesId);
+
+        const umaStr = umaToString(rules.uma);
+        const umaLabel = findUmaPresetLabel(umaStr, rules.numberOfPlayers);
+        const tiebreakLabel = rules.umaTieBreak === 'WIND' ? 'За вітром' : 'Ділити порівну';
+        const chombo = rules.chomboPointsAfterUma === null
+            ? 'без чомбо'
+            : `${formatNumber(rules.chomboPointsAfterUma)} після ума`;
+
+        let text = `📋 <b>${rules.name}</b>\n\n`
+            + `<b>Гравців:</b> ${rules.numberOfPlayers}\n`
+            + `<b>Стартові очки:</b> ${formatNumber(rules.startingPoints)}\n`
+            + `<b>Ума:</b> ${umaLabel}\n`
+            + `<b>Рівні ума:</b> ${tiebreakLabel}\n`
+            + `<b>Чомбо:</b> ${chombo}\n`
+            + `<b>Деталі:</b> ${rules.details !== null ? 'є' : 'немає'}`;
+
+        await ctx.replyWithHTML(text);
+
+        if (rules.details !== null) {
+            const buffer = Buffer.from(JSON.stringify(rules.details, null, 2), 'utf-8');
+            await ctx.replyWithDocument({
+                source: buffer,
+                filename: `${rules.name}.json`
+            });
+        }
+    }
+
+    // ── Flow: Create Wizard ──
 
     handleCreateMenu(ctx: TelegramCallbackQueryContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
@@ -254,138 +368,53 @@ class TelegramGameRulesService {
         ctx.reply('Введіть назву правил гри:');
     }
 
-    handleCreateNameInput(ctx: Context<{ message: Update.New & Update.NonChannel & Message.TextMessage; update_id: number }>): boolean {
-        const pending = this.getActivePendingCreation(ctx.from.id);
-        if (!pending || pending.step !== 'name') return false;
-
-        const name = ctx.message.text.trim();
-        if (name.length === 0) {
-            ctx.reply('Назва не може бути порожньою. Введіть назву:');
-            return true;
-        }
-
-        pending.name = name;
-        pending.step = 'players';
-        pending.timestamp = Date.now();
-
-        ctx.reply('Кількість гравців:', {
-            reply_markup: {
-                inline_keyboard: [[
-                    { text: '3 гравці', callback_data: 'gr_create_players_3' },
-                    { text: '4 гравці', callback_data: 'gr_create_players_4' }
-                ]]
-            }
-        });
-        return true;
-    }
-
     handleCreatePlayers(ctx: TelegramCallbackQueryContext) {
         const pending = this.requirePendingCreation(ctx.from.id);
-        const numberOfPlayers = parseInt(ctx.match[1]!);
-
-        pending.numberOfPlayers = numberOfPlayers;
+        pending.numberOfPlayers = parseInt(ctx.match[1]!);
         pending.step = 'points';
         pending.timestamp = Date.now();
-
-        const presets = [0, 25000, 30000, 35000];
-        const labels: Record<number, string> = { 0: '0 (EMA)', 25000: '25,000', 30000: '30,000', 35000: '35,000' };
-
-        ctx.reply('Стартові очки:', {
-            reply_markup: {
-                inline_keyboard: presets.map(p => ([{
-                    text: labels[p]!,
-                    callback_data: `gr_create_pts_${p}`
-                }]))
-            }
-        });
+        this.replyPointsStep(ctx, 'create');
     }
 
     handleCreatePoints(ctx: TelegramCallbackQueryContext) {
         const pending = this.requirePendingCreation(ctx.from.id);
-        const startingPoints = parseInt(ctx.match[1]!);
-
-        pending.startingPoints = startingPoints;
+        pending.startingPoints = parseInt(ctx.match[1]!);
         pending.step = 'uma';
         pending.timestamp = Date.now();
-
-        const presets = umaPresetsFor(pending.numberOfPlayers!);
-
-        ctx.reply('Ума:', {
-            reply_markup: {
-                inline_keyboard: presets.map((preset, index) => ([{
-                    text: preset.label,
-                    callback_data: `gr_create_uma_${index}`
-                }]))
-            }
-        });
+        this.replyUmaStep(ctx, 'create', pending.numberOfPlayers!);
     }
 
     handleCreateUma(ctx: TelegramCallbackQueryContext) {
         const pending = this.requirePendingCreation(ctx.from.id);
         const index = parseInt(ctx.match[1]!);
-
         const presets = umaPresetsFor(pending.numberOfPlayers!);
         const preset = presets[index];
-        if (!preset) {
-            ctx.reply('Невідомий варіант ума.');
-            return;
-        }
-
+        if (!preset) { ctx.reply('Невідомий варіант ума.'); return; }
         pending.uma = preset.value;
         pending.umaLabel = preset.label;
         pending.step = 'tiebreak';
         pending.timestamp = Date.now();
-
-        ctx.reply('Правило при рівних очках (ума):', {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: 'За вітром (WIND)', callback_data: 'gr_create_tiebreak_WIND' }],
-                    [{ text: 'Ділити порівну (DIVIDE)', callback_data: 'gr_create_tiebreak_DIVIDE' }]
-                ]
-            }
-        });
+        this.replyTiebreakStep(ctx, 'create');
     }
 
     handleCreateTiebreak(ctx: TelegramCallbackQueryContext) {
         const pending = this.requirePendingCreation(ctx.from.id);
-        const tiebreak = ctx.match[1]!;
-
-        pending.umaTieBreak = tiebreak;
+        pending.umaTieBreak = ctx.match[1]!;
         pending.step = 'chombo';
         pending.timestamp = Date.now();
-
-        ctx.reply('Чомбо:', {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: 'Без чомбо', callback_data: 'gr_create_chombo_none' }],
-                    [{ text: '20,000 після ума', callback_data: 'gr_create_chombo_20000' }]
-                ]
-            }
-        });
+        this.replyChomboStep(ctx, 'create');
     }
 
     handleCreateChombo(ctx: TelegramCallbackQueryContext) {
         const pending = this.requirePendingCreation(ctx.from.id);
         const raw = ctx.match[1]!;
-
         pending.chomboPointsAfterUma = raw === 'none' ? null : parseInt(raw);
         pending.step = 'confirm';
         pending.timestamp = Date.now();
-
-        ctx.replyWithHTML(
-            this.buildCreationSummary(pending),
-            {
-                reply_markup: {
-                    inline_keyboard: [[
-                        { text: '✅ Створити', callback_data: 'gr_create_confirm' },
-                        { text: '❌ Скасувати', callback_data: 'gr_create_cancel' }
-                    ]]
-                }
-            }
-        );
+        this.replyConfirmStep(ctx, 'create', pending, '📋 <b>Нові правила</b>');
     }
 
-    async handleCreateConfirm(ctx: TelegramCallbackQueryContext) {
+    handleCreateConfirm(ctx: TelegramCallbackQueryContext) {
         const pending = this.requirePendingCreation(ctx.from.id);
         if (pending.step !== 'confirm') {
             ctx.reply('Неможливо зберегти — заповніть всі кроки.');
@@ -403,32 +432,20 @@ class TelegramGameRulesService {
             clubId: pending.clubId
         }, user.id);
 
+        const details = buildBaseDetails({
+            numberOfPlayers: pending.numberOfPlayers!,
+            startingPoints: pending.startingPoints!,
+            umaLabel: pending.umaLabel!,
+            umaTieBreak: pending.umaTieBreak!,
+            chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
+        });
+        this.gameRulesService.updateGameRulesDetails(created.id, details, user.id);
+
         this.pendingCreations.delete(ctx.from.id);
 
-        this.pendingUploads.set(ctx.from.id, {
-            gameRulesId: created.id,
-            gameRulesName: created.name,
-            clubId: created.clubId,
-            timestamp: Date.now()
-        });
-
-        const templateBuffer = Buffer.from(JSON.stringify(BASE_TEMPLATE, null, 2), 'utf-8');
-        await ctx.replyWithDocument(
-            { source: templateBuffer, filename: `${created.name}.json` },
-            { caption: '📎 Базовий шаблон — завантажте, відредагуйте та надішліть назад' }
-        );
-
-        await ctx.replyWithHTML(
+        ctx.replyWithHTML(
             `✅ Правила "<b>${created.name}</b>" створено.\n\n`
-            + `Ви можете зараз завантажити деталі правил: відредагуйте шаблон вище та надішліть .json файл протягом 5 хвилин.\n\n`
-            + `Або натисніть <b>Пропустити</b> — деталі завжди можна додати чи оновити пізніше через /game_rules → ✏️ Оновити правила.`,
-            {
-                reply_markup: {
-                    inline_keyboard: [[
-                        { text: 'Пропустити', callback_data: 'gr_create_skip_details' }
-                    ]]
-                }
-            }
+            + `Деталі заповнено автоматично. Оновити пізніше через /game_rules → 📝 Оновити деталі.`
         );
     }
 
@@ -437,50 +454,9 @@ class TelegramGameRulesService {
         ctx.reply('❌ Скасовано');
     }
 
-    handleCreateSkipDetails(ctx: TelegramCallbackQueryContext) {
-        this.pendingUploads.delete(ctx.from.id);
-        ctx.reply('Готово. Деталі можна додати пізніше через /game_rules → Оновити.');
-    }
+    // ── Flow: Edit Wizard ──
 
-    private getActivePendingCreation(userId: number): PendingCreation | undefined {
-        const pending = this.pendingCreations.get(userId);
-        if (!pending) return undefined;
-        if (Date.now() - pending.timestamp > PENDING_CREATION_TTL_MS) {
-            this.pendingCreations.delete(userId);
-            return undefined;
-        }
-        return pending;
-    }
-
-    private requirePendingCreation(userId: number): PendingCreation {
-        const pending = this.getActivePendingCreation(userId);
-        if (!pending) {
-            throw new TelegramPendingCreationMissingError();
-        }
-        return pending;
-    }
-
-    private buildCreationSummary(pending: PendingCreation): string {
-        const chombo = pending.chomboPointsAfterUma === null || pending.chomboPointsAfterUma === undefined
-            ? 'без чомбо'
-            : `${pending.chomboPointsAfterUma} після ума`;
-        const tiebreakLabel = pending.umaTieBreak === 'WIND' ? 'За вітром (WIND)' : 'Ділити порівну (DIVIDE)';
-        return `📋 <b>Нові правила</b>\n\n`
-            + `<b>Назва:</b> ${pending.name}\n`
-            + `<b>Гравців:</b> ${pending.numberOfPlayers}\n`
-            + `<b>Стартові очки:</b> ${pending.startingPoints}\n`
-            + `<b>Ума:</b> ${pending.umaLabel}\n`
-            + `<b>Рівні ума:</b> ${tiebreakLabel}\n`
-            + `<b>Чомбо:</b> ${chombo}\n`;
-    }
-
-    hasPendingCreation(userId: number): boolean {
-        return this.getActivePendingCreation(userId) !== undefined;
-    }
-
-    // ── Flow D: Update Existing Details ──
-
-    handleUpdateMenu(ctx: TelegramCallbackQueryContext) {
+    handleEditMenu(ctx: TelegramCallbackQueryContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubs = this.getUserOwnedClubData(user);
 
@@ -488,20 +464,18 @@ class TelegramGameRulesService {
             reply_markup: {
                 inline_keyboard: clubs.map(club => ([{
                     text: club.clubName,
-                    callback_data: `gr_upd_club_${club.clubId}`
+                    callback_data: `gr_edit_club_${club.clubId}`
                 }]))
             }
         });
     }
 
-    handleUpdateClub(ctx: TelegramCallbackQueryContext) {
+    handleEditClub(ctx: TelegramCallbackQueryContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubId = parseInt(ctx.match[1]!);
         this.validateUserCanEditClub(user, clubId);
 
-        const rules = this.gameRulesService.getAllGameRules(clubId)
-            .filter(r => r.clubId === clubId);
-
+        const rules = this.getClubRules(clubId);
         if (rules.length === 0) {
             ctx.reply('Правил для цього клубу не знайдено.');
             return;
@@ -511,13 +485,13 @@ class TelegramGameRulesService {
             reply_markup: {
                 inline_keyboard: rules.map(r => ([{
                     text: r.name,
-                    callback_data: `gr_upd_${r.id}`
+                    callback_data: `gr_edit_${r.id}`
                 }]))
             }
         });
     }
 
-    async handleUpdateRules(ctx: TelegramCallbackQueryContext) {
+    handleEditRules(ctx: TelegramCallbackQueryContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         const rulesId = parseInt(ctx.match[1]!);
         const rules = this.gameRulesService.getGameRulesById(rulesId);
@@ -526,8 +500,160 @@ class TelegramGameRulesService {
             this.validateUserCanEditClub(user, rules.clubId);
         }
 
-        // Send existing file so user can download and edit it; fall back to template when empty
-        const source = rules.details ?? BASE_TEMPLATE;
+        const umaStr = umaToString(rules.uma);
+
+        this.pendingEdits.set(ctx.from.id, {
+            gameRulesId: rulesId,
+            clubId: rules.clubId!,
+            step: 'name',
+            name: rules.name,
+            numberOfPlayers: rules.numberOfPlayers,
+            startingPoints: rules.startingPoints,
+            uma: umaStr,
+            umaLabel: findUmaPresetLabel(umaStr, rules.numberOfPlayers),
+            umaTieBreak: rules.umaTieBreak,
+            chomboPointsAfterUma: rules.chomboPointsAfterUma,
+            timestamp: Date.now()
+        });
+
+        ctx.reply(`Введіть нову назву (поточна: ${rules.name}):`);
+    }
+
+    handleEditPlayers(ctx: TelegramCallbackQueryContext) {
+        const pending = this.requirePendingEdit(ctx.from.id);
+        pending.numberOfPlayers = parseInt(ctx.match[1]!);
+        pending.step = 'points';
+        pending.timestamp = Date.now();
+        this.replyPointsStep(ctx, 'edit');
+    }
+
+    handleEditPoints(ctx: TelegramCallbackQueryContext) {
+        const pending = this.requirePendingEdit(ctx.from.id);
+        pending.startingPoints = parseInt(ctx.match[1]!);
+        pending.step = 'uma';
+        pending.timestamp = Date.now();
+        this.replyUmaStep(ctx, 'edit', pending.numberOfPlayers!);
+    }
+
+    handleEditUma(ctx: TelegramCallbackQueryContext) {
+        const pending = this.requirePendingEdit(ctx.from.id);
+        const index = parseInt(ctx.match[1]!);
+        const presets = umaPresetsFor(pending.numberOfPlayers!);
+        const preset = presets[index];
+        if (!preset) { ctx.reply('Невідомий варіант ума.'); return; }
+        pending.uma = preset.value;
+        pending.umaLabel = preset.label;
+        pending.step = 'tiebreak';
+        pending.timestamp = Date.now();
+        this.replyTiebreakStep(ctx, 'edit');
+    }
+
+    handleEditTiebreak(ctx: TelegramCallbackQueryContext) {
+        const pending = this.requirePendingEdit(ctx.from.id);
+        pending.umaTieBreak = ctx.match[1]!;
+        pending.step = 'chombo';
+        pending.timestamp = Date.now();
+        this.replyChomboStep(ctx, 'edit');
+    }
+
+    handleEditChombo(ctx: TelegramCallbackQueryContext) {
+        const pending = this.requirePendingEdit(ctx.from.id);
+        const raw = ctx.match[1]!;
+        pending.chomboPointsAfterUma = raw === 'none' ? null : parseInt(raw);
+        pending.step = 'confirm';
+        pending.timestamp = Date.now();
+        this.replyConfirmStep(ctx, 'edit', pending, '✏️ <b>Оновлення правил</b>');
+    }
+
+    handleEditConfirm(ctx: TelegramCallbackQueryContext) {
+        const pending = this.requirePendingEdit(ctx.from.id);
+        if (pending.step !== 'confirm') {
+            ctx.reply('Неможливо зберегти — заповніть всі кроки.');
+            return;
+        }
+
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.gameRulesService.updateGameRules(pending.gameRulesId, {
+            name: pending.name!,
+            numberOfPlayers: pending.numberOfPlayers!,
+            uma: pending.uma!,
+            startingPoints: pending.startingPoints!,
+            chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
+            umaTieBreak: pending.umaTieBreak!,
+            clubId: pending.clubId
+        }, user.id);
+
+        const details = buildBaseDetails({
+            numberOfPlayers: pending.numberOfPlayers!,
+            startingPoints: pending.startingPoints!,
+            umaLabel: pending.umaLabel!,
+            umaTieBreak: pending.umaTieBreak!,
+            chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
+        });
+        this.gameRulesService.updateGameRulesDetails(pending.gameRulesId, details, user.id);
+
+        this.pendingEdits.delete(ctx.from.id);
+        ctx.replyWithHTML(`✅ Правила "<b>${pending.name}</b>" оновлено. Деталі перегенеровано.`);
+    }
+
+    handleEditCancel(ctx: TelegramCallbackQueryContext) {
+        this.pendingEdits.delete(ctx.from.id);
+        ctx.reply('❌ Скасовано');
+    }
+
+    // ── Flow: Update Details ──
+
+    handleDetailsMenu(ctx: TelegramCallbackQueryContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubs = this.getUserOwnedClubData(user);
+
+        ctx.reply('Оберіть клуб:', {
+            reply_markup: {
+                inline_keyboard: clubs.map(club => ([{
+                    text: club.clubName,
+                    callback_data: `gr_details_club_${club.clubId}`
+                }]))
+            }
+        });
+    }
+
+    handleDetailsClub(ctx: TelegramCallbackQueryContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubId = parseInt(ctx.match[1]!);
+        this.validateUserCanEditClub(user, clubId);
+
+        const rules = this.getClubRules(clubId);
+        if (rules.length === 0) {
+            ctx.reply('Правил для цього клубу не знайдено.');
+            return;
+        }
+
+        ctx.reply('Оберіть правила для оновлення деталей:', {
+            reply_markup: {
+                inline_keyboard: rules.map(r => ([{
+                    text: r.name,
+                    callback_data: `gr_details_${r.id}`
+                }]))
+            }
+        });
+    }
+
+    async handleDetailsRules(ctx: TelegramCallbackQueryContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const rulesId = parseInt(ctx.match[1]!);
+        const rules = this.gameRulesService.getGameRulesById(rulesId);
+
+        if (rules.clubId !== null) {
+            this.validateUserCanEditClub(user, rules.clubId);
+        }
+
+        const source = rules.details ?? buildBaseDetails({
+            numberOfPlayers: rules.numberOfPlayers,
+            startingPoints: rules.startingPoints,
+            umaLabel: findUmaPresetLabel(umaToString(rules.uma), rules.numberOfPlayers),
+            umaTieBreak: rules.umaTieBreak,
+            chomboPointsAfterUma: rules.chomboPointsAfterUma,
+        });
         const caption = rules.details !== null
             ? '📎 Поточна версія — завантажте, відредагуйте та надішліть назад'
             : '📎 Базовий шаблон — завантажте, відредагуйте та надішліть назад';
@@ -547,7 +673,7 @@ class TelegramGameRulesService {
         ctx.reply(`Надішліть JSON файл з оновленими деталями для "${rules.name}". У вас є 5 хвилин.`);
     }
 
-    // ── Flow E: Document Upload Handler ──
+    // ── Flow: Document Upload Handler ──
 
     async handleDocumentUpload(ctx: Context<{ message: Update.New & Update.NonChannel & Message.DocumentMessage; update_id: number }>) {
         const userId = ctx.from.id;
@@ -555,7 +681,6 @@ class TelegramGameRulesService {
 
         if (!pending) return;
 
-        // Check TTL
         if (Date.now() - pending.timestamp > PENDING_UPLOAD_TTL_MS) {
             this.pendingUploads.delete(userId);
             ctx.reply('Час вичерпано, спробуйте ще раз.');
@@ -564,7 +689,6 @@ class TelegramGameRulesService {
 
         const document = ctx.message.document;
 
-        // Validate file is .json
         if (!document.file_name?.endsWith('.json')) {
             this.pendingUploads.delete(userId);
             ctx.reply('Файл повинен мати розширення .json');
@@ -572,12 +696,10 @@ class TelegramGameRulesService {
         }
 
         try {
-            // Download file
             const fileLink = await ctx.telegram.getFileLink(document.file_id);
             const response = await fetch(fileLink.toString());
             const text = await response.text();
 
-            // Parse JSON
             let parsed: unknown;
             try {
                 parsed = JSON.parse(text);
@@ -587,7 +709,6 @@ class TelegramGameRulesService {
                 return;
             }
 
-            // Validate with Zod
             const result = gameRulesDetailsSchema.safeParse(parsed);
             if (!result.success) {
                 this.pendingUploads.delete(userId);
@@ -597,13 +718,9 @@ class TelegramGameRulesService {
             }
 
             const newDetails = result.data as GameRulesDetails;
-
             const existingRules = this.gameRulesService.getGameRulesById(pending.gameRulesId);
-
-            // Build diff summary
             const summary = buildDiffSummary(existingRules.details, newDetails);
 
-            // Store parsed details
             pending.parsedDetails = newDetails;
 
             ctx.replyWithHTML(
@@ -626,7 +743,7 @@ class TelegramGameRulesService {
         }
     }
 
-    // ── Flow F: Confirm / Cancel ──
+    // ── Flow: Confirm / Cancel Details Upload ──
 
     handleConfirm(ctx: TelegramCallbackQueryContext) {
         const userId = ctx.from.id;
@@ -649,7 +766,7 @@ class TelegramGameRulesService {
         ctx.reply('❌ Скасовано');
     }
 
-    // ── Flow G: Delete Details ──
+    // ── Flow: Delete Record ──
 
     handleDeleteMenu(ctx: TelegramCallbackQueryContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
@@ -670,14 +787,14 @@ class TelegramGameRulesService {
         const clubId = parseInt(ctx.match[1]!);
         this.validateUserCanEditClub(user, clubId);
 
-        const rules = this.gameRulesService.getGameRulesWithDetailsByClubId(clubId);
+        const rules = this.getClubRules(clubId);
 
         if (rules.length === 0) {
-            ctx.reply('Правил з деталями для цього клубу не знайдено.');
+            ctx.reply('Правил для цього клубу не знайдено.');
             return;
         }
 
-        ctx.reply('Оберіть правила для видалення деталей:', {
+        ctx.reply('Оберіть правила для видалення:', {
             reply_markup: {
                 inline_keyboard: rules.map(r => ([{
                     text: r.name,
@@ -697,7 +814,7 @@ class TelegramGameRulesService {
         }
 
         ctx.replyWithHTML(
-            `Видалити деталі для "<b>${rules.name}</b>"?`,
+            `Видалити правила "<b>${rules.name}</b>"?`,
             {
                 reply_markup: {
                     inline_keyboard: [
@@ -711,7 +828,7 @@ class TelegramGameRulesService {
         );
     }
 
-    async handleDeleteConfirm(ctx: TelegramCallbackQueryContext) {
+    handleDeleteConfirm(ctx: TelegramCallbackQueryContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         const rulesId = parseInt(ctx.match[1]!);
         const rules = this.gameRulesService.getGameRulesById(rulesId);
@@ -720,17 +837,164 @@ class TelegramGameRulesService {
             this.validateUserCanEditClub(user, rules.clubId);
         }
 
-        // Send old details as backup before deleting
-        if (rules.details !== null) {
-            const oldBuffer = Buffer.from(JSON.stringify(rules.details, null, 2), 'utf-8');
-            await ctx.replyWithDocument(
-                { source: oldBuffer, filename: `${rules.name}-deleted.json` },
-                { caption: '📎 Видалена версія (бекап)' }
-            );
+        try {
+            this.gameRulesService.deleteGameRules(rulesId, user.id);
+        } catch (error) {
+            if (error instanceof CannotDeleteGameRulesInUseError) {
+                throw new CannotDeleteGameRulesInUseTelegramError(rules.name, 0);
+            }
+            throw error;
         }
 
-        this.gameRulesService.updateGameRulesDetails(rulesId, null, user.id);
-        ctx.reply('✅ Деталі видалено');
+        ctx.reply(`✅ Правила "${rules.name}" видалено`);
+    }
+
+    // ── Text Input Handler ──
+
+    handleTextInput(ctx: Context<{ message: Update.New & Update.NonChannel & Message.TextMessage; update_id: number }>): boolean {
+        const userId = ctx.from.id;
+
+        const pendingCreate = this.getActiveWizardState(this.pendingCreations, userId);
+        if (pendingCreate && pendingCreate.step === 'name') {
+            return this.handleNameInput(ctx, pendingCreate, 'create');
+        }
+
+        const pendingEdit = this.getActiveWizardState(this.pendingEdits, userId);
+        if (pendingEdit && pendingEdit.step === 'name') {
+            return this.handleNameInput(ctx, pendingEdit, 'edit');
+        }
+
+        return false;
+    }
+
+    private handleNameInput(
+        ctx: Context<{ message: Update.New & Update.NonChannel & Message.TextMessage; update_id: number }>,
+        pending: WizardState,
+        prefix: string
+    ): boolean {
+        const name = ctx.message.text.trim();
+        if (name.length === 0) {
+            ctx.reply('Назва не може бути порожньою. Введіть назву:');
+            return true;
+        }
+
+        pending.name = name;
+        pending.step = 'players';
+        pending.timestamp = Date.now();
+
+        ctx.reply('Кількість гравців:', {
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '3 гравці', callback_data: `gr_${prefix}_players_3` },
+                    { text: '4 гравці', callback_data: `gr_${prefix}_players_4` }
+                ]]
+            }
+        });
+        return true;
+    }
+
+    // ── Shared Wizard Step Renderers ──
+
+    private replyPointsStep(ctx: TelegramCallbackQueryContext, prefix: string) {
+        const presets = [0, 25000, 30000, 35000];
+        ctx.reply('Стартові очки:', {
+            reply_markup: {
+                inline_keyboard: presets.map(p => ([{
+                    text: formatPointsLabel(p),
+                    callback_data: `gr_${prefix}_pts_${p}`
+                }]))
+            }
+        });
+    }
+
+    private replyUmaStep(ctx: TelegramCallbackQueryContext, prefix: string, numberOfPlayers: number) {
+        const presets = umaPresetsFor(numberOfPlayers);
+        ctx.reply('Ума:', {
+            reply_markup: {
+                inline_keyboard: presets.map((preset, index) => ([{
+                    text: preset.label,
+                    callback_data: `gr_${prefix}_uma_${index}`
+                }]))
+            }
+        });
+    }
+
+    private replyTiebreakStep(ctx: TelegramCallbackQueryContext, prefix: string) {
+        ctx.reply('Правило при рівних очках (ума):', {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: 'За вітром (WIND)', callback_data: `gr_${prefix}_tiebreak_WIND` }],
+                    [{ text: 'Ділити порівну (DIVIDE)', callback_data: `gr_${prefix}_tiebreak_DIVIDE` }]
+                ]
+            }
+        });
+    }
+
+    private replyChomboStep(ctx: TelegramCallbackQueryContext, prefix: string) {
+        ctx.reply('Чомбо:', {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: 'Без чомбо', callback_data: `gr_${prefix}_chombo_none` }],
+                    [{ text: '20,000 після ума', callback_data: `gr_${prefix}_chombo_20000` }]
+                ]
+            }
+        });
+    }
+
+    private replyConfirmStep(ctx: TelegramCallbackQueryContext, prefix: string, state: WizardState, title: string) {
+        const chombo = state.chomboPointsAfterUma === null || state.chomboPointsAfterUma === undefined
+            ? 'без чомбо'
+            : `${formatNumber(state.chomboPointsAfterUma)} після ума`;
+        const tiebreakLabel = state.umaTieBreak === 'WIND' ? 'За вітром (WIND)' : 'Ділити порівну (DIVIDE)';
+        const summary = `${title}\n\n`
+            + `<b>Назва:</b> ${state.name}\n`
+            + `<b>Гравців:</b> ${state.numberOfPlayers}\n`
+            + `<b>Стартові очки:</b> ${formatNumber(state.startingPoints!)}\n`
+            + `<b>Ума:</b> ${state.umaLabel}\n`
+            + `<b>Рівні ума:</b> ${tiebreakLabel}\n`
+            + `<b>Чомбо:</b> ${chombo}\n`;
+
+        ctx.replyWithHTML(summary, {
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '✅ Зберегти', callback_data: `gr_${prefix}_confirm` },
+                    { text: '❌ Скасувати', callback_data: `gr_${prefix}_cancel` }
+                ]]
+            }
+        });
+    }
+
+    // ── Wizard State Helpers ──
+
+    private getActiveWizardState<T extends WizardState>(map: Map<number, T>, userId: number): T | undefined {
+        const pending = map.get(userId);
+        if (!pending) return undefined;
+        if (Date.now() - pending.timestamp > PENDING_WIZARD_TTL_MS) {
+            map.delete(userId);
+            return undefined;
+        }
+        return pending;
+    }
+
+    private requirePendingCreation(userId: number): WizardState {
+        const pending = this.getActiveWizardState(this.pendingCreations, userId);
+        if (!pending) throw new TelegramPendingCreationMissingError();
+        return pending;
+    }
+
+    private requirePendingEdit(userId: number): PendingEdit {
+        const pending = this.getActiveWizardState(this.pendingEdits, userId);
+        if (!pending) throw new TelegramPendingCreationMissingError();
+        return pending;
+    }
+
+    hasPendingWizard(userId: number): boolean {
+        return this.getActiveWizardState(this.pendingCreations, userId) !== undefined
+            || this.getActiveWizardState(this.pendingEdits, userId) !== undefined;
+    }
+
+    hasPendingUpload(userId: number): boolean {
+        return this.pendingUploads.has(userId);
     }
 
     // ── Auth helpers ──
@@ -779,8 +1043,9 @@ class TelegramGameRulesService {
         return clubData;
     }
 
-    hasPendingUpload(userId: number): boolean {
-        return this.pendingUploads.has(userId);
+    private getClubRules(clubId: number): GameRules[] {
+        return this.gameRulesService.getAllGameRules(clubId)
+            .filter(r => r.clubId === clubId);
     }
 }
 
@@ -812,7 +1077,6 @@ function buildDiffSummary(oldDetails: GameRulesDetails | null, newDetails: GameR
 
     const sections: string[] = [];
 
-    // ── Rules diff ──
     const oldRuleMap = new Map(oldDetails.rules.map(r => [r.rule, r]));
     const newRuleMap = new Map(newDetails.rules.map(r => [r.rule, r]));
 
@@ -824,7 +1088,6 @@ function buildDiffSummary(oldDetails: GameRulesDetails | null, newDetails: GameR
     );
     if (rulesSection) sections.push(rulesSection);
 
-    // ── Links diff ──
     const oldLinks = oldDetails.links ?? [];
     const newLinks = newDetails.links ?? [];
     const oldLinkMap = new Map(oldLinks.map(l => [l.url, l]));
