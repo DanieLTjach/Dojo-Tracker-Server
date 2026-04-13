@@ -17,6 +17,12 @@ export class UserNotClubOwnerTelegramError extends TelegramReplyError {
     }
 }
 
+export class CannotDeleteGameRulesInUseTelegramError extends TelegramReplyError {
+    constructor(gameRulesName: string, eventCount: number) {
+        super(`Неможливо видалити правила "${gameRulesName}" — вони використовуються в ${eventCount} подіях`);
+    }
+}
+
 export class TelegramPendingCreationMissingError extends TelegramReplyError {
     constructor() {
         super('Сесію створення правил не знайдено або вона закінчилася. Спробуйте ще раз: /game_rules');

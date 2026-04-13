@@ -135,6 +135,32 @@ export class GameRulesRepository {
         const result = this.insertGameRulesStatement().run(params);
         return Number(result.lastInsertRowid);
     }
+
+    private updateGameRulesStatement(): Statement<UpdateGameRulesParams, void> {
+        return dbManager.db.prepare(`
+            UPDATE gameRules
+            SET name = :name, numberOfPlayers = :numberOfPlayers, uma = :uma,
+                startingPoints = :startingPoints, chomboPointsAfterUma = :chomboPointsAfterUma,
+                umaTieBreak = :umaTieBreak
+            WHERE id = :id
+        `);
+    }
+
+    updateGameRules(id: number, params: InsertGameRulesParams): void {
+        this.updateGameRulesStatement().run({ id, ...params });
+    }
+
+    private deleteGameRulesStatement(): Statement<{ id: number }, void> {
+        return dbManager.db.prepare(`DELETE FROM gameRules WHERE id = :id`);
+    }
+
+    deleteGameRules(id: number): void {
+        this.deleteGameRulesStatement().run({ id });
+    }
+}
+
+interface UpdateGameRulesParams extends InsertGameRulesParams {
+    id: number;
 }
 
 export interface InsertGameRulesParams {

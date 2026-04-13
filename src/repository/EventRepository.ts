@@ -185,6 +185,16 @@ export class EventRepository {
         const result = dbManager.db.prepare(`SELECT 1 FROM gameRules WHERE id = ?`).get(gameRulesId);
         return result !== undefined;
     }
+
+    private countEventsByGameRulesIdStatement(): Statement<{ gameRulesId: number }, { count: number }> {
+        return dbManager.db.prepare(`
+            SELECT COUNT(*) as count FROM event WHERE gameRules = :gameRulesId
+        `);
+    }
+
+    countEventsByGameRulesId(gameRulesId: number): number {
+        return this.countEventsByGameRulesIdStatement().get({ gameRulesId })!.count;
+    }
 }
 
 export interface EventCreateParams {

@@ -1,5 +1,6 @@
 import { GameRulesRepository, type InsertGameRulesParams } from '../repository/GameRulesRepository.ts';
-import { GameRulesNotFoundError } from '../error/EventErrors.ts';
+import { EventRepository } from '../repository/EventRepository.ts';
+import { CannotDeleteGameRulesInUseError, GameRulesNotFoundError } from '../error/EventErrors.ts';
 import type { GameRules, GameRulesDetails } from '../model/EventModels.ts';
 import { UserService } from './UserService.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
@@ -9,11 +10,13 @@ import { InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 
 export class GameRulesService {
     private gameRulesRepository: GameRulesRepository;
+    private eventRepository: EventRepository;
     private userService: UserService;
     private clubMembershipRepository: ClubMembershipRepository;
 
     constructor() {
         this.gameRulesRepository = new GameRulesRepository();
+        this.eventRepository = new EventRepository();
         this.userService = new UserService();
         this.clubMembershipRepository = new ClubMembershipRepository();
     }
@@ -56,6 +59,25 @@ export class GameRulesService {
         this.ensureCanCreateForClub(params.clubId, userId);
         const newId = this.gameRulesRepository.insertGameRules(params);
         return this.getGameRulesById(newId);
+    }
+
+    updateGameRules(id: number, params: InsertGameRulesParams, userId: number): GameRules {
+        const gameRules = this.getGameRulesById(id);
+        this.ensureCanUpdateGameRules(gameRules, userId);
+        this.gameRulesRepository.updateGameRules(id, params);
+        return this.getGameRulesById(id);
+    }
+
+    deleteGameRules(id: number, userId: number): void {
+        const gameRules = this.getGameRulesById(id);
+        this.ensureCanUpdateGameRules(gameRules, userId);
+
+        const eventCount = this.eventRepository.countEventsByGameRulesId(id);
+        if (eventCount > 0) {
+            throw new CannotDeleteGameRulesInUseError(gameRules.name, eventCount);
+        }
+
+        this.gameRulesRepository.deleteGameRules(id);
     }
 
     private ensureCanCreateForClub(clubId: number, userId: number): void {
