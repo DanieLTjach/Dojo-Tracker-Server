@@ -1,7 +1,7 @@
 import { GameRulesRepository, type InsertGameRulesParams } from '../src/repository/GameRulesRepository.ts';
 import { EventRepository } from '../src/repository/EventRepository.ts';
 import { GameRulesService } from '../src/service/GameRulesService.ts';
-import { CannotDeleteGameRulesInUseError } from '../src/error/EventErrors.ts';
+import { CannotDeleteGameRulesInUseError, CannotUpdateGameRulesInUseError } from '../src/error/EventErrors.ts';
 import { InsufficientClubPermissionsError } from '../src/error/ClubErrors.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
@@ -130,6 +130,30 @@ describe('Game Rules CRUD', () => {
 
             expect(result.name).toBe('Service Update Test');
             expect(result.startingPoints).toBe(35000);
+        });
+
+        test('updateGameRules throws CannotUpdateGameRulesInUseError when events reference it', () => {
+            const ruleId = repo.insertGameRules({ ...baseParams, name: 'Referenced Update Rule' });
+            const eventId = 8003;
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(eventId, 'Update Block Test', 'SEASON', ruleId, TEST_CLUB_ID, 0, 0, 0, timestamp, timestamp);
+
+            try {
+                expect(() => service.updateGameRules(ruleId, {
+                    ...baseParams,
+                    name: 'Blocked Update Rule',
+                    startingPoints: 35000
+                }, ADMIN_USER_ID)).toThrow(CannotUpdateGameRulesInUseError);
+
+                const fetched = repo.findGameRulesById(ruleId);
+                expect(fetched!.name).toBe('Referenced Update Rule');
+                expect(fetched!.startingPoints).toBe(baseParams.startingPoints);
+            } finally {
+                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+                repo.deleteGameRules(ruleId);
+            }
         });
 
         test('deleteGameRules succeeds when no events reference it', () => {

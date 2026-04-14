@@ -1,7 +1,7 @@
 import { jest, describe, test, expect, beforeAll, afterAll } from '@jest/globals';
 import telegramGameRulesService, { buildBaseDetails } from '../src/service/TelegramGameRulesService.ts';
 import { GameRulesRepository } from '../src/repository/GameRulesRepository.ts';
-import { UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from '../src/error/TelegramErrors.ts';
+import { CannotUpdateGameRulesInUseTelegramError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from '../src/error/TelegramErrors.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 
@@ -233,6 +233,45 @@ describe('TelegramGameRulesService', () => {
             expect(updated!.startingPoints).toBe(0);
             expect(updated!.details).not.toBeNull();
             expect(updated!.details!.rules.find(r => r.rule === 'Чомбо')).toBeUndefined();
+        });
+
+        test('blocks update when rule is referenced by event', () => {
+            const ruleId = repo.insertGameRules({
+                name: 'Referenced Edit Rules',
+                numberOfPlayers: 4,
+                uma: '15,5,-5,-15',
+                startingPoints: 25000,
+                chomboPointsAfterUma: null,
+                umaTieBreak: 'DIVIDE',
+                clubId: TEST_CLUB_ID
+            });
+            const eventId = 7002;
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(eventId, 'Edit Block Event', 'SEASON', ruleId, TEST_CLUB_ID, 0, 0, 0, timestamp, timestamp);
+
+            try {
+                telegramGameRulesService.handleEditRules(mockCallbackCtx(OWNER_TELEGRAM_ID, [`gr_edit_${ruleId}`, String(ruleId)]));
+                telegramGameRulesService.handleTextInput(mockTextCtx(OWNER_TELEGRAM_ID, 'Blocked Edit Rules'));
+                telegramGameRulesService.handleEditPlayers(mockCallbackCtx(OWNER_TELEGRAM_ID, ['gr_edit_players_3', '3']));
+                telegramGameRulesService.handleEditPoints(mockCallbackCtx(OWNER_TELEGRAM_ID, ['gr_edit_pts_0', '0']));
+                telegramGameRulesService.handleEditUma(mockCallbackCtx(OWNER_TELEGRAM_ID, ['gr_edit_uma_0', '0']));
+                telegramGameRulesService.handleEditTiebreak(mockCallbackCtx(OWNER_TELEGRAM_ID, ['gr_edit_tiebreak_WIND', 'WIND']));
+                telegramGameRulesService.handleEditChombo(mockCallbackCtx(OWNER_TELEGRAM_ID, ['gr_edit_chombo_none', 'none']));
+
+                expect(() => telegramGameRulesService.handleEditConfirm(mockCallbackCtx(OWNER_TELEGRAM_ID)))
+                    .toThrow(CannotUpdateGameRulesInUseTelegramError);
+
+                const fetched = repo.findGameRulesById(ruleId);
+                expect(fetched!.name).toBe('Referenced Edit Rules');
+                expect(fetched!.numberOfPlayers).toBe(4);
+                expect(fetched!.startingPoints).toBe(25000);
+            } finally {
+                telegramGameRulesService.handleEditCancel(mockCallbackCtx(OWNER_TELEGRAM_ID));
+                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+                repo.deleteGameRules(ruleId);
+            }
         });
     });
 

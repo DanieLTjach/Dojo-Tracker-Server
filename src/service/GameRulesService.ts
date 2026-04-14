@@ -1,6 +1,6 @@
 import { GameRulesRepository, type InsertGameRulesParams } from '../repository/GameRulesRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
-import { CannotDeleteGameRulesInUseError, GameRulesNotFoundError } from '../error/EventErrors.ts';
+import { CannotDeleteGameRulesInUseError, CannotUpdateGameRulesInUseError, GameRulesNotFoundError } from '../error/EventErrors.ts';
 import type { GameRules, GameRulesDetails } from '../model/EventModels.ts';
 import { UserService } from './UserService.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
@@ -64,6 +64,7 @@ export class GameRulesService {
     updateGameRules(id: number, params: InsertGameRulesParams, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
         this.ensureCanUpdateGameRules(gameRules, userId);
+        this.ensureCanChangeGameRules(gameRules);
         this.gameRulesRepository.updateGameRules(id, params);
         return this.getGameRulesById(id);
     }
@@ -103,6 +104,13 @@ export class GameRulesService {
         const role = this.clubMembershipRepository.getUserClubRole(gameRules.clubId, userId);
         if (role !== ClubRole.OWNER) {
             throw new InsufficientClubPermissionsError(ClubRole.OWNER);
+        }
+    }
+
+    private ensureCanChangeGameRules(gameRules: GameRules): void {
+        const eventCount = this.eventRepository.countEventsByGameRulesId(gameRules.id);
+        if (eventCount > 0) {
+            throw new CannotUpdateGameRulesInUseError(gameRules.name, eventCount);
         }
     }
 }

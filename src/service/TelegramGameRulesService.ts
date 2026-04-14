@@ -1,7 +1,7 @@
 import { Context } from "telegraf";
 import type { Message, Update } from "telegraf/types";
-import { CannotDeleteGameRulesInUseTelegramError, TelegramPendingCreationMissingError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from "../error/TelegramErrors.ts";
-import { CannotDeleteGameRulesInUseError } from "../error/EventErrors.ts";
+import { CannotDeleteGameRulesInUseTelegramError, CannotUpdateGameRulesInUseTelegramError, TelegramPendingCreationMissingError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from "../error/TelegramErrors.ts";
+import { CannotDeleteGameRulesInUseError, CannotUpdateGameRulesInUseError } from "../error/EventErrors.ts";
 import { ClubMembershipService } from "./ClubMembershipService.ts";
 import { ClubService } from "./ClubService.ts";
 import { GameRulesService } from "./GameRulesService.ts";
@@ -573,24 +573,31 @@ class TelegramGameRulesService {
         }
 
         const user = this.getUserByTelegramId(ctx.from.id);
-        this.gameRulesService.updateGameRules(pending.gameRulesId, {
-            name: pending.name!,
-            numberOfPlayers: pending.numberOfPlayers!,
-            uma: pending.uma!,
-            startingPoints: pending.startingPoints!,
-            chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
-            umaTieBreak: pending.umaTieBreak!,
-            clubId: pending.clubId
-        }, user.id);
+        try {
+            this.gameRulesService.updateGameRules(pending.gameRulesId, {
+                name: pending.name!,
+                numberOfPlayers: pending.numberOfPlayers!,
+                uma: pending.uma!,
+                startingPoints: pending.startingPoints!,
+                chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
+                umaTieBreak: pending.umaTieBreak!,
+                clubId: pending.clubId
+            }, user.id);
 
-        const details = buildBaseDetails({
-            numberOfPlayers: pending.numberOfPlayers!,
-            startingPoints: pending.startingPoints!,
-            umaLabel: pending.umaLabel!,
-            umaTieBreak: pending.umaTieBreak!,
-            chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
-        });
-        this.gameRulesService.updateGameRulesDetails(pending.gameRulesId, details, user.id);
+            const details = buildBaseDetails({
+                numberOfPlayers: pending.numberOfPlayers!,
+                startingPoints: pending.startingPoints!,
+                umaLabel: pending.umaLabel!,
+                umaTieBreak: pending.umaTieBreak!,
+                chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
+            });
+            this.gameRulesService.updateGameRulesDetails(pending.gameRulesId, details, user.id);
+        } catch (error) {
+            if (error instanceof CannotUpdateGameRulesInUseError) {
+                throw new CannotUpdateGameRulesInUseTelegramError(error.gameRulesName, error.eventCount);
+            }
+            throw error;
+        }
 
         this.pendingEdits.delete(ctx.from.id);
         ctx.replyWithHTML(`✅ Правила "<b>${pending.name}</b>" оновлено. Деталі перегенеровано.`);
@@ -841,7 +848,7 @@ class TelegramGameRulesService {
             this.gameRulesService.deleteGameRules(rulesId, user.id);
         } catch (error) {
             if (error instanceof CannotDeleteGameRulesInUseError) {
-                throw new CannotDeleteGameRulesInUseTelegramError(rules.name, 0);
+                throw new CannotDeleteGameRulesInUseTelegramError(error.gameRulesName, error.eventCount);
             }
             throw error;
         }
