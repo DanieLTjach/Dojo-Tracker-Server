@@ -5,14 +5,32 @@ export const UmaTieBreak = {
 
 export type UmaTieBreak = typeof UmaTieBreak[keyof typeof UmaTieBreak];
 
+export type TooltipBlock =
+    | { type: 'paragraph'; text: string }
+    | { type: 'list'; items: string[] }
+    | { type: 'definitionList'; items: { term: string; description: string }[] }
+    | { type: 'example'; text: string };
+
 export interface GameRulesTooltip {
     label: string;
-    content: string;
+    content: TooltipBlock[];
 }
 
 export interface GameRulesDetailsLink {
     url: string;
     label: string;
+}
+
+export interface GameRulesSection {
+    name: string;
+    tooltip?: GameRulesTooltip | undefined;
+    groups: GameRulesGroup[];
+}
+
+export interface GameRulesGroup {
+    name: string;
+    tooltip?: GameRulesTooltip | undefined;
+    rules: GameRulesDetailsRule[];
 }
 
 export interface GameRulesDetailsRule {
@@ -23,7 +41,7 @@ export interface GameRulesDetailsRule {
 
 export interface GameRulesDetails {
     links?: GameRulesDetailsLink[] | undefined;
-    rules: GameRulesDetailsRule[];
+    sections: GameRulesSection[];
 }
 
 export interface GameRules {

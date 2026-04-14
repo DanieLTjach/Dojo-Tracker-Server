@@ -1,5 +1,6 @@
 import { Context } from "telegraf";
 import type { Message, Update } from "telegraf/types";
+import dedent from "dedent";
 import { CannotDeleteGameRulesInUseTelegramError, CannotUpdateGameRulesInUseTelegramError, TelegramPendingCreationMissingError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from "../error/TelegramErrors.ts";
 import { CannotDeleteGameRulesInUseError, CannotUpdateGameRulesInUseError } from "../error/EventErrors.ts";
 import { ClubMembershipService } from "./ClubMembershipService.ts";
@@ -7,11 +8,14 @@ import { ClubService } from "./ClubService.ts";
 import { GameRulesService } from "./GameRulesService.ts";
 import { UserService } from "./UserService.ts";
 import LogService from "./LogService.ts";
+import TelegramMessageService from "./TelegramMessageService.ts";
 import type { TelegramCommandContext, TelegramCallbackQueryContext, ClubData } from "../model/TelegramTypes.ts";
 import type { GameRules, GameRulesDetails, GameRulesDetailsRule } from "../model/EventModels.ts";
 import { gameRulesDetailsSchema } from "../schema/GameRulesSchemas.ts";
 import type { User } from "../model/UserModels.ts";
 import { ClubRole } from "../model/ClubModels.ts";
+import type { Club } from "../model/ClubModels.ts";
+import { globalClubLogsTopic } from "../model/TelegramTopic.ts";
 
 interface PendingUpload {
     gameRulesId: number;
@@ -70,9 +74,6 @@ export function buildBaseDetails(params: {
 }): GameRulesDetails {
     const umaValues = params.umaLabel;
     const umaTooltipParts = umaValues.split(' / ');
-    const umaTooltipContent = umaTooltipParts
-        .map((v, i) => `${i + 1}-й: ${v.startsWith('-') ? v : '+' + v}`)
-        .join('\n');
 
     const rules: GameRulesDetailsRule[] = [
         { rule: "Кількість гравців", value: String(params.numberOfPlayers) },
@@ -80,7 +81,19 @@ export function buildBaseDetails(params: {
         {
             rule: "Ума",
             value: umaValues,
-            tooltip: { label: "Ума", content: `Розподіл бонусних очок за місце:\n${umaTooltipContent}` }
+            tooltip: {
+                label: "Ума",
+                content: [
+                    { type: "paragraph", text: "Розподіл бонусних очок за місце:" },
+                    {
+                        type: "definitionList",
+                        items: umaTooltipParts.map((v, i) => ({
+                            term: `${i + 1}-й`,
+                            description: v.startsWith('-') ? v : '+' + v
+                        }))
+                    }
+                ]
+            }
         },
         {
             rule: "Рівні ума",
@@ -95,7 +108,19 @@ export function buildBaseDetails(params: {
         });
     }
 
-    return { rules };
+    return {
+        sections: [
+            {
+                name: "Основні параметри",
+                groups: [
+                    {
+                        name: "Гра та рейтинг",
+                        rules
+                    }
+                ]
+            }
+        ]
+    };
 }
 
 function formatNumber(n: number): string {
@@ -105,6 +130,10 @@ function formatNumber(n: number): string {
 function formatPointsLabel(points: number): string {
     const labels: Record<number, string> = { 0: '0 (EMA)', 25000: '25,000', 30000: '30,000', 35000: '35,000' };
     return labels[points] ?? String(points);
+}
+
+function formatChombo(points: number | null): string {
+    return points === null ? 'none' : `${formatNumber(points)} after uma`;
 }
 
 function findUmaPresetLabel(umaString: string, numberOfPlayers: number): string {
@@ -261,11 +290,7 @@ class TelegramGameRulesService {
             return;
         }
 
-        const buffer = Buffer.from(JSON.stringify(rules.details, null, 2), 'utf-8');
-        await ctx.replyWithDocument({
-            source: buffer,
-            filename: `${rules.name}.json`
-        });
+        await this.replyWithDetailsJson(ctx, rules.details, `${rules.name}.json`);
     }
 
     // ── Flow: View ──
@@ -330,11 +355,7 @@ class TelegramGameRulesService {
         await ctx.replyWithHTML(text);
 
         if (rules.details !== null) {
-            const buffer = Buffer.from(JSON.stringify(rules.details, null, 2), 'utf-8');
-            await ctx.replyWithDocument({
-                source: buffer,
-                filename: `${rules.name}.json`
-            });
+            await this.replyWithDetailsJson(ctx, rules.details, `${rules.name}.json`);
         }
     }
 
@@ -440,6 +461,9 @@ class TelegramGameRulesService {
             chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
         });
         this.gameRulesService.updateGameRulesDetails(created.id, details, user.id);
+        const createdWithDetails = this.gameRulesService.getGameRulesById(created.id);
+        const club = this.clubService.getClubById(pending.clubId);
+        this.logGameRulesCreated(createdWithDetails, user, club);
 
         this.pendingCreations.delete(ctx.from.id);
 
@@ -573,6 +597,7 @@ class TelegramGameRulesService {
         }
 
         const user = this.getUserByTelegramId(ctx.from.id);
+        const oldRule = this.gameRulesService.getGameRulesById(pending.gameRulesId);
         try {
             this.gameRulesService.updateGameRules(pending.gameRulesId, {
                 name: pending.name!,
@@ -592,6 +617,9 @@ class TelegramGameRulesService {
                 chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
             });
             this.gameRulesService.updateGameRulesDetails(pending.gameRulesId, details, user.id);
+            const newRule = this.gameRulesService.getGameRulesById(pending.gameRulesId);
+            const club = this.clubService.getClubById(pending.clubId);
+            this.logGameRulesUpdated(oldRule, newRule, user, club);
         } catch (error) {
             if (error instanceof CannotUpdateGameRulesInUseError) {
                 throw new CannotUpdateGameRulesInUseTelegramError(error.gameRulesName, error.eventCount);
@@ -664,11 +692,7 @@ class TelegramGameRulesService {
         const caption = rules.details !== null
             ? '📎 Поточна версія — завантажте, відредагуйте та надішліть назад'
             : '📎 Базовий шаблон — завантажте, відредагуйте та надішліть назад';
-        const buffer = Buffer.from(JSON.stringify(source, null, 2), 'utf-8');
-        await ctx.replyWithDocument(
-            { source: buffer, filename: `${rules.name}.json` },
-            { caption }
-        );
+        await this.replyWithDetailsJson(ctx, source, `${rules.name}.json`, caption);
 
         this.pendingUploads.set(ctx.from.id, {
             gameRulesId: rulesId,
@@ -752,7 +776,7 @@ class TelegramGameRulesService {
 
     // ── Flow: Confirm / Cancel Details Upload ──
 
-    handleConfirm(ctx: TelegramCallbackQueryContext) {
+    async handleConfirm(ctx: TelegramCallbackQueryContext) {
         const userId = ctx.from.id;
         const pending = this.pendingUploads.get(userId);
 
@@ -762,7 +786,10 @@ class TelegramGameRulesService {
         }
 
         const user = this.getUserByTelegramId(userId);
+        const existingRules = this.gameRulesService.getGameRulesById(pending.gameRulesId);
         this.gameRulesService.updateGameRulesDetails(pending.gameRulesId, pending.parsedDetails, user.id);
+        const club = pending.clubId !== null ? this.clubService.getClubById(pending.clubId) : null;
+        await this.logGameRulesDetailsUpdated(existingRules.details, pending.parsedDetails, pending.gameRulesId, user, club);
         this.pendingUploads.delete(userId);
 
         ctx.reply('✅ Деталі збережено!');
@@ -846,6 +873,8 @@ class TelegramGameRulesService {
 
         try {
             this.gameRulesService.deleteGameRules(rulesId, user.id);
+            const club = rules.clubId !== null ? this.clubService.getClubById(rules.clubId) : null;
+            this.logGameRulesDeleted(rules, user, club);
         } catch (error) {
             if (error instanceof CannotDeleteGameRulesInUseError) {
                 throw new CannotDeleteGameRulesInUseTelegramError(error.gameRulesName, error.eventCount);
@@ -1004,6 +1033,128 @@ class TelegramGameRulesService {
         return this.pendingUploads.has(userId);
     }
 
+    // ── Admin Logging ──
+
+    private logClubEvent(club: Club | null, message: string): void {
+        LogService.logInfo(message, globalClubLogsTopic);
+        if (club === null) return;
+
+        const clubLogsTopic = this.clubService.getClubTelegramTopics(club.id).clubLogs;
+        if (clubLogsTopic !== null) {
+            LogService.logInfo(message, clubLogsTopic);
+        }
+    }
+
+    private logGameRulesCreated(rule: GameRules, actor: User, club: Club): void {
+        const message = dedent`
+            <b>🀄 Game Rules Created</b>
+
+            <b>Club:</b> ${club.name} <code>(ID: ${club.id})</code>
+            <b>Rules:</b> ${rule.name} <code>(ID: ${rule.id})</code>
+            ${this.coreFieldsSummary(rule)}
+            <b>Created by:</b> ${actor.name} <code>(ID: ${actor.id})</code>
+        `;
+        this.logClubEvent(club, message);
+    }
+
+    private logGameRulesUpdated(oldRule: GameRules, newRule: GameRules, actor: User, club: Club): void {
+        const changes = this.coreFieldChanges(oldRule, newRule);
+        const message = dedent`
+            <b>✏️ Game Rules Updated</b>
+
+            <b>Club:</b> ${club.name} <code>(ID: ${club.id})</code>
+            <b>Rules:</b> ${newRule.name} <code>(ID: ${newRule.id})</code>
+            ${changes.length > 0 ? changes.join('\n') : '<b>Core fields:</b> no changes'}
+            <b>Updated by:</b> ${actor.name} <code>(ID: ${actor.id})</code>
+        `;
+        this.logClubEvent(club, message);
+    }
+
+    private logGameRulesDeleted(rule: GameRules, actor: User, club: Club | null): void {
+        const clubLine = club !== null
+            ? `<b>Club:</b> ${club.name} <code>(ID: ${club.id})</code>`
+            : '<b>Club:</b> Global';
+        const message = dedent`
+            <b>🗑️ Game Rules Deleted</b>
+
+            ${clubLine}
+            <b>Rules:</b> ${rule.name} <code>(ID: ${rule.id})</code>
+            ${this.coreFieldsSummary(rule)}
+            <b>Deleted by:</b> ${actor.name} <code>(ID: ${actor.id})</code>
+        `;
+        this.logClubEvent(club, message);
+    }
+
+    private async logGameRulesDetailsUpdated(
+        oldDetails: GameRulesDetails | null,
+        newDetails: GameRulesDetails,
+        ruleId: number,
+        actor: User,
+        club: Club | null
+    ): Promise<void> {
+        const clubLine = club !== null
+            ? `<b>Club:</b> ${club.name} <code>(ID: ${club.id})</code>`
+            : '<b>Club:</b> Global';
+        const summary = buildDiffSummary(oldDetails, newDetails);
+        const message = dedent`
+            <b>📝 Game Rules Details Updated</b>
+
+            ${clubLine}
+            <b>Rules ID:</b> <code>${ruleId}</code>
+            <b>Updated by:</b> ${actor.name} <code>(ID: ${actor.id})</code>
+
+            ${summary}
+        `;
+        this.logClubEvent(club, message);
+
+        if (club === null) return;
+
+        const clubLogsTopic = this.clubService.getClubTelegramTopics(club.id).clubLogs;
+        if (clubLogsTopic === null) return;
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        if (oldDetails !== null) {
+            await TelegramMessageService.sendDocument(
+                clubLogsTopic,
+                detailsJsonBuffer(oldDetails),
+                `rules-${ruleId}-old-${timestamp}.json`,
+                'Old game rules details JSON'
+            );
+        }
+        await TelegramMessageService.sendDocument(
+            clubLogsTopic,
+            detailsJsonBuffer(newDetails),
+            `rules-${ruleId}-new-${timestamp}.json`,
+            'New game rules details JSON'
+        );
+    }
+
+    private coreFieldsSummary(rule: GameRules): string {
+        return [
+            `<b>Players:</b> ${rule.numberOfPlayers}`,
+            `<b>Starting points:</b> ${formatNumber(rule.startingPoints)}`,
+            `<b>Uma:</b> ${findUmaPresetLabel(umaToString(rule.uma), rule.numberOfPlayers)}`,
+            `<b>Chombo:</b> ${formatChombo(rule.chomboPointsAfterUma)}`,
+            `<b>Tiebreak:</b> ${rule.umaTieBreak}`,
+        ].join('\n');
+    }
+
+    private coreFieldChanges(oldRule: GameRules, newRule: GameRules): string[] {
+        const changes: string[] = [];
+
+        if (oldRule.name !== newRule.name) changes.push(`<b>Name:</b> ${oldRule.name} → ${newRule.name}`);
+        if (oldRule.numberOfPlayers !== newRule.numberOfPlayers) changes.push(`<b>Players:</b> ${oldRule.numberOfPlayers} → ${newRule.numberOfPlayers}`);
+        if (oldRule.startingPoints !== newRule.startingPoints) changes.push(`<b>Starting points:</b> ${formatNumber(oldRule.startingPoints)} → ${formatNumber(newRule.startingPoints)}`);
+
+        const oldUma = findUmaPresetLabel(umaToString(oldRule.uma), oldRule.numberOfPlayers);
+        const newUma = findUmaPresetLabel(umaToString(newRule.uma), newRule.numberOfPlayers);
+        if (oldUma !== newUma) changes.push(`<b>Uma:</b> ${oldUma} → ${newUma}`);
+        if (oldRule.chomboPointsAfterUma !== newRule.chomboPointsAfterUma) changes.push(`<b>Chombo:</b> ${formatChombo(oldRule.chomboPointsAfterUma)} → ${formatChombo(newRule.chomboPointsAfterUma)}`);
+        if (oldRule.umaTieBreak !== newRule.umaTieBreak) changes.push(`<b>Tiebreak:</b> ${oldRule.umaTieBreak} → ${newRule.umaTieBreak}`);
+
+        return changes;
+    }
+
     // ── Auth helpers ──
 
     private getUserByTelegramId(userTelegramId: number): User {
@@ -1054,6 +1205,19 @@ class TelegramGameRulesService {
         return this.gameRulesService.getAllGameRules(clubId)
             .filter(r => r.clubId === clubId);
     }
+
+    private async replyWithDetailsJson(
+        ctx: TelegramCallbackQueryContext,
+        details: GameRulesDetails,
+        filename: string,
+        caption?: string
+    ) {
+        const buffer = detailsJsonBuffer(details);
+        await ctx.replyWithDocument(
+            { source: buffer, filename },
+            caption !== undefined ? { caption } : undefined
+        );
+    }
 }
 
 // ── Diff Summary ──
@@ -1077,21 +1241,94 @@ function buildDiffSection(title: string, added: string[], changed: string[], rem
     return lines.join('\n');
 }
 
-function buildDiffSummary(oldDetails: GameRulesDetails | null, newDetails: GameRulesDetails): string {
+interface NamedDiffEntry<T> {
+    key: string;
+    label: string;
+    value: T;
+}
+
+function mapByKey<T>(entries: NamedDiffEntry<T>[]): Map<string, NamedDiffEntry<T>> {
+    return new Map(entries.map(entry => [entry.key, entry]));
+}
+
+function sectionEntries(details: GameRulesDetails): NamedDiffEntry<unknown>[] {
+    return details.sections.map(section => ({
+        key: section.name,
+        label: section.name,
+        value: { name: section.name, tooltip: section.tooltip }
+    }));
+}
+
+function groupEntries(details: GameRulesDetails): NamedDiffEntry<unknown>[] {
+    return details.sections.flatMap(section =>
+        section.groups.map(group => ({
+            key: `${section.name}\u0000${group.name}`,
+            label: `${section.name} / ${group.name}`,
+            value: { name: group.name, tooltip: group.tooltip }
+        }))
+    );
+}
+
+function ruleEntries(details: GameRulesDetails): NamedDiffEntry<GameRulesDetailsRule>[] {
+    return details.sections.flatMap(section =>
+        section.groups.flatMap(group =>
+            group.rules.map(rule => ({
+                key: `${section.name}\u0000${group.name}\u0000${rule.rule}`,
+                label: `${section.name} / ${group.name} / ${rule.rule}`,
+                value: rule
+            }))
+        )
+    );
+}
+
+function buildStructuredDiffSection<T>(
+    title: string,
+    oldEntries: NamedDiffEntry<T>[],
+    newEntries: NamedDiffEntry<T>[]
+): string | null {
+    const oldMap = mapByKey(oldEntries);
+    const newMap = mapByKey(newEntries);
+
+    return buildDiffSection(
+        title,
+        newEntries.filter(entry => !oldMap.has(entry.key)).map(entry => entry.label),
+        newEntries.filter(entry => {
+            const old = oldMap.get(entry.key);
+            return old !== undefined && JSON.stringify(old.value) !== JSON.stringify(entry.value);
+        }).map(entry => entry.label),
+        oldEntries.filter(entry => !newMap.has(entry.key)).map(entry => entry.label),
+    );
+}
+
+export function buildDiffSummary(oldDetails: GameRulesDetails | null, newDetails: GameRulesDetails): string {
     if (oldDetails === null) {
-        return `<b>📋 Правила</b>\n\n🟢 Додано:\n` + newDetails.rules.map(r => `  • ${r.rule}`).join('\n');
+        return [
+            buildDiffSection('📚 Розділи', newDetails.sections.map(section => section.name), [], []),
+            buildDiffSection('🧩 Групи', groupEntries(newDetails).map(entry => entry.label), [], []),
+            buildDiffSection('📋 Правила', ruleEntries(newDetails).map(entry => entry.label), [], []),
+        ].filter(section => section !== null).join('\n\n');
     }
 
     const sections: string[] = [];
 
-    const oldRuleMap = new Map(oldDetails.rules.map(r => [r.rule, r]));
-    const newRuleMap = new Map(newDetails.rules.map(r => [r.rule, r]));
+    const sectionsSection = buildStructuredDiffSection(
+        '📚 Розділи',
+        sectionEntries(oldDetails),
+        sectionEntries(newDetails)
+    );
+    if (sectionsSection) sections.push(sectionsSection);
 
-    const rulesSection = buildDiffSection(
+    const groupsSection = buildStructuredDiffSection(
+        '🧩 Групи',
+        groupEntries(oldDetails),
+        groupEntries(newDetails)
+    );
+    if (groupsSection) sections.push(groupsSection);
+
+    const rulesSection = buildStructuredDiffSection(
         '📋 Правила',
-        newDetails.rules.filter(r => !oldRuleMap.has(r.rule)).map(r => r.rule),
-        newDetails.rules.filter(r => { const old = oldRuleMap.get(r.rule); return old && JSON.stringify(old) !== JSON.stringify(r); }).map(r => r.rule),
-        oldDetails.rules.filter(r => !newRuleMap.has(r.rule)).map(r => r.rule),
+        ruleEntries(oldDetails),
+        ruleEntries(newDetails)
     );
     if (rulesSection) sections.push(rulesSection);
 
@@ -1113,6 +1350,10 @@ function buildDiffSummary(oldDetails: GameRulesDetails | null, newDetails: GameR
     }
 
     return sections.join('\n\n');
+}
+
+function detailsJsonBuffer(details: GameRulesDetails): Buffer {
+    return Buffer.from(JSON.stringify(details, null, 2), 'utf-8');
 }
 
 export default new TelegramGameRulesService();

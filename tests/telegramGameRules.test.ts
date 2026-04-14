@@ -1,9 +1,13 @@
-import { jest, describe, test, expect, beforeAll, afterAll } from '@jest/globals';
-import telegramGameRulesService, { buildBaseDetails } from '../src/service/TelegramGameRulesService.ts';
+import { jest, describe, test, expect, beforeAll, afterAll, afterEach } from '@jest/globals';
+import telegramGameRulesService, { buildBaseDetails, buildDiffSummary } from '../src/service/TelegramGameRulesService.ts';
 import { GameRulesRepository } from '../src/repository/GameRulesRepository.ts';
 import { CannotUpdateGameRulesInUseTelegramError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from '../src/error/TelegramErrors.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
+import LogService from '../src/service/LogService.ts';
+import TelegramMessageService from '../src/service/TelegramMessageService.ts';
+import { TelegramTopicType } from '../src/model/TelegramTopic.ts';
+import type { GameRulesDetails } from '../src/model/EventModels.ts';
 
 const TEST_CLUB_ID = 700;
 const OWNER_USER_ID = 701;
@@ -40,6 +44,72 @@ function mockTextCtx(telegramId: number, text: string): any {
     };
 }
 
+function mockDocumentCtx(telegramId: number, fileText: string): any {
+    const replies: any[] = [];
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+        text: async () => fileText
+    } as Response);
+
+    return {
+        from: { id: telegramId },
+        message: {
+            document: {
+                file_name: 'rules.json',
+                file_id: 'test-file-id'
+            }
+        },
+        telegram: {
+            getFileLink: jest.fn(async () => new URL('https://example.test/rules.json'))
+        },
+        reply: jest.fn((...args: any[]) => { replies.push(args); }),
+        replyWithHTML: jest.fn((...args: any[]) => { replies.push(args); }),
+        _replies: replies,
+    };
+}
+
+function baseRules(details: GameRulesDetails) {
+    return details.sections[0]!.groups[0]!.rules;
+}
+
+function sampleDetails(ruleName = 'Кількість гравців', value = '4'): GameRulesDetails {
+    return {
+        links: [{ url: 'https://example.test/rules', label: 'Rules' }],
+        sections: [
+            {
+                name: 'Основні параметри',
+                groups: [
+                    {
+                        name: 'Гра та рейтинг',
+                        rules: [
+                            {
+                                rule: ruleName,
+                                value,
+                                tooltip: {
+                                    label: ruleName,
+                                    content: [{ type: 'paragraph', text: `Tooltip for ${ruleName}` }]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    };
+}
+
+function sampleV1Details() {
+    return {
+        links: [{ url: 'https://example.test/rules', label: 'Rules' }],
+        rules: [
+            {
+                rule: 'Кількість гравців',
+                value: '4',
+                tooltip: { label: 'Кількість гравців', content: 'Flat tooltip text' }
+            }
+        ]
+    };
+}
+
 describe('TelegramGameRulesService', () => {
     beforeAll(() => {
         dbManager.db.prepare(
@@ -71,11 +141,16 @@ describe('TelegramGameRulesService', () => {
     afterAll(() => {
         dbManager.db.prepare('DELETE FROM event WHERE clubId = ?').run(TEST_CLUB_ID);
         dbManager.db.prepare('DELETE FROM gameRules WHERE clubId = ?').run(TEST_CLUB_ID);
+        dbManager.db.prepare('DELETE FROM clubTelegramTopics WHERE clubId = ?').run(TEST_CLUB_ID);
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(TEST_CLUB_ID);
         dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?)').run(OWNER_USER_ID, NON_OWNER_USER_ID);
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(TEST_CLUB_ID);
         dbManager.closeDB();
         cleanupTestDatabase();
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
     });
 
     describe('buildBaseDetails', () => {
@@ -88,14 +163,18 @@ describe('TelegramGameRulesService', () => {
                 chomboPointsAfterUma: 20000,
             });
 
-            expect(result.rules.length).toBe(5);
-            expect(result.rules[0]).toEqual({ rule: 'Кількість гравців', value: '4' });
-            expect(result.rules[1]!.rule).toBe('Стартові очки');
-            expect(result.rules[2]!.rule).toBe('Ума');
-            expect(result.rules[2]!.tooltip).toBeDefined();
-            expect(result.rules[3]!.rule).toBe('Рівні ума');
-            expect(result.rules[3]!.value).toBe('За вітром');
-            expect(result.rules[4]!.rule).toBe('Чомбо');
+            expect(result.sections[0]!.name).toBe('Основні параметри');
+            expect(result.sections[0]!.groups[0]!.name).toBe('Гра та рейтинг');
+            const rules = baseRules(result);
+            expect(rules.length).toBe(5);
+            expect(rules[0]).toEqual({ rule: 'Кількість гравців', value: '4' });
+            expect(rules[1]!.rule).toBe('Стартові очки');
+            expect(rules[2]!.rule).toBe('Ума');
+            expect(rules[2]!.tooltip).toBeDefined();
+            expect(rules[2]!.tooltip!.content[0]!.type).toBe('paragraph');
+            expect(rules[3]!.rule).toBe('Рівні ума');
+            expect(rules[3]!.value).toBe('За вітром');
+            expect(rules[4]!.rule).toBe('Чомбо');
         });
 
         test('3-player without chombo', () => {
@@ -107,11 +186,12 @@ describe('TelegramGameRulesService', () => {
                 chomboPointsAfterUma: null,
             });
 
-            expect(result.rules.length).toBe(4);
-            expect(result.rules[0]!.value).toBe('3');
-            expect(result.rules[1]!.value).toBe('0');
-            expect(result.rules[3]!.value).toBe('Ділити порівну');
-            expect(result.rules.find(r => r.rule === 'Чомбо')).toBeUndefined();
+            const rules = baseRules(result);
+            expect(rules.length).toBe(4);
+            expect(rules[0]!.value).toBe('3');
+            expect(rules[1]!.value).toBe('0');
+            expect(rules[3]!.value).toBe('Ділити порівну');
+            expect(rules.find(r => r.rule === 'Чомбо')).toBeUndefined();
         });
 
         test('has no links by default', () => {
@@ -128,6 +208,7 @@ describe('TelegramGameRulesService', () => {
 
     describe('Create wizard — full happy path', () => {
         test('creates game rules with auto-generated details', () => {
+            const logSpy = jest.spyOn(LogService, 'logInfo');
             // Step 1: club
             const ctx1 = mockCallbackCtx(OWNER_TELEGRAM_ID, ['gr_create_club_700', '700']);
             telegramGameRulesService.handleCreateClub(ctx1);
@@ -165,6 +246,7 @@ describe('TelegramGameRulesService', () => {
             telegramGameRulesService.handleCreateConfirm(ctx8);
             expect(ctx8.replyWithHTML).toHaveBeenCalled();
             expect(telegramGameRulesService.hasPendingWizard(OWNER_TELEGRAM_ID)).toBe(false);
+            expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Game Rules Created'), null);
 
             // Verify DB
             const allRules = repo.findAllGameRules();
@@ -173,7 +255,7 @@ describe('TelegramGameRulesService', () => {
             expect(created!.numberOfPlayers).toBe(4);
             expect(created!.startingPoints).toBe(25000);
             expect(created!.details).not.toBeNull();
-            expect(created!.details!.rules.length).toBe(5);
+            expect(baseRules(created!.details!).length).toBe(5);
         });
     });
 
@@ -193,6 +275,7 @@ describe('TelegramGameRulesService', () => {
         });
 
         test('updates game rules fields and regenerates details', () => {
+            const logSpy = jest.spyOn(LogService, 'logInfo');
             // Select rule to edit
             const ctx1 = mockCallbackCtx(OWNER_TELEGRAM_ID, [`gr_edit_${editRuleId}`, String(editRuleId)]);
             telegramGameRulesService.handleEditRules(ctx1);
@@ -226,13 +309,14 @@ describe('TelegramGameRulesService', () => {
             const ctx8 = mockCallbackCtx(OWNER_TELEGRAM_ID);
             telegramGameRulesService.handleEditConfirm(ctx8);
             expect(ctx8.replyWithHTML).toHaveBeenCalled();
+            expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Game Rules Updated'), null);
 
             const updated = repo.findGameRulesById(editRuleId);
             expect(updated!.name).toBe('Edited Rules Name');
             expect(updated!.numberOfPlayers).toBe(3);
             expect(updated!.startingPoints).toBe(0);
             expect(updated!.details).not.toBeNull();
-            expect(updated!.details!.rules.find(r => r.rule === 'Чомбо')).toBeUndefined();
+            expect(baseRules(updated!.details!).find(r => r.rule === 'Чомбо')).toBeUndefined();
         });
 
         test('blocks update when rule is referenced by event', () => {
@@ -302,6 +386,7 @@ describe('TelegramGameRulesService', () => {
 
     describe('Delete flow', () => {
         test('deletes unused rule', () => {
+            const logSpy = jest.spyOn(LogService, 'logInfo');
             const ruleId = repo.insertGameRules({
                 name: 'Delete Test Rules',
                 numberOfPlayers: 4,
@@ -319,6 +404,7 @@ describe('TelegramGameRulesService', () => {
             const ctx2 = mockCallbackCtx(OWNER_TELEGRAM_ID, [`gr_del_confirm_${ruleId}`, String(ruleId)]);
             telegramGameRulesService.handleDeleteConfirm(ctx2);
             expect(ctx2.reply).toHaveBeenCalledWith(expect.stringContaining('видалено'));
+            expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Game Rules Deleted'), null);
 
             expect(repo.findGameRulesById(ruleId)).toBeUndefined();
         });
@@ -376,6 +462,104 @@ describe('TelegramGameRulesService', () => {
             expect(handled).toBe(false);
 
             jest.useRealTimers();
+        });
+    });
+
+    describe('Details upload flow', () => {
+        let detailsRuleId: number;
+
+        beforeAll(() => {
+            detailsRuleId = repo.insertGameRules({
+                name: 'Details Upload Rules',
+                numberOfPlayers: 4,
+                uma: '15,5,-5,-15',
+                startingPoints: 25000,
+                chomboPointsAfterUma: null,
+                umaTieBreak: 'DIVIDE',
+                clubId: TEST_CLUB_ID
+            });
+            repo.updateGameRulesDetails(detailsRuleId, sampleDetails('Старе правило', 'old'));
+        });
+
+        test('accepts V2 upload and logs old and new JSON attachments on confirm', async () => {
+            const topic = { type: TelegramTopicType.CLUB_LOGS, chatId: -100700, topicId: 123 };
+            dbManager.db.prepare(
+                `INSERT INTO clubTelegramTopics (clubId, rating, userLogs, gameLogs, clubLogs, main, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON CONFLICT(clubId) DO UPDATE SET clubLogs = excluded.clubLogs`
+            ).run(TEST_CLUB_ID, null, null, null, JSON.stringify(topic), null, timestamp, timestamp, 0);
+
+            const newDetails = sampleDetails('Нове правило', 'new');
+            const selectCtx = mockCallbackCtx(OWNER_TELEGRAM_ID, [`gr_details_${detailsRuleId}`, String(detailsRuleId)]);
+            await telegramGameRulesService.handleDetailsRules(selectCtx);
+
+            const uploadCtx = mockDocumentCtx(OWNER_TELEGRAM_ID, JSON.stringify(newDetails));
+            await telegramGameRulesService.handleDocumentUpload(uploadCtx);
+            expect(uploadCtx.replyWithHTML).toHaveBeenCalledWith(
+                expect.stringContaining('Нове правило'),
+                expect.any(Object)
+            );
+
+            const sendDocumentSpy = jest.spyOn(TelegramMessageService, 'sendDocument').mockResolvedValue();
+            const confirmCtx = mockCallbackCtx(OWNER_TELEGRAM_ID, [`gr_confirm_${detailsRuleId}`, String(detailsRuleId)]);
+            await telegramGameRulesService.handleConfirm(confirmCtx);
+
+            expect(confirmCtx.reply).toHaveBeenCalledWith('✅ Деталі збережено!');
+            expect(sendDocumentSpy).toHaveBeenCalledTimes(2);
+            expect(sendDocumentSpy.mock.calls[0]![2]).toContain(`rules-${detailsRuleId}-old-`);
+            expect(sendDocumentSpy.mock.calls[1]![2]).toContain(`rules-${detailsRuleId}-new-`);
+            expect(repo.findGameRulesById(detailsRuleId)!.details).toEqual(newDetails);
+        });
+
+        test('rejects V1 upload with validation errors', async () => {
+            const selectCtx = mockCallbackCtx(OWNER_TELEGRAM_ID, [`gr_details_${detailsRuleId}`, String(detailsRuleId)]);
+            await telegramGameRulesService.handleDetailsRules(selectCtx);
+
+            const uploadCtx = mockDocumentCtx(OWNER_TELEGRAM_ID, JSON.stringify(sampleV1Details()));
+            await telegramGameRulesService.handleDocumentUpload(uploadCtx);
+
+            expect(uploadCtx.replyWithHTML).toHaveBeenCalledWith(expect.stringContaining('Помилки валідації'));
+            expect(uploadCtx.replyWithHTML.mock.calls[0]![0]).toContain('sections');
+        });
+    });
+
+    describe('buildDiffSummary', () => {
+        test('reports section, group, rule, and link paths', () => {
+            const oldDetails = sampleDetails('Старе правило', 'old');
+            const newDetails: GameRulesDetails = {
+                links: [{ url: 'https://example.test/new', label: 'New rules' }],
+                sections: [
+                    {
+                        name: 'Основні параметри',
+                        groups: [
+                            {
+                                name: 'Гра та рейтинг',
+                                rules: [
+                                    { rule: 'Старе правило', value: 'changed' },
+                                    { rule: 'Нове правило', value: 'new' }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        name: 'Нова секція',
+                        groups: [
+                            {
+                                name: 'Нова група',
+                                rules: [{ rule: 'Нове правило', value: 'new' }]
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            const summary = buildDiffSummary(oldDetails, newDetails);
+
+            expect(summary).toContain('Нова секція');
+            expect(summary).toContain('Нова секція / Нова група');
+            expect(summary).toContain('Основні параметри / Гра та рейтинг / Старе правило');
+            expect(summary).toContain('Основні параметри / Гра та рейтинг / Нове правило');
+            expect(summary).toContain('New rules');
         });
     });
 });
