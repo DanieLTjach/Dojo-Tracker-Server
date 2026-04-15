@@ -10,7 +10,7 @@ import { UserService } from "./UserService.ts";
 import LogService from "./LogService.ts";
 import TelegramMessageService from "./TelegramMessageService.ts";
 import type { TelegramCommandContext, TelegramCallbackQueryContext, ClubData } from "../model/TelegramTypes.ts";
-import type { GameRules, GameRulesDetails, GameRulesDetailsRule } from "../model/EventModels.ts";
+import type { ClubRuleEntry, GameRules, GameRulesDetails, LinkEntry, RuleValue } from "../model/EventModels.ts";
 import { gameRulesDetailsSchema } from "../schema/GameRulesSchemas.ts";
 import type { User } from "../model/UserModels.ts";
 import { ClubRole } from "../model/ClubModels.ts";
@@ -72,55 +72,32 @@ export function buildBaseDetails(params: {
     umaTieBreak: string;
     chomboPointsAfterUma: number | null;
 }): GameRulesDetails {
-    const umaValues = params.umaLabel;
-    const umaTooltipParts = umaValues.split(' / ');
-
-    const rules: GameRulesDetailsRule[] = [
-        { rule: "Кількість гравців", value: String(params.numberOfPlayers) },
-        { rule: "Стартові очки", value: formatNumber(params.startingPoints) },
-        {
-            rule: "Ума",
-            value: umaValues,
-            tooltip: {
-                label: "Ума",
-                content: [
-                    { type: "paragraph", text: "Розподіл бонусних очок за місце:" },
-                    {
-                        type: "definitionList",
-                        items: umaTooltipParts.map((v, i) => ({
-                            term: `${i + 1}-й`,
-                            description: v.startsWith('-') ? v : '+' + v
-                        }))
-                    }
-                ]
-            }
-        },
-        {
-            rule: "Рівні ума",
-            value: params.umaTieBreak === 'WIND' ? 'За вітром' : 'Ділити порівну'
-        }
-    ];
-
+    const rules: Record<string, RuleValue> = {
+        number_of_players: params.numberOfPlayers,
+        starting_points: params.startingPoints,
+        uma: parseUmaLabel(params.umaLabel),
+        uma_tie_break: params.umaTieBreak === 'WIND' ? 'by_wind' : 'equal_split',
+    };
     if (params.chomboPointsAfterUma !== null) {
-        rules.push({
-            rule: "Чомбо",
-            value: `${formatNumber(params.chomboPointsAfterUma)} після ума`
-        });
+        rules['chombo'] = params.chomboPointsAfterUma === 20000
+            ? 'twenty_thousand_after_uma'
+            : String(params.chomboPointsAfterUma);
     }
 
     return {
-        sections: [
-            {
-                name: "Основні параметри",
-                groups: [
-                    {
-                        name: "Гра та рейтинг",
-                        rules
-                    }
-                ]
-            }
-        ]
+        rules,
+        links: [],
+        clubRules: []
     };
+}
+
+function parseUmaLabel(umaLabel: string): number[] | number[][] {
+    if (umaLabel === 'Плаваюча') {
+        return [[24, -2, -6, -16], [16, 8, -8, -16], [16, 6, 2, -24]];
+    }
+
+    const values = umaLabel.split('/').map(part => Number(part.trim().replace(/^\+/, '')));
+    return values.every(Number.isInteger) ? values : [];
 }
 
 function formatNumber(n: number): string {
@@ -1241,53 +1218,19 @@ function buildDiffSection(title: string, added: string[], changed: string[], rem
     return lines.join('\n');
 }
 
-interface NamedDiffEntry<T> {
+interface DiffEntry<T> {
     key: string;
     label: string;
     value: T;
 }
 
-function mapByKey<T>(entries: NamedDiffEntry<T>[]): Map<string, NamedDiffEntry<T>> {
-    return new Map(entries.map(entry => [entry.key, entry]));
-}
-
-function sectionEntries(details: GameRulesDetails): NamedDiffEntry<unknown>[] {
-    return details.sections.map(section => ({
-        key: section.name,
-        label: section.name,
-        value: { name: section.name, tooltip: section.tooltip }
-    }));
-}
-
-function groupEntries(details: GameRulesDetails): NamedDiffEntry<unknown>[] {
-    return details.sections.flatMap(section =>
-        section.groups.map(group => ({
-            key: `${section.name}\u0000${group.name}`,
-            label: `${section.name} / ${group.name}`,
-            value: { name: group.name, tooltip: group.tooltip }
-        }))
-    );
-}
-
-function ruleEntries(details: GameRulesDetails): NamedDiffEntry<GameRulesDetailsRule>[] {
-    return details.sections.flatMap(section =>
-        section.groups.flatMap(group =>
-            group.rules.map(rule => ({
-                key: `${section.name}\u0000${group.name}\u0000${rule.rule}`,
-                label: `${section.name} / ${group.name} / ${rule.rule}`,
-                value: rule
-            }))
-        )
-    );
-}
-
 function buildStructuredDiffSection<T>(
     title: string,
-    oldEntries: NamedDiffEntry<T>[],
-    newEntries: NamedDiffEntry<T>[]
+    oldEntries: DiffEntry<T>[],
+    newEntries: DiffEntry<T>[]
 ): string | null {
-    const oldMap = mapByKey(oldEntries);
-    const newMap = mapByKey(newEntries);
+    const oldMap = new Map(oldEntries.map(entry => [entry.key, entry]));
+    const newMap = new Map(newEntries.map(entry => [entry.key, entry]));
 
     return buildDiffSection(
         title,
@@ -1300,56 +1243,63 @@ function buildStructuredDiffSection<T>(
     );
 }
 
+function ruleEntriesFrom(details: GameRulesDetails): DiffEntry<RuleValue>[] {
+    return Object.entries(details.rules)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => ({ key, label: key, value }));
+}
+
+function linkEntriesFrom(details: GameRulesDetails): DiffEntry<LinkEntry>[] {
+    return (details.links ?? [])
+        .map(link => ({ key: link.url, label: linkLabel(link), value: link }));
+}
+
+function clubRuleEntriesFrom(details: GameRulesDetails): DiffEntry<ClubRuleEntry>[] {
+    return (details.clubRules ?? [])
+        .map(rule => ({ key: rule.key, label: rule.key, value: rule }));
+}
+
 export function buildDiffSummary(oldDetails: GameRulesDetails | null, newDetails: GameRulesDetails): string {
     if (oldDetails === null) {
         return [
-            buildDiffSection('📚 Розділи', newDetails.sections.map(section => section.name), [], []),
-            buildDiffSection('🧩 Групи', groupEntries(newDetails).map(entry => entry.label), [], []),
-            buildDiffSection('📋 Правила', ruleEntries(newDetails).map(entry => entry.label), [], []),
+            buildDiffSection('📋 Правила', Object.keys(newDetails.rules).sort(), [], []),
+            buildDiffSection('🔗 Посилання', linkEntriesFrom(newDetails).map(entry => entry.label), [], []),
+            buildDiffSection('🏠 Клубні правила', clubRuleEntriesFrom(newDetails).map(entry => entry.label), [], []),
         ].filter(section => section !== null).join('\n\n');
     }
 
     const sections: string[] = [];
 
-    const sectionsSection = buildStructuredDiffSection(
-        '📚 Розділи',
-        sectionEntries(oldDetails),
-        sectionEntries(newDetails)
-    );
-    if (sectionsSection) sections.push(sectionsSection);
-
-    const groupsSection = buildStructuredDiffSection(
-        '🧩 Групи',
-        groupEntries(oldDetails),
-        groupEntries(newDetails)
-    );
-    if (groupsSection) sections.push(groupsSection);
-
     const rulesSection = buildStructuredDiffSection(
         '📋 Правила',
-        ruleEntries(oldDetails),
-        ruleEntries(newDetails)
+        ruleEntriesFrom(oldDetails),
+        ruleEntriesFrom(newDetails)
     );
     if (rulesSection) sections.push(rulesSection);
 
-    const oldLinks = oldDetails.links ?? [];
-    const newLinks = newDetails.links ?? [];
-    const oldLinkMap = new Map(oldLinks.map(l => [l.url, l]));
-    const newLinkMap = new Map(newLinks.map(l => [l.url, l]));
-
-    const linksSection = buildDiffSection(
+    const linksSection = buildStructuredDiffSection(
         '🔗 Посилання',
-        newLinks.filter(l => !oldLinkMap.has(l.url)).map(l => l.label),
-        newLinks.filter(l => { const old = oldLinkMap.get(l.url); return old && old.label !== l.label; }).map(l => l.label),
-        oldLinks.filter(l => !newLinkMap.has(l.url)).map(l => l.label),
+        linkEntriesFrom(oldDetails),
+        linkEntriesFrom(newDetails)
     );
     if (linksSection) sections.push(linksSection);
+
+    const clubRulesSection = buildStructuredDiffSection(
+        '🏠 Клубні правила',
+        clubRuleEntriesFrom(oldDetails),
+        clubRuleEntriesFrom(newDetails)
+    );
+    if (clubRulesSection) sections.push(clubRulesSection);
 
     if (sections.length === 0) {
         return '✨ Змін не виявлено';
     }
 
     return sections.join('\n\n');
+}
+
+function linkLabel(link: LinkEntry): string {
+    return link.label.uk || link.label.en || link.label.ja || link.url;
 }
 
 function detailsJsonBuffer(details: GameRulesDetails): Buffer {

@@ -1,90 +1,85 @@
 import { describe, expect, test } from '@jest/globals';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
+import { join } from 'path';
 import { gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
 
-describe('gameRulesDetailsSchema V2', () => {
-    test('accepts EMA 2025 structured blocks fixture', () => {
-        const details = JSON.parse(readFileSync('db/data/ema-2025-rules-details-structured-blocks-review.json', 'utf-8'));
+describe('gameRulesDetailsSchema compact format', () => {
+    test('accepts compact review files', () => {
+        const dir = 'db/data/game-rules-details-compact-review';
+        const files = readdirSync(dir).filter(file => /^\d+.*\.json$/.test(file));
 
-        const result = gameRulesDetailsSchema.safeParse(details);
+        expect(files.length).toBeGreaterThan(0);
 
-        expect(result.success).toBe(true);
-    });
-
-    test('rejects flat V1 details', () => {
-        const v1Details = {
-            links: [{ url: 'https://example.test/rules', label: 'Rules' }],
-            rules: [
-                {
-                    rule: 'Кількість гравців',
-                    value: '4',
-                    tooltip: { label: 'Кількість гравців', content: 'Flat tooltip text' }
-                }
-            ]
-        };
-
-        const result = gameRulesDetailsSchema.safeParse(v1Details);
-
-        expect(result.success).toBe(false);
-        if (!result.success) {
-            expect(result.error.issues.some(issue => issue.path.includes('sections'))).toBe(true);
+        for (const file of files) {
+            const details = JSON.parse(readFileSync(join(dir, file), 'utf-8'));
+            const result = gameRulesDetailsSchema.safeParse(details);
+            expect(result.success).toBe(true);
         }
     });
 
-    test('rejects malformed tooltip blocks', () => {
-        const details = {
-            sections: [
-                {
-                    name: 'Section',
-                    groups: [
-                        {
-                            name: 'Group',
-                            rules: [
-                                {
-                                    rule: 'Rule',
-                                    value: 'Value',
-                                    tooltip: {
-                                        label: 'Tooltip',
-                                        content: [{ type: 'paragraph' }]
-                                    }
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        };
-
-        const result = gameRulesDetailsSchema.safeParse(details);
+    test('rejects unknown canonical rule keys', () => {
+        const result = gameRulesDetailsSchema.safeParse({
+            rules: {
+                number_of_players: 4,
+                starting_points: 30000,
+                made_up_rule: true
+            }
+        });
 
         expect(result.success).toBe(false);
     });
 
-    test('rejects unknown tooltip block type', () => {
-        const details = {
-            sections: [
+    test('rejects wrong rule value type', () => {
+        const result = gameRulesDetailsSchema.safeParse({
+            rules: {
+                number_of_players: '4',
+                starting_points: 30000
+            }
+        });
+
+        expect(result.success).toBe(false);
+    });
+
+    test('rejects clubRules entry missing Ukrainian text', () => {
+        const result = gameRulesDetailsSchema.safeParse({
+            rules: {
+                number_of_players: 4,
+                starting_points: 30000
+            },
+            clubRules: [
                 {
-                    name: 'Section',
-                    groups: [
-                        {
-                            name: 'Group',
-                            rules: [
-                                {
-                                    rule: 'Rule',
-                                    value: 'Value',
-                                    tooltip: {
-                                        label: 'Tooltip',
-                                        content: [{ type: 'table', rows: [] }]
-                                    }
-                                }
-                            ]
-                        }
-                    ]
+                    key: 'house_yaku_tanuki',
+                    category: 'yaku',
+                    value: 1,
+                    name: { en: 'Tanuki' }
                 }
             ]
-        };
+        });
 
-        const result = gameRulesDetailsSchema.safeParse(details);
+        expect(result.success).toBe(false);
+    });
+
+    test('rejects duplicate clubRules keys', () => {
+        const result = gameRulesDetailsSchema.safeParse({
+            rules: {
+                number_of_players: 4,
+                starting_points: 30000
+            },
+            clubRules: [
+                {
+                    key: 'house_yaku_tanuki',
+                    category: 'yaku',
+                    value: 1,
+                    name: { uk: 'Танукі' }
+                },
+                {
+                    key: 'house_yaku_tanuki',
+                    category: 'yaku',
+                    value: 2,
+                    name: { uk: 'Танукі 2' }
+                }
+            ]
+        });
 
         expect(result.success).toBe(false);
     });

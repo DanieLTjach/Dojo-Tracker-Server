@@ -68,32 +68,23 @@ function mockDocumentCtx(telegramId: number, fileText: string): any {
 }
 
 function baseRules(details: GameRulesDetails) {
-    return details.sections[0]!.groups[0]!.rules;
+    return details.rules;
 }
 
 function sampleDetails(ruleName = 'Кількість гравців', value = '4'): GameRulesDetails {
+    const key = ruleName === 'Старе правило'
+        ? 'open_tanyao'
+        : ruleName === 'Нове правило'
+            ? 'after_attaching'
+            : 'number_of_players';
+    const normalizedValue = value === '4' ? 4 : value === 'old' ? false : value === 'new' ? true : value;
     return {
-        links: [{ url: 'https://example.test/rules', label: 'Rules' }],
-        sections: [
-            {
-                name: 'Основні параметри',
-                groups: [
-                    {
-                        name: 'Гра та рейтинг',
-                        rules: [
-                            {
-                                rule: ruleName,
-                                value,
-                                tooltip: {
-                                    label: ruleName,
-                                    content: [{ type: 'paragraph', text: `Tooltip for ${ruleName}` }]
-                                }
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
+        links: [{ url: 'https://example.test/rules', label: { uk: 'Rules' } }],
+        rules: {
+            number_of_players: 4,
+            starting_points: 30000,
+            [key]: normalizedValue
+        }
     };
 }
 
@@ -163,18 +154,12 @@ describe('TelegramGameRulesService', () => {
                 chomboPointsAfterUma: 20000,
             });
 
-            expect(result.sections[0]!.name).toBe('Основні параметри');
-            expect(result.sections[0]!.groups[0]!.name).toBe('Гра та рейтинг');
             const rules = baseRules(result);
-            expect(rules.length).toBe(5);
-            expect(rules[0]).toEqual({ rule: 'Кількість гравців', value: '4' });
-            expect(rules[1]!.rule).toBe('Стартові очки');
-            expect(rules[2]!.rule).toBe('Ума');
-            expect(rules[2]!.tooltip).toBeDefined();
-            expect(rules[2]!.tooltip!.content[0]!.type).toBe('paragraph');
-            expect(rules[3]!.rule).toBe('Рівні ума');
-            expect(rules[3]!.value).toBe('За вітром');
-            expect(rules[4]!.rule).toBe('Чомбо');
+            expect(rules['number_of_players']).toBe(4);
+            expect(rules['starting_points']).toBe(25000);
+            expect(rules['uma']).toEqual([15, 5, -5, -15]);
+            expect(rules['uma_tie_break']).toBe('by_wind');
+            expect(rules['chombo']).toBe('twenty_thousand_after_uma');
         });
 
         test('3-player without chombo', () => {
@@ -187,14 +172,13 @@ describe('TelegramGameRulesService', () => {
             });
 
             const rules = baseRules(result);
-            expect(rules.length).toBe(4);
-            expect(rules[0]!.value).toBe('3');
-            expect(rules[1]!.value).toBe('0');
-            expect(rules[3]!.value).toBe('Ділити порівну');
-            expect(rules.find(r => r.rule === 'Чомбо')).toBeUndefined();
+            expect(rules['number_of_players']).toBe(3);
+            expect(rules['starting_points']).toBe(0);
+            expect(rules['uma_tie_break']).toBe('equal_split');
+            expect(rules['chombo']).toBeUndefined();
         });
 
-        test('has no links by default', () => {
+        test('has empty optional collections by default', () => {
             const result = buildBaseDetails({
                 numberOfPlayers: 4,
                 startingPoints: 30000,
@@ -202,7 +186,8 @@ describe('TelegramGameRulesService', () => {
                 umaTieBreak: 'WIND',
                 chomboPointsAfterUma: null,
             });
-            expect(result.links).toBeUndefined();
+            expect(result.links).toEqual([]);
+            expect(result.clubRules).toEqual([]);
         });
     });
 
@@ -255,7 +240,7 @@ describe('TelegramGameRulesService', () => {
             expect(created!.numberOfPlayers).toBe(4);
             expect(created!.startingPoints).toBe(25000);
             expect(created!.details).not.toBeNull();
-            expect(baseRules(created!.details!).length).toBe(5);
+            expect(Object.keys(baseRules(created!.details!))).toHaveLength(5);
         });
     });
 
@@ -316,7 +301,7 @@ describe('TelegramGameRulesService', () => {
             expect(updated!.numberOfPlayers).toBe(3);
             expect(updated!.startingPoints).toBe(0);
             expect(updated!.details).not.toBeNull();
-            expect(baseRules(updated!.details!).find(r => r.rule === 'Чомбо')).toBeUndefined();
+            expect(baseRules(updated!.details!)['chombo']).toBeUndefined();
         });
 
         test('blocks update when rule is referenced by event', () => {
@@ -496,7 +481,7 @@ describe('TelegramGameRulesService', () => {
             const uploadCtx = mockDocumentCtx(OWNER_TELEGRAM_ID, JSON.stringify(newDetails));
             await telegramGameRulesService.handleDocumentUpload(uploadCtx);
             expect(uploadCtx.replyWithHTML).toHaveBeenCalledWith(
-                expect.stringContaining('Нове правило'),
+                expect.stringContaining('after_attaching'),
                 expect.any(Object)
             );
 
@@ -519,47 +504,38 @@ describe('TelegramGameRulesService', () => {
             await telegramGameRulesService.handleDocumentUpload(uploadCtx);
 
             expect(uploadCtx.replyWithHTML).toHaveBeenCalledWith(expect.stringContaining('Помилки валідації'));
-            expect(uploadCtx.replyWithHTML.mock.calls[0]![0]).toContain('sections');
+            expect(uploadCtx.replyWithHTML.mock.calls[0]![0]).toContain('rules');
         });
     });
 
     describe('buildDiffSummary', () => {
-        test('reports section, group, rule, and link paths', () => {
+        test('reports rule, link, and club rule changes', () => {
             const oldDetails = sampleDetails('Старе правило', 'old');
             const newDetails: GameRulesDetails = {
-                links: [{ url: 'https://example.test/new', label: 'New rules' }],
-                sections: [
+                links: [{ url: 'https://example.test/new', label: { uk: 'New rules' } }],
+                rules: {
+                    number_of_players: 4,
+                    starting_points: 30000,
+                    open_tanyao: true,
+                    after_attaching: true
+                },
+                clubRules: [
                     {
-                        name: 'Основні параметри',
-                        groups: [
-                            {
-                                name: 'Гра та рейтинг',
-                                rules: [
-                                    { rule: 'Старе правило', value: 'changed' },
-                                    { rule: 'Нове правило', value: 'new' }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        name: 'Нова секція',
-                        groups: [
-                            {
-                                name: 'Нова група',
-                                rules: [{ rule: 'Нове правило', value: 'new' }]
-                            }
-                        ]
+                        key: 'house_yaku_tanuki',
+                        category: 'yaku',
+                        value: 1,
+                        name: { uk: 'Танукі' }
                     }
                 ]
             };
 
             const summary = buildDiffSummary(oldDetails, newDetails);
 
-            expect(summary).toContain('Нова секція');
-            expect(summary).toContain('Нова секція / Нова група');
-            expect(summary).toContain('Основні параметри / Гра та рейтинг / Старе правило');
-            expect(summary).toContain('Основні параметри / Гра та рейтинг / Нове правило');
+            expect(summary).toContain('📋 Правила');
+            expect(summary).toContain('open_tanyao');
+            expect(summary).toContain('after_attaching');
             expect(summary).toContain('New rules');
+            expect(summary).toContain('house_yaku_tanuki');
         });
     });
 });

@@ -1,71 +1,111 @@
 import z from "zod";
+import { gameRulesCatalog, type GameRulesCatalog, type RuleSpec } from '../data/gameRulesCatalog.ts';
+import type { GameRulesDetails, RuleValue } from '../model/EventModels.ts';
 import { clubIdParamSchema } from './ClubSchemas.ts';
 
 export const gameRulesIdSchema = z.number().int("Game Rules ID must be an integer");
 export const gameRulesIdParamSchema = z.coerce.number().int("Game Rules ID must be an integer");
 
-const tooltipParagraphBlockSchema = z.strictObject({
-    type: z.literal('paragraph'),
-    text: z.string().trim().min(1, 'Tooltip paragraph text is required')
-});
-
-const tooltipListBlockSchema = z.strictObject({
-    type: z.literal('list'),
-    items: z.array(z.string().trim().min(1, 'Tooltip list item is required')).min(1, 'Tooltip list must have at least one item')
-});
-
-const tooltipDefinitionListBlockSchema = z.strictObject({
-    type: z.literal('definitionList'),
-    items: z.array(z.strictObject({
-        term: z.string().trim().min(1, 'Tooltip definition term is required'),
-        description: z.string().trim().min(1, 'Tooltip definition description is required')
-    })).min(1, 'Tooltip definition list must have at least one item')
-});
-
-const tooltipExampleBlockSchema = z.strictObject({
-    type: z.literal('example'),
-    text: z.string().trim().min(1, 'Tooltip example text is required')
-});
-
-const tooltipBlockSchema = z.discriminatedUnion('type', [
-    tooltipParagraphBlockSchema,
-    tooltipListBlockSchema,
-    tooltipDefinitionListBlockSchema,
-    tooltipExampleBlockSchema
-]);
-
-const gameRulesTooltipSchema = z.strictObject({
-    label: z.string().trim().min(1, 'Tooltip label is required'),
-    content: z.array(tooltipBlockSchema).min(1, 'Tooltip content must have at least one block')
+const localeTextSchema = z.strictObject({
+    uk: z.string().trim().min(1, 'Ukrainian text is required'),
+    en: z.string().trim().min(1, 'English text cannot be empty').optional(),
+    ja: z.string().trim().min(1, 'Japanese text cannot be empty').optional()
 });
 
 const gameRulesLinkSchema = z.strictObject({
     url: z.url('Link URL must be a valid URL'),
-    label: z.string().trim().min(1, 'Link label is required')
+    label: localeTextSchema
 });
 
-const gameRulesDetailRuleSchema = z.strictObject({
-    rule: z.string().trim().min(1, 'Rule name is required'),
-    value: z.string(),
-    tooltip: gameRulesTooltipSchema.optional()
+const clubRuleCategorySchema = z.enum(['yaku', 'fu', 'rule']);
+
+const ruleValueSchema: z.ZodType<RuleValue> = z.union([
+    z.boolean(),
+    z.number().int(),
+    z.string(),
+    z.array(z.number().int()),
+    z.array(z.array(z.number().int()))
+]) as z.ZodType<RuleValue>;
+
+const clubRuleEntrySchema = z.strictObject({
+    key: z.string().regex(/^[a-z][a-z0-9_]*$/, 'Club rule key must be snake_case'),
+    category: clubRuleCategorySchema,
+    value: ruleValueSchema,
+    name: localeTextSchema,
+    tooltip: localeTextSchema.optional()
 });
 
-const gameRulesGroupSchema = z.strictObject({
-    name: z.string().trim().min(1, 'Group name is required'),
-    tooltip: gameRulesTooltipSchema.optional(),
-    rules: z.array(gameRulesDetailRuleSchema).min(1, 'Group must have at least one rule')
-});
+function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
+    let schema: z.ZodType<RuleValue>;
 
-const gameRulesSectionSchema = z.strictObject({
-    name: z.string().trim().min(1, 'Section name is required'),
-    tooltip: gameRulesTooltipSchema.optional(),
-    groups: z.array(gameRulesGroupSchema).min(1, 'Section must have at least one group')
-});
+    switch (spec.type) {
+        case 'boolean':
+            schema = z.boolean();
+            break;
+        case 'integer':
+            schema = z.number().int(`${spec.key} must be an integer`);
+            break;
+        case 'string':
+            schema = z.string();
+            break;
+        case 'enumString':
+            schema = z.string().refine(
+                value => (spec.enum ?? []).includes(value),
+                `${spec.key} must be one of: ${(spec.enum ?? []).join(', ')}`
+            );
+            break;
+        case 'enumInteger':
+            schema = z.number().int(`${spec.key} must be an integer`).refine(
+                value => (spec.enum ?? []).includes(value),
+                `${spec.key} must be one of: ${(spec.enum ?? []).join(', ')}`
+            );
+            break;
+        case 'intArray':
+            schema = z.array(z.number().int(`${spec.key} entries must be integers`));
+            break;
+        case 'intMatrix':
+            schema = z.array(z.array(z.number().int(`${spec.key} entries must be integers`)));
+            break;
+        case 'uma':
+            schema = z.union([
+                z.array(z.number().int('uma entries must be integers')).min(3).max(4),
+                z.array(z.array(z.number().int('uma entries must be integers')).min(3).max(4)).min(1)
+            ]) as z.ZodType<RuleValue>;
+            break;
+    }
 
-export const gameRulesDetailsSchema = z.strictObject({
-    links: z.array(gameRulesLinkSchema).optional(),
-    sections: z.array(gameRulesSectionSchema).min(1, 'Must have at least one section'),
-});
+    if (spec.type === 'integer' || spec.type === 'enumInteger') {
+        const numberSchema = schema as z.ZodNumber;
+        schema = numberSchema
+            .refine(value => spec.min === undefined || value >= spec.min, `${spec.key} must be >= ${spec.min}`)
+            .refine(value => spec.max === undefined || value <= spec.max, `${spec.key} must be <= ${spec.max}`)
+            .refine(value => spec.multipleOf === undefined || value % spec.multipleOf === 0, `${spec.key} must be a multiple of ${spec.multipleOf}`);
+    }
+
+    if (spec.type === 'intArray' && spec.length !== undefined) {
+        schema = (schema as z.ZodArray<z.ZodNumber>).length(spec.length, `${spec.key} must have ${spec.length} entries`);
+    }
+
+    return schema;
+}
+
+export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRulesDetails> {
+    const ruleShape = Object.fromEntries(
+        catalog.rules.map(spec => [spec.key, spec.required ? ruleSpecToSchema(spec) : ruleSpecToSchema(spec).optional()])
+    );
+
+    return z.strictObject({
+        preset: z.string().trim().min(1, 'Preset cannot be empty').optional(),
+        rules: z.strictObject(ruleShape),
+        links: z.array(gameRulesLinkSchema).optional(),
+        clubRules: z.array(clubRuleEntrySchema).refine(
+            entries => new Set(entries.map(entry => entry.key)).size === entries.length,
+            'clubRules keys must be unique'
+        ).optional()
+    }) as z.ZodType<GameRulesDetails>;
+}
+
+export const gameRulesDetailsSchema = buildDetailsSchema(gameRulesCatalog);
 
 export const gameRulesGetByIdSchema = z.object({
     params: z.object({

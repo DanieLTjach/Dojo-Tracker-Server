@@ -7,6 +7,14 @@ const router = Router();
 const gameRulesController = new GameRulesController();
 
 /**
+ * GET /api/game-rules/catalog
+ * Get public compact details catalog
+ *
+ * Authentication: Not required
+ */
+router.get('/catalog', withTransaction((req, res) => gameRulesController.getCatalog(req, res)));
+
+/**
  * GET /api/game-rules
  * Get all game rules
  *

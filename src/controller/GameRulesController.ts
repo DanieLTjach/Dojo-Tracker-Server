@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { GameRulesService } from '../service/GameRulesService.ts';
 import { gameRulesDetailsUpdateSchema, gameRulesGetByIdSchema, gameRulesGetListSchema } from '../schema/GameRulesSchemas.ts';
+import { gameRulesCatalog } from '../data/gameRulesCatalog.ts';
 
 export class GameRulesController {
     private gameRulesService: GameRulesService = new GameRulesService();
@@ -16,6 +17,12 @@ export class GameRulesController {
         const { params: { id } } = gameRulesGetByIdSchema.parse(req);
         const gameRules = this.gameRulesService.getGameRulesById(id);
         return res.status(StatusCodes.OK).json(gameRules);
+    }
+
+    getCatalog(_req: Request, res: Response) {
+        return res.status(StatusCodes.OK)
+            .set('Cache-Control', 'public, max-age=300')
+            .json(gameRulesCatalog);
     }
 
     updateGameRulesDetails(req: Request, res: Response) {

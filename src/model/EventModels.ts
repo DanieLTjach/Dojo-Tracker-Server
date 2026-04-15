@@ -5,43 +5,32 @@ export const UmaTieBreak = {
 
 export type UmaTieBreak = typeof UmaTieBreak[keyof typeof UmaTieBreak];
 
-export type TooltipBlock =
-    | { type: 'paragraph'; text: string }
-    | { type: 'list'; items: string[] }
-    | { type: 'definitionList'; items: { term: string; description: string }[] }
-    | { type: 'example'; text: string };
-
-export interface GameRulesTooltip {
-    label: string;
-    content: TooltipBlock[];
+export interface LocaleText {
+    uk: string;
+    en?: string | undefined;
+    ja?: string | undefined;
 }
 
-export interface GameRulesDetailsLink {
+export type RuleValue = boolean | number | string | number[] | number[][];
+
+export interface LinkEntry {
     url: string;
-    label: string;
+    label: LocaleText;
 }
 
-export interface GameRulesSection {
-    name: string;
-    tooltip?: GameRulesTooltip | undefined;
-    groups: GameRulesGroup[];
-}
-
-export interface GameRulesGroup {
-    name: string;
-    tooltip?: GameRulesTooltip | undefined;
-    rules: GameRulesDetailsRule[];
-}
-
-export interface GameRulesDetailsRule {
-    rule: string;
-    value: string;
-    tooltip?: GameRulesTooltip | undefined;
+export interface ClubRuleEntry {
+    key: string;
+    category: 'yaku' | 'fu' | 'rule';
+    value: RuleValue;
+    name: LocaleText;
+    tooltip?: LocaleText | undefined;
 }
 
 export interface GameRulesDetails {
-    links?: GameRulesDetailsLink[] | undefined;
-    sections: GameRulesSection[];
+    preset?: string | undefined;
+    rules: Record<string, RuleValue>;
+    links?: LinkEntry[] | undefined;
+    clubRules?: ClubRuleEntry[] | undefined;
 }
 
 export interface GameRules {

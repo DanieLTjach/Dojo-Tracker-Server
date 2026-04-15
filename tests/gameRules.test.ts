@@ -20,6 +20,16 @@ describe('Game Rules API Endpoints', () => {
         cleanupTestDatabase();
     });
 
+    describe('GET /api/game-rules/catalog', () => {
+        test('should return public catalog without authentication', async () => {
+            const response = await request(app).get('/api/game-rules/catalog');
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body.rules)).toBe(true);
+            expect(response.body.rules.some((rule: { key: string }) => rule.key === 'number_of_players')).toBe(true);
+        });
+    });
+
     describe('GET /api/game-rules', () => {
         test('should return list of game rules with correct structure', async () => {
             const response = await request(app)
