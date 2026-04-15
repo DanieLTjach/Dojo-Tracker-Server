@@ -33,7 +33,7 @@ interface WizardState {
     name?: string;
     numberOfPlayers?: number;
     startingPoints?: number;
-    uma?: string;
+    uma?: number[] | number[][];
     umaLabel?: string;
     umaTieBreak?: string;
     chomboPointsAfterUma?: number | null;
@@ -49,16 +49,16 @@ const PENDING_WIZARD_TTL_MS = 10 * 60 * 1000;
 
 interface UmaPreset {
     label: string;
-    value: string;
+    value: number[] | number[][];
 }
 
 const UMA_PRESETS_4P: UmaPreset[] = [
-    { label: '15 / 5 / -5 / -15', value: '15,5,-5,-15' },
-    { label: 'Плаваюча', value: '24,-2,-6,-16;16,8,-8,-16;16,6,2,-24' }
+    { label: '15 / 5 / -5 / -15', value: [15, 5, -5, -15] },
+    { label: 'Плаваюча', value: [[24, -2, -6, -16], [16, 8, -8, -16], [16, 6, 2, -24]] }
 ];
 
 const UMA_PRESETS_3P: UmaPreset[] = [
-    { label: '15 / 0 / -15', value: '15,0,-15' }
+    { label: '15 / 0 / -15', value: [15, 0, -15] }
 ];
 
 function umaPresetsFor(numberOfPlayers: number): UmaPreset[] {
@@ -68,14 +68,12 @@ function umaPresetsFor(numberOfPlayers: number): UmaPreset[] {
 export function buildBaseDetails(params: {
     numberOfPlayers: number;
     startingPoints: number;
-    umaLabel: string;
     umaTieBreak: string;
     chomboPointsAfterUma: number | null;
 }): GameRulesDetails {
     const rules: Record<string, RuleValue> = {
         number_of_players: params.numberOfPlayers,
         starting_points: params.startingPoints,
-        uma: parseUmaLabel(params.umaLabel),
         uma_tie_break: params.umaTieBreak === 'WIND' ? 'by_wind' : 'equal_split',
     };
     if (params.chomboPointsAfterUma !== null) {
@@ -91,15 +89,6 @@ export function buildBaseDetails(params: {
     };
 }
 
-function parseUmaLabel(umaLabel: string): number[] | number[][] {
-    if (umaLabel === 'Плаваюча') {
-        return [[24, -2, -6, -16], [16, 8, -8, -16], [16, 6, 2, -24]];
-    }
-
-    const values = umaLabel.split('/').map(part => Number(part.trim().replace(/^\+/, '')));
-    return values.every(Number.isInteger) ? values : [];
-}
-
 function formatNumber(n: number): string {
     return n === 0 ? '0' : n.toLocaleString('uk-UA');
 }
@@ -113,16 +102,10 @@ function formatChombo(points: number | null): string {
     return points === null ? 'none' : `${formatNumber(points)} after uma`;
 }
 
-function findUmaPresetLabel(umaString: string, numberOfPlayers: number): string {
+function findUmaPresetLabel(uma: number[] | number[][], numberOfPlayers: number): string {
     const presets = umaPresetsFor(numberOfPlayers);
-    return presets.find(p => p.value === umaString)?.label ?? umaString;
-}
-
-function umaToString(uma: number[] | number[][]): string {
-    if (Array.isArray(uma[0])) {
-        return (uma as number[][]).map(row => row.join(',')).join(';');
-    }
-    return (uma as number[]).join(',');
+    const serialized = JSON.stringify(uma);
+    return presets.find(p => JSON.stringify(p.value) === serialized)?.label ?? serialized;
 }
 
 class TelegramGameRulesService {
@@ -314,8 +297,7 @@ class TelegramGameRulesService {
         const rulesId = parseInt(ctx.match[1]!);
         const rules = this.gameRulesService.getGameRulesById(rulesId);
 
-        const umaStr = umaToString(rules.uma);
-        const umaLabel = findUmaPresetLabel(umaStr, rules.numberOfPlayers);
+        const umaLabel = findUmaPresetLabel(rules.uma, rules.numberOfPlayers);
         const tiebreakLabel = rules.umaTieBreak === 'WIND' ? 'За вітром' : 'Ділити порівну';
         const chombo = rules.chomboPointsAfterUma === null
             ? 'без чомбо'
@@ -433,7 +415,6 @@ class TelegramGameRulesService {
         const details = buildBaseDetails({
             numberOfPlayers: pending.numberOfPlayers!,
             startingPoints: pending.startingPoints!,
-            umaLabel: pending.umaLabel!,
             umaTieBreak: pending.umaTieBreak!,
             chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
         });
@@ -501,8 +482,6 @@ class TelegramGameRulesService {
             this.validateUserCanEditClub(user, rules.clubId);
         }
 
-        const umaStr = umaToString(rules.uma);
-
         this.pendingEdits.set(ctx.from.id, {
             gameRulesId: rulesId,
             clubId: rules.clubId!,
@@ -510,8 +489,8 @@ class TelegramGameRulesService {
             name: rules.name,
             numberOfPlayers: rules.numberOfPlayers,
             startingPoints: rules.startingPoints,
-            uma: umaStr,
-            umaLabel: findUmaPresetLabel(umaStr, rules.numberOfPlayers),
+            uma: rules.uma,
+            umaLabel: findUmaPresetLabel(rules.uma, rules.numberOfPlayers),
             umaTieBreak: rules.umaTieBreak,
             chomboPointsAfterUma: rules.chomboPointsAfterUma,
             timestamp: Date.now()
@@ -589,7 +568,6 @@ class TelegramGameRulesService {
             const details = buildBaseDetails({
                 numberOfPlayers: pending.numberOfPlayers!,
                 startingPoints: pending.startingPoints!,
-                umaLabel: pending.umaLabel!,
                 umaTieBreak: pending.umaTieBreak!,
                 chomboPointsAfterUma: pending.chomboPointsAfterUma ?? null,
             });
@@ -662,7 +640,6 @@ class TelegramGameRulesService {
         const source = rules.details ?? buildBaseDetails({
             numberOfPlayers: rules.numberOfPlayers,
             startingPoints: rules.startingPoints,
-            umaLabel: findUmaPresetLabel(umaToString(rules.uma), rules.numberOfPlayers),
             umaTieBreak: rules.umaTieBreak,
             chomboPointsAfterUma: rules.chomboPointsAfterUma,
         });
@@ -1110,7 +1087,7 @@ class TelegramGameRulesService {
         return [
             `<b>Players:</b> ${rule.numberOfPlayers}`,
             `<b>Starting points:</b> ${formatNumber(rule.startingPoints)}`,
-            `<b>Uma:</b> ${findUmaPresetLabel(umaToString(rule.uma), rule.numberOfPlayers)}`,
+            `<b>Uma:</b> ${findUmaPresetLabel(rule.uma, rule.numberOfPlayers)}`,
             `<b>Chombo:</b> ${formatChombo(rule.chomboPointsAfterUma)}`,
             `<b>Tiebreak:</b> ${rule.umaTieBreak}`,
         ].join('\n');
@@ -1123,8 +1100,8 @@ class TelegramGameRulesService {
         if (oldRule.numberOfPlayers !== newRule.numberOfPlayers) changes.push(`<b>Players:</b> ${oldRule.numberOfPlayers} → ${newRule.numberOfPlayers}`);
         if (oldRule.startingPoints !== newRule.startingPoints) changes.push(`<b>Starting points:</b> ${formatNumber(oldRule.startingPoints)} → ${formatNumber(newRule.startingPoints)}`);
 
-        const oldUma = findUmaPresetLabel(umaToString(oldRule.uma), oldRule.numberOfPlayers);
-        const newUma = findUmaPresetLabel(umaToString(newRule.uma), newRule.numberOfPlayers);
+        const oldUma = findUmaPresetLabel(oldRule.uma, oldRule.numberOfPlayers);
+        const newUma = findUmaPresetLabel(newRule.uma, newRule.numberOfPlayers);
         if (oldUma !== newUma) changes.push(`<b>Uma:</b> ${oldUma} → ${newUma}`);
         if (oldRule.chomboPointsAfterUma !== newRule.chomboPointsAfterUma) changes.push(`<b>Chombo:</b> ${formatChombo(oldRule.chomboPointsAfterUma)} → ${formatChombo(newRule.chomboPointsAfterUma)}`);
         if (oldRule.umaTieBreak !== newRule.umaTieBreak) changes.push(`<b>Tiebreak:</b> ${oldRule.umaTieBreak} → ${newRule.umaTieBreak}`);
@@ -1299,7 +1276,7 @@ export function buildDiffSummary(oldDetails: GameRulesDetails | null, newDetails
 }
 
 function linkLabel(link: LinkEntry): string {
-    return link.label.uk || link.label.en || link.label.ja || link.url;
+    return link.label.uk || link.url;
 }
 
 function detailsJsonBuffer(details: GameRulesDetails): Buffer {

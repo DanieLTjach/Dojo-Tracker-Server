@@ -12,7 +12,7 @@ const ADMIN_USER_ID = 0;
 const baseParams: InsertGameRulesParams = {
     name: 'CRUD Test Rules',
     numberOfPlayers: 4,
-    uma: '15,5,-5,-15',
+    uma: [15, 5, -5, -15],
     startingPoints: 25000,
     chomboPointsAfterUma: null,
     umaTieBreak: 'DIVIDE',
@@ -62,7 +62,7 @@ describe('Game Rules CRUD', () => {
             const updatedParams: InsertGameRulesParams = {
                 name: 'Updated Rules',
                 numberOfPlayers: 3,
-                uma: '15,0,-15',
+                uma: [15, 0, -15],
                 startingPoints: 30000,
                 chomboPointsAfterUma: 20000,
                 umaTieBreak: 'WIND',

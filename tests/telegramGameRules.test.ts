@@ -149,7 +149,6 @@ describe('TelegramGameRulesService', () => {
             const result = buildBaseDetails({
                 numberOfPlayers: 4,
                 startingPoints: 25000,
-                umaLabel: '15 / 5 / -5 / -15',
                 umaTieBreak: 'WIND',
                 chomboPointsAfterUma: 20000,
             });
@@ -157,7 +156,6 @@ describe('TelegramGameRulesService', () => {
             const rules = baseRules(result);
             expect(rules['number_of_players']).toBe(4);
             expect(rules['starting_points']).toBe(25000);
-            expect(rules['uma']).toEqual([15, 5, -5, -15]);
             expect(rules['uma_tie_break']).toBe('by_wind');
             expect(rules['chombo']).toBe('twenty_thousand_after_uma');
         });
@@ -166,7 +164,6 @@ describe('TelegramGameRulesService', () => {
             const result = buildBaseDetails({
                 numberOfPlayers: 3,
                 startingPoints: 0,
-                umaLabel: '15 / 0 / -15',
                 umaTieBreak: 'DIVIDE',
                 chomboPointsAfterUma: null,
             });
@@ -182,7 +179,6 @@ describe('TelegramGameRulesService', () => {
             const result = buildBaseDetails({
                 numberOfPlayers: 4,
                 startingPoints: 30000,
-                umaLabel: '15 / 5 / -5 / -15',
                 umaTieBreak: 'WIND',
                 chomboPointsAfterUma: null,
             });
@@ -240,7 +236,7 @@ describe('TelegramGameRulesService', () => {
             expect(created!.numberOfPlayers).toBe(4);
             expect(created!.startingPoints).toBe(25000);
             expect(created!.details).not.toBeNull();
-            expect(Object.keys(baseRules(created!.details!))).toHaveLength(5);
+            expect(Object.keys(baseRules(created!.details!))).toHaveLength(4);
         });
     });
 
@@ -251,7 +247,7 @@ describe('TelegramGameRulesService', () => {
             editRuleId = repo.insertGameRules({
                 name: 'Edit Test Rules',
                 numberOfPlayers: 4,
-                uma: '15,5,-5,-15',
+                uma: [15, 5, -5, -15],
                 startingPoints: 25000,
                 chomboPointsAfterUma: null,
                 umaTieBreak: 'DIVIDE',
@@ -308,7 +304,7 @@ describe('TelegramGameRulesService', () => {
             const ruleId = repo.insertGameRules({
                 name: 'Referenced Edit Rules',
                 numberOfPlayers: 4,
-                uma: '15,5,-5,-15',
+                uma: [15, 5, -5, -15],
                 startingPoints: 25000,
                 chomboPointsAfterUma: null,
                 umaTieBreak: 'DIVIDE',
@@ -351,7 +347,7 @@ describe('TelegramGameRulesService', () => {
             viewRuleId = repo.insertGameRules({
                 name: 'View Test Rules',
                 numberOfPlayers: 4,
-                uma: '15,5,-5,-15',
+                uma: [15, 5, -5, -15],
                 startingPoints: 25000,
                 chomboPointsAfterUma: null,
                 umaTieBreak: 'DIVIDE',
@@ -375,7 +371,7 @@ describe('TelegramGameRulesService', () => {
             const ruleId = repo.insertGameRules({
                 name: 'Delete Test Rules',
                 numberOfPlayers: 4,
-                uma: '15,5,-5,-15',
+                uma: [15, 5, -5, -15],
                 startingPoints: 25000,
                 chomboPointsAfterUma: null,
                 umaTieBreak: 'DIVIDE',
@@ -398,7 +394,7 @@ describe('TelegramGameRulesService', () => {
             const ruleId = repo.insertGameRules({
                 name: 'Referenced Delete Rules',
                 numberOfPlayers: 4,
-                uma: '15,5,-5,-15',
+                uma: [15, 5, -5, -15],
                 startingPoints: 25000,
                 chomboPointsAfterUma: null,
                 umaTieBreak: 'DIVIDE',
@@ -457,7 +453,7 @@ describe('TelegramGameRulesService', () => {
             detailsRuleId = repo.insertGameRules({
                 name: 'Details Upload Rules',
                 numberOfPlayers: 4,
-                uma: '15,5,-5,-15',
+                uma: [15, 5, -5, -15],
                 startingPoints: 25000,
                 chomboPointsAfterUma: null,
                 umaTieBreak: 'DIVIDE',

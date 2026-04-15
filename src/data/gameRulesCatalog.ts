@@ -1,4 +1,4 @@
-export type RuleSpecType = 'boolean' | 'integer' | 'string' | 'enumString' | 'enumInteger' | 'intArray' | 'intMatrix' | 'uma';
+export type RuleSpecType = 'boolean' | 'integer' | 'string' | 'enumString' | 'enumInteger' | 'intArray' | 'intMatrix';
 
 export interface RuleSpec {
     key: string;
@@ -161,7 +161,6 @@ export const gameRulesCatalog = {
         { key: 'triple_triplets', type: 'enumInteger', enum: [2] },
         { key: 'twin_sequences', type: 'enumInteger', enum: [1] },
         { key: 'two_han_minimum', type: 'boolean' },
-        { key: 'uma', type: 'uma' },
         { key: 'uma_tie_break', type: 'enumString', enum: ["by_wind","equal_split"] },
         { key: 'unbroken', type: 'string' },
         { key: 'ura_dora', type: 'boolean' },

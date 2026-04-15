@@ -21,7 +21,17 @@ WHERE id = 1
   AND name = 'Сезон 3-5 йонма';
 
 INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId, umaTieBreak)
-VALUES (10, 'Сезон 5 йонма', 4, '15,5,-5,-15', 30000, NULL, 1, 'DIVIDE');
+VALUES (10, 'Сезон 5 йонма', 4, '[15,5,-5,-15]', 30000, NULL, 1, 'DIVIDE');
+
+UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE id = 1;
+UPDATE gameRules SET uma = '[[24,-2,-6,-16],[16,8,-8,-16],[16,6,2,-24]]' WHERE id = 2;
+UPDATE gameRules SET uma = '[15,0,-15]' WHERE id = 3;
+UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE id = 4;
+UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE id = 5;
+UPDATE gameRules SET uma = '[15,0,-15]' WHERE id = 6;
+UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE id = 7;
+UPDATE gameRules SET uma = '[15,0,-15]' WHERE id = 8;
+UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE id = 9;
 
 UPDATE event
 SET gameRules = 10

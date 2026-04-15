@@ -66,12 +66,6 @@ function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
         case 'intMatrix':
             schema = z.array(z.array(z.number().int(`${spec.key} entries must be integers`)));
             break;
-        case 'uma':
-            schema = z.union([
-                z.array(z.number().int('uma entries must be integers')).min(3).max(4),
-                z.array(z.array(z.number().int('uma entries must be integers')).min(3).max(4)).min(1)
-            ]) as z.ZodType<RuleValue>;
-            break;
     }
 
     if (spec.type === 'integer' || spec.type === 'enumInteger') {

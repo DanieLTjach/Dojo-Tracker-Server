@@ -124,7 +124,7 @@ export class GameRulesRepository {
         return this.findAllGameRulesWithoutDetailsByClubIdStatement().all({ clubId }).map(gameRulesFromDBEntity);
     }
 
-    private insertGameRulesStatement(): Statement<InsertGameRulesParams, void> {
+    private insertGameRulesStatement(): Statement<Omit<InsertGameRulesParams, 'uma'> & { uma: string }, void> {
         return dbManager.db.prepare(`
             INSERT INTO gameRules (name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak, clubId)
             VALUES (:name, :numberOfPlayers, :uma, :startingPoints, :chomboPointsAfterUma, :umaTieBreak, :clubId)
@@ -132,11 +132,12 @@ export class GameRulesRepository {
     }
 
     insertGameRules(params: InsertGameRulesParams): number {
-        const result = this.insertGameRulesStatement().run(params);
+        const { uma, ...rest } = params;
+        const result = this.insertGameRulesStatement().run({ ...rest, uma: JSON.stringify(uma) });
         return Number(result.lastInsertRowid);
     }
 
-    private updateGameRulesStatement(): Statement<UpdateGameRulesParams, void> {
+    private updateGameRulesStatement(): Statement<Omit<UpdateGameRulesParams, 'uma'> & { uma: string }, void> {
         return dbManager.db.prepare(`
             UPDATE gameRules
             SET name = :name, numberOfPlayers = :numberOfPlayers, uma = :uma,
@@ -147,7 +148,8 @@ export class GameRulesRepository {
     }
 
     updateGameRules(id: number, params: InsertGameRulesParams): void {
-        this.updateGameRulesStatement().run({ id, ...params });
+        const { uma, ...rest } = params;
+        this.updateGameRulesStatement().run({ id, ...rest, uma: JSON.stringify(uma) });
     }
 
     private deleteGameRulesStatement(): Statement<{ id: number }, void> {
@@ -166,7 +168,7 @@ interface UpdateGameRulesParams extends InsertGameRulesParams {
 export interface InsertGameRulesParams {
     name: string;
     numberOfPlayers: number;
-    uma: string;
+    uma: number[] | number[][];
     startingPoints: number;
     chomboPointsAfterUma: number | null;
     umaTieBreak: string;
