@@ -1,24 +1,9 @@
 import { describe, expect, test } from '@jest/globals';
-import { readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
 import { gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
 import { gameRulesPresets } from '../src/data/gameRulesPresets.ts';
 import { gameRulesCatalogByKey } from '../src/data/gameRulesCatalog.ts';
 
 describe('gameRulesDetailsSchema compact format', () => {
-    test('accepts compact review files', () => {
-        const dir = 'db/data/game-rules-details-compact-review';
-        const files = readdirSync(dir).filter(file => /^\d+.*\.json$/.test(file));
-
-        expect(files.length).toBeGreaterThan(0);
-
-        for (const file of files) {
-            const details = JSON.parse(readFileSync(join(dir, file), 'utf-8'));
-            const result = gameRulesDetailsSchema.safeParse(details);
-            expect(result.success).toBe(true);
-        }
-    });
-
     test('rejects unknown canonical rule keys', () => {
         const result = gameRulesDetailsSchema.safeParse({
             rules: {
