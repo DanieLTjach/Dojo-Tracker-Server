@@ -13,10 +13,12 @@ CREATE TABLE clubPollConfig (
     modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
+UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE numberOfPlayers = 4;
+UPDATE gameRules SET uma = '[15,0,-15]' WHERE numberOfPlayers = 3;
+UPDATE gameRules SET uma = '[[24,-2,-6,-16],[16,8,-8,-16],[16,6,2,-24]]' WHERE name = 'Сезон 6 йонма';
+
 ALTER TABLE gameRules ADD COLUMN details TEXT;
 
--- Split "Сезон 3-5 йонма" into "Сезон 3-4 йонма" (id=1) and a new "Сезон 5 йонма" (id=10),
--- then reassign the Season 5 event to the new rules row.
 UPDATE gameRules
 SET name = 'Сезон 3-4 йонма'
 WHERE id = 1
@@ -24,17 +26,6 @@ WHERE id = 1
 
 INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId, umaTieBreak)
 VALUES (10, 'Сезон 5 йонма', 4, '[15,5,-5,-15]', 30000, NULL, 1, 'DIVIDE');
-
--- Convert uma from legacy comma/semicolon strings to JSON (arrays for flat uma, nested arrays for tiered).
-UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE id = 1;
-UPDATE gameRules SET uma = '[[24,-2,-6,-16],[16,8,-8,-16],[16,6,2,-24]]' WHERE id = 2;
-UPDATE gameRules SET uma = '[15,0,-15]' WHERE id = 3;
-UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE id = 4;
-UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE id = 5;
-UPDATE gameRules SET uma = '[15,0,-15]' WHERE id = 6;
-UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE id = 7;
-UPDATE gameRules SET uma = '[15,0,-15]' WHERE id = 8;
-UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE id = 9;
 
 UPDATE event
 SET gameRules = 10
