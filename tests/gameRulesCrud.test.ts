@@ -196,10 +196,10 @@ describe('Game Rules CRUD', () => {
 
             expect(updated.details).not.toBeNull();
             expect(updated.details!.preset).toBe('ema_2025');
-            expect(updated.details!.rules.number_of_players).toBe(4);
-            expect(updated.details!.rules.starting_points).toBe(25000);
-            expect(updated.details!.rules.open_tanyao).toBe(true);
-            expect(updated.details!.rules.red_fives).toBe('three_one_per_suit');
+            expect(updated.details!.rules['number_of_players']).toBe(4);
+            expect(updated.details!.rules['starting_points']).toBe(25000);
+            expect(updated.details!.rules['open_tanyao']).toBe(true);
+            expect(updated.details!.rules['red_fives']).toBe('three_one_per_suit');
 
             const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
             const stored = JSON.parse(raw.details);
@@ -213,8 +213,8 @@ describe('Game Rules CRUD', () => {
             const details = { preset: 'ema_2025', rules: {} };
             const updated = service.updateGameRulesDetails(createdRuleId, details, ADMIN_USER_ID);
 
-            expect(updated.details!.rules.number_of_players).toBe(4);
-            expect(updated.details!.rules.open_tanyao).toBe(true);
+            expect(updated.details!.rules['number_of_players']).toBe(4);
+            expect(updated.details!.rules['open_tanyao']).toBe(true);
 
             const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
             const stored = JSON.parse(raw.details);

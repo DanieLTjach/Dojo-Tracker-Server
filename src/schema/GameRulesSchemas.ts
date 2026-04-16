@@ -93,8 +93,8 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
     );
 
     const presetSchema = z.string().trim().min(1, 'Preset cannot be empty').refine(
-        key => gameRulesPresetsByKey.has(key),
-        key => ({ message: `Unknown preset: ${key}` })
+        (key) => gameRulesPresetsByKey.has(key),
+        { message: 'Unknown preset' }
     );
 
     return z.strictObject({

@@ -133,7 +133,8 @@ function compactDetails(details: GameRulesDetails): GameRulesDetails {
 
     const overrides: Record<string, RuleValue> = {};
     for (const [key, value] of Object.entries(details.rules)) {
-        if (!(key in preset.rules) || !ruleValuesEqual(value, preset.rules[key])) {
+        const presetValue = preset.rules[key];
+        if (presetValue === undefined || !ruleValuesEqual(value, presetValue)) {
             overrides[key] = value;
         }
     }

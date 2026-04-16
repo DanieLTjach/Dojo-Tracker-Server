@@ -1,9 +1,9 @@
 import { describe, expect, test } from '@jest/globals';
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
-import { gameRulesDetailsSchema, buildDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
-import { gameRulesPresets, gameRulesPresetsByKey } from '../src/data/gameRulesPresets.ts';
-import { gameRulesCatalog, gameRulesCatalogByKey } from '../src/data/gameRulesCatalog.ts';
+import { gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
+import { gameRulesPresets } from '../src/data/gameRulesPresets.ts';
+import { gameRulesCatalogByKey } from '../src/data/gameRulesCatalog.ts';
 
 describe('gameRulesDetailsSchema compact format', () => {
     test('accepts compact review files', () => {
@@ -96,8 +96,8 @@ describe('preset validation', () => {
 
         expect(result.success).toBe(true);
         if (result.success) {
-            expect(result.data.rules.starting_points).toBe(25000);
-            expect(result.data.rules.red_fives).toBe('three_one_per_suit');
+            expect(result.data.rules['starting_points']).toBe(25000);
+            expect(result.data.rules['red_fives']).toBe('three_one_per_suit');
         }
     });
 
@@ -161,7 +161,7 @@ describe('preset values match catalog constraints', () => {
     for (const preset of gameRulesPresets) {
         test(`${preset.key} values are valid per catalog`, () => {
             for (const [key, value] of Object.entries(preset.rules)) {
-                const spec = gameRulesCatalogByKey.get(key);
+                const spec = gameRulesCatalogByKey.get(key as never);
                 expect(spec).toBeDefined();
 
                 if (spec!.type === 'boolean') {
@@ -179,7 +179,7 @@ describe('preset values match catalog constraints', () => {
 
         test(`${preset.key} keys are all known catalog keys`, () => {
             for (const key of Object.keys(preset.rules)) {
-                expect(gameRulesCatalogByKey.has(key)).toBe(true);
+                expect(gameRulesCatalogByKey.has(key as never)).toBe(true);
             }
         });
     }
