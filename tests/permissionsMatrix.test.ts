@@ -148,7 +148,7 @@ describe('Permissions matrix integration specification', () => {
         dbManager.db.prepare(
             `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId)
              VALUES (?, ?, ?, ?, ?, ?, ?)`
-        ).run(gameRulesId, name, numberOfPlayers, '15,0,-15', startingPoints, null, clubId);
+        ).run(gameRulesId, name, numberOfPlayers, '[15,0,-15]', startingPoints, null, clubId);
     }
 
     function insertEvent(eventId: number, name: string, clubId: number | null, gameRulesId: number): void {
