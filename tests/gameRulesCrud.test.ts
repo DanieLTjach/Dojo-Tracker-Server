@@ -181,6 +181,65 @@ describe('Game Rules CRUD', () => {
             repo.deleteGameRules(ruleId);
         });
 
+        test('updateGameRulesDetails with preset stores only overrides', () => {
+            const fullRules = {
+                preset: 'ema_2025',
+                rules: {
+                    number_of_players: 4,
+                    starting_points: 25000,
+                    open_tanyao: true,
+                    red_fives: 'three_one_per_suit',
+                }
+            };
+
+            const updated = service.updateGameRulesDetails(createdRuleId, fullRules, ADMIN_USER_ID);
+
+            expect(updated.details).not.toBeNull();
+            expect(updated.details!.preset).toBe('ema_2025');
+            expect(updated.details!.rules.number_of_players).toBe(4);
+            expect(updated.details!.rules.starting_points).toBe(25000);
+            expect(updated.details!.rules.open_tanyao).toBe(true);
+            expect(updated.details!.rules.red_fives).toBe('three_one_per_suit');
+
+            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
+            const stored = JSON.parse(raw.details);
+            expect(stored.rules.starting_points).toBe(25000);
+            expect(stored.rules.red_fives).toBe('three_one_per_suit');
+            expect(stored.rules.number_of_players).toBeUndefined();
+            expect(stored.rules.open_tanyao).toBeUndefined();
+        });
+
+        test('updateGameRulesDetails with preset and empty overrides stores empty rules', () => {
+            const details = { preset: 'ema_2025', rules: {} };
+            const updated = service.updateGameRulesDetails(createdRuleId, details, ADMIN_USER_ID);
+
+            expect(updated.details!.rules.number_of_players).toBe(4);
+            expect(updated.details!.rules.open_tanyao).toBe(true);
+
+            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
+            const stored = JSON.parse(raw.details);
+            expect(Object.keys(stored.rules).length).toBe(0);
+        });
+
+        test('updateGameRulesDetails without preset stores all rules', () => {
+            const details = {
+                rules: {
+                    number_of_players: 4,
+                    starting_points: 30000,
+                    open_tanyao: true,
+                }
+            };
+
+            service.updateGameRulesDetails(createdRuleId, details, ADMIN_USER_ID);
+
+            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
+            const stored = JSON.parse(raw.details);
+            expect(stored.rules.number_of_players).toBe(4);
+            expect(stored.rules.starting_points).toBe(30000);
+            expect(stored.rules.open_tanyao).toBe(true);
+            expect(stored.preset).toBeUndefined();
+        });
+
         test('createGameRules with non-owner non-admin throws InsufficientClubPermissionsError', () => {
             const nonOwnerUserId = 999;
             dbManager.db.prepare(
