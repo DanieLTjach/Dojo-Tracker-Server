@@ -7,6 +7,14 @@ const router = Router();
 const gameRulesController = new GameRulesController();
 
 /**
+ * GET /api/game-rules/catalog
+ * Get public compact details catalog
+ *
+ * Authentication: Not required
+ */
+router.get('/catalog', withTransaction((req, res) => gameRulesController.getCatalog(req, res)));
+
+/**
  * GET /api/game-rules
  * Get all game rules
  *
@@ -21,5 +29,13 @@ router.get('/', requireAuth, withTransaction((req, res) => gameRulesController.g
  * Authentication: Required
  */
 router.get('/:id', requireAuth, withTransaction((req, res) => gameRulesController.getGameRulesById(req, res)));
+
+/**
+ * PUT /api/game-rules/:id/details
+ * Update game rules details
+ *
+ * Authentication: Required
+ */
+router.put('/:id/details', requireAuth, withTransaction((req, res) => gameRulesController.updateGameRulesDetails(req, res)));
 
 export default router;

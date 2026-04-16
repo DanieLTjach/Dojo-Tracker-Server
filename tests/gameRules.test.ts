@@ -20,6 +20,16 @@ describe('Game Rules API Endpoints', () => {
         cleanupTestDatabase();
     });
 
+    describe('GET /api/game-rules/catalog', () => {
+        test('should return public catalog without authentication', async () => {
+            const response = await request(app).get('/api/game-rules/catalog');
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body.rules)).toBe(true);
+            expect(response.body.rules.some((rule: { key: string }) => rule.key === 'number_of_players')).toBe(true);
+        });
+    });
+
     describe('GET /api/game-rules', () => {
         test('should return list of game rules with correct structure', async () => {
             const response = await request(app)
@@ -84,17 +94,17 @@ describe('Game Rules API Endpoints', () => {
             dbManager.db.prepare(
                 `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`
-            ).run(clubRuleId, 'Club Rule', clubId, 4, '15,5,-5,-15', 30000, null);
+            ).run(clubRuleId, 'Club Rule', clubId, 4, '[15,5,-5,-15]', 30000, null);
 
             dbManager.db.prepare(
                 `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`
-            ).run(globalRuleId, 'Global Rule', null, 4, '15,5,-5,-15', 30000, null);
+            ).run(globalRuleId, 'Global Rule', null, 4, '[15,5,-5,-15]', 30000, null);
 
             dbManager.db.prepare(
                 `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`
-            ).run(otherClubRuleId, 'Other Club Rule', otherClubId, 4, '15,5,-5,-15', 30000, null);
+            ).run(otherClubRuleId, 'Other Club Rule', otherClubId, 4, '[15,5,-5,-15]', 30000, null);
 
             const response = await request(app)
                 .get(`/api/game-rules?clubId=${clubId}`)

@@ -16,3 +16,21 @@ export class UserNotClubOwnerTelegramError extends TelegramReplyError {
         super('Ви повинні бути власником клубу, щоб виконати цю дію');
     }
 }
+
+export class CannotDeleteGameRulesInUseTelegramError extends TelegramReplyError {
+    constructor(gameRulesName: string, eventCount: number) {
+        super(`Неможливо видалити правила "${gameRulesName}" — вони використовуються в ${eventCount} подіях`);
+    }
+}
+
+export class CannotUpdateGameRulesInUseTelegramError extends TelegramReplyError {
+    constructor(gameRulesName: string, eventCount: number) {
+        super(`Неможливо оновити правила "${gameRulesName}" — вони використовуються в ${eventCount} подіях`);
+    }
+}
+
+export class TelegramPendingCreationMissingError extends TelegramReplyError {
+    constructor() {
+        super('Сесію створення правил не знайдено або вона закінчилася. Спробуйте ще раз: /game_rules');
+    }
+}

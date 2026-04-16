@@ -28,6 +28,22 @@ class TelegramMessageService {
             console.error(`Error sending Telegram message to user ${telegramId}:`, error);
         }
     }
+
+    async sendDocument(topic: TelegramTopic, buffer: Buffer, filename: string, caption?: string): Promise<void> {
+        try {
+            await telegramBot.telegram.sendDocument(
+                topic.chatId,
+                { source: buffer, filename },
+                {
+                    parse_mode: 'HTML',
+                    ...(topic.topicId !== undefined ? { message_thread_id: topic.topicId } : {}),
+                    ...(caption !== undefined ? { caption } : {})
+                }
+            );
+        } catch (error) {
+            console.error(`Error sending Telegram document to chat ${topic.chatId} and topic ${topic.topicId}:`, error);
+        }
+    }
 }
 
 type SendMessageOptions = Omit<

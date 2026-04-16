@@ -5,6 +5,34 @@ export const UmaTieBreak = {
 
 export type UmaTieBreak = typeof UmaTieBreak[keyof typeof UmaTieBreak];
 
+export interface LocaleText {
+    uk: string;
+    en?: string | undefined;
+    ja?: string | undefined;
+}
+
+export type RuleValue = boolean | number | string | number[] | number[][];
+
+export interface LinkEntry {
+    url: string;
+    label: LocaleText;
+}
+
+export interface ClubRuleEntry {
+    key: string;
+    category: 'yaku' | 'fu' | 'rule';
+    value: RuleValue;
+    name: LocaleText;
+    tooltip?: LocaleText | undefined;
+}
+
+export interface GameRulesDetails {
+    preset?: string | undefined;
+    rules: Record<string, RuleValue>;
+    links?: LinkEntry[] | undefined;
+    clubRules?: ClubRuleEntry[] | undefined;
+}
+
 export interface GameRules {
     id: number;
     name: string;
@@ -14,6 +42,7 @@ export interface GameRules {
     startingPoints: number;
     chomboPointsAfterUma: number | null;
     umaTieBreak: UmaTieBreak;
+    details: GameRulesDetails | null;
 }
 
 export interface Event {
