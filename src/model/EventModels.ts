@@ -21,7 +21,7 @@ export interface LinkEntry {
 export interface ClubRuleEntry {
     key: string;
     category: 'yaku' | 'fu' | 'rule';
-    value: RuleValue;
+    value: boolean | number | string;
     name: LocaleText;
     tooltip?: LocaleText | undefined;
 }

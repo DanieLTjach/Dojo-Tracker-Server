@@ -20,18 +20,16 @@ const gameRulesLinkSchema = z.strictObject({
 
 const clubRuleCategorySchema = z.enum(['yaku', 'fu', 'rule']);
 
-const ruleValueSchema: z.ZodType<RuleValue> = z.union([
+const clubRuleValueSchema = z.union([
     z.boolean(),
     z.number().int(),
     z.string(),
-    z.array(z.number().int()),
-    z.array(z.array(z.number().int()))
-]) as z.ZodType<RuleValue>;
+]);
 
 const clubRuleEntrySchema = z.strictObject({
     key: z.string().regex(/^[a-z][a-z0-9_]*$/, 'Club rule key must be snake_case'),
     category: clubRuleCategorySchema,
-    value: ruleValueSchema,
+    value: clubRuleValueSchema,
     name: localeTextSchema,
     tooltip: localeTextSchema.optional()
 });
