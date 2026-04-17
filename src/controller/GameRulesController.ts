@@ -22,13 +22,13 @@ export class GameRulesController {
 
     getCatalog(_req: Request, res: Response) {
         return res.status(StatusCodes.OK)
-            .set('Cache-Control', 'public, max-age=300')
+            .set('Cache-Control', 'private, max-age=300')
             .json(gameRulesCatalog);
     }
 
     getPresets(_req: Request, res: Response) {
         return res.status(StatusCodes.OK)
-            .set('Cache-Control', 'public, max-age=300')
+            .set('Cache-Control', 'private, max-age=300')
             .json(
                 gameRulesPresets
                     .filter(preset => !preset.internal)
