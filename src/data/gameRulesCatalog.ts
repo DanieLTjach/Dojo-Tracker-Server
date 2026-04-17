@@ -1,4 +1,4 @@
-export type RuleSpecType = 'boolean' | 'integer' | 'string' | 'enumString' | 'enumInteger' | 'intArray' | 'intMatrix';
+export type RuleSpecType = 'boolean' | 'integer' | 'string' | 'enumString' | 'enumInteger';
 
 export interface RuleSpec {
     key: string;
@@ -7,7 +7,6 @@ export interface RuleSpec {
     min?: number;
     max?: number;
     multipleOf?: number;
-    length?: number;
     required?: boolean;
     constant?: boolean;
 }

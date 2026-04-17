@@ -11,7 +11,7 @@ export interface LocaleText {
     ja?: string | undefined;
 }
 
-export type RuleValue = boolean | number | string | number[] | number[][];
+export type RuleValue = boolean | number | string;
 
 export interface LinkEntry {
     url: string;

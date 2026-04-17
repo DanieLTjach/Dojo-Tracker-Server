@@ -59,12 +59,6 @@ function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
                 `${spec.key} must be one of: ${(spec.enum ?? []).join(', ')}`
             );
             break;
-        case 'intArray':
-            schema = z.array(z.number().int(`${spec.key} entries must be integers`));
-            break;
-        case 'intMatrix':
-            schema = z.array(z.array(z.number().int(`${spec.key} entries must be integers`)));
-            break;
     }
 
     if (spec.type === 'integer' || spec.type === 'enumInteger') {
@@ -73,10 +67,6 @@ function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
             .refine(value => spec.min === undefined || value >= spec.min, `${spec.key} must be >= ${spec.min}`)
             .refine(value => spec.max === undefined || value <= spec.max, `${spec.key} must be <= ${spec.max}`)
             .refine(value => spec.multipleOf === undefined || value % spec.multipleOf === 0, `${spec.key} must be a multiple of ${spec.multipleOf}`);
-    }
-
-    if (spec.type === 'intArray' && spec.length !== undefined) {
-        schema = (schema as z.ZodArray<z.ZodNumber>).length(spec.length, `${spec.key} must have ${spec.length} entries`);
     }
 
     return schema;
