@@ -264,9 +264,37 @@ const mahjongSoulRules: Record<string, RuleValue> = {
     yakuman_stacking: true,
 };
 
+const mahjongSoulSanmaRules: Record<string, RuleValue> = {
+    ...mahjongSoulRules,
+    number_of_players: 3,
+    chi: false,
+    removed_tiles: 'two_to_eight_manzu',
+    dora_after_1_manzu: 'nine_manzu',
+    scoring: 'tsumo_loss_ranked',
+    rinshan_tiles: 8,
+    north_kita_pei: 'nukidora',
+    kita_after_pon: false,
+    kita_cancels: 'ippatsu_chiho_kyushu_double_riichi',
+    rinshan_from_kita: true,
+    ron_on_kita: 'yes_without_chankan',
+    kita_and_furiten: 'no_effect',
+    north_as_yaku: 'no_guest_wind',
+    red_fives: 'two_red_fives_five_pin_and_north',
+    mixed_sequences: 'no_manzu',
+    abortive_draw: 'four_kans_nine_terminals',
+    honba: '2x100',
+    noten_penalty: 2000,
+    starting_points: 35000,
+    goal: 40000,
+    suufuu_suucha: 'no_three_players',
+    target_points: 40000,
+    uma_tie_break: 'by_wind',
+};
+
 export const gameRulesPresets: readonly GameRulesPreset[] = [
     { key: 'ema_2025', name: 'EMA 2025', rules: ema2025Rules },
     { key: 'mahjong_soul', name: 'Mahjong Soul', rules: mahjongSoulRules },
+    { key: 'mahjong_soul_sanma', name: 'Mahjong Soul Sanma', rules: mahjongSoulSanmaRules },
 ];
 
 export const gameRulesPresetsByKey = new Map(gameRulesPresets.map(p => [p.key, p]));
