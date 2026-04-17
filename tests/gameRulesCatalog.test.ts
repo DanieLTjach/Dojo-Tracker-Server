@@ -10,7 +10,7 @@ describe('gameRulesCatalog', () => {
 
         for (const rule of gameRulesCatalog.rules) {
             expect(rule.key).toMatch(/^[a-z][a-z0-9_]*$/);
-            expect(['boolean', 'integer', 'string', 'enumString', 'enumInteger', 'intArray', 'intMatrix']).toContain(rule.type);
+            expect(['boolean', 'integer', 'string', 'enumString', 'enumInteger']).toContain(rule.type);
             if (rule.type === 'enumString' || rule.type === 'enumInteger') {
                 expect(rule.enum?.length).toBeGreaterThan(0);
             }
