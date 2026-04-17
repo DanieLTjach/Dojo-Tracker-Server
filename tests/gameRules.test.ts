@@ -28,6 +28,17 @@ describe('Game Rules API Endpoints', () => {
             expect(Array.isArray(response.body.rules)).toBe(true);
             expect(response.body.rules.some((rule: { key: string }) => rule.key === 'number_of_players')).toBe(true);
         });
+
+        test('should include constant metadata for fixed-value rules', async () => {
+            const response = await request(app).get('/api/game-rules/catalog');
+
+            expect(response.status).toBe(200);
+            expect(response.body.rules.find((rule: { key: string }) => rule.key === 'after_a_quad')).toMatchObject({
+                key: 'after_a_quad',
+                enum: [1],
+                constant: true
+            });
+        });
     });
 
     describe('GET /api/game-rules/presets', () => {
@@ -191,6 +202,85 @@ describe('Game Rules API Endpoints', () => {
 
         test('should require authentication', async () => {
             const response = await request(app).get('/api/game-rules/1');
+            expect(response.status).toBe(401);
+        });
+    });
+
+    describe('PUT /api/game-rules/:id/details', () => {
+        test('should update details and return merged preset rules', async () => {
+            const clubId = 912;
+            const ruleId = 9104;
+            const timestamp = '2026-01-01T00:00:00.000Z';
+
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubId, 'Details Update Club', null, null, null, null, 1, timestamp, timestamp, 0);
+
+            dbManager.db.prepare(
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(ruleId, 'Details Update Rule', clubId, 4, '[15,5,-5,-15]', 30000, null, 'DIVIDE');
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}/details`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({
+                        details: {
+                            preset: 'ema_2025',
+                            rules: {
+                                starting_points: 25000,
+                                red_fives: 'three_one_per_suit'
+                            }
+                        }
+                    });
+
+                expect(response.status).toBe(200);
+                expect(response.body.details).toMatchObject({
+                    preset: 'ema_2025'
+                });
+                expect(response.body.details.rules.number_of_players).toBe(4);
+                expect(response.body.details.rules.open_tanyao).toBe(true);
+                expect(response.body.details.rules.starting_points).toBe(25000);
+                expect(response.body.details.rules.red_fives).toBe('three_one_per_suit');
+
+                const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(ruleId) as { details: string };
+                const stored = JSON.parse(raw.details);
+                expect(stored).toEqual({
+                    preset: 'ema_2025',
+                    rules: {
+                        starting_points: 25000,
+                        red_fives: 'three_one_per_suit'
+                    }
+                });
+            } finally {
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+                dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(clubId);
+            }
+        });
+
+        test('should reject internal presets', async () => {
+            const response = await request(app)
+                .put('/api/game-rules/1/details')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    details: {
+                        preset: 'default',
+                        rules: {}
+                    }
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should require authentication', async () => {
+            const response = await request(app)
+                .put('/api/game-rules/1/details')
+                .send({
+                    details: null
+                });
+
             expect(response.status).toBe(401);
         });
     });
