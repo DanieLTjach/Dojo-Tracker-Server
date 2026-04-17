@@ -1,8 +1,9 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
-import type { Event } from '../model/EventModels.ts';
+import type { Event, GameRulesDetails } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
+import { parseStoredGameRulesDetails } from '../util/GameRulesDetailsUtil.ts';
 
 export class EventRepository {
     private findAllEventsStatement(): Statement<[], EventWithGameRulesDBEntity> {
@@ -19,6 +20,7 @@ export class EventRepository {
                 gr.startingPoints as gr_startingPoints,
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
+                gr.details as gr_details,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
@@ -45,6 +47,7 @@ export class EventRepository {
                 gr.startingPoints as gr_startingPoints,
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
+                gr.details as gr_details,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
@@ -72,6 +75,7 @@ export class EventRepository {
                 gr.startingPoints as gr_startingPoints,
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
+                gr.details as gr_details,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
@@ -182,6 +186,16 @@ export class EventRepository {
         const result = dbManager.db.prepare(`SELECT 1 FROM gameRules WHERE id = ?`).get(gameRulesId);
         return result !== undefined;
     }
+
+    private countEventsByGameRulesIdStatement(): Statement<{ gameRulesId: number }, { count: number }> {
+        return dbManager.db.prepare(`
+            SELECT COUNT(*) as count FROM event WHERE gameRules = :gameRulesId
+        `);
+    }
+
+    countEventsByGameRulesId(gameRulesId: number): number {
+        return this.countEventsByGameRulesIdStatement().get({ gameRulesId })!.count;
+    }
 }
 
 export interface EventCreateParams {
@@ -237,6 +251,7 @@ interface EventWithGameRulesDBEntity {
     gr_startingPoints: number;
     gr_chomboPointsAfterUma: number | null;
     gr_umaTieBreak: string;
+    gr_details: string | null;
     gameCount: number;
 }
 
@@ -258,7 +273,8 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             uma: parseUma(dbEntity.gr_uma),
             startingPoints: dbEntity.gr_startingPoints,
             chomboPointsAfterUma: dbEntity.gr_chomboPointsAfterUma,
-            umaTieBreak: parseUmaTieBreak(dbEntity.gr_umaTieBreak)
+            umaTieBreak: parseUmaTieBreak(dbEntity.gr_umaTieBreak),
+            details: parseGameRulesDetails(dbEntity.gr_details)
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
@@ -267,4 +283,8 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy
     };
+}
+
+function parseGameRulesDetails(details: string | null): GameRulesDetails | null {
+    return parseStoredGameRulesDetails(details);
 }

@@ -191,6 +191,20 @@ describe('Event API Endpoints', () => {
             expect(typeof response.body.startingRating).toBe('number');
         });
 
+        test('should resolve preset-backed game rules details in event response', async () => {
+            const response = await request(app)
+                .get(`/api/events/${TEST_EVENT_ID}`)
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.gameRules.details).toMatchObject({
+                preset: 'ema_2025'
+            });
+            expect(response.body.gameRules.details.rules.number_of_players).toBe(4);
+            expect(response.body.gameRules.details.rules.open_tanyao).toBe(true);
+            expect(response.body.gameRules.details.rules.minimum_games_for_rating).toBe(5);
+        });
+
         test('should parse uma as 2D array of numbers in game rules', async () => {
             const response = await request(app)
                 .get(`/api/events/${TEST_EVENT_ID}`)

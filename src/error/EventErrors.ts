@@ -12,6 +12,34 @@ export class GameRulesNotFoundError extends NotFoundError {
     }
 }
 
+export class CannotDeleteGameRulesInUseError extends BadRequestError {
+    readonly gameRulesName: string;
+    readonly eventCount: number;
+
+    constructor(gameRulesName: string, eventCount: number) {
+        super(
+            `Неможливо видалити правила "${gameRulesName}" — вони використовуються в ${eventCount} подіях`,
+            'cannotDeleteGameRulesInUse'
+        );
+        this.gameRulesName = gameRulesName;
+        this.eventCount = eventCount;
+    }
+}
+
+export class CannotUpdateGameRulesInUseError extends BadRequestError {
+    readonly gameRulesName: string;
+    readonly eventCount: number;
+
+    constructor(gameRulesName: string, eventCount: number) {
+        super(
+            `Неможливо оновити правила "${gameRulesName}" — вони використовуються в ${eventCount} подіях`,
+            'cannotUpdateGameRulesInUse'
+        );
+        this.gameRulesName = gameRulesName;
+        this.eventCount = eventCount;
+    }
+}
+
 export class CannotDeleteEventWithGamesError extends BadRequestError {
     constructor(eventName: string, gameCount: number) {
         super(

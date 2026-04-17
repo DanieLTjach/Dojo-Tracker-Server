@@ -13,7 +13,33 @@ CREATE TABLE clubPollConfig (
     modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)
 );
-
 UPDATE gameRules SET uma = '[15,5,-5,-15]' WHERE numberOfPlayers = 4;
 UPDATE gameRules SET uma = '[15,0,-15]' WHERE numberOfPlayers = 3;
 UPDATE gameRules SET uma = '[[24,-2,-6,-16],[16,8,-8,-16],[16,6,2,-24]]' WHERE name = 'Сезон 6 йонма';
+
+ALTER TABLE gameRules ADD COLUMN details TEXT;
+
+UPDATE gameRules
+SET name = 'Сезон 3-4 йонма'
+WHERE id = 1
+  AND name = 'Сезон 3-5 йонма';
+
+INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId, umaTieBreak)
+VALUES (10, 'Сезон 5 йонма', 4, '[15,5,-5,-15]', 30000, NULL, 1, 'DIVIDE');
+
+UPDATE event
+SET gameRules = 10
+WHERE gameRules = 1
+  AND clubId = 1
+  AND name = 'Сезон 5';
+
+UPDATE gameRules SET details = '{"preset":"ema_2025","rules":{"big_winds":2,"counted_yakuman":true,"double_riichi":"1+1","double_yakuman":true,"four_concealed_triplets_on_the_pair":2,"nagashi_mangan":true,"nagashi_mangan_count_as_a_win":false,"nine_gates_on_9_waits":2,"precedence":"ron_pon","red_fives":"present","riichi_1000_points_min":"not_required","starting_points":30000,"thirteen_orphans_on_13_waits":2,"yakuman_stacking":true}}' WHERE id = 1;
+UPDATE gameRules SET details = '{"preset":"ema_2025","rules":{"big_winds":2,"counted_yakuman":true,"double_riichi":"1+1","double_yakuman":true,"four_concealed_triplets_on_the_pair":2,"minimum_games_for_rating":5,"nagashi_mangan":true,"nagashi_mangan_count_as_a_win":false,"nine_gates_on_9_waits":2,"precedence":"ron_pon","red_fives":"present","riichi_1000_points_min":"not_required","starting_points":30000,"thirteen_orphans_on_13_waits":2,"yakuman_stacking":true}}' WHERE id = 2;
+UPDATE gameRules SET details = '{"preset":"mahjong_soul_sanma","rules":{"abortive_draw":"none","agari_yame":"no","bankrupt":"none","blessing_of_man":"mangan","continuance_payment":"all","double_riichi":"1+1","double_wind_fu_exception":"two_fu","goal":30000,"in_case_of_tie":"divide","kan_dora_called_promoted_quad":"before","mangan_rounding_up":true,"mixed_sequences":"2/1","noten_penalty":3000,"red_fives":"present","riichi_1000_points_min":"not_required","riichi_without_a_next_draw":true,"tenpai_yame":"no","west_round":false}}' WHERE id = 3;
+UPDATE gameRules SET details = '{"preset":"ema_2025","rules":{},"links":[{"url":"http://mahjong-europe.org/portal/images/docs/Riichi-rules-2025-EN.pdf","label":"Riichi Rules 2025 (PDF)"}]}' WHERE id = 4;
+UPDATE gameRules SET details = '{"preset":"mahjong_soul","rules":{},"links":[{"url":"https://riichi.wiki/Mahjong_Soul","label":"Mahjong Soul"}]}' WHERE id = 5;
+UPDATE gameRules SET details = '{"preset":"mahjong_soul_sanma","rules":{},"links":[{"url":"https://riichi.wiki/Mahjong_Soul#3P-Mahjong","label":"Mahjong Soul - 3P Mahjong"}]}' WHERE id = 6;
+UPDATE gameRules SET details = '{"preset":"mahjong_soul","rules":{"abortive_draw":"none","blessing_of_man":"yakuman","double_wind_fu_exception":"two_fu","in_case_of_tie":"divide","kan_dora_called_promoted_quad":"before","mangan_rounding_up":true,"precedence":"ron_first","riichi_without_a_next_draw":true,"west_round":false}}' WHERE id = 7;
+UPDATE gameRules SET details = '{"preset":"mahjong_soul_sanma","rules":{"abortive_draw":"none","blessing_of_man":"yakuman","double_wind_fu_exception":"two_fu","in_case_of_tie":"divide","kiriage_mangan":true,"mangan_rounding_up":true,"mixed_sequences":"sanma_no_manzu_variant_b","renho":"yakuman","riichi_without_a_next_draw":true,"uma_tie_break":"equal_split"}}' WHERE id = 8;
+UPDATE gameRules SET details = '{"preset":"mahjong_soul","rules":{"abortive_draw":"none","blessing_of_man":"yakuman","continuation":"agari","double_wind_fu_exception":"two_fu","in_case_of_tie":"divide","kan_dora_called_promoted_quad":"before","mangan_rounding_up":true,"precedence":"ron_first","riichi_without_a_next_draw":true,"swap_calling":"no","triple_ron":"cancel"}}' WHERE id = 9;
+UPDATE gameRules SET details = '{"preset":"mahjong_soul","rules":{"abortive_draw":"none","bankrupt":"zero_or_less","blessing_of_man":"mangan","continuance_payment":"all","continuance_points":"3x500","double_riichi":"1+1","in_case_of_tie":"divide","kan_dora_called_promoted_quad":"before","red_fives":"present","starting_points":30000,"west_round":false}}' WHERE id = 10;
