@@ -21,8 +21,10 @@ describe('Game Rules API Endpoints', () => {
     });
 
     describe('GET /api/game-rules/catalog', () => {
-        test('should return public catalog without authentication', async () => {
-            const response = await request(app).get('/api/game-rules/catalog');
+        test('should return catalog for authenticated user', async () => {
+            const response = await request(app)
+                .get('/api/game-rules/catalog')
+                .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body.rules)).toBe(true);
@@ -30,7 +32,9 @@ describe('Game Rules API Endpoints', () => {
         });
 
         test('should include constant metadata for fixed-value rules', async () => {
-            const response = await request(app).get('/api/game-rules/catalog');
+            const response = await request(app)
+                .get('/api/game-rules/catalog')
+                .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(200);
             expect(response.body.rules.find((rule: { key: string }) => rule.key === 'after_a_quad')).toMatchObject({
@@ -39,11 +43,33 @@ describe('Game Rules API Endpoints', () => {
                 constant: true
             });
         });
+
+        test('should require authentication', async () => {
+            const response = await request(app).get('/api/game-rules/catalog');
+            expect(response.status).toBe(401);
+        });
     });
 
     describe('GET /api/game-rules/presets', () => {
-        test('should return presets without authentication', async () => {
-            const response = await request(app).get('/api/game-rules/presets');
+        const NON_ADMIN_USER_ID = 9201;
+        const nonAdminAuthHeader = createAuthHeader(NON_ADMIN_USER_ID);
+        const presetsTimestamp = '2026-01-01T00:00:00.000Z';
+
+        beforeAll(() => {
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(NON_ADMIN_USER_ID, 920100, 'presets-nonadmin', 1, 0, presetsTimestamp, presetsTimestamp, 0);
+        });
+
+        afterAll(() => {
+            dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(NON_ADMIN_USER_ID);
+        });
+
+        test('should return presets for an admin', async () => {
+            const response = await request(app)
+                .get('/api/game-rules/presets')
+                .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
@@ -60,7 +86,9 @@ describe('Game Rules API Endpoints', () => {
         });
 
         test('should include public presets and hide the internal default preset', async () => {
-            const response = await request(app).get('/api/game-rules/presets');
+            const response = await request(app)
+                .get('/api/game-rules/presets')
+                .set('Authorization', adminAuthHeader);
 
             const keys = response.body.map((p: { key: string }) => p.key);
             expect(keys).toContain('ema_2025');
@@ -70,12 +98,26 @@ describe('Game Rules API Endpoints', () => {
         });
 
         test('should expose inheritance metadata for each preset', async () => {
-            const response = await request(app).get('/api/game-rules/presets');
+            const response = await request(app)
+                .get('/api/game-rules/presets')
+                .set('Authorization', adminAuthHeader);
 
             const byKey = new Map(response.body.map((preset: { key: string }) => [preset.key, preset]));
             expect(byKey.get('ema_2025')).toMatchObject({ extends: 'default' });
             expect(byKey.get('mahjong_soul')).toMatchObject({ extends: 'default' });
             expect(byKey.get('mahjong_soul_sanma')).toMatchObject({ extends: 'mahjong_soul' });
+        });
+
+        test('should require authentication', async () => {
+            const response = await request(app).get('/api/game-rules/presets');
+            expect(response.status).toBe(401);
+        });
+
+        test('should reject non-admin users', async () => {
+            const response = await request(app)
+                .get('/api/game-rules/presets')
+                .set('Authorization', nonAdminAuthHeader);
+            expect(response.status).toBe(403);
         });
     });
 

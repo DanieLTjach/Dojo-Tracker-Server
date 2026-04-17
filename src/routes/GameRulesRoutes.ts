@@ -1,26 +1,26 @@
 import { Router } from 'express';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { GameRulesController } from '../controller/GameRulesController.ts';
-import { requireAuth } from '../middleware/AuthMiddleware.ts';
+import { requireAdmin, requireAuth } from '../middleware/AuthMiddleware.ts';
 
 const router = Router();
 const gameRulesController = new GameRulesController();
 
 /**
  * GET /api/game-rules/catalog
- * Get public compact details catalog
+ * Get compact details catalog
  *
- * Authentication: Not required
+ * Authentication: Required
  */
-router.get('/catalog', withTransaction((req, res) => gameRulesController.getCatalog(req, res)));
+router.get('/catalog', requireAuth, withTransaction((req, res) => gameRulesController.getCatalog(req, res)));
 
 /**
  * GET /api/game-rules/presets
  * Get available game rules presets
  *
- * Authentication: Not required
+ * Authentication: Required (admin only)
  */
-router.get('/presets', withTransaction((req, res) => gameRulesController.getPresets(req, res)));
+router.get('/presets', requireAuth, requireAdmin, withTransaction((req, res) => gameRulesController.getPresets(req, res)));
 
 /**
  * GET /api/game-rules
