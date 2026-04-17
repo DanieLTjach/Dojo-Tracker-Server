@@ -132,6 +132,7 @@ function compactDetails(details: GameRulesDetails): GameRulesDetails {
     if (!preset) return details;
 
     const overrides: Record<string, RuleValue> = {};
+    // Diff against the fully resolved preset chain so inherited defaults compact correctly.
     for (const [key, value] of Object.entries(details.rules)) {
         const presetValue = preset.rules[key];
         if (presetValue === undefined || !ruleValuesEqual(value, presetValue)) {

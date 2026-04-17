@@ -79,6 +79,8 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
     const withRequiredShape = Object.fromEntries(
         catalog.rules.map(spec => [spec.key, spec.required ? ruleSpecToSchema(spec) : ruleSpecToSchema(spec).optional()])
     );
+    const allOptionalRulesSchema = z.strictObject(allOptionalShape);
+    const withRequiredRulesSchema = z.strictObject(withRequiredShape);
 
     const presetSchema = z.string().trim().min(1, 'Preset cannot be empty').refine(
         (key) => {
@@ -88,28 +90,24 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
         { message: 'Unknown preset' }
     );
 
-    return z.strictObject({
-        preset: presetSchema.optional(),
-        rules: z.any(),
-        links: z.array(gameRulesLinkSchema).optional(),
-        clubRules: z.array(clubRuleEntrySchema).refine(
-            entries => new Set(entries.map(entry => entry.key)).size === entries.length,
-            'clubRules keys must be unique'
-        ).optional()
-    }).transform((val, ctx) => {
-        const rulesSchema = val.preset
-            ? z.strictObject(allOptionalShape)
-            : z.strictObject(withRequiredShape);
+    const clubRulesSchema = z.array(clubRuleEntrySchema).refine(
+        entries => new Set(entries.map(entry => entry.key)).size === entries.length,
+        'clubRules keys must be unique'
+    );
 
-        const result = rulesSchema.safeParse(val.rules);
-        if (!result.success) {
-            for (const issue of result.error.issues) {
-                ctx.addIssue({ ...issue, path: ['rules', ...issue.path] });
-            }
-            return z.NEVER;
-        }
-        return { ...val, rules: result.data } as GameRulesDetails;
-    }) as z.ZodType<GameRulesDetails>;
+    return z.union([
+        z.strictObject({
+            preset: presetSchema,
+            rules: allOptionalRulesSchema,
+            links: z.array(gameRulesLinkSchema).optional(),
+            clubRules: clubRulesSchema.optional()
+        }),
+        z.strictObject({
+            rules: withRequiredRulesSchema,
+            links: z.array(gameRulesLinkSchema).optional(),
+            clubRules: clubRulesSchema.optional()
+        })
+    ]) as z.ZodType<GameRulesDetails>;
 }
 
 export const gameRulesDetailsSchema = buildDetailsSchema(gameRulesCatalog);

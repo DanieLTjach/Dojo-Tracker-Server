@@ -3,6 +3,7 @@ import { dbManager } from '../db/dbInit.ts';
 import type { Event, GameRulesDetails } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
+import { parseStoredGameRulesDetails } from '../util/GameRulesDetailsUtil.ts';
 
 export class EventRepository {
     private findAllEventsStatement(): Statement<[], EventWithGameRulesDBEntity> {
@@ -285,5 +286,5 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
 }
 
 function parseGameRulesDetails(details: string | null): GameRulesDetails | null {
-    return details ? JSON.parse(details) : null;
+    return parseStoredGameRulesDetails(details);
 }

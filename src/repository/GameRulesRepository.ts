@@ -3,7 +3,7 @@ import { dbManager } from '../db/dbInit.ts';
 import type { GameRules, GameRulesDetails } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
-import { gameRulesPresetsByKey } from '../data/gameRulesPresets.ts';
+import { parseStoredGameRulesDetails } from '../util/GameRulesDetailsUtil.ts';
 
 export class GameRulesRepository {
     private findAllGameRulesStatement(): Statement<[], GameRulesDBEntity> {
@@ -203,13 +203,5 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
 }
 
 function parseGameRulesDetails(details: string | null): GameRulesDetails | null {
-    if (!details) return null;
-    const parsed: GameRulesDetails = JSON.parse(details);
-    if (!parsed.preset) return parsed;
-
-    const preset = gameRulesPresetsByKey.get(parsed.preset);
-    if (!preset) return parsed;
-
-    parsed.rules = { ...preset.rules, ...parsed.rules };
-    return parsed;
+    return parseStoredGameRulesDetails(details);
 }
