@@ -29,7 +29,17 @@ export class GameRulesController {
     getPresets(_req: Request, res: Response) {
         return res.status(StatusCodes.OK)
             .set('Cache-Control', 'public, max-age=300')
-            .json(gameRulesPresets);
+            .json(
+                gameRulesPresets
+                    .filter(preset => !preset.internal)
+                    .map(({ key, name, extends: parentPreset, rules, ownRules }) => ({
+                        key,
+                        name,
+                        extends: parentPreset,
+                        rules,
+                        ownRules
+                    }))
+            );
     }
 
     updateGameRulesDetails(req: Request, res: Response) {
