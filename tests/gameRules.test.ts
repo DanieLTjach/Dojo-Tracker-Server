@@ -36,21 +36,35 @@ describe('Game Rules API Endpoints', () => {
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
-            expect(response.body.length).toBeGreaterThan(0);
+            expect(response.body).toHaveLength(3);
 
             const preset = response.body[0];
             expect(preset).toHaveProperty('key');
             expect(preset).toHaveProperty('name');
+            expect(preset).toHaveProperty('extends');
             expect(preset).toHaveProperty('rules');
+            expect(preset).toHaveProperty('ownRules');
             expect(typeof preset.rules).toBe('object');
+            expect(typeof preset.ownRules).toBe('object');
         });
 
-        test('should include ema_2025 and mahjong_soul presets', async () => {
+        test('should include public presets and hide the internal default preset', async () => {
             const response = await request(app).get('/api/game-rules/presets');
 
             const keys = response.body.map((p: { key: string }) => p.key);
             expect(keys).toContain('ema_2025');
             expect(keys).toContain('mahjong_soul');
+            expect(keys).toContain('mahjong_soul_sanma');
+            expect(keys).not.toContain('default');
+        });
+
+        test('should expose inheritance metadata for each preset', async () => {
+            const response = await request(app).get('/api/game-rules/presets');
+
+            const byKey = new Map(response.body.map((preset: { key: string }) => [preset.key, preset]));
+            expect(byKey.get('ema_2025')).toMatchObject({ extends: 'default' });
+            expect(byKey.get('mahjong_soul')).toMatchObject({ extends: 'default' });
+            expect(byKey.get('mahjong_soul_sanma')).toMatchObject({ extends: 'mahjong_soul' });
         });
     });
 

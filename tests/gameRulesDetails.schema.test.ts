@@ -104,6 +104,15 @@ describe('preset validation', () => {
         expect(result.success).toBe(false);
     });
 
+    test('rejects internal preset', () => {
+        const result = gameRulesDetailsSchema.safeParse({
+            preset: 'default',
+            rules: {}
+        });
+
+        expect(result.success).toBe(false);
+    });
+
     test('rejects preset with invalid override value type', () => {
         const result = gameRulesDetailsSchema.safeParse({
             preset: 'ema_2025',
@@ -130,8 +139,8 @@ describe('preset validation', () => {
         expect(result.success).toBe(false);
     });
 
-    test('accepts all known presets with their full rules', () => {
-        for (const preset of gameRulesPresets) {
+    test('accepts all public presets with their full rules', () => {
+        for (const preset of gameRulesPresets.filter(candidate => !candidate.internal)) {
             const result = gameRulesDetailsSchema.safeParse({
                 preset: preset.key,
                 rules: preset.rules
