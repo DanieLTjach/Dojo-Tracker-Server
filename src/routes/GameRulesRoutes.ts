@@ -42,7 +42,7 @@ router.get('/:id', requireAuth, withTransaction((req, res) => gameRulesControlle
  * PUT /api/game-rules/:id/details
  * Update game rules details
  *
- * Authentication: Required
+ * Authentication: Required (admin, or owner of the rule's club)
  */
 router.put('/:id/details', requireAuth, withTransaction((req, res) => gameRulesController.updateGameRulesDetails(req, res)));
 

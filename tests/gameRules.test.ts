@@ -325,5 +325,80 @@ describe('Game Rules API Endpoints', () => {
 
             expect(response.status).toBe(401);
         });
+
+        test('should reject non-admin non-owner users with 403', async () => {
+            const clubId = 913;
+            const ruleId = 9105;
+            const userId = 9106;
+            const timestamp = '2026-01-01T00:00:00.000Z';
+
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubId, 'PUT Forbidden Club', null, null, null, null, 1, timestamp, timestamp, 0);
+            dbManager.db.prepare(
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(ruleId, 'PUT Forbidden Rule', clubId, 4, '[15,5,-5,-15]', 30000, null, 'DIVIDE');
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(userId, 910600, 'put-nonowner', 1, 0, timestamp, timestamp, 0);
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}/details`)
+                    .set('Authorization', createAuthHeader(userId))
+                    .send({
+                        details: { preset: 'ema_2025', rules: {} }
+                    });
+                expect(response.status).toBe(403);
+            } finally {
+                dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(userId);
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+                dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(clubId);
+            }
+        });
+
+        test('should allow club owner to update details', async () => {
+            const clubId = 914;
+            const ruleId = 9107;
+            const ownerId = 9108;
+            const timestamp = '2026-01-01T00:00:00.000Z';
+
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubId, 'PUT Owner Club', null, null, null, null, 1, timestamp, timestamp, 0);
+            dbManager.db.prepare(
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(ruleId, 'PUT Owner Rule', clubId, 4, '[15,5,-5,-15]', 30000, null, 'DIVIDE');
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(ownerId, 910800, 'put-owner', 1, 0, timestamp, timestamp, 0);
+            dbManager.db.prepare(
+                `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubId, ownerId, 'OWNER', 'ACTIVE', timestamp, timestamp, 0);
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}/details`)
+                    .set('Authorization', createAuthHeader(ownerId))
+                    .send({
+                        details: { preset: 'ema_2025', rules: { starting_points: 25000 } }
+                    });
+                expect(response.status).toBe(200);
+                expect(response.body.details.preset).toBe('ema_2025');
+                expect(response.body.details.rules.starting_points).toBe(25000);
+            } finally {
+                dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(clubId, ownerId);
+                dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(ownerId);
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+                dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(clubId);
+            }
+        });
     });
 });
