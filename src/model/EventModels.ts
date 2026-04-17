@@ -7,15 +7,13 @@ export type UmaTieBreak = typeof UmaTieBreak[keyof typeof UmaTieBreak];
 
 export interface LocaleText {
     uk: string;
-    en?: string | undefined;
-    ja?: string | undefined;
 }
 
 export type RuleValue = boolean | number | string;
 
 export interface LinkEntry {
     url: string;
-    label: LocaleText;
+    label: string;
 }
 
 export interface ClubRuleEntry {

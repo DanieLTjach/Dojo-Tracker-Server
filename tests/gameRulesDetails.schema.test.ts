@@ -38,7 +38,7 @@ describe('gameRulesDetailsSchema compact format', () => {
                     key: 'house_yaku_tanuki',
                     category: 'yaku',
                     value: 1,
-                    name: { en: 'Tanuki' }
+                    name: {}
                 }
             ]
         });
@@ -64,6 +64,40 @@ describe('gameRulesDetailsSchema compact format', () => {
                     category: 'yaku',
                     value: 2,
                     name: { uk: 'Танукі 2' }
+                }
+            ]
+        });
+
+        expect(result.success).toBe(false);
+    });
+
+    test('accepts links with plain string labels', () => {
+        const result = gameRulesDetailsSchema.safeParse({
+            rules: {
+                number_of_players: 4,
+                starting_points: 30000
+            },
+            links: [
+                {
+                    url: 'https://riichi.wiki/Mahjong_Soul',
+                    label: 'Mahjong Soul'
+                }
+            ]
+        });
+
+        expect(result.success).toBe(true);
+    });
+
+    test('rejects empty link labels', () => {
+        const result = gameRulesDetailsSchema.safeParse({
+            rules: {
+                number_of_players: 4,
+                starting_points: 30000
+            },
+            links: [
+                {
+                    url: 'https://riichi.wiki/Mahjong_Soul',
+                    label: '   '
                 }
             ]
         });

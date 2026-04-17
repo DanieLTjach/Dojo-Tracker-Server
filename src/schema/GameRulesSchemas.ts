@@ -8,14 +8,14 @@ export const gameRulesIdSchema = z.number().int("Game Rules ID must be an intege
 export const gameRulesIdParamSchema = z.coerce.number().int("Game Rules ID must be an integer");
 
 const localeTextSchema = z.strictObject({
-    uk: z.string().trim().min(1, 'Ukrainian text is required'),
-    en: z.string().trim().min(1, 'English text cannot be empty').optional(),
-    ja: z.string().trim().min(1, 'Japanese text cannot be empty').optional()
+    uk: z.string().trim().min(1, 'Ukrainian text is required')
 });
+
+const linkLabelSchema = z.string().trim().min(1, 'Link label cannot be empty');
 
 const gameRulesLinkSchema = z.strictObject({
     url: z.url('Link URL must be a valid URL'),
-    label: localeTextSchema
+    label: linkLabelSchema
 });
 
 const clubRuleCategorySchema = z.enum(['yaku', 'fu', 'rule']);
