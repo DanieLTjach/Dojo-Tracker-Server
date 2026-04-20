@@ -49,19 +49,19 @@ function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
             break;
         case 'enumString':
             schema = z.string().refine(
-                value => (spec.enum ?? []).includes(value),
-                `${spec.key} must be one of: ${(spec.enum ?? []).join(', ')}`
+                value => spec.enum.includes(value),
+                `${spec.key} must be one of: ${spec.enum.join(', ')}`
             );
             break;
         case 'enumInteger':
             schema = z.number().int(`${spec.key} must be an integer`).refine(
-                value => (spec.enum ?? []).includes(value),
-                `${spec.key} must be one of: ${(spec.enum ?? []).join(', ')}`
+                value => spec.enum.includes(value),
+                `${spec.key} must be one of: ${spec.enum.join(', ')}`
             );
             break;
     }
 
-    if (spec.type === 'integer' || spec.type === 'enumInteger') {
+    if (spec.type === 'integer') {
         const numberSchema = schema as z.ZodNumber;
         schema = numberSchema
             .refine(value => spec.min === undefined || value >= spec.min, `${spec.key} must be >= ${spec.min}`)

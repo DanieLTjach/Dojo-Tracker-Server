@@ -31,7 +31,7 @@ describe('Game Rules API Endpoints', () => {
             expect(response.body.rules.some((rule: { key: string }) => rule.key === 'number_of_players')).toBe(true);
         });
 
-        test('should include constant metadata for fixed-value rules', async () => {
+        test('should expose single-value enums for fixed-value rules', async () => {
             const response = await request(app)
                 .get('/api/game-rules/catalog')
                 .set('Authorization', adminAuthHeader);
@@ -39,8 +39,8 @@ describe('Game Rules API Endpoints', () => {
             expect(response.status).toBe(200);
             expect(response.body.rules.find((rule: { key: string }) => rule.key === 'after_a_quad')).toMatchObject({
                 key: 'after_a_quad',
-                enum: [1],
-                constant: true
+                type: 'enumInteger',
+                enum: [1]
             });
         });
 
