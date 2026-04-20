@@ -31,8 +31,8 @@ describe('game rules presets', () => {
         const sanmaPreset = gameRulesPresetsByKey.get('mahjong_soul_sanma');
 
         expect(sanmaPreset).toBeDefined();
-        expect(sanmaPreset!.rules['abortive_draw']).toBe('four_kans_nine_terminals');
-        expect(sanmaPreset!.rules['automatic']).toBe(true);
+        expect(sanmaPreset!.rules['abortive_draw']).toBe(true);
+        expect(sanmaPreset!.rules['automatic_agari_tenpai_yame']).toBe(true);
         expect(sanmaPreset!.rules['after_a_quad']).toBe(1);
     });
 
