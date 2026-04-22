@@ -3,6 +3,7 @@ import { EventRepository } from '../src/repository/EventRepository.ts';
 import { GameRulesService } from '../src/service/GameRulesService.ts';
 import { CannotDeleteGameRulesInUseError, CannotUpdateGameRulesInUseError } from '../src/error/EventErrors.ts';
 import { InsufficientClubPermissionsError } from '../src/error/ClubErrors.ts';
+import { InsufficientPermissionsError } from '../src/error/AuthErrors.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 
@@ -280,6 +281,71 @@ describe('Game Rules CRUD', () => {
                 .toThrow(InsufficientClubPermissionsError);
 
             dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(nonOwnerUserId);
+        });
+
+        test('non-admin club owner can updateGameRules and deleteGameRules for own club', () => {
+            const ownerUserId = 981;
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(ownerUserId, 981981, 'club-owner', 1, 0, timestamp, timestamp, 0);
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, 'OWNER', 'ACTIVE', ?, ?, 0)`
+            ).run(TEST_CLUB_ID, ownerUserId, timestamp, timestamp);
+
+            const ruleId = repo.insertGameRules({ ...baseParams, name: 'Owner Flow Rule' });
+            try {
+                const updated = service.updateGameRules(ruleId, {
+                    ...baseParams,
+                    name: 'Owner Updated Rule',
+                    startingPoints: 35000
+                }, ownerUserId);
+                expect(updated.name).toBe('Owner Updated Rule');
+
+                service.deleteGameRules(ruleId, ownerUserId);
+                expect(repo.findGameRulesById(ruleId)).toBeUndefined();
+            } finally {
+                dbManager.db.prepare('DELETE FROM clubMembership WHERE userId = ?').run(ownerUserId);
+                dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(ownerUserId);
+            }
+        });
+
+        test('updateGameRules on global (clubId null) by non-admin throws InsufficientPermissionsError', () => {
+            const nonAdminId = 982;
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(nonAdminId, 982982, 'non-admin', 1, 0, timestamp, timestamp, 0);
+
+            const globalRuleId = repo.insertGameRules({ ...baseParams, name: 'Global Rule', clubId: null });
+            try {
+                expect(() => service.updateGameRules(globalRuleId, {
+                    ...baseParams,
+                    name: 'Should Fail',
+                    clubId: null
+                }, nonAdminId)).toThrow(InsufficientPermissionsError);
+            } finally {
+                repo.deleteGameRules(globalRuleId);
+                dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(nonAdminId);
+            }
+        });
+
+        test('updateGameRulesDetails strips values equal to preset defaults', () => {
+            const details = {
+                preset: 'ema_2025',
+                rules: {
+                    open_tanyao: true,
+                    starting_points: 30000,
+                }
+            };
+
+            service.updateGameRulesDetails(createdRuleId, details, ADMIN_USER_ID);
+
+            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
+            const stored = JSON.parse(raw.details);
+            expect(stored.rules.open_tanyao).toBeUndefined();
+            expect(stored.rules.starting_points).toBe(30000);
         });
     });
 });
