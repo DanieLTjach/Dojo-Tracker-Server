@@ -1,13 +1,11 @@
+import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
+
 export const UmaTieBreak = {
     WIND: 'WIND',
-    DIVIDE: 'DIVIDE' 
+    DIVIDE: 'DIVIDE'
 } as const;
 
 export type UmaTieBreak = typeof UmaTieBreak[keyof typeof UmaTieBreak];
-
-export interface LocaleText {
-    uk: string;
-}
 
 export type RuleValue = boolean | number | string;
 
@@ -16,19 +14,18 @@ export interface LinkEntry {
     label: string;
 }
 
-export interface ClubRuleEntry {
-    key: string;
+export interface CustomRuleEntry {
     category: 'yaku' | 'fu' | 'rule';
     value: boolean | number | string;
-    name: LocaleText;
-    tooltip?: LocaleText | undefined;
+    name: string;
+    tooltip?: string | undefined;
 }
 
 export interface GameRulesDetails {
     preset?: string | undefined;
-    rules: Record<string, RuleValue>;
+    rules: GameRulesValues;
     links?: LinkEntry[] | undefined;
-    clubRules?: ClubRuleEntry[] | undefined;
+    customRules?: CustomRuleEntry[] | undefined;
 }
 
 export interface GameRules {

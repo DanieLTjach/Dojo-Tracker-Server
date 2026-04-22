@@ -1,7 +1,7 @@
 import { gameRulesPresetsByKey } from '../data/gameRulesPresets.ts';
 import type { GameRulesDetails } from '../model/EventModels.ts';
 
-export function parseStoredGameRulesDetails(details: string | null): GameRulesDetails | null {
+export function parseGameRulesDetailsAndApplyPresets(details: string | null): GameRulesDetails | null {
     if (!details) return null;
 
     const parsed: GameRulesDetails = JSON.parse(details);

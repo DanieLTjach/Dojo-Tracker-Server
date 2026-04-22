@@ -7,10 +7,6 @@ import { clubIdParamSchema } from './ClubSchemas.ts';
 export const gameRulesIdSchema = z.number().int("Game Rules ID must be an integer");
 export const gameRulesIdParamSchema = z.coerce.number().int("Game Rules ID must be an integer");
 
-const localeTextSchema = z.strictObject({
-    uk: z.string().trim().min(1, 'Ukrainian text is required')
-});
-
 const linkLabelSchema = z.string().trim().min(1, 'Link label cannot be empty');
 
 const gameRulesLinkSchema = z.strictObject({
@@ -18,20 +14,22 @@ const gameRulesLinkSchema = z.strictObject({
     label: linkLabelSchema
 });
 
-const clubRuleCategorySchema = z.enum(['yaku', 'fu', 'rule']);
+const customRuleCategorySchema = z.enum(['yaku', 'fu', 'rule']);
 
-const clubRuleValueSchema = z.union([
+const customRuleValueSchema = z.union([
     z.boolean(),
     z.number().int(),
     z.string(),
 ]);
 
-const clubRuleEntrySchema = z.strictObject({
-    key: z.string().regex(/^[a-z][a-z0-9_]*$/, 'Club rule key must be snake_case'),
-    category: clubRuleCategorySchema,
-    value: clubRuleValueSchema,
-    name: localeTextSchema,
-    tooltip: localeTextSchema.optional()
+const customRuleNameSchema = z.string().trim().min(1, 'Custom rule name cannot be empty');
+const customRuleTooltipSchema = z.string().trim().min(1, 'Custom rule tooltip cannot be empty');
+
+const customRuleEntrySchema = z.strictObject({
+    category: customRuleCategorySchema,
+    value: customRuleValueSchema,
+    name: customRuleNameSchema,
+    tooltip: customRuleTooltipSchema.optional()
 });
 
 function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
@@ -90,22 +88,19 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
         { message: 'Unknown preset' }
     );
 
-    const clubRulesSchema = z.array(clubRuleEntrySchema).refine(
-        entries => new Set(entries.map(entry => entry.key)).size === entries.length,
-        'clubRules keys must be unique'
-    );
+    const customRulesSchema = z.array(customRuleEntrySchema);
 
     return z.union([
         z.strictObject({
             preset: presetSchema,
             rules: allOptionalRulesSchema,
             links: z.array(gameRulesLinkSchema).optional(),
-            clubRules: clubRulesSchema.optional()
+            customRules: customRulesSchema.optional()
         }),
         z.strictObject({
             rules: withRequiredRulesSchema,
             links: z.array(gameRulesLinkSchema).optional(),
-            clubRules: clubRulesSchema.optional()
+            customRules: customRulesSchema.optional()
         })
     ]) as z.ZodType<GameRulesDetails>;
 }
