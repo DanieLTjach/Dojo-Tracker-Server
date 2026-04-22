@@ -1,20 +1,15 @@
-import type { RuleValue } from '../model/EventModels.ts';
+import type { GameRulesValues } from './gameRulesCatalog.ts';
 
 export interface GameRulesPresetDef {
     key: string;
     name: string;
     extends?: string;
     internal?: true;
-    ownRules: Record<string, RuleValue>;
+    ownRules: GameRulesValues;
 }
 
-export interface GameRulesPreset {
-    key: string;
-    name: string;
-    extends?: string;
-    internal?: true;
-    rules: Record<string, RuleValue>;
-    ownRules: Record<string, RuleValue>;
+export interface GameRulesPreset extends GameRulesPresetDef {
+    rules: GameRulesValues;
 }
 
 const defaultDef: GameRulesPresetDef = {
@@ -22,38 +17,17 @@ const defaultDef: GameRulesPresetDef = {
     name: 'Default',
     internal: true,
     ownRules: {
-        after_a_quad: 1,
         after_attaching: true,
-        all_green: 1,
         all_green_must_have_green_dragon: false,
-        all_honours: 1,
-        all_inside: 1,
-        all_triplets: 2,
         apply_if_other_yakuman: true,
-        big_dragons: 1,
-        blessing_of_earth: 1,
-        blessing_of_heaven: 1,
-        common_ends: '2/1',
-        common_flush: '3/2',
-        common_terminals: '2+2',
-        concealed_quad: 'sixteen_thirty_two_fu',
         concealed_quad_after_riichi: true,
-        concealed_sequence: 'zero_zero_fu',
-        concealed_triplet: 'four_eight_fu',
         continuance_payment_pao: 'discarder',
         continuation: 'tenpai',
         dora: true,
         double_riichi: '2',
         double_ron: 'yes',
-        double_twin_sequences: 3,
-        double_wind: '1+1',
-        edge_middle_pair_wait: 'two_fu',
         eight_consecutive_wins: false,
         fifth_tile_in_own_hand: false,
-        four_concealed_triplets: 1,
-        four_quads: 1,
-        full_straight: '2/1',
-        fully_concealed_hand: 1,
         furiten_riichi: true,
         if_changes_hand_structure: false,
         if_changes_wait: false,
@@ -61,58 +35,29 @@ const defaultDef: GameRulesPresetDef = {
         kan_dora: true,
         kan_dora_concealed_quad: 'before_discard',
         kan_ura_dora: true,
-        last_tile_claim: 1,
-        last_tile_draw: 1,
         last_tile_draw_after_a_quad: false,
         liability_payment: 'big_dragons_big_winds',
-        little_dragons: '2+2',
-        little_winds: 1,
         max_points: 0,
-        melded_quad: 'eight_sixteen_fu',
-        melded_sequence: 'zero_zero_fu',
-        melded_triplet: 'two_four_fu',
         nb_quads_max: 4,
-        nine_gates: 1,
         oka: 0,
         on_any_tile: false,
-        open_pinfu: 'two_fu',
         open_riichi: false,
         open_tanyao: true,
         other_yakus: false,
-        pair: 'zero_zero_fu',
         pairs_2_to_8_in_the_same_suit: false,
-        perfect_ends: '3/2',
-        perfect_flush: '6/5',
-        perfect_terminals: 1,
-        pinfu: 1,
         pinfu_yaku: false,
         remaining_riichi_deposits: 'final_winner',
         replacement_tile: true,
-        riichi: 1,
         riichi_deposits_payment: 'bump',
         riichi_on_the_last_tile: false,
-        robbing_a_quad: 1,
-        seven_pairs: 2,
-        seven_pairs_fu: 'twenty_five_fu',
         shape_tenpai: true,
         swap_calling: 'hard',
         temporary_furiten_duration: 'players_discard',
         thirteen_isolated_tiles: false,
-        thirteen_orphans: 1,
         thirteen_orphans_allows_to_rob_a_concealed_quad: true,
-        three_concealed_triplets: 2,
-        three_quads: 2,
         triple_ron: 'yes',
-        triple_triplets: 2,
-        twin_sequences: 1,
         two_han_minimum: false,
-        unbroken: '1+1',
         ura_dora: true,
-        value_honour: 1,
-        value_honour_fu: 'two_fu',
-        winning: 'twenty_fu',
-        winning_by_calling_a_tile_on_a_closed_hand: 'ten_fu',
-        winning_by_self_draw: 'two_fu',
     }
 };
 
@@ -124,21 +69,17 @@ const ema2025Def: GameRulesPresetDef = {
         abortive_draw: false,
         agari_yame: 'no',
         bankrupt: 'none',
-        big_winds: 1,
         blessing_of_man: 'mangan',
         chombo: 'twenty_thousand_after_uma',
         continuance_payment: 'all',
         counted_yakuman: false,
-        double_wind_fu_exception: 'two_fu',
+        double_wind_fu: 'four_fu',
         double_yakuman: false,
-        four_concealed_triplets_on_the_pair: 1,
         goal: 30000,
         in_case_of_tie: 'divide',
         kan_dora_called_promoted_quad: 'before_discard',
         mangan_rounding_up: true,
-        mixed_sequences: '2/1',
         nagashi_mangan: false,
-        nine_gates_on_9_waits: 1,
         noten_penalty: 3000,
         number_of_players: 4,
         official_starting_points: 30000,
@@ -147,7 +88,6 @@ const ema2025Def: GameRulesPresetDef = {
         riichi_without_a_next_draw: true,
         starting_points: 0,
         tenpai_yame: 'no',
-        thirteen_orphans_on_13_waits: 1,
         west_round: false,
         yakuman_stacking: false,
     }
@@ -162,22 +102,17 @@ const mahjongSoulDef: GameRulesPresetDef = {
         agari_yame: 'no',
         automatic_agari_tenpai_yame: true,
         bankrupt: 'below_zero',
-        big_winds: 2,
         blessing_of_man: 'none',
         continuance_payment: 'bump',
         continuation_when_abortion: true,
         counted_yakuman: true,
-        double_wind_fu_exception: 'four_fu',
         double_yakuman: true,
-        four_concealed_triplets_on_the_pair: 2,
         goal: 30000,
         in_case_of_tie: 'head_bump',
         kan_dora_called_promoted_quad: 'after_discard',
         mangan_rounding_up: false,
-        mixed_sequences: '2/1',
         nagashi_mangan: true,
         nagashi_mangan_count_as_a_win: false,
-        nine_gates_on_9_waits: 2,
         noten_penalty: 3000,
         number_of_players: 4,
         precedence: 'ron_pon',
@@ -186,7 +121,6 @@ const mahjongSoulDef: GameRulesPresetDef = {
         riichi_without_a_next_draw: false,
         starting_points: 25000,
         tenpai_yame: 'no',
-        thirteen_orphans_on_13_waits: 2,
         west_round: true,
         yakuman_stacking: true,
     }
@@ -199,7 +133,6 @@ const mahjongSoulSanmaDef: GameRulesPresetDef = {
     ownRules: {
         abortive_draw: true,
         goal: 40000,
-        mixed_sequences: 'no_manzu',
         noten_penalty: 2000,
         number_of_players: 3,
         red_fives: 'two_red_fives_five_pin_and_north',
@@ -239,9 +172,9 @@ export function buildGameRulesPresets(defs: readonly GameRulesPresetDef[]): read
         defsByKey.set(def.key, def);
     }
 
-    const resolvedByKey = new Map<string, Record<string, RuleValue>>();
+    const resolvedByKey = new Map<string, GameRulesValues>();
 
-    function resolve(def: GameRulesPresetDef, seen = new Set<string>()): Record<string, RuleValue> {
+    function resolve(def: GameRulesPresetDef, seen = new Set<string>()): GameRulesValues {
         const cached = resolvedByKey.get(def.key);
         if (cached) return cached;
         if (seen.has(def.key)) {
@@ -251,7 +184,7 @@ export function buildGameRulesPresets(defs: readonly GameRulesPresetDef[]): read
         const nextSeen = new Set(seen);
         nextSeen.add(def.key);
 
-        let resolvedRules: Record<string, RuleValue>;
+        let resolvedRules: GameRulesValues;
         if (!def.extends) {
             resolvedRules = { ...def.ownRules };
         } else {
@@ -270,8 +203,8 @@ export function buildGameRulesPresets(defs: readonly GameRulesPresetDef[]): read
         const preset: GameRulesPreset = {
             key: def.key,
             name: def.name,
-            rules: resolve(def),
             ownRules: { ...def.ownRules },
+            rules: resolve(def),
         };
 
         if (def.extends) {
