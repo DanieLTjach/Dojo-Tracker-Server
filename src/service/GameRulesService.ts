@@ -1,26 +1,18 @@
 import { GameRulesRepository, type InsertGameRulesParams } from '../repository/GameRulesRepository.ts';
-import { EventRepository } from '../repository/EventRepository.ts';
 import { CannotDeleteGameRulesInUseError, CannotUpdateGameRulesInUseError, GameRulesNotFoundError } from '../error/EventErrors.ts';
 import type { GameRules, GameRulesDetails, RuleValue } from '../model/EventModels.ts';
+import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
 import { gameRulesPresetsByKey } from '../data/gameRulesPresets.ts';
 import { UserService } from './UserService.ts';
-import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
-import { ClubRole } from '../model/ClubModels.ts';
+import { ClubMembershipService } from './ClubMembershipService.ts';
+import { EventService } from './EventService.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
-import { InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 
 export class GameRulesService {
-    private gameRulesRepository: GameRulesRepository;
-    private eventRepository: EventRepository;
-    private userService: UserService;
-    private clubMembershipRepository: ClubMembershipRepository;
-
-    constructor() {
-        this.gameRulesRepository = new GameRulesRepository();
-        this.eventRepository = new EventRepository();
-        this.userService = new UserService();
-        this.clubMembershipRepository = new ClubMembershipRepository();
-    }
+    private gameRulesRepository: GameRulesRepository = new GameRulesRepository();
+    private userService: UserService = new UserService();
+    private clubMembershipService: ClubMembershipService = new ClubMembershipService();
+    private eventService: EventService = new EventService();
 
     getAllGameRules(clubId?: number): GameRules[] {
         if (clubId !== undefined) {
@@ -39,43 +31,31 @@ export class GameRulesService {
 
     updateGameRulesDetails(id: number, details: GameRulesDetails | null, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
-        this.ensureCanUpdateGameRules(gameRules, userId);
+        this.validateUserCanUpdateGameRules(gameRules, userId);
         const compacted = details ? compactDetails(details) : null;
         this.gameRulesRepository.updateGameRulesDetails(id, compacted);
         return this.getGameRulesById(id);
     }
 
-    getGlobalGameRules(): GameRules[] {
-        return this.gameRulesRepository.findAllGlobalGameRules();
-    }
-
-    getGameRulesWithDetailsByClubId(clubId: number): GameRules[] {
-        return this.gameRulesRepository.findAllGameRulesWithDetailsByClubId(clubId);
-    }
-
-    getGameRulesWithoutDetailsByClubId(clubId: number): GameRules[] {
-        return this.gameRulesRepository.findAllGameRulesWithoutDetailsByClubId(clubId);
-    }
-
     createGameRules(params: InsertGameRulesParams, userId: number): GameRules {
-        this.ensureCanCreateForClub(params.clubId, userId);
+        this.clubMembershipService.validateUserCanEditClub(params.clubId, userId);
         const newId = this.gameRulesRepository.insertGameRules(params);
         return this.getGameRulesById(newId);
     }
 
     updateGameRules(id: number, params: InsertGameRulesParams, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
-        this.ensureCanUpdateGameRules(gameRules, userId);
-        this.ensureCanChangeGameRules(gameRules);
+        this.validateUserCanUpdateGameRules(gameRules, userId);
+        this.validateGameRulesHaveNoGames(gameRules);
         this.gameRulesRepository.updateGameRules(id, params);
         return this.getGameRulesById(id);
     }
 
     deleteGameRules(id: number, userId: number): void {
         const gameRules = this.getGameRulesById(id);
-        this.ensureCanUpdateGameRules(gameRules, userId);
+        this.validateUserCanUpdateGameRules(gameRules, userId);
 
-        const eventCount = this.eventRepository.countEventsByGameRulesId(id);
+        const eventCount = this.eventService.countEventsByGameRulesId(id);
         if (eventCount > 0) {
             throw new CannotDeleteGameRulesInUseError(gameRules.name, eventCount);
         }
@@ -83,17 +63,7 @@ export class GameRulesService {
         this.gameRulesRepository.deleteGameRules(id);
     }
 
-    private ensureCanCreateForClub(clubId: number, userId: number): void {
-        const user = this.userService.getUserById(userId);
-        if (user.isAdmin) return;
-
-        const role = this.clubMembershipRepository.getUserClubRole(clubId, userId);
-        if (role !== ClubRole.OWNER) {
-            throw new InsufficientClubPermissionsError(ClubRole.OWNER);
-        }
-    }
-
-    private ensureCanUpdateGameRules(gameRules: GameRules, userId: number): void {
+    private validateUserCanUpdateGameRules(gameRules: GameRules, userId: number): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
             return;
@@ -103,16 +73,13 @@ export class GameRulesService {
             throw new InsufficientPermissionsError();
         }
 
-        const role = this.clubMembershipRepository.getUserClubRole(gameRules.clubId, userId);
-        if (role !== ClubRole.OWNER) {
-            throw new InsufficientClubPermissionsError(ClubRole.OWNER);
-        }
+        this.clubMembershipService.validateUserCanEditClub(gameRules.clubId, userId);
     }
 
-    private ensureCanChangeGameRules(gameRules: GameRules): void {
-        const eventCount = this.eventRepository.countEventsByGameRulesId(gameRules.id);
-        if (eventCount > 0) {
-            throw new CannotUpdateGameRulesInUseError(gameRules.name, eventCount);
+    private validateGameRulesHaveNoGames(gameRules: GameRules): void {
+        const gameCount = this.eventService.countGamesByGameRulesId(gameRules.id);
+        if (gameCount > 0) {
+            throw new CannotUpdateGameRulesInUseError(gameRules.name, gameCount);
         }
     }
 }
@@ -129,14 +96,16 @@ function compactDetails(details: GameRulesDetails): GameRulesDetails {
     if (!details.preset) return details;
 
     const preset = gameRulesPresetsByKey.get(details.preset);
-    if (!preset) return details;
+    if (!preset) {
+        throw new Error(`Unknown game-rules preset "${details.preset}"`);
+    }
 
-    const overrides: Record<string, RuleValue> = {};
-    // Diff against the fully resolved preset chain so inherited defaults compact correctly.
+    const overrides: GameRulesValues = {};
     for (const [key, value] of Object.entries(details.rules)) {
-        const presetValue = preset.rules[key];
+        if (value === undefined) continue;
+        const presetValue = preset.rules[key as keyof GameRulesValues];
         if (presetValue === undefined || !ruleValuesEqual(value, presetValue)) {
-            overrides[key] = value;
+            overrides[key as keyof GameRulesValues] = value;
         }
     }
 

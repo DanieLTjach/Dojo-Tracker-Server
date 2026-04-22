@@ -1,9 +1,9 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
-import type { Event, GameRulesDetails } from '../model/EventModels.ts';
+import type { Event } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
-import { parseStoredGameRulesDetails } from '../util/GameRulesDetailsUtil.ts';
+import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
 
 export class EventRepository {
     private findAllEventsStatement(): Statement<[], EventWithGameRulesDBEntity> {
@@ -196,6 +196,19 @@ export class EventRepository {
     countEventsByGameRulesId(gameRulesId: number): number {
         return this.countEventsByGameRulesIdStatement().get({ gameRulesId })!.count;
     }
+
+    private countGamesByGameRulesIdStatement(): Statement<{ gameRulesId: number }, { count: number }> {
+        return dbManager.db.prepare(`
+            SELECT COUNT(*) as count
+            FROM game g
+            JOIN event e ON g.eventId = e.id
+            WHERE e.gameRules = :gameRulesId
+        `);
+    }
+
+    countGamesByGameRulesId(gameRulesId: number): number {
+        return this.countGamesByGameRulesIdStatement().get({ gameRulesId })!.count;
+    }
 }
 
 export interface EventCreateParams {
@@ -274,7 +287,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             startingPoints: dbEntity.gr_startingPoints,
             chomboPointsAfterUma: dbEntity.gr_chomboPointsAfterUma,
             umaTieBreak: parseUmaTieBreak(dbEntity.gr_umaTieBreak),
-            details: parseGameRulesDetails(dbEntity.gr_details)
+            details: parseGameRulesDetailsAndApplyPresets(dbEntity.gr_details)
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
@@ -285,6 +298,3 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
     };
 }
 
-function parseGameRulesDetails(details: string | null): GameRulesDetails | null {
-    return parseStoredGameRulesDetails(details);
-}

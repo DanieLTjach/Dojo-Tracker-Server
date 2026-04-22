@@ -3,7 +3,7 @@ import { dbManager } from '../db/dbInit.ts';
 import type { GameRules, GameRulesDetails } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
-import { parseStoredGameRulesDetails } from '../util/GameRulesDetailsUtil.ts';
+import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
 
 export class GameRulesRepository {
     private findAllGameRulesStatement(): Statement<[], GameRulesDBEntity> {
@@ -86,45 +86,6 @@ export class GameRulesRepository {
         });
     }
 
-    private findAllGlobalGameRulesStatement(): Statement<[], GameRulesDBEntity> {
-        return dbManager.db.prepare(`
-            SELECT id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak, details
-            FROM gameRules
-            WHERE clubId IS NULL
-            ORDER BY id ASC`
-        );
-    }
-
-    findAllGlobalGameRules(): GameRules[] {
-        return this.findAllGlobalGameRulesStatement().all().map(gameRulesFromDBEntity);
-    }
-
-    private findAllGameRulesWithDetailsByClubIdStatement(): Statement<{ clubId: number }, GameRulesDBEntity> {
-        return dbManager.db.prepare(`
-            SELECT id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak, details
-            FROM gameRules
-            WHERE clubId = :clubId AND details IS NOT NULL
-            ORDER BY id ASC`
-        );
-    }
-
-    findAllGameRulesWithDetailsByClubId(clubId: number): GameRules[] {
-        return this.findAllGameRulesWithDetailsByClubIdStatement().all({ clubId }).map(gameRulesFromDBEntity);
-    }
-
-    private findAllGameRulesWithoutDetailsByClubIdStatement(): Statement<{ clubId: number }, GameRulesDBEntity> {
-        return dbManager.db.prepare(`
-            SELECT id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak, details
-            FROM gameRules
-            WHERE clubId = :clubId AND details IS NULL
-            ORDER BY id ASC`
-        );
-    }
-
-    findAllGameRulesWithoutDetailsByClubId(clubId: number): GameRules[] {
-        return this.findAllGameRulesWithoutDetailsByClubIdStatement().all({ clubId }).map(gameRulesFromDBEntity);
-    }
-
     private insertGameRulesStatement(): Statement<Omit<InsertGameRulesParams, 'uma'> & { uma: string }, void> {
         return dbManager.db.prepare(`
             INSERT INTO gameRules (name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak, clubId)
@@ -133,8 +94,7 @@ export class GameRulesRepository {
     }
 
     insertGameRules(params: InsertGameRulesParams): number {
-        const { uma, ...rest } = params;
-        const result = this.insertGameRulesStatement().run({ ...rest, uma: JSON.stringify(uma) });
+        const result = this.insertGameRulesStatement().run({ ...params, uma: JSON.stringify(params.uma) });
         return Number(result.lastInsertRowid);
     }
 
@@ -149,8 +109,7 @@ export class GameRulesRepository {
     }
 
     updateGameRules(id: number, params: InsertGameRulesParams): void {
-        const { uma, ...rest } = params;
-        this.updateGameRulesStatement().run({ id, ...rest, uma: JSON.stringify(uma) });
+        this.updateGameRulesStatement().run({ id, ...params, uma: JSON.stringify(params.uma) });
     }
 
     private deleteGameRulesStatement(): Statement<{ id: number }, void> {
@@ -198,10 +157,6 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         startingPoints: dbEntity.startingPoints,
         chomboPointsAfterUma: dbEntity.chomboPointsAfterUma,
         umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak),
-        details: parseGameRulesDetails(dbEntity.details)
+        details: parseGameRulesDetailsAndApplyPresets(dbEntity.details)
     };
-}
-
-function parseGameRulesDetails(details: string | null): GameRulesDetails | null {
-    return parseStoredGameRulesDetails(details);
 }
