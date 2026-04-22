@@ -6,7 +6,7 @@ describe('gameRulesCatalog', () => {
         const keys = gameRulesCatalog.rules.map(rule => rule.key);
 
         expect(new Set(keys).size).toBe(keys.length);
-        expect(keys.length).toBeGreaterThan(100);
+        expect(keys.length).toBeGreaterThan(50);
 
         for (const rule of gameRulesCatalog.rules) {
             expect(rule.key).toMatch(/^[a-z][a-z0-9_]*$/);

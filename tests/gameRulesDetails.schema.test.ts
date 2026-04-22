@@ -27,18 +27,17 @@ describe('gameRulesDetailsSchema compact format', () => {
         expect(result.success).toBe(false);
     });
 
-    test('rejects clubRules entry missing Ukrainian text', () => {
+    test('rejects customRules entry with empty name', () => {
         const result = gameRulesDetailsSchema.safeParse({
             rules: {
                 number_of_players: 4,
                 starting_points: 30000
             },
-            clubRules: [
+            customRules: [
                 {
-                    key: 'house_yaku_tanuki',
                     category: 'yaku',
                     value: 1,
-                    name: {}
+                    name: '   '
                 }
             ]
         });
@@ -46,29 +45,28 @@ describe('gameRulesDetailsSchema compact format', () => {
         expect(result.success).toBe(false);
     });
 
-    test('rejects duplicate clubRules keys', () => {
+    test('accepts customRules entries with plain-string name and tooltip', () => {
         const result = gameRulesDetailsSchema.safeParse({
             rules: {
                 number_of_players: 4,
                 starting_points: 30000
             },
-            clubRules: [
+            customRules: [
                 {
-                    key: 'house_yaku_tanuki',
                     category: 'yaku',
                     value: 1,
-                    name: { uk: 'Танукі' }
+                    name: 'Танукі',
+                    tooltip: 'Домашнє яку'
                 },
                 {
-                    key: 'house_yaku_tanuki',
-                    category: 'yaku',
-                    value: 2,
-                    name: { uk: 'Танукі 2' }
+                    category: 'rule',
+                    value: true,
+                    name: 'Щось особливе'
                 }
             ]
         });
 
-        expect(result.success).toBe(false);
+        expect(result.success).toBe(true);
     });
 
     test('accepts links with plain string labels', () => {

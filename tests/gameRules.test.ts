@@ -37,10 +37,10 @@ describe('Game Rules API Endpoints', () => {
                 .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(200);
-            expect(response.body.rules.find((rule: { key: string }) => rule.key === 'after_a_quad')).toMatchObject({
-                key: 'after_a_quad',
+            expect(response.body.rules.find((rule: { key: string }) => rule.key === 'nb_quads_max')).toMatchObject({
+                key: 'nb_quads_max',
                 type: 'enumInteger',
-                enum: [1]
+                enum: [4]
             });
         });
 

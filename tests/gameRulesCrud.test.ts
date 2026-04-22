@@ -132,13 +132,18 @@ describe('Game Rules CRUD', () => {
             expect(result.startingPoints).toBe(35000);
         });
 
-        test('updateGameRules throws CannotUpdateGameRulesInUseError when events reference it', () => {
+        test('updateGameRules throws CannotUpdateGameRulesInUseError when games exist for the rule', () => {
             const ruleId = repo.insertGameRules({ ...baseParams, name: 'Referenced Update Rule' });
             const eventId = 8003;
+            const gameId = 80003;
             dbManager.db.prepare(
                 `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(eventId, 'Update Block Test', 'SEASON', ruleId, TEST_CLUB_ID, 0, 0, 0, timestamp, timestamp);
+            dbManager.db.prepare(
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0);
 
             try {
                 expect(() => service.updateGameRules(ruleId, {
@@ -150,6 +155,30 @@ describe('Game Rules CRUD', () => {
                 const fetched = repo.findGameRulesById(ruleId);
                 expect(fetched!.name).toBe('Referenced Update Rule');
                 expect(fetched!.startingPoints).toBe(baseParams.startingPoints);
+            } finally {
+                dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);
+                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+                repo.deleteGameRules(ruleId);
+            }
+        });
+
+        test('updateGameRules allows update when events exist but no games', () => {
+            const ruleId = repo.insertGameRules({ ...baseParams, name: 'Event-only Rule' });
+            const eventId = 8004;
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(eventId, 'No Games Event', 'SEASON', ruleId, TEST_CLUB_ID, 0, 0, 0, timestamp, timestamp);
+
+            try {
+                const updated = service.updateGameRules(ruleId, {
+                    ...baseParams,
+                    name: 'Updated Without Games',
+                    startingPoints: 35000
+                }, ADMIN_USER_ID);
+
+                expect(updated.name).toBe('Updated Without Games');
+                expect(updated.startingPoints).toBe(35000);
             } finally {
                 dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
                 repo.deleteGameRules(ruleId);

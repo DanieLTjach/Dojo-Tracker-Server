@@ -33,7 +33,7 @@ describe('game rules presets', () => {
         expect(sanmaPreset).toBeDefined();
         expect(sanmaPreset!.rules['abortive_draw']).toBe(true);
         expect(sanmaPreset!.rules['automatic_agari_tenpai_yame']).toBe(true);
-        expect(sanmaPreset!.rules['after_a_quad']).toBe(1);
+        expect(sanmaPreset!.rules['open_tanyao']).toBe(true);
     });
 
     test('internal default preset is hidden from public consumers', () => {
