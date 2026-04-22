@@ -113,11 +113,12 @@ describe('Game Rules API Endpoints', () => {
             expect(response.status).toBe(401);
         });
 
-        test('should reject non-admin users', async () => {
+        test('should return presets for a non-admin authenticated user', async () => {
             const response = await request(app)
                 .get('/api/game-rules/presets')
                 .set('Authorization', nonAdminAuthHeader);
-            expect(response.status).toBe(403);
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
         });
     });
 

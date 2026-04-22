@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { GameRulesController } from '../controller/GameRulesController.ts';
-import { requireAdmin, requireAuth } from '../middleware/AuthMiddleware.ts';
+import { requireAuth } from '../middleware/AuthMiddleware.ts';
 
 const router = Router();
 const gameRulesController = new GameRulesController();
@@ -18,9 +18,9 @@ router.get('/catalog', requireAuth, withTransaction((req, res) => gameRulesContr
  * GET /api/game-rules/presets
  * Get available game rules presets
  *
- * Authentication: Required (admin only)
+ * Authentication: Required
  */
-router.get('/presets', requireAuth, requireAdmin, withTransaction((req, res) => gameRulesController.getPresets(req, res)));
+router.get('/presets', requireAuth, withTransaction((req, res) => gameRulesController.getPresets(req, res)));
 
 /**
  * GET /api/game-rules
