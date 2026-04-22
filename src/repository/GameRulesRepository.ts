@@ -132,7 +132,7 @@ export interface InsertGameRulesParams {
     startingPoints: number;
     chomboPointsAfterUma: number | null;
     umaTieBreak: string;
-    clubId: number;
+    clubId: number | null;
 }
 
 interface GameRulesDBEntity {

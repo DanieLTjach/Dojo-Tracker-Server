@@ -38,7 +38,14 @@ export class GameRulesService {
     }
 
     createGameRules(params: InsertGameRulesParams, userId: number): GameRules {
-        this.clubMembershipService.validateUserCanEditClub(params.clubId, userId);
+        if (params.clubId === null) {
+            const user = this.userService.getUserById(userId);
+            if (!user.isAdmin) {
+                throw new InsufficientPermissionsError();
+            }
+        } else {
+            this.clubMembershipService.validateUserCanEditClub(params.clubId, userId);
+        }
         const newId = this.gameRulesRepository.insertGameRules(params);
         return this.getGameRulesById(newId);
     }
