@@ -127,3 +127,36 @@ export const gameRulesDetailsUpdateSchema = z.object({
         details: gameRulesDetailsSchema.nullable()
     })
 });
+
+const umaEntrySchema = z.number().int();
+const umaSchema = z.union([
+    z.array(umaEntrySchema).min(3).max(4),
+    z.array(z.array(umaEntrySchema).min(3).max(4)).min(1)
+]);
+
+export const gameRulesUpsertBodySchema = z.strictObject({
+    name: z.string().trim().min(1, 'Name cannot be empty'),
+    numberOfPlayers: z.union([z.literal(3), z.literal(4)]),
+    uma: umaSchema,
+    startingPoints: z.number().int().min(0),
+    chomboPointsAfterUma: z.number().int().nullable(),
+    umaTieBreak: z.enum(['WIND', 'DIVIDE']),
+    clubId: z.number().int().nullable()
+});
+
+export const gameRulesCreateSchema = z.object({
+    body: gameRulesUpsertBodySchema
+});
+
+export const gameRulesUpdateSchema = z.object({
+    params: z.object({
+        id: gameRulesIdParamSchema
+    }),
+    body: gameRulesUpsertBodySchema
+});
+
+export const gameRulesDeleteSchema = z.object({
+    params: z.object({
+        id: gameRulesIdParamSchema
+    })
+});

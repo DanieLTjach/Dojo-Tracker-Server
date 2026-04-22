@@ -402,4 +402,212 @@ describe('Game Rules API Endpoints', () => {
             }
         });
     });
+
+    describe('POST /api/game-rules, PUT /:id, DELETE /:id', () => {
+        const clubId = 910900;
+        const ownerId = 910901;
+        const nonMemberId = 910902;
+        const timestamp = '2026-01-01T00:00:00.000Z';
+        const validBody = {
+            name: 'API Upsert Rule',
+            numberOfPlayers: 4,
+            uma: [15, 5, -5, -15],
+            startingPoints: 30000,
+            chomboPointsAfterUma: null,
+            umaTieBreak: 'DIVIDE',
+            clubId
+        };
+
+        beforeAll(() => {
+            dbManager.db.prepare(
+                `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubId, 'Upsert API Club', null, null, null, null, 1, timestamp, timestamp, 0);
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(ownerId, 910901, 'upsert-owner', 1, 0, timestamp, timestamp, 0);
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(nonMemberId, 910902, 'upsert-nonmember', 1, 0, timestamp, timestamp, 0);
+            dbManager.db.prepare(
+                `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(clubId, ownerId, 'OWNER', 'ACTIVE', timestamp, timestamp, 0);
+        });
+
+        afterAll(() => {
+            dbManager.db.prepare('DELETE FROM gameRules WHERE clubId = ?').run(clubId);
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(clubId);
+            dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?)').run(ownerId, nonMemberId);
+            dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(clubId);
+        });
+
+        test('POST creates rule as admin and returns 201', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'POST Admin Rule' });
+
+            expect(response.status).toBe(201);
+            expect(response.body.id).toBeGreaterThan(0);
+            expect(response.body.name).toBe('POST Admin Rule');
+
+            dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(response.body.id);
+        });
+
+        test('POST creates rule as club owner', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', createAuthHeader(ownerId))
+                .send({ ...validBody, name: 'POST Owner Rule' });
+
+            expect(response.status).toBe(201);
+            expect(response.body.clubId).toBe(clubId);
+
+            dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(response.body.id);
+        });
+
+        test('POST by non-member returns 403', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', createAuthHeader(nonMemberId))
+                .send({ ...validBody, name: 'Should Fail' });
+
+            expect(response.status).toBe(403);
+        });
+
+        test('POST without auth returns 401', async () => {
+            const response = await request(app).post('/api/game-rules').send(validBody);
+            expect(response.status).toBe(401);
+        });
+
+        test('POST with invalid body (bad numberOfPlayers) returns 400', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, numberOfPlayers: 5 });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('POST with global clubId by non-admin returns 403', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', createAuthHeader(ownerId))
+                .send({ ...validBody, name: 'Global Attempt', clubId: null });
+
+            expect(response.status).toBe(403);
+        });
+
+        test('PUT updates rule as admin', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'PUT Target' });
+            const ruleId = create.body.id;
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({ ...validBody, name: 'PUT Updated', startingPoints: 25000 });
+
+                expect(response.status).toBe(200);
+                expect(response.body.name).toBe('PUT Updated');
+                expect(response.body.startingPoints).toBe(25000);
+            } finally {
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
+        test('PUT blocked when games reference the rule (400)', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'PUT Blocked' });
+            const ruleId = create.body.id;
+            const eventId = 910910;
+            const gameId = 910911;
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(eventId, 'PUT Blocked Event', 'SEASON', ruleId, clubId, 0, 0, 0, timestamp, timestamp);
+            dbManager.db.prepare(
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0);
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({ ...validBody, name: 'Try Update' });
+
+                expect(response.status).toBe(400);
+            } finally {
+                dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);
+                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
+        test('DELETE removes rule and returns 204', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'DELETE Target' });
+            const ruleId = create.body.id;
+
+            const response = await request(app)
+                .delete(`/api/game-rules/${ruleId}`)
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(204);
+            expect(dbManager.db.prepare('SELECT id FROM gameRules WHERE id = ?').get(ruleId)).toBeUndefined();
+        });
+
+        test('DELETE blocked when events reference the rule (400)', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'DELETE Blocked' });
+            const ruleId = create.body.id;
+            const eventId = 910920;
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(eventId, 'DELETE Blocked Event', 'SEASON', ruleId, clubId, 0, 0, 0, timestamp, timestamp);
+
+            try {
+                const response = await request(app)
+                    .delete(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader);
+
+                expect(response.status).toBe(400);
+            } finally {
+                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
+        test('DELETE by non-member returns 403', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'DELETE Forbidden' });
+            const ruleId = create.body.id;
+
+            try {
+                const response = await request(app)
+                    .delete(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', createAuthHeader(nonMemberId));
+
+                expect(response.status).toBe(403);
+            } finally {
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+    });
 });

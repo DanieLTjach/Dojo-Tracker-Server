@@ -1,7 +1,14 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { GameRulesService } from '../service/GameRulesService.ts';
-import { gameRulesDetailsUpdateSchema, gameRulesGetByIdSchema, gameRulesGetListSchema } from '../schema/GameRulesSchemas.ts';
+import {
+    gameRulesCreateSchema,
+    gameRulesDeleteSchema,
+    gameRulesDetailsUpdateSchema,
+    gameRulesGetByIdSchema,
+    gameRulesGetListSchema,
+    gameRulesUpdateSchema
+} from '../schema/GameRulesSchemas.ts';
 import { gameRulesCatalog } from '../data/gameRulesCatalog.ts';
 import { gameRulesPresets } from '../data/gameRulesPresets.ts';
 
@@ -47,5 +54,26 @@ export class GameRulesController {
         const userId = req.user!.userId;
         const gameRules = this.gameRulesService.updateGameRulesDetails(id, details, userId);
         return res.status(StatusCodes.OK).json(gameRules);
+    }
+
+    createGameRules(req: Request, res: Response) {
+        const { body } = gameRulesCreateSchema.parse(req);
+        const userId = req.user!.userId;
+        const gameRules = this.gameRulesService.createGameRules(body, userId);
+        return res.status(StatusCodes.CREATED).json(gameRules);
+    }
+
+    updateGameRules(req: Request, res: Response) {
+        const { params: { id }, body } = gameRulesUpdateSchema.parse(req);
+        const userId = req.user!.userId;
+        const gameRules = this.gameRulesService.updateGameRules(id, body, userId);
+        return res.status(StatusCodes.OK).json(gameRules);
+    }
+
+    deleteGameRules(req: Request, res: Response) {
+        const { params: { id } } = gameRulesDeleteSchema.parse(req);
+        const userId = req.user!.userId;
+        this.gameRulesService.deleteGameRules(id, userId);
+        return res.status(StatusCodes.NO_CONTENT).send();
     }
 }
