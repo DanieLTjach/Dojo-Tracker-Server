@@ -202,7 +202,7 @@ describe('Event API Endpoints', () => {
             });
             expect(response.body.gameRules.details.rules.number_of_players).toBe(4);
             expect(response.body.gameRules.details.rules.open_tanyao).toBe(true);
-            expect(response.body.gameRules.details.rules.minimum_games_for_rating).toBe(5);
+            expect(response.body.gameRules.details.rules.counted_yakuman).toBe(true);
         });
 
         test('should parse uma as 2D array of numbers in game rules', async () => {
