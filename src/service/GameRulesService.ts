@@ -39,10 +39,7 @@ export class GameRulesService {
 
     createGameRules(params: InsertGameRulesParams, userId: number): GameRules {
         if (params.clubId === null) {
-            const user = this.userService.getUserById(userId);
-            if (!user.isAdmin) {
-                throw new InsufficientPermissionsError();
-            }
+            this.userService.validateUserIsAdmin(userId, () => new InsufficientPermissionsError());
         } else {
             this.clubMembershipService.validateUserCanEditClub(params.clubId, userId);
         }
