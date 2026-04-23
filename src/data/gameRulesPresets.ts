@@ -76,7 +76,6 @@ const ema2025Def: GameRulesPresetDef = {
         riichi_without_a_next_draw: true,
         starting_points: 0,
         tenpai_yame: 'no',
-        uma_tie_break: 'equal_split',
         west_round: false,
         yakuman_stacking: false,
     }
@@ -109,7 +108,6 @@ const mahjongSoulDef: GameRulesPresetDef = {
         riichi_without_a_next_draw: false,
         starting_points: 25000,
         tenpai_yame: 'no',
-        uma_tie_break: 'by_wind',
         west_round: true,
         yakuman_stacking: true,
     }
@@ -133,7 +131,6 @@ const mahjongSoulSanmaDef: GameRulesPresetDef = {
         furiten_from_kita: false,
         north_as_yaku: false,
         honba: '2x100',
-        uma_tie_break: 'by_wind',
     }
 };
 

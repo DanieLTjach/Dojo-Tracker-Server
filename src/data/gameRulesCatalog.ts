@@ -106,7 +106,6 @@ export const gameRulesCatalog = {
         { key: 'thirteen_orphans_allows_to_rob_a_concealed_quad', type: 'boolean' },
         { key: 'triple_ron', type: 'enumString', enum: ['yes','head_bump','first','cancel'] },
         { key: 'two_han_minimum', type: 'boolean' },
-        { key: 'uma_tie_break', type: 'enumString', enum: ['by_wind','equal_split'] },
         { key: 'ura_dora', type: 'boolean' },
         { key: 'west_round', type: 'boolean' },
         { key: 'yakuman_stacking', type: 'boolean' },
