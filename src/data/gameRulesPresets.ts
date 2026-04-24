@@ -65,7 +65,6 @@ const ema2025Def: GameRulesPresetDef = {
         counted_yakuman: false,
         double_wind_fu: 'two_fu',
         double_yakuman: false,
-        goal: 0,
         honba: '3x100',
         kan_dora_called_promoted_quad: 'before_discard',
         mangan_rounding_up: true,
