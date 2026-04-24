@@ -3,6 +3,7 @@ import type { Database as BetterSqlite3Database } from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -194,6 +195,47 @@ describe('Database Migrations', () => {
 
     const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
     expect(foreignKeyViolations).toEqual([]);
+
+    db.close();
+  });
+
+  test('migration 5 seeds game rules details in current compact format', () => {
+    const db = createMigratedDb('5.sql');
+
+    const rows = db.prepare('SELECT id, details FROM gameRules WHERE details IS NOT NULL ORDER BY id').all() as Array<{ id: number; details: string }>;
+    expect(rows.map(row => row.id)).toEqual([1, 2, 3, 4, 5, 6, 10]);
+
+    const parsedById = new Map<number, ReturnType<typeof gameRulesDetailsSchema.parse>>();
+
+    for (const row of rows) {
+      const details = JSON.parse(row.details);
+      const result = gameRulesDetailsSchema.safeParse(details);
+      expect(result.success).toBe(true);
+      if (!result.success) {
+        continue;
+      }
+
+      parsedById.set(row.id, result.data);
+    }
+
+    expect(parsedById.get(4)?.links).toEqual([
+      {
+        url: 'http://mahjong-europe.org/portal/images/docs/Riichi-rules-2025-EN.pdf',
+        label: 'Riichi Rules 2025 (PDF)'
+      }
+    ]);
+    expect(parsedById.get(5)?.links).toEqual([
+      {
+        url: 'https://riichi.wiki/Mahjong_Soul',
+        label: 'Mahjong Soul'
+      }
+    ]);
+    expect(parsedById.get(6)?.links).toEqual([
+      {
+        url: 'https://riichi.wiki/Mahjong_Soul#3P-Mahjong',
+        label: 'Mahjong Soul - 3P Mahjong'
+      }
+    ]);
 
     db.close();
   });

@@ -3,6 +3,7 @@ import config from '../../config/config.ts';
 import {
     ClubMembershipAlreadyExistsError,
     ClubMembershipNotFoundError,
+    InsufficientClubPermissionsError,
     InvalidClubMembershipStateError
 } from '../error/ClubErrors.ts';
 import type { Club, ClubMembership, ClubRole, UserClubMembership } from '../model/ClubModels.ts';
@@ -40,6 +41,16 @@ export class ClubMembershipService {
         const user = this.userService.getUserById(userId);
         const membership = this.membershipRepository.findMembership(clubId, userId);
         return membership !== undefined ? buildUserClubMembership(membership, user) : undefined;
+    }
+
+    validateUserCanEditClub(clubId: number, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+        if (!this.getUserClubMembership(clubId, userId)?.permissions.canEditClub) {
+            throw new InsufficientClubPermissionsError('OWNER');
+        }
     }
 
     getUserClubMemberships(userId: number): UserClubMembership[] {

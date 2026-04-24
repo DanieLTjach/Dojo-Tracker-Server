@@ -26,6 +26,14 @@ export class EventService {
         return this.eventRepository.findAllEvents();
     }
 
+    countEventsByGameRulesId(gameRulesId: number): number {
+        return this.eventRepository.countEventsByGameRulesId(gameRulesId);
+    }
+
+    countGamesByGameRulesId(gameRulesId: number): number {
+        return this.eventRepository.countGamesByGameRulesId(gameRulesId);
+    }
+
     getEventById(eventId: number): Event {
         const event = this.eventRepository.findEventById(eventId);
         if (!event) {
