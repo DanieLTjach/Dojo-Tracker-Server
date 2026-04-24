@@ -198,7 +198,7 @@ describe('Event API Endpoints', () => {
 
             expect(response.status).toBe(200);
             expect(response.body.gameRules.details).toMatchObject({
-                preset: 'mahjong_soul'
+                preset: 'ema_2025'
             });
             expect(response.body.gameRules.details.rules.number_of_players).toBe(4);
             expect(response.body.gameRules.details.rules.open_tanyao).toBe(true);
