@@ -358,7 +358,7 @@ export class GameService {
         }
     }
 
-    private validatePlayers(playersData: PlayerData[], gameRules: GameRules): void {
+    validatePlayers(playersData: PlayerData[], gameRules: GameRules): void {
         if (playersData.length !== gameRules.numberOfPlayers) {
             throw new IncorrectPlayerCountError(gameRules.numberOfPlayers);
         }

@@ -4,6 +4,7 @@ import { UserRepository } from '../repository/UserRepository.ts';
 import { CsvParsingError, NoValidGamesInCsvError } from '../error/ImportErrors.ts';
 import type { PlayerData } from '../model/GameModels.ts';
 import type { GameWithPlayers } from '../model/GameModels.ts';
+import type { Event } from '../model/EventModels.ts';
 
 interface RowError {
     row: number;
@@ -32,36 +33,33 @@ export class ImportService {
     private eventService: EventService = new EventService();
     private userRepository: UserRepository = new UserRepository();
 
-    importGames(eventId: number, csvContent: string, importedBy: number): ImportResult {
-        const event = this.eventService.getEventById(eventId);
-        const numberOfPlayers = event.gameRules.numberOfPlayers;
+    /**
+     * Parse and validate the CSV without writing any games. Returns the same shape as importGames
+     * with imported=0 and games=[]. Catches both row-parse errors and per-game rule errors
+     * (point sums, duplicate players, etc.) so callers can surface every problem in one pass.
+     */
+    validateGames(eventId: number, csvContent: string): ImportResult {
+        const { event, parsedRows, errors } = this.parseAndValidate(eventId, csvContent);
 
-        const { headers, dataRows } = this.parseCsv(csvContent);
-        this.validateHeaders(headers, numberOfPlayers);
-
-        // Pass 1: Validate all rows
-        const parsedRows: (ParsedGameRow | null)[] = [];
-        const errors: RowError[] = [];
-
-        for (let i = 0; i < dataRows.length; i++) {
-            const rowNumber = i + 2; // 1-indexed, skip header
-            const cells = dataRows[i]!;
-
-            try {
-                const parsed = this.parseGameRow(cells, headers, numberOfPlayers, rowNumber);
-                parsedRows.push(parsed);
-            } catch (error: any) {
-                errors.push({ row: rowNumber, message: error.message });
-                parsedRows.push(null);
+        if (errors.length === 0) {
+            for (let i = 0; i < parsedRows.length; i++) {
+                const parsed = parsedRows[i]!;
+                try {
+                    this.gameService.validatePlayers(parsed.players, event.gameRules);
+                } catch (error: any) {
+                    errors.push({ row: i + 2, message: error.message });
+                }
             }
         }
 
+        return { imported: 0, errors, games: [] };
+    }
+
+    importGames(eventId: number, csvContent: string, importedBy: number): ImportResult {
+        const { parsedRows, errors } = this.parseAndValidate(eventId, csvContent);
+
         if (errors.length > 0) {
             return { imported: 0, errors, games: [] };
-        }
-
-        if (parsedRows.length === 0) {
-            throw new NoValidGamesInCsvError();
         }
 
         // Pass 2: Insert all games
@@ -93,6 +91,35 @@ export class ImportService {
             errors,
             games
         };
+    }
+
+    private parseAndValidate(eventId: number, csvContent: string): { event: Event; parsedRows: ParsedGameRow[]; errors: RowError[] } {
+        const event = this.eventService.getEventById(eventId);
+        const numberOfPlayers = event.gameRules.numberOfPlayers;
+
+        const { headers, dataRows } = this.parseCsv(csvContent);
+        this.validateHeaders(headers, numberOfPlayers);
+
+        const parsedRows: ParsedGameRow[] = [];
+        const errors: RowError[] = [];
+
+        for (let i = 0; i < dataRows.length; i++) {
+            const rowNumber = i + 2; // 1-indexed, skip header
+            const cells = dataRows[i]!;
+
+            try {
+                const parsed = this.parseGameRow(cells, headers, numberOfPlayers, rowNumber);
+                parsedRows.push(parsed);
+            } catch (error: any) {
+                errors.push({ row: rowNumber, message: error.message });
+            }
+        }
+
+        if (errors.length === 0 && parsedRows.length === 0) {
+            throw new NoValidGamesInCsvError();
+        }
+
+        return { event, parsedRows, errors };
     }
 
     private parseCsv(csvContent: string): { headers: string[]; dataRows: string[][] } {
