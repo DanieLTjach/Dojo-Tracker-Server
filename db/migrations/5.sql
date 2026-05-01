@@ -27,6 +27,9 @@ WHERE id = 1
 INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId, umaTieBreak)
 VALUES (10, 'Сезон 5 йонма', 4, '[15,5,-5,-15]', 30000, NULL, 1, 'DIVIDE');
 
+INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId, umaTieBreak)
+VALUES (11, 'EMA 2025 + red fives', 4, '[15,5,-5,-15]', 0, 20000, NULL, 'DIVIDE');
+
 UPDATE event
 SET gameRules = 10
 WHERE gameRules = 1
@@ -43,3 +46,4 @@ UPDATE gameRules SET details = '{"preset":"mahjong_soul","rules":{"abortive_draw
 UPDATE gameRules SET details = '{"preset":"mahjong_soul_sanma","rules":{"abortive_draw":false,"blessing_of_man":"yakuman","mangan_rounding_up":true,"riichi_without_a_next_draw":true}}' WHERE id = 8;
 UPDATE gameRules SET details = '{"preset":"mahjong_soul","rules":{"abortive_draw":false,"blessing_of_man":"yakuman","call_precedence":"ron_first","continuation":"agari","kan_dora_called_promoted_quad":"before_discard","mangan_rounding_up":true,"riichi_without_a_next_draw":true,"triple_ron":"cancel"}}' WHERE id = 9;
 UPDATE gameRules SET details = '{"preset":"mahjong_soul","rules":{"abortive_draw":false,"bankrupt":"zero_or_less","blessing_of_man":"mangan","chombo":"mangan","continuance_payment_on_multiple_ron":"all","honba":"3x500","kan_dora_called_promoted_quad":"before_discard","starting_points":30000,"west_round":false}}' WHERE id = 10;
+UPDATE gameRules SET details = '{"preset":"ema_2025","rules":{"red_fives":"three_one_per_suit"},"links":[{"url":"http://mahjong-europe.org/portal/images/docs/Riichi-rules-2025-EN.pdf","label":"Riichi Rules 2025 (PDF)"}]}' WHERE id = 11;
