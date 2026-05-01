@@ -203,7 +203,7 @@ describe('Database Migrations', () => {
     const db = createMigratedDb('5.sql');
 
     const rows = db.prepare('SELECT id, details FROM gameRules WHERE details IS NOT NULL ORDER BY id').all() as Array<{ id: number; details: string }>;
-    expect(rows.map(row => row.id)).toEqual([1, 2, 3, 4, 5, 6, 10]);
+    expect(rows.map(row => row.id)).toEqual([1, 2, 3, 4, 5, 6, 10, 11]);
 
     const parsedById = new Map<number, ReturnType<typeof gameRulesDetailsSchema.parse>>();
 
