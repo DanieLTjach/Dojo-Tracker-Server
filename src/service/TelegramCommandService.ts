@@ -8,8 +8,11 @@ import { UserService } from "./UserService.ts";
 import type { CallbackQuery, Message, Update } from "telegraf/types";
 import type { User } from "../model/UserModels.ts";
 import { dbManager } from "../db/dbInit.ts";
-import { ClubService, updateClubTelegramTopic } from "./ClubService.ts";
+import { ClubService, updateClubTelegramTopic, unsetClubTelegramTopic } from "./ClubService.ts";
 import { ClubTelegramTopicType } from "../model/TelegramTopic.ts";
+import type { TelegramTopic } from "../model/TelegramTopic.ts";
+import type { ClubTelegramTopics } from "../model/ClubModels.ts";
+import TelegramMessageService from "./TelegramMessageService.ts";
 import { parseClubTelegramTopicType } from "../util/EnumUtil.ts";
 import { PollRepository } from "../repository/PollRepository.ts";
 import type { ClubPollConfig } from "../model/PollModels.ts";
@@ -40,6 +43,14 @@ class TelegramCommandService {
             this.executeWithErrorHandling(ctx, this.handleSetTopicCommand.bind(this));
         });
 
+        telegramBot.command('unset_topic', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handleUnsetTopicCommand.bind(this));
+        });
+
+        telegramBot.command('diagnose_topics', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handleDiagnoseTopicsCommand.bind(this));
+        });
+
         telegramBot.command('post_app_link', (ctx) => {
             this.executeWithErrorHandling(ctx, this.handlePostAppLinkCommand.bind(this));
         });
@@ -49,6 +60,21 @@ class TelegramCommandService {
         });
         telegramBot.action(/set_topic_([A-Z_]+)_(\d+)(?:_(-?\d+))?/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleSetTopicCallback.bind(this));
+        });
+
+        telegramBot.action(/select_unset_topic_type_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleSelectUnsetTopicTypeCallback.bind(this));
+        });
+        telegramBot.action(/unset_topic_([A-Z_]+)_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleUnsetTopicCallback.bind(this));
+        });
+        telegramBot.action(/diagnose_topics_club_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleDiagnoseTopicsClubCallback.bind(this));
+        });
+        telegramBot.action(/test_topic_([A-Z_]+)_(\d+)/, async (ctx) => {
+            // Note: do NOT use executeCallbackQueryWithErrorHandling — it deletes the message,
+            // and we want the diagnose panel with all test buttons to remain interactable.
+            await this.executeWithErrorHandling(ctx, this.handleTestTopicCallback.bind(this));
         });
 
         telegramBot.command('setup_poll', (ctx) => {
@@ -96,6 +122,8 @@ class TelegramCommandService {
             { command: 'help', description: 'Показати список команд' },
             { command: 'post_app_link', description: 'Опублікувати посилання на додаток' },
             { command: 'set_topic', description: 'Налаштувати сповіщення в поточному топіку' },
+            { command: 'unset_topic', description: 'Видалити налаштування топіка' },
+            { command: 'diagnose_topics', description: 'Перевірити налаштування топіків' },
             { command: 'setup_poll', description: 'Налаштувати опитування для клубу' },
             { command: 'preview_poll', description: 'Попередній перегляд опитування' },
             { command: 'send_poll', description: 'Відправити опитування зараз' },
@@ -127,7 +155,9 @@ class TelegramCommandService {
                 + `<code>/send_poll</code> — Відправити опитування зараз\n`
                 + `\n`
                 + `<b>Сповіщення:</b>\n`
-                + `<code>/set_topic</code> — Налаштувати сповіщення в поточному топіку\n`;
+                + `<code>/set_topic</code> — Налаштувати сповіщення в поточному топіку\n`
+                + `<code>/unset_topic</code> — Скинути налаштування топіка\n`
+                + `<code>/diagnose_topics</code> — Перевірити налаштування топіків\n`;
         }
 
         ctx.replyWithHTML(text);
@@ -196,6 +226,139 @@ class TelegramCommandService {
         })();
 
         ctx.reply(clubTelegramTopicUpdatedSuccessfullyText(topicType));
+    }
+
+    private handleUnsetTopicCommand(ctx: TelegramCommandContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubData = this.getUserOwnedClubData(user);
+
+        ctx.reply('Виберіть клуб, для якого хочете скинути топік:', {
+            reply_markup: {
+                inline_keyboard: clubData.map(c => ([{
+                    text: c.clubName,
+                    callback_data: `select_unset_topic_type_${c.clubId}`
+                }]))
+            }
+        });
+    }
+
+    private handleSelectUnsetTopicTypeCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const topics = this.clubService.getClubTelegramTopics(clubId);
+        // Only show topic types that are currently set, so admins can't "unset" something already null.
+        const setTypes = (Object.values(ClubTelegramTopicType) as ClubTelegramTopicType[])
+            .filter(t => getTopicByType(topics, t) !== null);
+
+        if (setTypes.length === 0) {
+            ctx.reply('Для цього клубу не налаштовано жодного топіка.');
+            return;
+        }
+
+        ctx.reply('Виберіть топік, який хочете скинути:', {
+            reply_markup: {
+                inline_keyboard: setTypes.map(topicType => ([{
+                    text: clubTelegramTopicDescription(topicType),
+                    callback_data: `unset_topic_${topicType}_${clubId}`
+                }]))
+            }
+        });
+    }
+
+    private handleUnsetTopicCallback(ctx: TelegramCallbackQueryContext) {
+        const topicType = parseClubTelegramTopicType(ctx.match[1]!);
+        const clubId = parseInt(ctx.match[2]!);
+
+        dbManager.db.transaction(() => {
+            const user = this.getUserByTelegramId(ctx.from.id);
+            this.validateUserCanEditClub(user, clubId);
+
+            const topics = this.clubService.getClubTelegramTopics(clubId);
+            const updated = unsetClubTelegramTopic(topics, topicType);
+            this.clubService.setClubTelegramTopics(clubId, updated, user.id);
+        })();
+
+        ctx.reply(clubTelegramTopicUnsetSuccessfullyText(topicType));
+    }
+
+    private handleDiagnoseTopicsCommand(ctx: TelegramCommandContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubData = this.getUserOwnedClubData(user);
+
+        if (clubData.length === 1) {
+            // Skip the club picker for single-club admins — render directly.
+            return this.sendDiagnoseTopicsForClub(ctx, user, clubData[0]!.clubId);
+        }
+
+        ctx.reply('Виберіть клуб для діагностики топіків:', {
+            reply_markup: {
+                inline_keyboard: clubData.map(c => ([{
+                    text: c.clubName,
+                    callback_data: `diagnose_topics_club_${c.clubId}`
+                }]))
+            }
+        });
+    }
+
+    private handleDiagnoseTopicsClubCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.sendDiagnoseTopicsForClub(ctx, user, clubId);
+    }
+
+    private sendDiagnoseTopicsForClub(
+        ctx: TelegramCommandContext | TelegramCallbackQueryContext,
+        user: User,
+        clubId: number,
+    ) {
+        this.validateUserCanEditClub(user, clubId);
+        const topics = this.clubService.getClubTelegramTopics(clubId);
+
+        const lines: string[] = ['🩺 <b>Діагностика топіків</b>', ''];
+        const buttons: { text: string; callback_data: string }[][] = [];
+
+        for (const topicType of Object.values(ClubTelegramTopicType) as ClubTelegramTopicType[]) {
+            const topic = getTopicByType(topics, topicType);
+            const label = clubTelegramTopicDescription(topicType);
+            if (topic === null) {
+                lines.push(`${label}: ❌ не налаштовано`);
+            } else {
+                const topicSuffix = topic.topicId !== undefined ? ` / thread <code>${topic.topicId}</code>` : ' (general)';
+                lines.push(`${label}: chat <code>${topic.chatId}</code>${topicSuffix}`);
+                buttons.push([{
+                    text: `📨 Тест: ${label}`,
+                    callback_data: `test_topic_${topicType}_${clubId}`
+                }]);
+            }
+        }
+
+        ctx.replyWithHTML(lines.join('\n'), {
+            reply_markup: { inline_keyboard: buttons }
+        });
+    }
+
+    private async handleTestTopicCallback(ctx: TelegramCallbackQueryContext) {
+        const topicType = parseClubTelegramTopicType(ctx.match[1]!);
+        const clubId = parseInt(ctx.match[2]!);
+
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const topic = getTopicByType(this.clubService.getClubTelegramTopics(clubId), topicType);
+        if (topic === null) {
+            await ctx.answerCbQuery('Топік не налаштовано', { show_alert: true });
+            return;
+        }
+
+        await TelegramMessageService.sendMessage(
+            `🧪 <b>Тестове повідомлення</b>\n` +
+            `Топік: ${clubTelegramTopicDescription(topicType)}\n` +
+            `Якщо ви бачите це повідомлення — топік налаштовано правильно.`,
+            topic
+        );
+        await ctx.answerCbQuery('Тестове повідомлення надіслано ✅');
     }
 
     // ── Poll wizard handlers ──
@@ -633,6 +796,26 @@ function clubTelegramTopicUpdatedSuccessfullyText(topicType: ClubTelegramTopicTy
             return 'Топік для логів клубу успішно встановлено!';
         case ClubTelegramTopicType.MAIN:
             return 'Основний топік успішно встановлено!';
+    }
+}
+
+function clubTelegramTopicUnsetSuccessfullyText(topicType: ClubTelegramTopicType): string {
+    switch (topicType) {
+        case ClubTelegramTopicType.RATING:    return 'Топік для рейтингу скинуто.';
+        case ClubTelegramTopicType.USER_LOGS: return 'Топік для логів користувачів скинуто.';
+        case ClubTelegramTopicType.GAME_LOGS: return 'Топік для логів ігр скинуто.';
+        case ClubTelegramTopicType.CLUB_LOGS: return 'Топік для логів клубу скинуто.';
+        case ClubTelegramTopicType.MAIN:      return 'Основний топік скинуто.';
+    }
+}
+
+function getTopicByType(topics: ClubTelegramTopics, topicType: ClubTelegramTopicType): TelegramTopic | null {
+    switch (topicType) {
+        case ClubTelegramTopicType.RATING:    return topics.rating;
+        case ClubTelegramTopicType.USER_LOGS: return topics.userLogs;
+        case ClubTelegramTopicType.GAME_LOGS: return topics.gameLogs;
+        case ClubTelegramTopicType.CLUB_LOGS: return topics.clubLogs;
+        case ClubTelegramTopicType.MAIN:      return topics.main;
     }
 }
 
