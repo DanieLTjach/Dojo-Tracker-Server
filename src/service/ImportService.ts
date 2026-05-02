@@ -2,6 +2,7 @@ import { GameService } from './GameService.ts';
 import { EventService } from './EventService.ts';
 import { UserRepository } from '../repository/UserRepository.ts';
 import { CsvParsingError, NoValidGamesInCsvError } from '../error/ImportErrors.ts';
+import { dbManager } from '../db/dbInit.ts';
 import type { PlayerData } from '../model/GameModels.ts';
 import type { GameWithPlayers } from '../model/GameModels.ts';
 import type { Event } from '../model/EventModels.ts';
@@ -26,6 +27,9 @@ interface ParsedGameRow {
 
 const PLAYER_COLUMNS = ['username', 'points', 'startPlace', 'chombo'] as const;
 const VALID_START_PLACES = ['EAST', 'SOUTH', 'WEST', 'NORTH'] as const;
+
+// Sentinel error: thrown inside the import transaction to force a rollback after collecting all per-row errors.
+class ImportRollbackError extends Error {}
 
 export class ImportService {
 
@@ -62,28 +66,38 @@ export class ImportService {
             return { imported: 0, errors, games: [] };
         }
 
-        // Pass 2: Insert all games
+        // Pass 2: insert all games inside a transaction; any per-row failure rolls back the whole batch
         const games: GameWithPlayers[] = [];
         const baseTimestamp = new Date();
 
-        for (let i = 0; i < parsedRows.length; i++) {
-            const parsed = parsedRows[i]!;
-            const createdAt = parsed.createdAt ?? new Date(baseTimestamp.getTime() + i * 1000);
+        try {
+            dbManager.db.transaction(() => {
+                for (let i = 0; i < parsedRows.length; i++) {
+                    const parsed = parsedRows[i]!;
+                    const createdAt = parsed.createdAt ?? new Date(baseTimestamp.getTime() + i * 1000);
 
-            try {
-                const game = this.gameService.addGame(
-                    eventId,
-                    parsed.players,
-                    importedBy,
-                    createdAt,
-                    true, // hideNewGameMessage
-                    parsed.tournamentHanchanNumber,
-                    parsed.tournamentTableNumber
-                );
-                games.push(game);
-            } catch (error: any) {
-                errors.push({ row: i + 2, message: error.message });
-            }
+                    try {
+                        const game = this.gameService.addGame(
+                            eventId,
+                            parsed.players,
+                            importedBy,
+                            createdAt,
+                            true, // hideNewGameMessage
+                            parsed.tournamentHanchanNumber,
+                            parsed.tournamentTableNumber
+                        );
+                        games.push(game);
+                    } catch (error: any) {
+                        errors.push({ row: i + 2, message: error.message });
+                    }
+                }
+                if (errors.length > 0) {
+                    throw new ImportRollbackError();
+                }
+            })();
+        } catch (error: unknown) {
+            if (!(error instanceof ImportRollbackError)) throw error;
+            return { imported: 0, errors, games: [] };
         }
 
         return {
