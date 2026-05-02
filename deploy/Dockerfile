@@ -16,6 +16,9 @@ COPY tsconfig.json ./tsconfig.json
 # Copy database migrations
 COPY db/migrations ./db/migrations
 
+# Copy CLI scripts (bulk import etc.) so they can be invoked via docker exec
+COPY scripts ./scripts
+
 # Expose port
 EXPOSE 3000
 
