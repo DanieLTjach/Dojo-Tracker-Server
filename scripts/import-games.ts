@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import { parseArgs } from 'node:util';
 import { dbManager } from '../src/db/dbInit.ts';
 import { ImportService } from '../src/service/ImportService.ts';
+import LogService from '../src/service/LogService.ts';
 
 const { values } = parseArgs({
     options: {
@@ -59,6 +60,11 @@ if (dryRun) {
     console.log(`Imported: ${result.imported} games`);
 }
 
+// Drain the LogService queue so admin-channel logs (per-game posts) reach Telegram before exit,
+// then close the DB and exit explicitly — otherwise the LogService poll loop keeps the process alive.
+await LogService.shutdown();
+dbManager.closeDB();
+
 if (result.errors.length > 0) {
     console.error(`${result.errors.length} error(s):`);
     for (const err of result.errors) {
@@ -66,3 +72,5 @@ if (result.errors.length > 0) {
     }
     process.exit(1);
 }
+
+process.exit(0);
