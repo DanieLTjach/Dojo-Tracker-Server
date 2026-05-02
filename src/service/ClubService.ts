@@ -184,6 +184,19 @@ export function updateClubTelegramTopic(
     }
 }
 
+export function unsetClubTelegramTopic(
+    topics: ClubTelegramTopics,
+    topicType: ClubTelegramTopicType
+): ClubTelegramTopics {
+    switch (topicType) {
+        case ClubTelegramTopicType.RATING:    return { ...topics, rating: null };
+        case ClubTelegramTopicType.USER_LOGS: return { ...topics, userLogs: null };
+        case ClubTelegramTopicType.GAME_LOGS: return { ...topics, gameLogs: null };
+        case ClubTelegramTopicType.CLUB_LOGS: return { ...topics, clubLogs: null };
+        case ClubTelegramTopicType.MAIN:      return { ...topics, main: null };
+    }
+}
+
 export interface ClubData {
     name: string;
     address?: string | null | undefined;
