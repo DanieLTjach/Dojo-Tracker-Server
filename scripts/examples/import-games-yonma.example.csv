@@ -1,0 +1,3 @@
+player1_username,player1_points,player1_startPlace,player1_chombo,player2_username,player2_points,player2_startPlace,player2_chombo,player3_username,player3_points,player3_startPlace,player3_chombo,player4_username,player4_points,player4_startPlace,player4_chombo,tournamentHanchanNumber,tournamentTableNumber
+@alice_a,24700,EAST,0,@bob_b,17100,SOUTH,0,@carol_c,-500,WEST,0,@dave_d,-41300,NORTH,0,1,1
+@alice_a,5000,SOUTH,0,@bob_b,3000,EAST,0,@carol_c,-2000,NORTH,0,@dave_d,-6000,WEST,1,1,2
