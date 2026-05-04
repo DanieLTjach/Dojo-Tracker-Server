@@ -32,8 +32,7 @@ export class GameRulesService {
     updateGameRulesDetails(id: number, details: GameRulesDetails | null, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
         this.validateUserCanUpdateGameRules(gameRules, userId);
-        const compacted = details ? compactDetails(details) : null;
-        this.gameRulesRepository.updateGameRulesDetails(id, compacted);
+        this.writeGameRulesDetails(id, details);
         return this.getGameRulesById(id);
     }
 
@@ -47,11 +46,20 @@ export class GameRulesService {
         return this.getGameRulesById(newId);
     }
 
-    updateGameRules(id: number, params: InsertGameRulesParams, userId: number): GameRules {
+    updateGameRules(id: number, params: UpdateGameRulesParams, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
         this.validateUserCanUpdateGameRules(gameRules, userId);
-        this.validateGameRulesHaveNoGames(gameRules);
-        this.gameRulesRepository.updateGameRules(id, params);
+        const { details, ...gameRulesParams } = params;
+
+        if (!gameRulesCoreFieldsEqual(gameRules, gameRulesParams)) {
+            this.validateGameRulesHaveNoGames(gameRules);
+            this.gameRulesRepository.updateGameRules(id, gameRulesParams);
+        }
+
+        if (details !== undefined) {
+            this.writeGameRulesDetails(id, details);
+        }
+
         return this.getGameRulesById(id);
     }
 
@@ -86,6 +94,25 @@ export class GameRulesService {
             throw new CannotUpdateGameRulesInUseError(gameRules.name, gameCount);
         }
     }
+
+    private writeGameRulesDetails(id: number, details: GameRulesDetails | null): void {
+        const compacted = details ? compactDetails(details) : null;
+        this.gameRulesRepository.updateGameRulesDetails(id, compacted);
+    }
+}
+
+export interface UpdateGameRulesParams extends InsertGameRulesParams {
+    details?: GameRulesDetails | null | undefined;
+}
+
+function gameRulesCoreFieldsEqual(gameRules: GameRules, params: InsertGameRulesParams): boolean {
+    return gameRules.name === params.name
+        && gameRules.clubId === params.clubId
+        && gameRules.numberOfPlayers === params.numberOfPlayers
+        && gameRules.startingPoints === params.startingPoints
+        && gameRules.chomboPointsAfterUma === params.chomboPointsAfterUma
+        && gameRules.umaTieBreak === params.umaTieBreak
+        && JSON.stringify(gameRules.uma) === JSON.stringify(params.uma);
 }
 
 function ruleValuesEqual(a: RuleValue, b: RuleValue): boolean {
