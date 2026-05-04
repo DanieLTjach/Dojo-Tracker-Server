@@ -206,39 +206,6 @@ describe('Game Rules CRUD', () => {
             }
         });
 
-        test('updateGameRules clears details when null is passed and rule has games', () => {
-            const originalParams = { ...baseParams, name: 'Clear Details Rule' };
-            const ruleId = repo.insertGameRules(originalParams);
-            repo.updateGameRulesDetails(ruleId, {
-                preset: 'ema_2025',
-                rules: {},
-                customRules: [{ category: 'rule', value: true, name: 'Pre-existing' }]
-            });
-            const eventId = 8006;
-            const gameId = 80006;
-            dbManager.db.prepare(
-                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(eventId, 'Clear Details In Use Event', 'SEASON', ruleId, TEST_CLUB_ID, 0, 0, 0, timestamp, timestamp);
-            dbManager.db.prepare(
-                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?)`
-            ).run(gameId, eventId, timestamp, timestamp, 0);
-
-            try {
-                const updated = service.updateGameRules(ruleId, {
-                    ...originalParams,
-                    details: null
-                }, ADMIN_USER_ID);
-
-                expect(updated.details).toBeNull();
-            } finally {
-                dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);
-                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
-                repo.deleteGameRules(ruleId);
-            }
-        });
-
         test('updateGameRules allows update when events exist but no games', () => {
             const ruleId = repo.insertGameRules({ ...baseParams, name: 'Event-only Rule' });
             const eventId = 8004;

@@ -553,6 +553,44 @@ describe('Game Rules API Endpoints', () => {
             }
         });
 
+        test('PUT rejects details: null with 400', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'PUT Reject Null Details' });
+            const ruleId = create.body.id;
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({ ...validBody, name: 'PUT Reject Null Details', details: null });
+
+                expect(response.status).toBe(400);
+            } finally {
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
+        test('PUT /:id/details rejects details: null with 400', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'Details Endpoint Reject Null' });
+            const ruleId = create.body.id;
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}/details`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({ details: null });
+
+                expect(response.status).toBe(400);
+            } finally {
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
         test('PUT allows unchanged payload when games reference the rule', async () => {
             const create = await request(app)
                 .post('/api/game-rules')

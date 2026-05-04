@@ -124,7 +124,7 @@ export const gameRulesDetailsUpdateSchema = z.object({
         id: gameRulesIdParamSchema
     }),
     body: z.object({
-        details: gameRulesDetailsSchema.nullable()
+        details: gameRulesDetailsSchema
     })
 });
 
@@ -149,7 +149,7 @@ export const gameRulesCreateSchema = z.object({
 });
 
 const gameRulesUpdateBodySchema = gameRulesUpsertBodySchema.extend({
-    details: gameRulesDetailsSchema.nullable().optional()
+    details: gameRulesDetailsSchema.optional()
 });
 
 export const gameRulesUpdateSchema = z.object({

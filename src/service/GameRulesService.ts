@@ -30,7 +30,7 @@ export class GameRulesService {
         return gameRules;
     }
 
-    updateGameRulesDetails(id: number, details: GameRulesDetails | null, userId: number): GameRules {
+    updateGameRulesDetails(id: number, details: GameRulesDetails, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
         this.validateUserCanUpdateGameRules(gameRules, userId);
         this.writeGameRulesDetails(id, details);
@@ -96,14 +96,13 @@ export class GameRulesService {
         }
     }
 
-    private writeGameRulesDetails(id: number, details: GameRulesDetails | null): void {
-        const compacted = details ? compactDetails(details) : null;
-        this.gameRulesRepository.updateGameRulesDetails(id, compacted);
+    private writeGameRulesDetails(id: number, details: GameRulesDetails): void {
+        this.gameRulesRepository.updateGameRulesDetails(id, compactDetails(details));
     }
 }
 
 export interface UpdateGameRulesServiceParams extends InsertGameRulesParams {
-    details?: GameRulesDetails | null | undefined;
+    details?: GameRulesDetails | undefined;
 }
 
 const GAME_RULES_CORE_FIELDS = [
