@@ -303,6 +303,67 @@ describe('Game Rules API Endpoints', () => {
             }
         });
 
+        test('should reject unknown preset key', async () => {
+            const response = await request(app)
+                .put('/api/game-rules/1/details')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    details: {
+                        preset: 'totally_made_up',
+                        rules: {}
+                    }
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject unknown top-level key in details', async () => {
+            const response = await request(app)
+                .put('/api/game-rules/1/details')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    details: {
+                        preset: 'ema_2025',
+                        rules: {},
+                        unexpectedField: 'nope'
+                    }
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject unknown rule key inside rules', async () => {
+            const response = await request(app)
+                .put('/api/game-rules/1/details')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    details: {
+                        preset: 'ema_2025',
+                        rules: {
+                            not_a_real_rule: true
+                        }
+                    }
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject wrong value type for a known rule', async () => {
+            const response = await request(app)
+                .put('/api/game-rules/1/details')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    details: {
+                        preset: 'ema_2025',
+                        rules: {
+                            open_tanyao: 'yes'
+                        }
+                    }
+                });
+
+            expect(response.status).toBe(400);
+        });
+
         test('should reject internal presets', async () => {
             const response = await request(app)
                 .put('/api/game-rules/1/details')
@@ -546,6 +607,128 @@ describe('Game Rules API Endpoints', () => {
                     .send({ ...validBody, name: 'Try Update' });
 
                 expect(response.status).toBe(400);
+            } finally {
+                dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);
+                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
+        test('PUT rejects details: null with 400', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'PUT Reject Null Details' });
+            const ruleId = create.body.id;
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({ ...validBody, name: 'PUT Reject Null Details', details: null });
+
+                expect(response.status).toBe(400);
+            } finally {
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
+        test('PUT /:id/details rejects details: null with 400', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'Details Endpoint Reject Null' });
+            const ruleId = create.body.id;
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}/details`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({ details: null });
+
+                expect(response.status).toBe(400);
+            } finally {
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
+        test('PUT allows unchanged payload when games reference the rule', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'PUT Unchanged' });
+            const ruleId = create.body.id;
+            const eventId = 910914;
+            const gameId = 910915;
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(eventId, 'PUT Unchanged Event', 'SEASON', ruleId, clubId, 0, 0, 0, timestamp, timestamp);
+            dbManager.db.prepare(
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0);
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({ ...validBody, name: 'PUT Unchanged' });
+
+                expect(response.status).toBe(200);
+                expect(response.body.name).toBe('PUT Unchanged');
+                expect(response.body.startingPoints).toBe(validBody.startingPoints);
+            } finally {
+                dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);
+                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
+        test('PUT allows details update when games reference unchanged rule fields', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'PUT Details Only' });
+            const ruleId = create.body.id;
+            const eventId = 910912;
+            const gameId = 910913;
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(eventId, 'PUT Details Only Event', 'SEASON', ruleId, clubId, 0, 0, 0, timestamp, timestamp);
+            dbManager.db.prepare(
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0);
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({
+                        ...validBody,
+                        name: 'PUT Details Only',
+                        details: {
+                            preset: 'ema_2025',
+                            rules: {},
+                            customRules: [{
+                                category: 'rule',
+                                value: true,
+                                name: 'Allow table note'
+                            }]
+                        }
+                    });
+
+                expect(response.status).toBe(200);
+                expect(response.body.name).toBe('PUT Details Only');
+                expect(response.body.startingPoints).toBe(validBody.startingPoints);
+                expect(response.body.details.preset).toBe('ema_2025');
+                expect(response.body.details.customRules).toEqual([{
+                    category: 'rule',
+                    value: true,
+                    name: 'Allow table note'
+                }]);
             } finally {
                 dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);
                 dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);

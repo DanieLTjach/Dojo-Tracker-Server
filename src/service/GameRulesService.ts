@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { GameRulesRepository, type InsertGameRulesParams } from '../repository/GameRulesRepository.ts';
 import { CannotDeleteGameRulesInUseError, CannotUpdateGameRulesInUseError, GameRulesNotFoundError } from '../error/EventErrors.ts';
 import type { GameRules, GameRulesDetails, RuleValue } from '../model/EventModels.ts';
@@ -29,11 +30,10 @@ export class GameRulesService {
         return gameRules;
     }
 
-    updateGameRulesDetails(id: number, details: GameRulesDetails | null, userId: number): GameRules {
+    updateGameRulesDetails(id: number, details: GameRulesDetails, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
         this.validateUserCanUpdateGameRules(gameRules, userId);
-        const compacted = details ? compactDetails(details) : null;
-        this.gameRulesRepository.updateGameRulesDetails(id, compacted);
+        this.writeGameRulesDetails(id, details);
         return this.getGameRulesById(id);
     }
 
@@ -47,11 +47,20 @@ export class GameRulesService {
         return this.getGameRulesById(newId);
     }
 
-    updateGameRules(id: number, params: InsertGameRulesParams, userId: number): GameRules {
+    updateGameRules(id: number, params: UpdateGameRulesServiceParams, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
         this.validateUserCanUpdateGameRules(gameRules, userId);
-        this.validateGameRulesHaveNoGames(gameRules);
-        this.gameRulesRepository.updateGameRules(id, params);
+        const { details, ...gameRulesParams } = params;
+
+        if (!gameRulesCoreFieldsEqual(gameRules, gameRulesParams)) {
+            this.validateGameRulesHaveNoGames(gameRules);
+            this.gameRulesRepository.updateGameRules(id, gameRulesParams);
+        }
+
+        if (details !== undefined) {
+            this.writeGameRulesDetails(id, details);
+        }
+
         return this.getGameRulesById(id);
     }
 
@@ -86,6 +95,28 @@ export class GameRulesService {
             throw new CannotUpdateGameRulesInUseError(gameRules.name, gameCount);
         }
     }
+
+    private writeGameRulesDetails(id: number, details: GameRulesDetails): void {
+        this.gameRulesRepository.updateGameRulesDetails(id, compactDetails(details));
+    }
+}
+
+export interface UpdateGameRulesServiceParams extends InsertGameRulesParams {
+    details?: GameRulesDetails | undefined;
+}
+
+const GAME_RULES_CORE_FIELDS = [
+    'name',
+    'clubId',
+    'numberOfPlayers',
+    'startingPoints',
+    'chomboPointsAfterUma',
+    'umaTieBreak',
+    'uma'
+] as const satisfies readonly (keyof InsertGameRulesParams)[];
+
+function gameRulesCoreFieldsEqual(gameRules: GameRules, params: InsertGameRulesParams): boolean {
+    return GAME_RULES_CORE_FIELDS.every(key => isDeepStrictEqual(gameRules[key], params[key]));
 }
 
 function ruleValuesEqual(a: RuleValue, b: RuleValue): boolean {
