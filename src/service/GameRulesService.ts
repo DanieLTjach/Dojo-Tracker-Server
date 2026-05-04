@@ -46,7 +46,7 @@ export class GameRulesService {
         return this.getGameRulesById(newId);
     }
 
-    updateGameRules(id: number, params: UpdateGameRulesParams, userId: number): GameRules {
+    updateGameRules(id: number, params: UpdateGameRulesServiceParams, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
         this.validateUserCanUpdateGameRules(gameRules, userId);
         const { details, ...gameRulesParams } = params;
@@ -101,7 +101,7 @@ export class GameRulesService {
     }
 }
 
-export interface UpdateGameRulesParams extends InsertGameRulesParams {
+export interface UpdateGameRulesServiceParams extends InsertGameRulesParams {
     details?: GameRulesDetails | null | undefined;
 }
 
