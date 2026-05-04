@@ -303,6 +303,67 @@ describe('Game Rules API Endpoints', () => {
             }
         });
 
+        test('should reject unknown preset key', async () => {
+            const response = await request(app)
+                .put('/api/game-rules/1/details')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    details: {
+                        preset: 'totally_made_up',
+                        rules: {}
+                    }
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject unknown top-level key in details', async () => {
+            const response = await request(app)
+                .put('/api/game-rules/1/details')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    details: {
+                        preset: 'ema_2025',
+                        rules: {},
+                        unexpectedField: 'nope'
+                    }
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject unknown rule key inside rules', async () => {
+            const response = await request(app)
+                .put('/api/game-rules/1/details')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    details: {
+                        preset: 'ema_2025',
+                        rules: {
+                            not_a_real_rule: true
+                        }
+                    }
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject wrong value type for a known rule', async () => {
+            const response = await request(app)
+                .put('/api/game-rules/1/details')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    details: {
+                        preset: 'ema_2025',
+                        rules: {
+                            open_tanyao: 'yes'
+                        }
+                    }
+                });
+
+            expect(response.status).toBe(400);
+        });
+
         test('should reject internal presets', async () => {
             const response = await request(app)
                 .put('/api/game-rules/1/details')
