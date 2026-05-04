@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { GameRulesRepository, type InsertGameRulesParams } from '../repository/GameRulesRepository.ts';
 import { CannotDeleteGameRulesInUseError, CannotUpdateGameRulesInUseError, GameRulesNotFoundError } from '../error/EventErrors.ts';
 import type { GameRules, GameRulesDetails, RuleValue } from '../model/EventModels.ts';
@@ -105,14 +106,18 @@ export interface UpdateGameRulesServiceParams extends InsertGameRulesParams {
     details?: GameRulesDetails | null | undefined;
 }
 
+const GAME_RULES_CORE_FIELDS = [
+    'name',
+    'clubId',
+    'numberOfPlayers',
+    'startingPoints',
+    'chomboPointsAfterUma',
+    'umaTieBreak',
+    'uma'
+] as const satisfies readonly (keyof InsertGameRulesParams)[];
+
 function gameRulesCoreFieldsEqual(gameRules: GameRules, params: InsertGameRulesParams): boolean {
-    return gameRules.name === params.name
-        && gameRules.clubId === params.clubId
-        && gameRules.numberOfPlayers === params.numberOfPlayers
-        && gameRules.startingPoints === params.startingPoints
-        && gameRules.chomboPointsAfterUma === params.chomboPointsAfterUma
-        && gameRules.umaTieBreak === params.umaTieBreak
-        && JSON.stringify(gameRules.uma) === JSON.stringify(params.uma);
+    return GAME_RULES_CORE_FIELDS.every(key => isDeepStrictEqual(gameRules[key], params[key]));
 }
 
 function ruleValuesEqual(a: RuleValue, b: RuleValue): boolean {
