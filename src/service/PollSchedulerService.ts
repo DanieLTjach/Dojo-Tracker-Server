@@ -53,13 +53,13 @@ class PollSchedulerService {
         }
     }
 
-    async sendPollNow(config: ClubPollConfig) {
+    async sendPollNow(config: ClubPollConfig): Promise<TelegramPollSendResult> {
         const pollTopic = this.clubService.getClubTelegramTopics(config.clubId).main;
         if (pollTopic === null) {
             throw new Error(`No main topic configured for club ${config.clubId}`);
         }
 
-        await this.sendTelegramPoll(pollTopic, this.buildPollTitle(config), this.buildPollOptions(config));
+        return await this.sendTelegramPoll(pollTopic, this.buildPollTitle(config), this.buildPollOptions(config));
     }
 
     private sendScheduledPoll(config: ClubPollConfig) {
@@ -95,17 +95,39 @@ class PollSchedulerService {
         return options;
     }
 
-    private async sendTelegramPoll(topic: TelegramTopic, question: string, options: string[]) {
+    private async sendTelegramPoll(topic: TelegramTopic, question: string, options: string[]): Promise<TelegramPollSendResult> {
         try {
-            await telegramBot.telegram.sendPoll(topic.chatId, question, options, {
+            const pollMessage = await telegramBot.telegram.sendPoll(topic.chatId, question, options, {
                 is_anonymous: false,
                 allows_multiple_answers: true,
                 ...(topic.topicId !== undefined && { message_thread_id: topic.topicId })
             });
+            return {
+                messageId: pollMessage.message_id,
+                pinned: await this.pinTelegramPoll(topic, pollMessage.message_id)
+            };
         } catch (error) {
             LogService.logError(`Error sending poll to chat ${topic.chatId} topic ${topic.topicId}`, error);
+            return { messageId: null, pinned: false };
         }
     }
+
+    private async pinTelegramPoll(topic: TelegramTopic, messageId: number): Promise<boolean> {
+        try {
+            await telegramBot.telegram.pinChatMessage(topic.chatId, messageId, {
+                disable_notification: true
+            });
+            return true;
+        } catch (error) {
+            LogService.logError(`Error pinning poll message ${messageId} in chat ${topic.chatId} topic ${topic.topicId}`, error);
+            return false;
+        }
+    }
+}
+
+interface TelegramPollSendResult {
+    messageId: number | null;
+    pinned: boolean;
 }
 
 /** Converts JS day (0=Sunday) to ISO day (7=Sunday, 1=Monday) */

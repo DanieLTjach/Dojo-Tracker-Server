@@ -1,5 +1,9 @@
+import { jest } from '@jest/globals';
 import PollSchedulerService, { getNextDayOfWeek, formatDayName } from '../src/service/PollSchedulerService.ts';
 import type { ClubPollConfig } from '../src/model/PollModels.ts';
+import { telegramBot } from '../src/service/TelegramBot.ts';
+import { TelegramTopicType, type TelegramTopic } from '../src/model/TelegramTopic.ts';
+import LogService from '../src/service/LogService.ts';
 
 function makeConfig(overrides: Partial<ClubPollConfig> = {}): ClubPollConfig {
     return {
@@ -123,6 +127,85 @@ describe('buildPollOptions', () => {
         const options = PollSchedulerService.buildPollOptions(config, now);
 
         expect(options).toEqual(['Середа', 'П\u02BCятниця']);
+    });
+});
+
+describe('sendTelegramPoll', () => {
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    const topic: TelegramTopic = {
+        type: TelegramTopicType.MAIN,
+        chatId: -100123456,
+        topicId: 789
+    };
+
+    type PollSender = {
+        sendTelegramPoll(
+            topic: TelegramTopic,
+            question: string,
+            options: string[]
+        ): Promise<{ messageId: number | null; pinned: boolean }>;
+    };
+
+    function pollSender(): PollSender {
+        return PollSchedulerService as unknown as PollSender;
+    }
+
+    test('pins sent poll silently', async () => {
+        const sendPollSpy = jest.spyOn(telegramBot.telegram, 'sendPoll')
+            .mockResolvedValue({ message_id: 321 } as Awaited<ReturnType<typeof telegramBot.telegram.sendPoll>>);
+        const pinChatMessageSpy = jest.spyOn(telegramBot.telegram, 'pinChatMessage')
+            .mockResolvedValue(true);
+
+        const result = await pollSender().sendTelegramPoll(topic, 'Poll question', ['Yes', 'No']);
+
+        expect(sendPollSpy).toHaveBeenCalledWith(topic.chatId, 'Poll question', ['Yes', 'No'], {
+            is_anonymous: false,
+            allows_multiple_answers: true,
+            message_thread_id: topic.topicId
+        });
+        expect(pinChatMessageSpy).toHaveBeenCalledWith(topic.chatId, 321, {
+            disable_notification: true
+        });
+        expect(result).toEqual({ messageId: 321, pinned: true });
+    });
+
+    test('logs and returns pin failure without failing the poll send', async () => {
+        const pinError = new Error('not enough rights');
+        jest.spyOn(telegramBot.telegram, 'sendPoll')
+            .mockResolvedValue({ message_id: 654 } as Awaited<ReturnType<typeof telegramBot.telegram.sendPoll>>);
+        jest.spyOn(telegramBot.telegram, 'pinChatMessage').mockRejectedValue(pinError);
+        const logErrorSpy = jest.spyOn(LogService, 'logError').mockImplementation(() => undefined);
+
+        const result = await pollSender().sendTelegramPoll(topic, 'Poll question', ['Yes', 'No']);
+
+        expect(logErrorSpy).toHaveBeenCalledWith(
+            `Error pinning poll message 654 in chat ${topic.chatId} topic ${topic.topicId}`,
+            pinError
+        );
+        expect(logErrorSpy).not.toHaveBeenCalledWith(
+            expect.stringContaining('Error sending poll'),
+            expect.anything()
+        );
+        expect(result).toEqual({ messageId: 654, pinned: false });
+    });
+
+    test('returns send failure when Telegram rejects the poll', async () => {
+        const sendError = new Error('chat not found');
+        jest.spyOn(telegramBot.telegram, 'sendPoll').mockRejectedValue(sendError);
+        const pinChatMessageSpy = jest.spyOn(telegramBot.telegram, 'pinChatMessage');
+        const logErrorSpy = jest.spyOn(LogService, 'logError').mockImplementation(() => undefined);
+
+        const result = await pollSender().sendTelegramPoll(topic, 'Poll question', ['Yes', 'No']);
+
+        expect(logErrorSpy).toHaveBeenCalledWith(
+            `Error sending poll to chat ${topic.chatId} topic ${topic.topicId}`,
+            sendError
+        );
+        expect(pinChatMessageSpy).not.toHaveBeenCalled();
+        expect(result).toEqual({ messageId: null, pinned: false });
     });
 });
 
