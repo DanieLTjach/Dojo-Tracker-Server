@@ -6,6 +6,8 @@ import {
     CurrentRatingEventMustBeSeasonError,
     TournamentMustHaveClubError
 } from '../error/EventErrors.ts';
+import { EventHasRegistrationsError } from '../error/EventRegistrationErrors.ts';
+import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { Event } from '../model/EventModels.ts';
@@ -18,6 +20,7 @@ export class EventService {
     private eventRepository: EventRepository = new EventRepository();
     private clubRepository: ClubRepository = new ClubRepository();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
+    private eventRegistrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
     private userService: UserService = new UserService();
 
     getAllEvents(clubId?: number): Event[] {
@@ -168,6 +171,11 @@ export class EventService {
         const gameCount = this.eventRepository.getGameCountForEvent(eventId);
         if (gameCount > 0) {
             throw new CannotDeleteEventWithGamesError(event.name, gameCount);
+        }
+
+        const registrationCount = this.eventRegistrationRepository.countRegistrationsByEventId(eventId);
+        if (registrationCount > 0) {
+            throw new EventHasRegistrationsError(event.name, registrationCount);
         }
 
         if (event.isCurrentRating && event.clubId !== null) {
