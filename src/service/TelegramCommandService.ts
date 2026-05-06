@@ -686,7 +686,7 @@ class TelegramCommandService {
 
         const result = await PollSchedulerService.sendPollNow(pollConfig);
         if (result.messageId === null) {
-            ctx.reply('❌ Не вдалося відправити опитування. Деталі в логах.');
+            ctx.reply('❌ Не вдалося відправити опитування. Перевірте, що бот має доступ до чату');
             return;
         }
 
