@@ -684,8 +684,16 @@ class TelegramCommandService {
             return;
         }
 
-        await PollSchedulerService.sendPollNow(pollConfig);
-        ctx.reply('✅ Опитування відправлено!');
+        const result = await PollSchedulerService.sendPollNow(pollConfig);
+        if (result.messageId === null) {
+            ctx.reply('❌ Не вдалося відправити опитування. Перевірте, що бот має доступ до чату');
+            return;
+        }
+
+        ctx.reply(result.pinned
+            ? '✅ Опитування відправлено і закріплено!'
+            : '✅ Опитування відправлено, але не вдалося закріпити. Перевірте, що бот має право закріплювати повідомлення.'
+        );
     }
 
     private getUserByTelegramId(userTelegramId: number): User {
