@@ -12,12 +12,14 @@ export class ProfileService {
         userId: number,
         firstNameEn: string | null | undefined,
         lastNameEn: string | null | undefined,
+        firstName: string | null | undefined,
+        lastName: string | null | undefined,
         emaNumber: string | null | undefined,
         hideProfile: boolean | undefined,
         modifiedBy: number
     ): Profile {
         this.userService.validateUserExistsById(userId);
-        this.validateProfileUpdatePermissions(userId, firstNameEn, lastNameEn, emaNumber, modifiedBy);
+        this.validateProfileUpdatePermissions(userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, modifiedBy);
 
         const existing = this.profileRepository.findProfileByUserId(userId);
 
@@ -25,11 +27,27 @@ export class ProfileService {
             userId,
             firstNameEn !== undefined ? firstNameEn : existing?.firstNameEn ?? null,
             lastNameEn !== undefined ? lastNameEn : existing?.lastNameEn ?? null,
+            firstName !== undefined ? firstName : existing?.firstName ?? null,
+            lastName !== undefined ? lastName : existing?.lastName ?? null,
             emaNumber !== undefined ? emaNumber : existing?.emaNumber ?? null,
             hideProfile !== undefined ? hideProfile : existing?.hideProfile ?? false,
             modifiedBy
         );
 
+        return this.profileRepository.findProfileByUserId(userId)!;
+    }
+
+    getProfileByUserId(userId: number): Profile | undefined {
+        return this.profileRepository.findProfileByUserId(userId);
+    }
+
+    updateProfileNames(
+        userId: number,
+        firstName: string | null | undefined,
+        lastName: string | null | undefined,
+        modifiedBy: number
+    ): Profile {
+        this.profileRepository.updateProfileNames(userId, firstName, lastName, modifiedBy);
         return this.profileRepository.findProfileByUserId(userId)!;
     }
 
@@ -41,6 +59,8 @@ export class ProfileService {
         userId: number,
         firstNameEn: string | null | undefined,
         lastNameEn: string | null | undefined,
+        firstName: string | null | undefined,
+        lastName: string | null | undefined,
         emaNumber: string | null | undefined,
         modifiedBy: number
     ): void {
@@ -54,7 +74,8 @@ export class ProfileService {
             throw new InsufficientPermissionsError();
         }
 
-        // Non-admin: can only update hideProfile (no other fields allowed)
+        // Non-admin can update hideProfile and own native-language firstName/lastName,
+        // but not EMA fields or emaNumber.
         if (firstNameEn !== undefined || lastNameEn !== undefined || emaNumber !== undefined) {
             throw new InsufficientPermissionsError();
         }

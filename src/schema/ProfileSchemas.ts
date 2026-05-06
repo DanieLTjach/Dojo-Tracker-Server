@@ -8,6 +8,8 @@ export const profileEditSchema = z.object({
     body: z.object({
         firstNameEn: z.string().trim().min(1).nullish(),
         lastNameEn: z.string().trim().min(1).nullish(),
+        firstName: z.string().trim().min(1).nullish(),
+        lastName: z.string().trim().min(1).nullish(),
         emaNumber: z.string().regex(/^\d+$/, "EMA number must contain only digits").nullish(),
         hideProfile: z.boolean().optional()
     })
