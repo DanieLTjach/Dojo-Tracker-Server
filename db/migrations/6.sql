@@ -1,8 +1,8 @@
--- Backfill any remaining global events to Japan Dojo (clubId=1).
+-- Backfill any remaining global events to Japan Dojo.
 -- Migration 4 set clubId for all events that existed at that point, but events
 -- created between migrations 4 and 6 with clubId=NULL would otherwise be
 -- unmanageable under the new requireEventManagementRole middleware.
-UPDATE event SET clubId = 1 WHERE clubId IS NULL;
+UPDATE event SET clubId = (SELECT id FROM club WHERE name = 'Japan Dojo') WHERE clubId IS NULL;
 
 -- Profile native-language names (existing firstNameEn/lastNameEn are EMA-specific)
 ALTER TABLE profile ADD COLUMN firstName TEXT;
