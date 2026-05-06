@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { UserController } from '../controller/UserController.ts';
 import { ClubMembershipController } from '../controller/ClubMembershipController.ts';
+import { EventRegistrationController } from '../controller/EventRegistrationController.ts';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { requireAuth } from '../middleware/AuthMiddleware.ts';
 import profileRoutes from './ProfileRoutes.ts';
@@ -8,6 +9,7 @@ import profileRoutes from './ProfileRoutes.ts';
 const router = Router();
 const userController = new UserController();
 const membershipController = new ClubMembershipController();
+const registrationController = new EventRegistrationController();
 
 // Public - user registration
 router.post('/', withTransaction((req, res) => userController.registerUser(req, res)));
@@ -15,6 +17,8 @@ router.post('/', withTransaction((req, res) => userController.registerUser(req, 
 router.post('/current/status', withTransaction((req, res) => userController.getCurrentUserStatus(req, res)));
 // Authenticated - get current user's club memberships
 router.get('/current/clubs', requireAuth, withTransaction((req, res) => membershipController.getCurrentUserClubs(req, res)));
+// Authenticated - get current user's tournament registrations
+router.get('/current/registrations', requireAuth, withTransaction((req, res) => registrationController.listForCurrentUser(req, res)));
 
 // Authenticated users - read operations
 router.get('/', requireAuth, withTransaction((req, res) => userController.getAllUsers(req, res)));
