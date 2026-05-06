@@ -52,6 +52,8 @@ export interface Event {
     minimumGamesForRating: number;
     dateFrom: Date | null;
     dateTo: Date | null;
+    maxParticipants: number | null;
+    registrationDeadline: Date | null;
     gameCount: number;
     createdAt: Date;
     modifiedAt: Date;

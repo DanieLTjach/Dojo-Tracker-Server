@@ -22,6 +22,8 @@ const eventSchema = z.object({
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int("gameRulesId must be an integer"),
     clubId: clubIdSchema.nullish(),
+    maxParticipants: z.number().int("maxParticipants must be an integer").min(1, "maxParticipants must be at least 1").nullish(),
+    registrationDeadline: dateSchema.nullish(),
     startingRating: z.number().int("startingRating must be an integer").default(0),
     minimumGamesForRating: z.number().int("minimumGamesForRating must be an integer").min(0).default(0)
 }).refine(

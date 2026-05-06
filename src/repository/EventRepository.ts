@@ -97,6 +97,8 @@ export class EventRepository {
         clubId: number | null;
         dateFrom: string | null;
         dateTo: string | null;
+        maxParticipants: number | null;
+        registrationDeadline: string | null;
         startingRating: number;
         minimumGamesForRating: number;
         createdAt: string;
@@ -104,8 +106,8 @@ export class EventRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :maxParticipants, :registrationDeadline, :startingRating, :minimumGamesForRating, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -115,6 +117,7 @@ export class EventRepository {
             ...params,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
+            registrationDeadline: params.registrationDeadline?.toISOString() ?? null,
             createdAt: params.createdAt.toISOString(),
             modifiedAt: params.modifiedAt.toISOString()
         });
@@ -130,6 +133,8 @@ export class EventRepository {
         clubId: number | null;
         dateFrom: string | null;
         dateTo: string | null;
+        maxParticipants: number | null;
+        registrationDeadline: string | null;
         startingRating: number;
         minimumGamesForRating: number;
         modifiedAt: string;
@@ -144,6 +149,8 @@ export class EventRepository {
                 clubId = :clubId,
                 dateFrom = :dateFrom,
                 dateTo = :dateTo,
+                maxParticipants = :maxParticipants,
+                registrationDeadline = :registrationDeadline,
                 startingRating = :startingRating,
                 minimumGamesForRating = :minimumGamesForRating,
                 modifiedAt = :modifiedAt,
@@ -157,6 +164,7 @@ export class EventRepository {
             ...params,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
+            registrationDeadline: params.registrationDeadline?.toISOString() ?? null,
             modifiedAt: params.modifiedAt.toISOString()
         });
     }
@@ -219,6 +227,8 @@ export interface EventCreateParams {
     clubId: number | null;
     dateFrom: Date | null;
     dateTo: Date | null;
+    maxParticipants: number | null;
+    registrationDeadline: Date | null;
     startingRating: number;
     minimumGamesForRating: number;
     createdAt: Date;
@@ -235,6 +245,8 @@ export interface EventUpdateParams {
     clubId: number | null;
     dateFrom: Date | null;
     dateTo: Date | null;
+    maxParticipants: number | null;
+    registrationDeadline: Date | null;
     startingRating: number;
     minimumGamesForRating: number;
     modifiedAt: Date;
@@ -253,6 +265,8 @@ interface EventWithGameRulesDBEntity {
     minimumGamesForRating: number;
     dateFrom: string | null;
     dateTo: string | null;
+    maxParticipants: number | null;
+    registrationDeadline: string | null;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
@@ -291,6 +305,8 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
+        maxParticipants: dbEntity.maxParticipants,
+        registrationDeadline: dbEntity.registrationDeadline !== null ? new Date(dbEntity.registrationDeadline) : null,
         gameCount: dbEntity.gameCount,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),

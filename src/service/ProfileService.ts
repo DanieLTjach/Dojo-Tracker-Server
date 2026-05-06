@@ -59,8 +59,8 @@ export class ProfileService {
         userId: number,
         firstNameEn: string | null | undefined,
         lastNameEn: string | null | undefined,
-        firstName: string | null | undefined,
-        lastName: string | null | undefined,
+        _firstName: string | null | undefined,
+        _lastName: string | null | undefined,
         emaNumber: string | null | undefined,
         modifiedBy: number
     ): void {
