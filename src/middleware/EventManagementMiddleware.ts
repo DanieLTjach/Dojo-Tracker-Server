@@ -12,7 +12,7 @@ const userService = new UserService();
 
 /**
  * Allows access if the requester is a system admin or an ACTIVE OWNER/MODERATOR
- * of the event's club. For global events (event.clubId === null), only admins pass.
+ * of the event's club.
  */
 export const requireEventManagementRole = (req: Request, _res: Response, next: NextFunction): void => {
     try {
@@ -32,6 +32,8 @@ export const requireEventManagementRole = (req: Request, _res: Response, next: N
             throw new EventNotFoundError(eventId);
         }
 
+        // event.clubId is nullable in the schema for legacy reasons but the
+        // upcoming "remove global events" PR will tighten this. Guard defensively.
         if (event.clubId === null) {
             throw new InsufficientEventManagementPermissionsError();
         }
