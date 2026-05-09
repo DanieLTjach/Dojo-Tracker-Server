@@ -1,10 +1,13 @@
 import { Router } from 'express';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { EventController } from '../controller/EventController.ts';
+import { EventRegistrationController } from '../controller/EventRegistrationController.ts';
 import { requireAuth } from '../middleware/AuthMiddleware.ts';
+import { requireEventManagementRole } from '../middleware/EventManagementMiddleware.ts';
 
 const router = Router();
 const eventController = new EventController();
+const registrationController = new EventRegistrationController();
 
 /**
  * GET /api/events
@@ -45,5 +48,47 @@ router.put('/:eventId', requireAuth, withTransaction((req, res) => eventControll
  * Authentication: Required (Admin or Club Owner)
  */
 router.delete('/:eventId', requireAuth, withTransaction((req, res) => eventController.deleteEvent(req, res)));
+
+// Tournament registrations (only valid for events with type='TOURNAMENT')
+router.post(
+    '/:eventId/register',
+    requireAuth,
+    withTransaction((req, res) => registrationController.apply(req, res))
+);
+router.post(
+    '/:eventId/withdraw',
+    requireAuth,
+    withTransaction((req, res) => registrationController.withdraw(req, res))
+);
+router.get(
+    '/:eventId/registrations',
+    requireAuth,
+    requireEventManagementRole,
+    withTransaction((req, res) => registrationController.listForEvent(req, res))
+);
+router.post(
+    '/:eventId/registrations/:userId/approve',
+    requireAuth,
+    requireEventManagementRole,
+    withTransaction((req, res) => registrationController.approve(req, res))
+);
+router.post(
+    '/:eventId/registrations/:userId/reject',
+    requireAuth,
+    requireEventManagementRole,
+    withTransaction((req, res) => registrationController.reject(req, res))
+);
+router.post(
+    '/:eventId/registrations/:userId/manual',
+    requireAuth,
+    requireEventManagementRole,
+    withTransaction((req, res) => registrationController.manualRegister(req, res))
+);
+router.patch(
+    '/:eventId/registrations/:userId/profile',
+    requireAuth,
+    requireEventManagementRole,
+    withTransaction((req, res) => registrationController.editParticipantProfileNames(req, res))
+);
 
 export default router;

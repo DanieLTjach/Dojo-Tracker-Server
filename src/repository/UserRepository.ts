@@ -11,6 +11,8 @@ export class UserRepository {
             SELECT user.*,
                 p.firstNameEn as p_firstNameEn,
                 p.lastNameEn as p_lastNameEn,
+                p.firstName as p_firstName,
+                p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.hideProfile as p_hideProfile
             FROM user
@@ -35,6 +37,8 @@ export class UserRepository {
             SELECT user.*,
                 p.firstNameEn as p_firstNameEn,
                 p.lastNameEn as p_lastNameEn,
+                p.firstName as p_firstName,
+                p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.hideProfile as p_hideProfile
             FROM user
@@ -62,6 +66,8 @@ export class UserRepository {
             SELECT user.*,
                 p.firstNameEn as p_firstNameEn,
                 p.lastNameEn as p_lastNameEn,
+                p.firstName as p_firstName,
+                p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.hideProfile as p_hideProfile
             FROM user
@@ -80,6 +86,8 @@ export class UserRepository {
             SELECT user.*,
                 p.firstNameEn as p_firstNameEn,
                 p.lastNameEn as p_lastNameEn,
+                p.firstName as p_firstName,
+                p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.hideProfile as p_hideProfile
             FROM user
@@ -98,6 +106,8 @@ export class UserRepository {
             SELECT user.*,
                 p.firstNameEn as p_firstNameEn,
                 p.lastNameEn as p_lastNameEn,
+                p.firstName as p_firstName,
+                p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.hideProfile as p_hideProfile
             FROM user
@@ -116,6 +126,8 @@ export class UserRepository {
             SELECT user.*,
                 p.firstNameEn as p_firstNameEn,
                 p.lastNameEn as p_lastNameEn,
+                p.firstName as p_firstName,
+                p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.hideProfile as p_hideProfile
             FROM user
@@ -228,6 +240,8 @@ interface UserWithProfileDBEntity {
     modifiedBy: string;
     p_firstNameEn: string | null;
     p_lastNameEn: string | null;
+    p_firstName: string | null;
+    p_lastName: string | null;
     p_emaNumber: string | null;
     p_hideProfile: number | null;
 }
@@ -245,6 +259,8 @@ function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
             userId: dbEntity.id,
             firstNameEn: dbEntity.p_firstNameEn,
             lastNameEn: dbEntity.p_lastNameEn,
+            firstName: dbEntity.p_firstName,
+            lastName: dbEntity.p_lastName,
             emaNumber: dbEntity.p_emaNumber,
             hideProfile: Boolean(dbEntity.p_hideProfile)
         } : null,

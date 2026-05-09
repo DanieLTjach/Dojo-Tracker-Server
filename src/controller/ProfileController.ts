@@ -10,7 +10,7 @@ export class ProfileController {
     updateProfile(req: Request, res: Response) {
         const {
             params: { id },
-            body: { firstNameEn, lastNameEn, emaNumber, hideProfile }
+            body: { firstNameEn, lastNameEn, firstName, lastName, emaNumber, hideProfile }
         } = profileEditSchema.parse(req);
 
         const modifiedBy = req.user!.userId;
@@ -18,6 +18,8 @@ export class ProfileController {
             id,
             firstNameEn,
             lastNameEn,
+            firstName,
+            lastName,
             emaNumber,
             hideProfile,
             modifiedBy

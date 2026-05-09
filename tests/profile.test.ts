@@ -264,6 +264,65 @@ describe('Profile API Endpoints', () => {
         });
     });
 
+    describe('Native-language firstName / lastName', () => {
+        it('admin can set native-language names', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', adminAuthHeader)
+                .send({ firstName: 'Іван', lastName: 'Іваненко' })
+                .expect(200);
+
+            expect(response.body.firstName).toBe('Іван');
+            expect(response.body.lastName).toBe('Іваненко');
+        });
+
+        it('non-admin can set native-language names on own profile', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ firstName: 'Петро', lastName: 'Петренко' })
+                .expect(200);
+
+            expect(response.body.firstName).toBe('Петро');
+            expect(response.body.lastName).toBe('Петренко');
+        });
+
+        it('non-admin cannot set native-language names on another users profile', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUser2Id}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ firstName: 'Hacker' });
+
+            expect(response.status).toBe(403);
+        });
+
+        it('GET /api/users/:id includes native-language names', async () => {
+            const response = await request(app)
+                .get(`/api/users/${testUserId}`)
+                .set('Authorization', adminAuthHeader)
+                .expect(200);
+
+            expect(response.body.profile.firstName).toBe('Петро');
+            expect(response.body.profile.lastName).toBe('Петренко');
+        });
+
+        it('hideProfile masks native-language names along with EMA names', async () => {
+            await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ hideProfile: true })
+                .expect(200);
+
+            const otherUserAuthHeader = createAuthHeader(testUser2Id);
+            const response = await request(app)
+                .get(`/api/users/${testUserId}`)
+                .set('Authorization', otherUserAuthHeader)
+                .expect(200);
+
+            expect(response.body.profile).toBeNull();
+        });
+    });
+
     describe('Profile visibility (hideProfile)', () => {
         beforeAll(async () => {
             // Ensure testUser has hideProfile set to true

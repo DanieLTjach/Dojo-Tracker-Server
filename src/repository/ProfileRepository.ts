@@ -18,17 +18,21 @@ export class ProfileRepository {
         userId: number,
         firstNameEn: string | null,
         lastNameEn: string | null,
+        firstName: string | null,
+        lastName: string | null,
         emaNumber: string | null,
         hideProfile: number,
         modifiedBy: number,
         timestamp: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO profile (userId, firstNameEn, lastNameEn, emaNumber, hideProfile, modifiedBy, modifiedAt)
-            VALUES (:userId, :firstNameEn, :lastNameEn, :emaNumber, :hideProfile, :modifiedBy, :timestamp)
+            INSERT INTO profile (userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, hideProfile, modifiedBy, modifiedAt)
+            VALUES (:userId, :firstNameEn, :lastNameEn, :firstName, :lastName, :emaNumber, :hideProfile, :modifiedBy, :timestamp)
             ON CONFLICT(userId) DO UPDATE SET
                 firstNameEn = :firstNameEn,
                 lastNameEn = :lastNameEn,
+                firstName = :firstName,
+                lastName = :lastName,
                 emaNumber = :emaNumber,
                 hideProfile = :hideProfile,
                 modifiedBy = :modifiedBy,
@@ -40,6 +44,8 @@ export class ProfileRepository {
         userId: number,
         firstNameEn: string | null,
         lastNameEn: string | null,
+        firstName: string | null,
+        lastName: string | null,
         emaNumber: string | null,
         hideProfile: boolean,
         modifiedBy: number
@@ -48,8 +54,43 @@ export class ProfileRepository {
             userId,
             firstNameEn,
             lastNameEn,
+            firstName,
+            lastName,
             emaNumber,
             hideProfile: booleanToInteger(hideProfile),
+            modifiedBy,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    private updateProfileNamesStatement(): Statement<{
+        userId: number,
+        firstName: string | null,
+        lastName: string | null,
+        modifiedBy: number,
+        timestamp: string
+    }, void> {
+        return dbManager.db.prepare(`
+            INSERT INTO profile (userId, firstName, lastName, hideProfile, modifiedBy, modifiedAt)
+            VALUES (:userId, :firstName, :lastName, 0, :modifiedBy, :timestamp)
+            ON CONFLICT(userId) DO UPDATE SET
+                firstName = COALESCE(:firstName, firstName),
+                lastName = COALESCE(:lastName, lastName),
+                modifiedBy = :modifiedBy,
+                modifiedAt = :timestamp`
+        );
+    }
+
+    updateProfileNames(
+        userId: number,
+        firstName: string | null | undefined,
+        lastName: string | null | undefined,
+        modifiedBy: number
+    ): void {
+        this.updateProfileNamesStatement().run({
+            userId,
+            firstName: firstName ?? null,
+            lastName: lastName ?? null,
             modifiedBy,
             timestamp: new Date().toISOString()
         });
@@ -60,6 +101,8 @@ interface ProfileDBEntity {
     userId: number;
     firstNameEn: string | null;
     lastNameEn: string | null;
+    firstName: string | null;
+    lastName: string | null;
     emaNumber: string | null;
     hideProfile: number;
     modifiedAt: string;
@@ -71,6 +114,8 @@ function profileFromDBEntity(dbEntity: ProfileDBEntity): Profile {
         userId: dbEntity.userId,
         firstNameEn: dbEntity.firstNameEn,
         lastNameEn: dbEntity.lastNameEn,
+        firstName: dbEntity.firstName,
+        lastName: dbEntity.lastName,
         emaNumber: dbEntity.emaNumber,
         hideProfile: Boolean(dbEntity.hideProfile)
     };

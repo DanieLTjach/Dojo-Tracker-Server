@@ -40,6 +40,13 @@ export class NotFoundError extends ResponseStatusError {
     }
 }
 
+export class ConflictError extends ResponseStatusError {
+    constructor(message: string, errorCode?: string) {
+        super(StatusCodes.CONFLICT, message, errorCode);
+        this.name = 'ConflictError';
+    }
+}
+
 export class InternalServerError extends ResponseStatusError {
     constructor(message: string, errorCode?: string) {
         super(StatusCodes.INTERNAL_SERVER_ERROR, message, errorCode);

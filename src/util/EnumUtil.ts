@@ -1,5 +1,6 @@
 import { InternalServerError } from "../error/BaseErrors.ts";
 import { ClubMembershipStatus, ClubRole } from "../model/ClubModels.ts";
+import { EventRegistrationStatus } from "../model/EventRegistrationModels.ts";
 import { UmaTieBreak } from "../model/EventModels.ts";
 import { StartPlace } from "../model/GameModels.ts";
 import { ClubTelegramTopicType } from "../model/TelegramTopic.ts";
@@ -35,6 +36,10 @@ export function parseClubRole(value: string): ClubRole {
 
 export function parseClubMembershipStatus(value: string): ClubMembershipStatus {
     return parseEnumValue('ClubMembershipStatus', ClubMembershipStatus, value);
+}
+
+export function parseEventRegistrationStatus(value: string): EventRegistrationStatus {
+    return parseEnumValue('EventRegistrationStatus', EventRegistrationStatus, value);
 }
 
 export function parseStartPlace(value: string): StartPlace {

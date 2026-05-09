@@ -2,9 +2,12 @@ import {
     EventNotFoundError,
     GameRulesNotFoundError,
     CannotDeleteEventWithGamesError,
+    CannotDeleteEventWithRegistrationsError,
     CurrentRatingEventMustBeClubScopedError,
-    CurrentRatingEventMustBeSeasonError
+    CurrentRatingEventMustBeSeasonError,
+    TournamentMustHaveClubError
 } from '../error/EventErrors.ts';
+import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { Event } from '../model/EventModels.ts';
@@ -17,6 +20,7 @@ export class EventService {
     private eventRepository: EventRepository = new EventRepository();
     private clubRepository: ClubRepository = new ClubRepository();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
+    private eventRegistrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
     private userService: UserService = new UserService();
 
     getAllEvents(clubId?: number): Event[] {
@@ -61,6 +65,7 @@ export class EventService {
         }
 
         this.validateCurrentRatingEvent(data);
+        this.validateTournamentClub(data);
 
         const now = new Date();
         const eventId = this.eventRepository.createEvent({
@@ -71,6 +76,8 @@ export class EventService {
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
+            maxParticipants: data.maxParticipants ?? null,
+            registrationDeadline: data.registrationDeadline ?? null,
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             createdAt: now,
@@ -96,6 +103,7 @@ export class EventService {
         }
 
         this.validateCurrentRatingEvent(data);
+        this.validateTournamentClub(data);
 
         const now = new Date();
         this.syncCurrentRatingEvent(existingEvent, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
@@ -109,6 +117,8 @@ export class EventService {
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
+            maxParticipants: data.maxParticipants ?? null,
+            registrationDeadline: data.registrationDeadline ?? null,
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             modifiedAt: now,
@@ -163,6 +173,11 @@ export class EventService {
             throw new CannotDeleteEventWithGamesError(event.name, gameCount);
         }
 
+        const registrationCount = this.eventRegistrationRepository.countRegistrationsByEventId(eventId);
+        if (registrationCount > 0) {
+            throw new CannotDeleteEventWithRegistrationsError(event.name, registrationCount);
+        }
+
         if (event.isCurrentRating && event.clubId !== null) {
             this.clubRepository.updateCurrentRatingEvent(event.clubId, null, new Date(), modifiedBy);
         }
@@ -183,6 +198,12 @@ export class EventService {
         const clubRole = this.membershipRepository.getUserClubRole(event.clubId, userId);
         if (clubRole !== 'OWNER') {
             throw new InsufficientClubPermissionsError('OWNER');
+        }
+    }
+
+    private validateTournamentClub(data: EventData): void {
+        if (data.type === 'TOURNAMENT' && (data.clubId === null || data.clubId === undefined)) {
+            throw new TournamentMustHaveClubError();
         }
     }
 
@@ -226,6 +247,8 @@ export interface EventData {
     isCurrentRating?: boolean | null | undefined;
     dateFrom?: Date | null | undefined;
     dateTo?: Date | null | undefined;
+    maxParticipants?: number | null | undefined;
+    registrationDeadline?: Date | null | undefined;
     gameRulesId: number;
     startingRating: number;
     minimumGamesForRating: number;
