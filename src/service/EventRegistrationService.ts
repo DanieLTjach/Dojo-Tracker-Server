@@ -185,8 +185,15 @@ export class EventRegistrationService {
             throw new EventRegistrationNotFoundError(event.name, targetUserId);
         }
 
+        const before = this.profileService.getProfileByUserId(targetUserId);
         const profile = this.profileService.updateProfileNames(targetUserId, firstName, lastName, modifierId);
-        this.logProfileNamesUpdated(event, target, modifier);
+        this.logProfileNamesUpdated(
+            event,
+            target,
+            modifier,
+            { firstName: before?.firstName ?? null, lastName: before?.lastName ?? null },
+            { firstName: profile.firstName, lastName: profile.lastName }
+        );
         return profile;
     }
 
@@ -313,7 +320,7 @@ export class EventRegistrationService {
             <b>${headline}</b>
 
             <b>Турнір:</b> ${event.name}
-            <a href="${config.botUrl}">Відкрити додаток</a>
+            <a href="${config.botUrl}?startapp=event_${event.id}">Відкрити сторінку турніру</a>
         `;
         void TelegramMessageService.sendDirectMessage(target.telegramId, message);
     }
@@ -328,12 +335,19 @@ export class EventRegistrationService {
         }
     }
 
+    private formatParticipant(user: User): string {
+        const profile = this.profileService.getProfileByUserId(user.id);
+        const firstName = profile?.firstName ?? '—';
+        const lastName = profile?.lastName ?? '—';
+        return `${user.name} <code>(ID: ${user.id})</code>\n<b>Імʼя:</b> ${firstName} ${lastName}`;
+    }
+
     private logApplied(event: Event, applicant: User): void {
         const message = dedent`
             <b>🔔 Заявка на турнір</b>
 
             <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${applicant.name} <code>(ID: ${applicant.id})</code>
+            <b>Учасник:</b> ${this.formatParticipant(applicant)}
         `;
         this.logEvent(event, message);
     }
@@ -343,7 +357,7 @@ export class EventRegistrationService {
             <b>✅ Заявку на турнір схвалено</b>
 
             <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${target.name} <code>(ID: ${target.id})</code>
+            <b>Учасник:</b> ${this.formatParticipant(target)}
             <b>Схвалив:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         this.logEvent(event, message);
@@ -354,7 +368,7 @@ export class EventRegistrationService {
             <b>❌ Заявку на турнір відхилено</b>
 
             <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${target.name} <code>(ID: ${target.id})</code>
+            <b>Учасник:</b> ${this.formatParticipant(target)}
             <b>Відхилив:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         this.logEvent(event, message);
@@ -365,7 +379,7 @@ export class EventRegistrationService {
             <b>🚪 Учасник скасував заявку на турнір</b>
 
             <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${applicant.name} <code>(ID: ${applicant.id})</code>
+            <b>Учасник:</b> ${this.formatParticipant(applicant)}
         `;
         this.logEvent(event, message);
     }
@@ -375,18 +389,27 @@ export class EventRegistrationService {
             <b>📝 Учасника додано вручну</b>
 
             <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${target.name} <code>(ID: ${target.id})</code>
+            <b>Учасник:</b> ${this.formatParticipant(target)}
             <b>Додав:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         this.logEvent(event, message);
     }
 
-    private logProfileNamesUpdated(event: Event, target: User, modifier: User): void {
+    private logProfileNamesUpdated(
+        event: Event,
+        target: User,
+        modifier: User,
+        before: { firstName: string | null; lastName: string | null },
+        after: { firstName: string | null; lastName: string | null }
+    ): void {
+        const fmt = (n: string | null): string => n ?? '—';
         const message = dedent`
             <b>📝 Оновлено імʼя учасника</b>
 
             <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
             <b>Учасник:</b> ${target.name} <code>(ID: ${target.id})</code>
+            <b>Було:</b> ${fmt(before.firstName)} ${fmt(before.lastName)}
+            <b>Стало:</b> ${fmt(after.firstName)} ${fmt(after.lastName)}
             <b>Оновив:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         this.logEvent(event, message);
