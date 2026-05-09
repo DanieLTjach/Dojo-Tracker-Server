@@ -47,6 +47,7 @@ export class ProfileService {
         lastName: string | null | undefined,
         modifiedBy: number
     ): Profile {
+        this.userService.validateUserExistsById(userId);
         this.profileRepository.updateProfileNames(userId, firstName, lastName, modifiedBy);
         return this.profileRepository.findProfileByUserId(userId)!;
     }
