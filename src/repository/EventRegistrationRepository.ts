@@ -3,22 +3,32 @@ import { dbManager } from '../db/dbInit.ts';
 import type { EventRegistration, EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
 import { parseEventRegistrationStatus } from '../util/EnumUtil.ts';
 
+const REGISTRATION_SELECT_COLUMNS = `
+    er.eventId,
+    e.name as eventName,
+    er.userId,
+    u.name as userName,
+    p.firstName as firstName,
+    p.lastName as lastName,
+    er.status,
+    er.createdAt,
+    er.modifiedAt,
+    er.modifiedBy
+`;
+
+const REGISTRATION_FROM_JOIN = `
+    FROM eventRegistration er
+    JOIN event e ON er.eventId = e.id
+    JOIN user u ON er.userId = u.id
+    LEFT JOIN profile p ON p.userId = er.userId
+`;
+
 export class EventRegistrationRepository {
 
     private findRegistrationStatement(): Statement<{ eventId: number; userId: number }, EventRegistrationDBEntity> {
         return dbManager.db.prepare(`
-            SELECT
-                er.eventId,
-                e.name as eventName,
-                er.userId,
-                u.name as userName,
-                er.status,
-                er.createdAt,
-                er.modifiedAt,
-                er.modifiedBy
-            FROM eventRegistration er
-            JOIN event e ON er.eventId = e.id
-            JOIN user u ON er.userId = u.id
+            SELECT ${REGISTRATION_SELECT_COLUMNS}
+            ${REGISTRATION_FROM_JOIN}
             WHERE er.eventId = :eventId
               AND er.userId = :userId
         `);
@@ -31,18 +41,8 @@ export class EventRegistrationRepository {
 
     private findRegistrationsByEventIdStatement(): Statement<{ eventId: number }, EventRegistrationDBEntity> {
         return dbManager.db.prepare(`
-            SELECT
-                er.eventId,
-                e.name as eventName,
-                er.userId,
-                u.name as userName,
-                er.status,
-                er.createdAt,
-                er.modifiedAt,
-                er.modifiedBy
-            FROM eventRegistration er
-            JOIN event e ON er.eventId = e.id
-            JOIN user u ON er.userId = u.id
+            SELECT ${REGISTRATION_SELECT_COLUMNS}
+            ${REGISTRATION_FROM_JOIN}
             WHERE er.eventId = :eventId
             ORDER BY er.createdAt
         `);
@@ -54,18 +54,8 @@ export class EventRegistrationRepository {
 
     private findRegistrationsByEventIdAndStatusStatement(): Statement<{ eventId: number; status: EventRegistrationStatus }, EventRegistrationDBEntity> {
         return dbManager.db.prepare(`
-            SELECT
-                er.eventId,
-                e.name as eventName,
-                er.userId,
-                u.name as userName,
-                er.status,
-                er.createdAt,
-                er.modifiedAt,
-                er.modifiedBy
-            FROM eventRegistration er
-            JOIN event e ON er.eventId = e.id
-            JOIN user u ON er.userId = u.id
+            SELECT ${REGISTRATION_SELECT_COLUMNS}
+            ${REGISTRATION_FROM_JOIN}
             WHERE er.eventId = :eventId
               AND er.status = :status
             ORDER BY er.createdAt
@@ -78,18 +68,8 @@ export class EventRegistrationRepository {
 
     private findRegistrationsByUserIdStatement(): Statement<{ userId: number }, EventRegistrationDBEntity> {
         return dbManager.db.prepare(`
-            SELECT
-                er.eventId,
-                e.name as eventName,
-                er.userId,
-                u.name as userName,
-                er.status,
-                er.createdAt,
-                er.modifiedAt,
-                er.modifiedBy
-            FROM eventRegistration er
-            JOIN event e ON er.eventId = e.id
-            JOIN user u ON er.userId = u.id
+            SELECT ${REGISTRATION_SELECT_COLUMNS}
+            ${REGISTRATION_FROM_JOIN}
             WHERE er.userId = :userId
             ORDER BY er.createdAt DESC
         `);
@@ -101,18 +81,8 @@ export class EventRegistrationRepository {
 
     private findRegistrationsByUserIdAndStatusStatement(): Statement<{ userId: number; status: EventRegistrationStatus }, EventRegistrationDBEntity> {
         return dbManager.db.prepare(`
-            SELECT
-                er.eventId,
-                e.name as eventName,
-                er.userId,
-                u.name as userName,
-                er.status,
-                er.createdAt,
-                er.modifiedAt,
-                er.modifiedBy
-            FROM eventRegistration er
-            JOIN event e ON er.eventId = e.id
-            JOIN user u ON er.userId = u.id
+            SELECT ${REGISTRATION_SELECT_COLUMNS}
+            ${REGISTRATION_FROM_JOIN}
             WHERE er.userId = :userId
               AND er.status = :status
             ORDER BY er.createdAt DESC
@@ -224,6 +194,8 @@ interface EventRegistrationDBEntity {
     eventName: string;
     userId: number;
     userName: string;
+    firstName: string | null;
+    lastName: string | null;
     status: string;
     createdAt: string;
     modifiedAt: string;
@@ -236,6 +208,8 @@ function eventRegistrationFromDBEntity(dbEntity: EventRegistrationDBEntity): Eve
         eventName: dbEntity.eventName,
         userId: dbEntity.userId,
         userName: dbEntity.userName,
+        firstName: dbEntity.firstName,
+        lastName: dbEntity.lastName,
         status: parseEventRegistrationStatus(dbEntity.status),
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),

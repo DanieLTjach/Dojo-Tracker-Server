@@ -11,6 +11,8 @@ export interface EventRegistration {
     eventName: string;
     userId: number;
     userName: string;
+    firstName: string | null;
+    lastName: string | null;
     status: EventRegistrationStatus;
     createdAt: Date;
     modifiedAt: Date;
