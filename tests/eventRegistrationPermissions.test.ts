@@ -295,7 +295,7 @@ describe('Event registration permissions matrix', () => {
     describe('Edge cases', () => {
         afterEach(() => clearRegistrations());
 
-        it('apply without firstName/lastName → 400 MissingProfileNamesError', async () => {
+        it('apply without firstName/lastName → 400 MissingProfileNamesForTournamentRegistrationError', async () => {
             // Strip names from MEMBER user
             profileRepo.upsertProfile(MEMBER_USER_ID, null, null, null, null, null, false, SYSTEM_USER_ID);
             try {
@@ -304,7 +304,7 @@ describe('Event registration permissions matrix', () => {
                     .set('Authorization', authHeaders.member)
                     .send({});
                 expect(response.status).toBe(400);
-                expect(response.body.errorCode).toBe('missingProfileNames');
+                expect(response.body.errorCode).toBe('missingProfileNamesForTournamentRegistration');
             } finally {
                 setProfile(MEMBER_USER_ID, 'Імʼя', 'Прізвище');
             }
@@ -410,7 +410,7 @@ describe('Event registration permissions matrix', () => {
             expect(response.body.errorCode).toBe('tournamentMustHaveClub');
         });
 
-        it('DELETE event with existing registrations → 400 EventHasRegistrationsError', async () => {
+        it('DELETE event with existing registrations → 400 CannotDeleteEventWithRegistrationsError', async () => {
             // Insert a separate event we can attempt to delete
             const tempEventId = 97250;
             const ts = nextTs();
@@ -429,7 +429,7 @@ describe('Event registration permissions matrix', () => {
                     .delete(`/api/events/${tempEventId}`)
                     .set('Authorization', authHeaders.admin);
                 expect(response.status).toBe(400);
-                expect(response.body.errorCode).toBe('eventHasRegistrations');
+                expect(response.body.errorCode).toBe('cannotDeleteEventWithRegistrations');
             } finally {
                 dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId = ?').run(tempEventId);
                 dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(tempEventId);

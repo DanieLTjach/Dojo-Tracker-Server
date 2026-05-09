@@ -8,7 +8,7 @@ import {
     EventCapacityReachedError,
     EventRegistrationNotFoundError,
     InvalidEventRegistrationStateError,
-    MissingProfileNamesError
+    MissingProfileNamesForTournamentRegistrationError
 } from '../src/error/EventRegistrationErrors.ts';
 import { BadRequestError } from '../src/error/BaseErrors.ts';
 
@@ -179,8 +179,8 @@ describe('EventRegistrationService', () => {
             expect(result.status).toBe('PENDING');
         });
 
-        it('throws MissingProfileNamesError when profile lacks firstName/lastName', () => {
-            expect(() => service.apply(TOURNAMENT_EVENT_ID, NO_NAMES_USER_ID)).toThrow(MissingProfileNamesError);
+        it('throws MissingProfileNamesForTournamentRegistrationError when profile lacks firstName/lastName', () => {
+            expect(() => service.apply(TOURNAMENT_EVENT_ID, NO_NAMES_USER_ID)).toThrow(MissingProfileNamesForTournamentRegistrationError);
         });
 
         it('rejects apply on non-tournament events', () => {
@@ -292,9 +292,9 @@ describe('EventRegistrationService', () => {
             expect(membership?.status).toBe('ACTIVE');
         });
 
-        it('throws MissingProfileNamesError when profile lacks names', () => {
+        it('throws MissingProfileNamesForTournamentRegistrationError when profile lacks names', () => {
             expect(() => service.manualRegister(TOURNAMENT_EVENT_ID, NO_NAMES_USER_ID, OWNER_USER_ID))
-                .toThrow(MissingProfileNamesError);
+                .toThrow(MissingProfileNamesForTournamentRegistrationError);
         });
 
         it('respects maxParticipants', () => {

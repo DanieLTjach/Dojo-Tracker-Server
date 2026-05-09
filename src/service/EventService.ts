@@ -2,11 +2,11 @@ import {
     EventNotFoundError,
     GameRulesNotFoundError,
     CannotDeleteEventWithGamesError,
+    CannotDeleteEventWithRegistrationsError,
     CurrentRatingEventMustBeClubScopedError,
     CurrentRatingEventMustBeSeasonError,
     TournamentMustHaveClubError
 } from '../error/EventErrors.ts';
-import { EventHasRegistrationsError } from '../error/EventRegistrationErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
@@ -175,7 +175,7 @@ export class EventService {
 
         const registrationCount = this.eventRegistrationRepository.countRegistrationsByEventId(eventId);
         if (registrationCount > 0) {
-            throw new EventHasRegistrationsError(event.name, registrationCount);
+            throw new CannotDeleteEventWithRegistrationsError(event.name, registrationCount);
         }
 
         if (event.isCurrentRating && event.clubId !== null) {

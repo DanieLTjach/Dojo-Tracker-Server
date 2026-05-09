@@ -4,7 +4,7 @@ import {
     EventCapacityReachedError,
     EventRegistrationNotFoundError,
     InvalidEventRegistrationStateError,
-    MissingProfileNamesError
+    MissingProfileNamesForTournamentRegistrationError
 } from '../error/EventRegistrationErrors.ts';
 import { BadRequestError } from '../error/BaseErrors.ts';
 import type { Event } from '../model/EventModels.ts';
@@ -233,7 +233,7 @@ export class EventRegistrationService {
     private validateProfileHasNames(userId: number): void {
         const profile = this.profileService.getProfileByUserId(userId);
         if (profile === undefined || profile.firstName === null || profile.lastName === null) {
-            throw new MissingProfileNamesError();
+            throw new MissingProfileNamesForTournamentRegistrationError();
         }
     }
 

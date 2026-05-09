@@ -16,9 +16,9 @@ export class InvalidEventRegistrationStateError extends BadRequestError {
     }
 }
 
-export class MissingProfileNamesError extends BadRequestError {
+export class MissingProfileNamesForTournamentRegistrationError extends BadRequestError {
     constructor() {
-        super('Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі', 'missingProfileNames');
+        super('Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі', 'missingProfileNamesForTournamentRegistration');
     }
 }
 
@@ -31,20 +31,11 @@ export class EventCapacityReachedError extends ConflictError {
     }
 }
 
-export class EventHasRegistrationsError extends BadRequestError {
-    constructor(eventName: string, registrationCount: number) {
-        super(
-            `Неможливо видалити подію "${eventName}" — існує ${registrationCount} реєстрацій. Видаліть реєстрації перед видаленням події.`,
-            'eventHasRegistrations'
-        );
-    }
-}
-
-export class InsufficientEventManagementPermissionsError extends ForbiddenError {
+export class InsufficientEventRegistrationManagementPermissionsError extends ForbiddenError {
     constructor() {
         super(
             'Недостатньо прав для управління реєстраціями на цю подію. Потрібна роль адміна або OWNER/MODERATOR клубу події.',
-            'insufficientEventManagementPermissions'
+            'insufficientEventRegistrationManagementPermissions'
         );
     }
 }

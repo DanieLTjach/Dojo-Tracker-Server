@@ -39,6 +39,15 @@ export class CannotDeleteEventWithGamesError extends BadRequestError {
     }
 }
 
+export class CannotDeleteEventWithRegistrationsError extends BadRequestError {
+    constructor(eventName: string, registrationCount: number) {
+        super(
+            `Неможливо видалити подію "${eventName}" — існує ${registrationCount} реєстрацій. Видаліть реєстрації перед видаленням події.`,
+            'cannotDeleteEventWithRegistrations'
+        );
+    }
+}
+
 export class CurrentRatingEventMustBeClubScopedError extends BadRequestError {
     constructor() {
         super('Поточний рейтинговий сезон можна встановити лише для клубної події', 'currentRatingEventMustBeClubScoped');
