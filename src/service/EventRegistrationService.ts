@@ -48,24 +48,21 @@ export class EventRegistrationService {
             }
             // REJECTED → revert to PENDING
             this.registrationRepository.updateRegistrationStatus(eventId, applicantId, 'PENDING', applicantId);
-            const updated = this.getRegistration(eventId, applicantId);
-            this.logApplied(event, applicant);
-            return updated;
+        } else {
+            const now = new Date();
+            this.registrationRepository.createRegistration({
+                eventId,
+                userId: applicantId,
+                status: 'PENDING',
+                createdAt: now,
+                modifiedAt: now,
+                modifiedBy: applicantId
+            });
         }
 
-        const now = new Date();
-        this.registrationRepository.createRegistration({
-            eventId,
-            userId: applicantId,
-            status: 'PENDING',
-            createdAt: now,
-            modifiedAt: now,
-            modifiedBy: applicantId
-        });
-
-        const created = this.getRegistration(eventId, applicantId);
+        const updated = this.getRegistration(eventId, applicantId);
         this.logApplied(event, applicant);
-        return created;
+        return updated;
     }
 
     withdraw(eventId: number, applicantId: number): void {
