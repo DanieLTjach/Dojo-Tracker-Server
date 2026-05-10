@@ -6,11 +6,7 @@ coverage
 # macOS files
 .DS_Store
 
-# Environment files
-# Keep .env.example, .env.test in repo
-# Ignore local overrides and sensitive production configs
-.env
-.env.local
-.env.production
-.env.development
-.env.*.local
+# Environment files: ignore all except the two tracked ones
+.env*
+!.env.example
+!.env.test

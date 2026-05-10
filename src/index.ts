@@ -53,8 +53,10 @@ app.listen(config.port, (error?: Error) => {
     }
 });
 
-TelegramCommandService.init();
-PollSchedulerService.init();
+if (config.env !== 'test') {
+    TelegramCommandService.init();
+    PollSchedulerService.init();
+}
 
 async function shutdown() {
     await LogService.shutdown();
