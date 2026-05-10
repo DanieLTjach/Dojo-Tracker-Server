@@ -56,7 +56,7 @@ const config: Config = {
     botToken: getRequiredStringEnvVariable("BOT_TOKEN"),
     jwtSecret: getRequiredStringEnvVariable("JWT_SECRET"),
     jwtExpiry: process.env["JWT_EXPIRY"] || '7d',
-    authInitDataValiditySeconds: tryParseIntEnvVariable("AUTH_INIT_DATA_VALIDITY_SECONDS") || 3600,
+    authInitDataValiditySeconds: tryParseIntEnvVariable("AUTH_INIT_DATA_VALIDITY_SECONDS") || 86400,
     frontendUrl: getRequiredStringEnvVariable("FRONTEND_URL"),
     botUrl: getRequiredStringEnvVariable("BOT_URL"),
     globalLogsChatId: globalLogsChatId,

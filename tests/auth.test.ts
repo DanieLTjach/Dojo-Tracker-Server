@@ -90,8 +90,8 @@ describe('Authentication API Endpoints', () => {
      * Helper function to generate expired initData
      */
     function generateExpiredInitData(): Record<string, string> {
-        // Set auth_date to 2 hours ago (beyond default 1 hour validity)
-        const authDate = Math.floor(Date.now() / 1000) - (2 * 60 * 60);
+        // Set auth_date to 25 hours ago (beyond default 24 hour validity)
+        const authDate = Math.floor(Date.now() / 1000) - (25 * 60 * 60);
         const user = JSON.stringify({
             id: TEST_TELEGRAM_ID,
             first_name: 'Test',
