@@ -13,4 +13,5 @@ coverage
 .env.local
 .env.production
 .env.development
+.env.e2e
 .env.*.local
