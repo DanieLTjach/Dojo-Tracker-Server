@@ -8,7 +8,7 @@ export class InvalidInitDataError extends UnauthorizedError {
 
 export class ExpiredAuthDataError extends UnauthorizedError {
     constructor() {
-        super('Термін дії даних автентифікації минув. Будь ласка, перезапустіть додаток.', 'expiredAuthData');
+        super('Термін дії даних автентифікації минув. Будь ласка, закрийте та відкрийте додаток заново.', 'expiredAuthData');
     }
 }
 
