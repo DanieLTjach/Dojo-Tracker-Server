@@ -4,14 +4,14 @@ import { eventIdParamSchema, eventIdSchema } from './EventSchemas.ts';
 import { clubIdParamSchema } from './ClubSchemas.ts';
 import { dateSchema } from './CommonSchemas.ts';
 
-export const gameStartPlace = z.enum(['EAST', 'WEST', 'NORTH', 'SOUTH']);
+export const windSchema = z.enum(['EAST', 'WEST', 'NORTH', 'SOUTH']);
 
 export const gameIdParamSchema = z.coerce.number().int("Game ID must be an integer")
 
 const playerDataSchema = z.object({
     userId: userIdSchema,
     points: z.number().int("Points must be an integer"),
-    startPlace: gameStartPlace.nullish(),
+    startPlace: windSchema.nullish(),
     chomboCount: z.number().int("Chombo count must be an integer").nonnegative().max(10).nullish()
 });
 

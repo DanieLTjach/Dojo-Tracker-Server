@@ -2,7 +2,7 @@ import type { Statement } from 'better-sqlite3';
 import type { Game, GameFilters, GamePlayer } from '../model/GameModels.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { RATING_TO_POINTS_COEFFICIENT } from '../service/RatingService.ts';
-import { parseStartPlace } from '../util/EnumUtil.ts';
+import { parseWind } from '../util/EnumUtil.ts';
 
 export class GameRepository {
 
@@ -242,7 +242,7 @@ export interface GamePlayerDBEntity {
 function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
     return {
         ...dbEntity,
-        startPlace: dbEntity.startPlace !== null ? parseStartPlace(dbEntity.startPlace) : null,
+        startPlace: dbEntity.startPlace !== null ? parseWind(dbEntity.startPlace) : null,
         ratingChange: dbEntity.ratingChange / RATING_TO_POINTS_COEFFICIENT
     }
 }

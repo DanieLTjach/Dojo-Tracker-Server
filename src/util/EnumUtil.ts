@@ -2,7 +2,7 @@ import { InternalServerError } from "../error/BaseErrors.ts";
 import { ClubMembershipStatus, ClubRole } from "../model/ClubModels.ts";
 import { EventRegistrationStatus } from "../model/EventRegistrationModels.ts";
 import { UmaTieBreak } from "../model/EventModels.ts";
-import { StartPlace } from "../model/GameModels.ts";
+import { Wind } from "../model/GameModels.ts";
 import { ClubTelegramTopicType } from "../model/TelegramTopic.ts";
 import { UserStatus } from "../model/UserModels.ts";
 
@@ -42,8 +42,8 @@ export function parseEventRegistrationStatus(value: string): EventRegistrationSt
     return parseEnumValue('EventRegistrationStatus', EventRegistrationStatus, value);
 }
 
-export function parseStartPlace(value: string): StartPlace {
-    return parseEnumValue('StartPlace', StartPlace, value);
+export function parseWind(value: string): Wind {
+    return parseEnumValue('Wind', Wind, value);
 }
 
 export function parseUmaTieBreak(value: string): UmaTieBreak {

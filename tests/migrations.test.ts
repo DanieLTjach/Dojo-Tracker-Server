@@ -199,6 +199,49 @@ describe('Database Migrations', () => {
     db.close();
   });
 
+  test('migration 7 renames gameStartPlace to wind', () => {
+    const db = createMigratedDb('6.sql');
+
+    db.prepare(`
+      INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
+      VALUES (1, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
+    `).run();
+
+    db.prepare(`
+      INSERT INTO userToGame (userId, gameId, startPlace, points, chomboCount, createdAt, modifiedAt, modifiedBy)
+      VALUES (0, 1, 'EAST', 30000, 0, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
+    `).run();
+
+    runMigration(db, '7.sql');
+    db.pragma('foreign_keys = ON');
+
+    const winds = db.prepare('SELECT wind FROM wind ORDER BY wind').all() as Array<{ wind: string }>;
+    expect(winds.map(({ wind }) => wind)).toEqual(['EAST', 'NORTH', 'SOUTH', 'WEST']);
+
+    const gameStartPlaceTable = db.prepare(`
+      SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'gameStartPlace'
+    `).get();
+    expect(gameStartPlaceTable).toBeUndefined();
+
+    const userToGame = db.prepare(`
+      SELECT userId, gameId, startPlace, points, chomboCount
+      FROM userToGame
+      WHERE userId = 0 AND gameId = 1
+    `).get() as Record<string, unknown>;
+    expect(userToGame).toEqual({
+      userId: 0,
+      gameId: 1,
+      startPlace: 'EAST',
+      points: 30000,
+      chomboCount: 0,
+    });
+
+    const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+    expect(foreignKeyViolations).toEqual([]);
+
+    db.close();
+  });
+
   test('migration 5 seeds game rules details in current compact format', () => {
     const db = createMigratedDb('5.sql');
 

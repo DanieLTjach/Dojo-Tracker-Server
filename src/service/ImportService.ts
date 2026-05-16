@@ -3,8 +3,7 @@ import { EventService } from './EventService.ts';
 import { UserRepository } from '../repository/UserRepository.ts';
 import { CsvParsingError, NoValidGamesInCsvError } from '../error/ImportErrors.ts';
 import { dbManager } from '../db/dbInit.ts';
-import type { PlayerData } from '../model/GameModels.ts';
-import type { GameWithPlayers } from '../model/GameModels.ts';
+import type { GameWithPlayers, PlayerData, Wind } from '../model/GameModels.ts';
 import type { Event } from '../model/EventModels.ts';
 
 interface RowError {
@@ -26,7 +25,7 @@ interface ParsedGameRow {
 }
 
 const PLAYER_COLUMNS = ['username', 'points', 'startPlace', 'chombo'] as const;
-const VALID_START_PLACES = ['EAST', 'SOUTH', 'WEST', 'NORTH'] as const;
+const VALID_WINDS = ['EAST', 'SOUTH', 'WEST', 'NORTH'] as const satisfies readonly Wind[];
 
 // Sentinel error: thrown inside the import transaction to force a rollback after collecting all per-row errors.
 class ImportRollbackError extends Error {}
@@ -189,12 +188,12 @@ export class ImportService {
                 throw new Error(`Row ${rowNumber}: player${p}_points must be an integer`);
             }
 
-            let startPlace: 'EAST' | 'SOUTH' | 'WEST' | 'NORTH' | undefined = undefined;
+            let startPlace: Wind | undefined = undefined;
             if (startPlaceStr) {
-                if (!VALID_START_PLACES.includes(startPlaceStr as any)) {
-                    throw new Error(`Row ${rowNumber}: player${p}_startPlace must be one of: ${VALID_START_PLACES.join(', ')}`);
+                if (!VALID_WINDS.includes(startPlaceStr as Wind)) {
+                    throw new Error(`Row ${rowNumber}: player${p}_startPlace must be one of: ${VALID_WINDS.join(', ')}`);
                 }
-                startPlace = startPlaceStr as typeof VALID_START_PLACES[number];
+                startPlace = startPlaceStr as Wind;
             }
 
             const chomboCount = chomboStr ? Number(chomboStr) : 0;
