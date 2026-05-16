@@ -237,20 +237,31 @@ describe('Database Migrations', () => {
     });
 
     const game = db.prepare(`
-      SELECT tournamentRound, tournamentTable
+      SELECT tournamentRound, tournamentTable, status, startedAt, endedAt, lastRoundWasDeleted
       FROM game
       WHERE id = 1
     `).get() as Record<string, unknown>;
     expect(game).toEqual({
       tournamentRound: 2,
       tournamentTable: '5',
+      status: 'FINISHED',
+      startedAt: '2026-01-01T00:00:00.000Z',
+      endedAt: '2026-01-01T00:00:00.000Z',
+      lastRoundWasDeleted: 0,
     });
+
+    const gameStatuses = db.prepare('SELECT status FROM gameStatus ORDER BY status').all() as Array<{ status: string }>;
+    expect(gameStatuses.map(({ status }) => status)).toEqual(['FINISHED', 'HAS_NOT_STARTED', 'IN_PROGRESS']);
 
     const gameColumns = (db.prepare('PRAGMA table_info(game)').all() as Array<{ name: string; type: string }>)
       .map(({ name, type }) => ({ name, type }));
     expect(gameColumns).toEqual(expect.arrayContaining([
       { name: 'tournamentRound', type: 'INTEGER' },
       { name: 'tournamentTable', type: 'TEXT' },
+      { name: 'status', type: 'TEXT' },
+      { name: 'startedAt', type: 'TIMESTAMP' },
+      { name: 'endedAt', type: 'TIMESTAMP' },
+      { name: 'lastRoundWasDeleted', type: 'BOOL' },
     ]));
     expect(gameColumns.find(column => column.name === 'tournamentHanchanNumber')).toBeUndefined();
     expect(gameColumns.find(column => column.name === 'tournamentTableNumber')).toBeUndefined();

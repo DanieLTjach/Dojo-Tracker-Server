@@ -596,9 +596,9 @@ describe('Game Rules API Endpoints', () => {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(eventId, 'PUT Blocked Event', 'SEASON', ruleId, clubId, 0, 0, 0, timestamp, timestamp);
             dbManager.db.prepare(
-                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?)`
-            ).run(gameId, eventId, timestamp, timestamp, 0);
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, startedAt, endedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0, 'FINISHED', timestamp, timestamp);
 
             try {
                 const response = await request(app)
@@ -665,9 +665,9 @@ describe('Game Rules API Endpoints', () => {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(eventId, 'PUT Unchanged Event', 'SEASON', ruleId, clubId, 0, 0, 0, timestamp, timestamp);
             dbManager.db.prepare(
-                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?)`
-            ).run(gameId, eventId, timestamp, timestamp, 0);
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, startedAt, endedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0, 'FINISHED', timestamp, timestamp);
 
             try {
                 const response = await request(app)
@@ -698,9 +698,9 @@ describe('Game Rules API Endpoints', () => {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(eventId, 'PUT Details Only Event', 'SEASON', ruleId, clubId, 0, 0, 0, timestamp, timestamp);
             dbManager.db.prepare(
-                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?)`
-            ).run(gameId, eventId, timestamp, timestamp, 0);
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, startedAt, endedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0, 'FINISHED', timestamp, timestamp);
 
             try {
                 const response = await request(app)

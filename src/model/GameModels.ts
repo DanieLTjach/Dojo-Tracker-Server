@@ -7,6 +7,31 @@ export const Wind = {
 
 export type Wind = typeof Wind[keyof typeof Wind];
 
+export const GameStatus = {
+    HAS_NOT_STARTED: 'HAS_NOT_STARTED',
+    IN_PROGRESS: 'IN_PROGRESS',
+    FINISHED: 'FINISHED'
+} as const;
+
+export type GameStatus = typeof GameStatus[keyof typeof GameStatus];
+
+export type RoundResult = unknown;
+
+export interface GameRound {
+    gameId: number;
+    roundNumber: number;
+    wind: Wind;
+    counters: number;
+    riichiSticks: number;
+    result: RoundResult;
+}
+
+export interface GameState {
+    wind: Wind;
+    counters: number;
+    riichiSticks: number;
+}
+
 export interface Game {
     id: number;
     eventId: number;
@@ -15,6 +40,10 @@ export interface Game {
     modifiedBy: number;
     tournamentRound: number | null;
     tournamentTable: string | null;
+    status: GameStatus;
+    startedAt: Date | null;
+    endedAt: Date | null;
+    lastRoundWasDeleted: boolean;
 }
 
 export interface GamePlayer {
@@ -30,6 +59,11 @@ export interface GamePlayer {
 
 export interface GameWithPlayers extends Game {
     players: GamePlayer[];
+}
+
+export interface DetailedGame extends GameWithPlayers {
+    rounds: GameRound[];
+    currentState: GameState | null;
 }
 
 export interface PlayerData {

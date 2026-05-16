@@ -142,9 +142,9 @@ describe('Game Rules CRUD', () => {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(eventId, 'Update Block Test', 'SEASON', ruleId, TEST_CLUB_ID, 0, 0, 0, timestamp, timestamp);
             dbManager.db.prepare(
-                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?)`
-            ).run(gameId, eventId, timestamp, timestamp, 0);
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, startedAt, endedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0, 'FINISHED', timestamp, timestamp);
 
             try {
                 expect(() => service.updateGameRules(ruleId, {
@@ -173,9 +173,9 @@ describe('Game Rules CRUD', () => {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(eventId, 'Details Update In Use Event', 'SEASON', ruleId, TEST_CLUB_ID, 0, 0, 0, timestamp, timestamp);
             dbManager.db.prepare(
-                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?)`
-            ).run(gameId, eventId, timestamp, timestamp, 0);
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, startedAt, endedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0, 'FINISHED', timestamp, timestamp);
 
             try {
                 const updated = service.updateGameRules(ruleId, {

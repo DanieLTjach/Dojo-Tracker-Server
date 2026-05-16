@@ -470,12 +470,80 @@ describe('Game API Endpoints', () => {
             expect(response.body.players).toHaveLength(4);
             expect(response.body).toHaveProperty('createdAt');
             expect(response.body).toHaveProperty('modifiedAt');
+            expect(response.body.status).toBe('FINISHED');
+            expect(response.body.lastRoundWasDeleted).toBe(false);
+            expect(response.body.rounds).toEqual([]);
+            expect(response.body.currentState).toBeNull();
 
             // Verify players have ratingChange field
             response.body.players.forEach((player: any) => {
                 expect(player).toHaveProperty('ratingChange');
                 expect(typeof player.ratingChange === 'number' || player.ratingChange === null).toBe(true);
             });
+        });
+
+        test('should return game rounds in roundNumber order with parsed result', async () => {
+            const createResponse = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 30000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 30000 }
+                    ]
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+
+            const roundOneResult = {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [testUser1Id],
+                tenpaiPlayerIds: [testUser1Id, testUser2Id],
+                nagashiManganPlayerIds: []
+            };
+            const roundTwoResult = {
+                type: 'CHOMBO',
+                offenderPlayerId: testUser3Id
+            };
+
+            dbManager.db.prepare(`
+                INSERT INTO gameRound (gameId, roundNumber, wind, counters, riichiSticks, result)
+                VALUES (?, 2, 'SOUTH', 1, 0, ?),
+                       (?, 1, 'EAST', 0, 1, ?)
+            `).run(
+                gameId,
+                JSON.stringify(roundTwoResult),
+                gameId,
+                JSON.stringify(roundOneResult)
+            );
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.rounds).toEqual([
+                {
+                    gameId,
+                    roundNumber: 1,
+                    wind: 'EAST',
+                    counters: 0,
+                    riichiSticks: 1,
+                    result: roundOneResult
+                },
+                {
+                    gameId,
+                    roundNumber: 2,
+                    wind: 'SOUTH',
+                    counters: 1,
+                    riichiSticks: 0,
+                    result: roundTwoResult
+                }
+            ]);
         });
 
         test('should fail with non-existent game ID', async () => {

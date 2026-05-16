@@ -25,6 +25,12 @@ ALTER TABLE userToGame_new RENAME TO userToGame;
 
 DROP TABLE gameStartPlace;
 
+CREATE TABLE gameStatus (
+    status TEXT NOT NULL PRIMARY KEY
+);
+
+INSERT INTO gameStatus (status) VALUES ('HAS_NOT_STARTED'), ('IN_PROGRESS'), ('FINISHED');
+
 CREATE TABLE game_new (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     eventId INTEGER NOT NULL REFERENCES event(id),
@@ -33,10 +39,26 @@ CREATE TABLE game_new (
     modifiedBy INTEGER NOT NULL REFERENCES user(id),
     tournamentRound INTEGER,
     tournamentTable TEXT,
+    status TEXT NOT NULL REFERENCES gameStatus(status),
+    startedAt TIMESTAMP,
+    endedAt TIMESTAMP,
+    lastRoundWasDeleted BOOL NOT NULL DEFAULT false,
     UNIQUE (eventId, createdAt)
 );
 
-INSERT INTO game_new (id, eventId, createdAt, modifiedAt, modifiedBy, tournamentRound, tournamentTable)
+INSERT INTO game_new (
+    id,
+    eventId,
+    createdAt,
+    modifiedAt,
+    modifiedBy,
+    tournamentRound,
+    tournamentTable,
+    status,
+    startedAt,
+    endedAt,
+    lastRoundWasDeleted
+)
 SELECT
     id,
     eventId,
@@ -44,8 +66,22 @@ SELECT
     modifiedAt,
     modifiedBy,
     tournamentHanchanNumber,
-    CASE WHEN tournamentTableNumber IS NULL THEN NULL ELSE CAST(tournamentTableNumber AS TEXT) END
+    CASE WHEN tournamentTableNumber IS NULL THEN NULL ELSE CAST(tournamentTableNumber AS TEXT) END,
+    'FINISHED',
+    createdAt,
+    createdAt,
+    false
 FROM game;
 
 DROP TABLE game;
 ALTER TABLE game_new RENAME TO game;
+
+CREATE TABLE gameRound (
+    gameId INTEGER NOT NULL REFERENCES game(id),
+    roundNumber INTEGER NOT NULL,
+    wind TEXT NOT NULL REFERENCES wind(wind),
+    counters INTEGER NOT NULL,
+    riichiSticks INTEGER NOT NULL,
+    result TEXT NOT NULL,
+    PRIMARY KEY (gameId, roundNumber)
+);

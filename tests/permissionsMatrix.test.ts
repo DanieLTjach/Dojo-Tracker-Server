@@ -176,9 +176,9 @@ describe('Permissions matrix integration specification', () => {
     function insertGame(gameId: number, eventId: number): void {
         const timestamp = nextTimestamp();
         dbManager.db.prepare(
-            `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, tournamentRound, tournamentTable)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`
-        ).run(gameId, eventId, timestamp, timestamp, SYSTEM_USER_ID, null, null);
+            `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, tournamentRound, tournamentTable, status, startedAt, endedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).run(gameId, eventId, timestamp, timestamp, SYSTEM_USER_ID, null, null, 'FINISHED', timestamp, timestamp);
     }
 
     function cleanupEventCascade(eventId: number): void {

@@ -28,7 +28,7 @@ export class GameController {
 
     getGameById(req: Request, res: Response) {
         const { params: { gameId } } = gameGetByIdSchema.parse(req);
-        const game = this.gameService.getGameById(gameId);
+        const game = this.gameService.getDetailedGameById(gameId);
         return res.status(StatusCodes.OK).json(game);
     }
 

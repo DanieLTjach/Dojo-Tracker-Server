@@ -13,7 +13,7 @@ import {
     PointsNotWithinRange,
     YouHaveToBeAdminToHideNewGameMessage
 } from '../error/GameErrors.ts';
-import type { GameWithPlayers, PlayerData, GameFilters, GamePlayer } from '../model/GameModels.ts';
+import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
@@ -89,6 +89,17 @@ export class GameService {
         return {
             ...game,
             players: this.gameRepository.findGamePlayersByGameId(gameId)
+        };
+    }
+
+    getDetailedGameById(gameId: number): DetailedGame {
+        const game = this.getGameById(gameId);
+
+        return {
+            ...game,
+            rounds: this.gameRepository.findGameRoundsByGameId(gameId),
+            // TODO: implement later — derive from last round when game is IN_PROGRESS
+            currentState: null
         };
     }
 

@@ -1,8 +1,8 @@
 import type { Statement } from 'better-sqlite3';
-import type { Game, GameFilters, GamePlayer } from '../model/GameModels.ts';
+import type { Game, GameFilters, GamePlayer, GameRound } from '../model/GameModels.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { RATING_TO_POINTS_COEFFICIENT } from '../service/RatingService.ts';
-import { parseWind } from '../util/EnumUtil.ts';
+import { parseGameStatus, parseWind } from '../util/EnumUtil.ts';
 
 export class GameRepository {
 
@@ -14,8 +14,8 @@ export class GameRepository {
         tournamentTable: string | null
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt, tournamentRound, tournamentTable)
-            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentRound, :tournamentTable)`
+            INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt, tournamentRound, tournamentTable, status, startedAt, endedAt)
+            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentRound, :tournamentTable, 'FINISHED', :timestamp, :timestamp)`
         );
     }
 
@@ -87,6 +87,19 @@ export class GameRepository {
 
     findGamePlayersByGameId(gameId: number): GamePlayer[] {
         return this.findGamePlayersByGameIdStatement().all({ gameId }).map(gamePlayerFromDBEntity);
+    }
+
+    private findGameRoundsByGameIdStatement(): Statement<{ gameId: number }, GameRoundDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT gameId, roundNumber, wind, counters, riichiSticks, result
+            FROM gameRound
+            WHERE gameId = :gameId
+            ORDER BY roundNumber`
+        );
+    }
+
+    findGameRoundsByGameId(gameId: number): GameRound[] {
+        return this.findGameRoundsByGameIdStatement().all({ gameId }).map(gameRoundFromDBEntity);
     }
 
     findGamePlayersByGameIds(gameIds: number[]): GamePlayer[] {
@@ -218,14 +231,46 @@ interface GameDBEntity {
     modifiedBy: number;
     tournamentRound: number | null;
     tournamentTable: string | null;
+    status: string;
+    startedAt: string | null;
+    endedAt: string | null;
+    lastRoundWasDeleted: number;
 }
 
 function gameFromDBEntity(dbEntity: GameDBEntity): Game {
     return {
-        ...dbEntity,
+        id: dbEntity.id,
+        eventId: dbEntity.eventId,
         createdAt: new Date(dbEntity.createdAt),
-        modifiedAt: new Date(dbEntity.modifiedAt)
+        modifiedAt: new Date(dbEntity.modifiedAt),
+        modifiedBy: dbEntity.modifiedBy,
+        tournamentRound: dbEntity.tournamentRound,
+        tournamentTable: dbEntity.tournamentTable,
+        status: parseGameStatus(dbEntity.status),
+        startedAt: dbEntity.startedAt !== null ? new Date(dbEntity.startedAt) : null,
+        endedAt: dbEntity.endedAt !== null ? new Date(dbEntity.endedAt) : null,
+        lastRoundWasDeleted: Boolean(dbEntity.lastRoundWasDeleted)
     }
+}
+
+interface GameRoundDBEntity {
+    gameId: number;
+    roundNumber: number;
+    wind: string;
+    counters: number;
+    riichiSticks: number;
+    result: string;
+}
+
+function gameRoundFromDBEntity(dbEntity: GameRoundDBEntity): GameRound {
+    return {
+        gameId: dbEntity.gameId,
+        roundNumber: dbEntity.roundNumber,
+        wind: parseWind(dbEntity.wind),
+        counters: dbEntity.counters,
+        riichiSticks: dbEntity.riichiSticks,
+        result: JSON.parse(dbEntity.result) as GameRound['result']
+    };
 }
 
 export interface GamePlayerDBEntity {
