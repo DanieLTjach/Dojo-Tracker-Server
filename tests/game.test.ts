@@ -107,8 +107,8 @@ describe('Game API Endpoints', () => {
                 points: 40000,
                 startPlace: 'EAST'
             });
-            expect(response.body.tournamentHanchanNumber).toBeNull();
-            expect(response.body.tournamentTableNumber).toBeNull();
+            expect(response.body.tournamentRound).toBeNull();
+            expect(response.body.tournamentTable).toBeNull();
 
             testGameId = response.body.id; // Save for later tests
         });
@@ -125,16 +125,16 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 25000 },
                         { userId: testUser4Id, points: 20000 }
                     ],
-                    tournamentHanchanNumber: 1,
-                    tournamentTableNumber: 3
+                    tournamentRound: 1,
+                    tournamentTable: '3'
                 });
 
             expect(response.status).toBe(201);
-            expect(response.body.tournamentHanchanNumber).toBe(1);
-            expect(response.body.tournamentTableNumber).toBe(3);
+            expect(response.body.tournamentRound).toBe(1);
+            expect(response.body.tournamentTable).toBe('3');
         });
 
-        test('should reject non-positive tournamentHanchanNumber', async () => {
+        test('should reject non-positive tournamentRound', async () => {
             const response = await request(app)
                 .post('/api/games')
                 .set('Authorization', user1AuthHeader)
@@ -146,13 +146,13 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
                     ],
-                    tournamentHanchanNumber: 0
+                    tournamentRound: 0
                 });
 
             expect(response.status).toBe(400);
         });
 
-        test('should reject non-integer tournamentTableNumber', async () => {
+        test('should reject empty tournamentTable', async () => {
             const response = await request(app)
                 .post('/api/games')
                 .set('Authorization', user1AuthHeader)
@@ -164,7 +164,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
                     ],
-                    tournamentTableNumber: 1.5
+                    tournamentTable: ''
                 });
 
             expect(response.status).toBe(400);
@@ -674,13 +674,13 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 25000 },
                         { userId: testUser4Id, points: 15000 }
                     ],
-                    tournamentHanchanNumber: 2,
-                    tournamentTableNumber: 5
+                    tournamentRound: 2,
+                    tournamentTable: '5'
                 });
 
             expect(response.status).toBe(200);
-            expect(response.body.tournamentHanchanNumber).toBe(2);
-            expect(response.body.tournamentTableNumber).toBe(5);
+            expect(response.body.tournamentRound).toBe(2);
+            expect(response.body.tournamentTable).toBe('5');
         });
 
         test('should clear tournament metadata by passing null', async () => {
@@ -695,13 +695,13 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 25000 },
                         { userId: testUser4Id, points: 15000 }
                     ],
-                    tournamentHanchanNumber: null,
-                    tournamentTableNumber: null
+                    tournamentRound: null,
+                    tournamentTable: null
                 });
 
             expect(response.status).toBe(200);
-            expect(response.body.tournamentHanchanNumber).toBeNull();
-            expect(response.body.tournamentTableNumber).toBeNull();
+            expect(response.body.tournamentRound).toBeNull();
+            expect(response.body.tournamentTable).toBeNull();
         });
 
         test('should fail to update game without admin privileges', async () => {

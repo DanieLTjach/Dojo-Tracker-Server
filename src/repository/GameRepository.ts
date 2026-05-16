@@ -10,23 +10,23 @@ export class GameRepository {
         eventId: number,
         modifiedBy: number,
         timestamp: string,
-        tournamentHanchanNumber: number | null,
-        tournamentTableNumber: number | null
+        tournamentRound: number | null,
+        tournamentTable: string | null
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt, tournamentHanchanNumber, tournamentTableNumber)
-            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentHanchanNumber, :tournamentTableNumber)`
+            INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt, tournamentRound, tournamentTable)
+            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentRound, :tournamentTable)`
         );
     }
 
-    createGame(eventId: number, modifiedBy: number, timestamp: Date, tournamentHanchanNumber: number | null, tournamentTableNumber: number | null): number {
+    createGame(eventId: number, modifiedBy: number, timestamp: Date, tournamentRound: number | null, tournamentTable: string | null): number {
         return Number(
             this.createGameStatement().run({
                 eventId,
                 modifiedBy,
                 timestamp: timestamp.toISOString(),
-                tournamentHanchanNumber,
-                tournamentTableNumber
+                tournamentRound,
+                tournamentTable
             }).lastInsertRowid
         );
     }
@@ -169,19 +169,19 @@ export class GameRepository {
         id: number,
         createdAt: string,
         modifiedAt: string,
-        tournamentHanchanNumber: number | null,
-        tournamentTableNumber: number | null
+        tournamentRound: number | null,
+        tournamentTable: string | null
     }, void> {
         return dbManager.db.prepare(`
             UPDATE game
             SET eventId = :eventId, modifiedBy = :modifiedBy, createdAt = :createdAt, modifiedAt = :modifiedAt,
-                tournamentHanchanNumber = :tournamentHanchanNumber, tournamentTableNumber = :tournamentTableNumber
+                tournamentRound = :tournamentRound, tournamentTable = :tournamentTable
             WHERE id = :id`
         );
     }
 
-    updateGame(gameId: number, eventId: number, modifiedBy: number, createdAt: Date, tournamentHanchanNumber: number | null, tournamentTableNumber: number | null): void {
-        this.updateGameStatement().run({ eventId, modifiedBy, id: gameId, createdAt: createdAt.toISOString(), modifiedAt: new Date().toISOString(), tournamentHanchanNumber, tournamentTableNumber });
+    updateGame(gameId: number, eventId: number, modifiedBy: number, createdAt: Date, tournamentRound: number | null, tournamentTable: string | null): void {
+        this.updateGameStatement().run({ eventId, modifiedBy, id: gameId, createdAt: createdAt.toISOString(), modifiedAt: new Date().toISOString(), tournamentRound, tournamentTable });
     }
 
     private deleteGamePlayersByGameIdStatement(): Statement<{ gameId: number }, void> {
@@ -216,8 +216,8 @@ interface GameDBEntity {
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
-    tournamentHanchanNumber: number | null;
-    tournamentTableNumber: number | null;
+    tournamentRound: number | null;
+    tournamentTable: string | null;
 }
 
 function gameFromDBEntity(dbEntity: GameDBEntity): Game {

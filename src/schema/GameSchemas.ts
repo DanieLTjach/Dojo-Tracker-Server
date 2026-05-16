@@ -30,8 +30,8 @@ export const gameCreationSchema = z.object({
         playersData: playerListSchema,
         createdAt: dateSchema.nullish(),
         hideNewGameMessage: z.boolean().nullish(),
-        tournamentHanchanNumber: z.number().int().positive().nullish(),
-        tournamentTableNumber: z.number().int().positive().nullish()
+        tournamentRound: z.number().int().positive().nullish(),
+        tournamentTable: z.string().min(1).nullish()
     })
 });
 
@@ -62,8 +62,8 @@ export const gameUpdateSchema = z.object({
         eventId: eventIdSchema,
         playersData: playerListSchema,
         createdAt: dateSchema.nullish(),
-        tournamentHanchanNumber: z.number().int().positive().nullish(),
-        tournamentTableNumber: z.number().int().positive().nullish()
+        tournamentRound: z.number().int().positive().nullish(),
+        tournamentTable: z.string().min(1).nullish()
     })
 });
 

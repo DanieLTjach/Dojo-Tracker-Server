@@ -47,8 +47,8 @@ Optional row-level columns:
 | Column | Format |
 |---|---|
 | `createdAt` | ISO 8601 (e.g. `2026-04-26T10:00:00.000Z`); omitted = sequential auto-timestamps |
-| `tournamentHanchanNumber` | positive integer (round number) |
-| `tournamentTableNumber` | positive integer (table within the round) |
+| `tournamentRound` | positive integer (round number) |
+| `tournamentTable` | non-empty string (table within the round) |
 
 Run:
 

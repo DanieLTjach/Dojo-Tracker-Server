@@ -199,12 +199,12 @@ describe('Database Migrations', () => {
     db.close();
   });
 
-  test('migration 7 renames gameStartPlace to wind', () => {
+  test('migration 7 renames gameStartPlace to wind and tournament columns on game', () => {
     const db = createMigratedDb('6.sql');
 
     db.prepare(`
-      INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy)
-      VALUES (1, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
+      INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, tournamentHanchanNumber, tournamentTableNumber)
+      VALUES (1, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0, 2, 5)
     `).run();
 
     db.prepare(`
@@ -235,6 +235,25 @@ describe('Database Migrations', () => {
       points: 30000,
       chomboCount: 0,
     });
+
+    const game = db.prepare(`
+      SELECT tournamentRound, tournamentTable
+      FROM game
+      WHERE id = 1
+    `).get() as Record<string, unknown>;
+    expect(game).toEqual({
+      tournamentRound: 2,
+      tournamentTable: '5',
+    });
+
+    const gameColumns = (db.prepare('PRAGMA table_info(game)').all() as Array<{ name: string; type: string }>)
+      .map(({ name, type }) => ({ name, type }));
+    expect(gameColumns).toEqual(expect.arrayContaining([
+      { name: 'tournamentRound', type: 'INTEGER' },
+      { name: 'tournamentTable', type: 'TEXT' },
+    ]));
+    expect(gameColumns.find(column => column.name === 'tournamentHanchanNumber')).toBeUndefined();
+    expect(gameColumns.find(column => column.name === 'tournamentTableNumber')).toBeUndefined();
 
     const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
     expect(foreignKeyViolations).toEqual([]);

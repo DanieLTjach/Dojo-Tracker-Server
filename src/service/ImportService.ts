@@ -20,8 +20,8 @@ interface ImportResult {
 interface ParsedGameRow {
     players: PlayerData[];
     createdAt: Date | undefined;
-    tournamentHanchanNumber: number | null;
-    tournamentTableNumber: number | null;
+    tournamentRound: number | null;
+    tournamentTable: string | null;
 }
 
 const PLAYER_COLUMNS = ['username', 'points', 'startPlace', 'chombo'] as const;
@@ -82,8 +82,8 @@ export class ImportService {
                             importedBy,
                             createdAt,
                             true, // hideNewGameMessage
-                            parsed.tournamentHanchanNumber,
-                            parsed.tournamentTableNumber
+                            parsed.tournamentRound,
+                            parsed.tournamentTable
                         );
                         games.push(game);
                     } catch (error: any) {
@@ -218,19 +218,16 @@ export class ImportService {
             }
         }
 
-        const hanchanStr = getValue('tournamentHanchanNumber');
-        const tableStr = getValue('tournamentTableNumber');
+        const roundStr = getValue('tournamentRound');
+        const tableStr = getValue('tournamentTable');
 
-        const tournamentHanchanNumber = hanchanStr ? Number(hanchanStr) : null;
-        const tournamentTableNumber = tableStr ? Number(tableStr) : null;
+        const tournamentRound = roundStr ? Number(roundStr) : null;
+        const tournamentTable = tableStr || null;
 
-        if (tournamentHanchanNumber !== null && (isNaN(tournamentHanchanNumber) || tournamentHanchanNumber < 1)) {
-            throw new Error(`Row ${rowNumber}: tournamentHanchanNumber must be a positive integer`);
-        }
-        if (tournamentTableNumber !== null && (isNaN(tournamentTableNumber) || tournamentTableNumber < 1)) {
-            throw new Error(`Row ${rowNumber}: tournamentTableNumber must be a positive integer`);
+        if (tournamentRound !== null && (isNaN(tournamentRound) || tournamentRound < 1)) {
+            throw new Error(`Row ${rowNumber}: tournamentRound must be a positive integer`);
         }
 
-        return { players, createdAt, tournamentHanchanNumber, tournamentTableNumber };
+        return { players, createdAt, tournamentRound, tournamentTable };
     }
 }

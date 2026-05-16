@@ -13,8 +13,8 @@ export interface Game {
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;
-    tournamentHanchanNumber: number | null;
-    tournamentTableNumber: number | null;
+    tournamentRound: number | null;
+    tournamentTable: string | null;
 }
 
 export interface GamePlayer {
