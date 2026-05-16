@@ -458,6 +458,129 @@ describe('Game API Endpoints', () => {
         });
     });
 
+    describe('POST /api/games/tracked - Create Tracked Game', () => {
+        const STARTING_POINTS = 30000;
+
+        const trackedPlayers = () => [
+            { userId: testUser1Id, startPlace: 'EAST' as const },
+            { userId: testUser2Id, startPlace: 'SOUTH' as const },
+            { userId: testUser3Id, startPlace: 'WEST' as const },
+            { userId: testUser4Id, startPlace: 'NORTH' as const }
+        ];
+
+        test('should create a tracked game and return detailed game response', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayers()
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body.eventId).toBe(TEST_EVENT_ID);
+            expect(response.body.status).toBe('IN_PROGRESS');
+            expect(response.body.startedAt).toBe(response.body.createdAt);
+            expect(response.body.endedAt).toBeNull();
+            expect(response.body.lastRoundWasDeleted).toBe(false);
+            expect(response.body.rounds).toEqual([]);
+            expect(response.body.currentState).toBeNull();
+            expect(response.body.players).toHaveLength(4);
+            expect(response.body.players).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    userId: testUser1Id,
+                    points: STARTING_POINTS,
+                    startPlace: 'EAST',
+                    chomboCount: 0,
+                    ratingChange: 0
+                }),
+                expect.objectContaining({
+                    userId: testUser2Id,
+                    points: STARTING_POINTS,
+                    startPlace: 'SOUTH',
+                    chomboCount: 0,
+                    ratingChange: 0
+                }),
+                expect.objectContaining({
+                    userId: testUser3Id,
+                    points: STARTING_POINTS,
+                    startPlace: 'WEST',
+                    chomboCount: 0,
+                    ratingChange: 0
+                }),
+                expect.objectContaining({
+                    userId: testUser4Id,
+                    points: STARTING_POINTS,
+                    startPlace: 'NORTH',
+                    chomboCount: 0,
+                    ratingChange: 0
+                })
+            ]));
+
+            const getResponse = await request(app)
+                .get(`/api/games/${response.body.id}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(getResponse.status).toBe(200);
+            expect(getResponse.body.status).toBe('IN_PROGRESS');
+            expect(getResponse.body.startedAt).toBe(getResponse.body.createdAt);
+            expect(getResponse.body.rounds).toEqual([]);
+        });
+
+        test('should fail with incorrect number of players', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe('Для гри потрібно 4 гравців');
+        });
+
+        test('should fail with duplicate start places', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'EAST' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
+        });
+
+        test('should fail when startPlace is missing', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
+        });
+    });
+
     describe('GET /api/games/:gameId - Get Game by ID', () => {
         test('should retrieve a game by ID', async () => {
             const response = await request(app)

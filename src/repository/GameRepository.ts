@@ -31,6 +31,27 @@ export class GameRepository {
         );
     }
 
+    private createTrackedGameStatement(): Statement<{
+        eventId: number,
+        modifiedBy: number,
+        timestamp: string
+    }, void> {
+        return dbManager.db.prepare(`
+            INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt, tournamentRound, tournamentTable, status, startedAt, endedAt, lastRoundWasDeleted)
+            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, NULL, NULL, 'IN_PROGRESS', :timestamp, NULL, 0)`
+        );
+    }
+
+    createTrackedGame(eventId: number, modifiedBy: number, timestamp: Date): number {
+        return Number(
+            this.createTrackedGameStatement().run({
+                eventId,
+                modifiedBy,
+                timestamp: timestamp.toISOString()
+            }).lastInsertRowid
+        );
+    }
+
     private addGamePlayerStatement(): Statement<{
         gameId: number,
         userId: number,
@@ -76,10 +97,10 @@ export class GameRepository {
 
     private findGamePlayersByGameIdStatement(): Statement<{ gameId: number }, GamePlayerDBEntity> {
         return dbManager.db.prepare(`
-            SELECT u.name, u.telegramUsername, utg.*, urc.ratingChange
+            SELECT u.name, u.telegramUsername, utg.*, COALESCE(urc.ratingChange, 0) AS ratingChange
             FROM userToGame utg
             JOIN user u ON utg.userId = u.id
-            JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
+            LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
             WHERE utg.gameId = :gameId
             ORDER BY points DESC, userId`
         );
@@ -109,10 +130,10 @@ export class GameRepository {
 
         const placeholders = gameIds.map(() => '?').join(',');
         const query = `
-            SELECT u.name, u.telegramUsername, utg.*, urc.ratingChange
+            SELECT u.name, u.telegramUsername, utg.*, COALESCE(urc.ratingChange, 0) AS ratingChange
             FROM userToGame utg
             JOIN user u ON utg.userId = u.id
-            JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
+            LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
             WHERE utg.gameId IN (${placeholders})
         `;
 
@@ -245,7 +266,7 @@ function gameFromDBEntity(dbEntity: GameDBEntity): Game {
         modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy,
         tournamentRound: dbEntity.tournamentRound,
-        tournamentTable: dbEntity.tournamentTable,
+        tournamentTable: dbEntity.tournamentTable !== null ? String(dbEntity.tournamentTable) : null,
         status: parseGameStatus(dbEntity.status),
         startedAt: dbEntity.startedAt !== null ? new Date(dbEntity.startedAt) : null,
         endedAt: dbEntity.endedAt !== null ? new Date(dbEntity.endedAt) : null,

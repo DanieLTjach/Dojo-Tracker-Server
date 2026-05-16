@@ -73,6 +73,11 @@ export interface PlayerData {
     chomboCount?: number | undefined | null;
 }
 
+export interface TrackedGamePlayerData {
+    userId: number;
+    startPlace: Wind;
+}
+
 export interface GameFilters {
     dateFrom?: Date | undefined;
     dateTo?: Date | undefined;

@@ -2,7 +2,8 @@ import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { GameService } from '../service/GameService.ts';
 import { 
-    gameCreationSchema, 
+    gameCreationSchema,
+    trackedGameCreationSchema,
     gameGetByIdSchema, 
     gameGetListSchema, 
     gameUpdateSchema, 
@@ -17,6 +18,13 @@ export class GameController {
         const { body: { eventId, playersData, createdAt, hideNewGameMessage, tournamentRound, tournamentTable } } = gameCreationSchema.parse(req);
         const createdBy = req.user!.userId;
         const newGame = this.gameService.addGame(eventId, playersData, createdBy, createdAt ?? undefined, hideNewGameMessage ?? false, tournamentRound ?? null, tournamentTable ?? null);
+        return res.status(StatusCodes.CREATED).json(newGame);
+    }
+
+    addTrackedGame(req: Request, res: Response) {
+        const { body: { eventId, players } } = trackedGameCreationSchema.parse(req);
+        const createdBy = req.user!.userId;
+        const newGame = this.gameService.addTrackedGame(eventId, players, createdBy);
         return res.status(StatusCodes.CREATED).json(newGame);
     }
 

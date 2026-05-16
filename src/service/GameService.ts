@@ -13,7 +13,7 @@ import {
     PointsNotWithinRange,
     YouHaveToBeAdminToHideNewGameMessage
 } from '../error/GameErrors.ts';
-import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer } from '../model/GameModels.ts';
+import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData } from '../model/GameModels.ts';
 import { EventService } from './EventService.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
@@ -77,6 +77,23 @@ export class GameService {
         if (!hideNewGameMessage) {
             this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter, createdBy);
         }
+        return newGame;
+    }
+
+    addTrackedGame(eventId: number, players: TrackedGamePlayerData[], createdBy: number): DetailedGame {
+        const gameTimestamp = new Date();
+
+        const event = this.eventService.getEventById(eventId);
+        this.authorizeGameCreation(event, players, createdBy);
+        this.validateTrackedGamePlayers(players, event.gameRules);
+        this.validateGameWithinEventDates(event, gameTimestamp, createdBy);
+        this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
+
+        const newGameId = this.gameRepository.createTrackedGame(eventId, createdBy, gameTimestamp);
+        this.addPlayersToTrackedGame(newGameId, players, event.gameRules.startingPoints, createdBy);
+
+        const newGame = this.getDetailedGameById(newGameId);
+        this.logNewTrackedGame(newGame, event);
         return newGame;
     }
 
@@ -166,7 +183,7 @@ export class GameService {
         this.logDeletedGame(game, event, deletedBy);
     }
 
-    private authorizeGameCreation(event: Event, playersData: PlayerData[], createdBy: number): void {
+    private authorizeGameCreation(event: Event, playersData: Array<{ userId: number }>, createdBy: number): void {
         const user = this.userService.getUserById(createdBy);
         if (user.isAdmin || event.clubId === null) {
             return;
@@ -203,6 +220,21 @@ export class GameService {
 
     private logNewGame(game: GameWithPlayers, event: Event): void {
         this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by');
+    }
+
+    private logNewTrackedGame(game: GameWithPlayers, event: Event): void {
+        const user = this.userService.getUserById(game.modifiedBy);
+        const message = dedent`
+            <b>🎮 New Tracked Game Started</b>
+
+            <b>Game ID:</b> <code>${game.id}</code>
+            <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>Timestamp:</b> <code>${game.createdAt.toISOString()}</code>
+            <b>Created by:</b> ${user.name} <code>(ID: ${user.id})</code>
+
+            <b>Players:</b>\n
+        ` + this.printTrackedGamePlayersLog(game.players);
+        this.logMessageToGameLogsTopics(message, event);
     }
 
     private logEditedGame(oldGame: GameWithPlayers, newGame: GameWithPlayers, event: Event, modifiedBy: number): void {
@@ -303,6 +335,13 @@ export class GameService {
         }).join('\n\n');
     }
 
+    private printTrackedGamePlayersLog(players: GamePlayer[]): string {
+        return players.map((p, index) => {
+            const user = this.userService.getUserById(p.userId);
+            return `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>\n   • Start Place: <b>${p.startPlace}</b>`;
+        }).join('\n\n');
+    }
+
     private logRatingUpdateForGame(
         game: GameWithPlayers,
         event: Event,
@@ -369,6 +408,18 @@ export class GameService {
         }
     }
 
+    validateTrackedGamePlayers(players: TrackedGamePlayerData[], gameRules: GameRules): void {
+        if (players.length !== gameRules.numberOfPlayers) {
+            throw new IncorrectPlayerCountError(gameRules.numberOfPlayers);
+        }
+
+        for (const player of players) {
+            this.userService.validateUserIsActiveById(player.userId);
+        }
+
+        this.validateNoDuplicatePlayers(players);
+    }
+
     validatePlayers(playersData: PlayerData[], gameRules: GameRules): void {
         if (playersData.length !== gameRules.numberOfPlayers) {
             throw new IncorrectPlayerCountError(gameRules.numberOfPlayers);
@@ -396,7 +447,25 @@ export class GameService {
         }
     }
 
-    private validateNoDuplicatePlayers(players: PlayerData[]): void {
+    private addPlayersToTrackedGame(
+        gameId: number,
+        players: TrackedGamePlayerData[],
+        startingPoints: number,
+        modifiedBy: number
+    ): void {
+        for (const player of players) {
+            this.gameRepository.addGamePlayer(
+                gameId,
+                player.userId,
+                startingPoints,
+                player.startPlace,
+                0,
+                modifiedBy
+            );
+        }
+    }
+
+    private validateNoDuplicatePlayers(players: Array<{ userId: number }>): void {
         const userIds = players.map(p => p.userId);
         const uniqueUserIds = new Set(userIds);
 
