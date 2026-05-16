@@ -484,7 +484,7 @@ describe('Game API Endpoints', () => {
             expect(response.body.endedAt).toBeNull();
             expect(response.body.lastRoundWasDeleted).toBe(false);
             expect(response.body.rounds).toEqual([]);
-            expect(response.body.currentState).toBeNull();
+            expect(response.body.currentState).toEqual({ wind: 'EAST', counters: 0, riichiSticks: 0 });
             expect(response.body.players).toHaveLength(4);
             expect(response.body.players).toEqual(expect.arrayContaining([
                 expect.objectContaining({
@@ -525,6 +525,7 @@ describe('Game API Endpoints', () => {
             expect(getResponse.body.status).toBe('IN_PROGRESS');
             expect(getResponse.body.startedAt).toBe(getResponse.body.createdAt);
             expect(getResponse.body.rounds).toEqual([]);
+            expect(getResponse.body.currentState).toEqual({ wind: 'EAST', counters: 0, riichiSticks: 0 });
         });
 
         test('should fail with incorrect number of players', async () => {
@@ -578,6 +579,148 @@ describe('Game API Endpoints', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBe('Invalid request data');
+        });
+    });
+
+    describe('POST /api/games/:gameId/rounds/:roundId - Post Round Result', () => {
+        let trackedGameId: number;
+
+        const exhaustiveDrawResult = {
+            type: 'EXHAUSTIVE_DRAW',
+            riichiPlayerIds: [] as number[],
+            tenpaiPlayerIds: [] as number[],
+            nagashiManganPlayerIds: [] as number[]
+        };
+
+        beforeAll(async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(response.status).toBe(201);
+            trackedGameId = response.body.id;
+        });
+
+        test('should post current round result and return detailed game', async () => {
+            const response = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/1`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(200);
+            expect(response.body.id).toBe(trackedGameId);
+            expect(response.body.status).toBe('IN_PROGRESS');
+            expect(response.body.rounds).toHaveLength(1);
+            expect(response.body.rounds[0]).toMatchObject({
+                gameId: trackedGameId,
+                roundNumber: 1,
+                wind: 'EAST',
+                counters: 0,
+                riichiSticks: 0,
+                result: {
+                    ...exhaustiveDrawResult,
+                    playerPointChanges: []
+                }
+            });
+            expect(response.body.currentState).toEqual({ wind: 'EAST', counters: 0, riichiSticks: 0 });
+
+            const duplicateRoundResponse = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/1`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(duplicateRoundResponse.status).toBe(400);
+            expect(duplicateRoundResponse.body.errorCode).toBe('roundAlreadyExists');
+        });
+
+        test('should post the next round when previous rounds exist', async () => {
+            const chomboResult = {
+                type: 'CHOMBO',
+                offenderPlayerId: testUser3Id
+            };
+
+            const response = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/2`)
+                .set('Authorization', user1AuthHeader)
+                .send(chomboResult);
+
+            expect(response.status).toBe(200);
+            expect(response.body.rounds).toHaveLength(2);
+            expect(response.body.rounds[1]).toMatchObject({
+                roundNumber: 2,
+                result: {
+                    ...chomboResult,
+                    playerPointChanges: []
+                }
+            });
+
+            const duplicateRoundResponse = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/2`)
+                .set('Authorization', user1AuthHeader)
+                .send(chomboResult);
+
+            expect(duplicateRoundResponse.status).toBe(400);
+            expect(duplicateRoundResponse.body.errorCode).toBe('roundAlreadyExists');
+        });
+
+        test('should reject round id that is not the current round', async () => {
+            const response = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/99`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('invalidRoundId');
+        });
+
+        test('should reject posting to a finished game', async () => {
+            const response = await request(app)
+                .post(`/api/games/${testGameId}/rounds/1`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameNotInProgress');
+        });
+
+        test('should reject player not in the game', async () => {
+            const response = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/3`)
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    type: 'CHOMBO',
+                    offenderPlayerId: 99999
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('invalidRoundResultPlayer');
+        });
+
+        test('should reject user who is not a player or club moderator', async () => {
+            const outsiderApp = express();
+            outsiderApp.use(express.json());
+            outsiderApp.use('/api/users', userRoutes);
+            outsiderApp.use(handleErrors);
+
+            const outsiderId = await createTestUser('Outsider', 555555555);
+            const outsiderAuth = createAuthHeader(outsiderId);
+
+            const response = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/3`)
+                .set('Authorization', outsiderAuth)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('notAuthorizedToModifyGame');
         });
     });
 

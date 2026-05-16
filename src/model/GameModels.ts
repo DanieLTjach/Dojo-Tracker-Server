@@ -1,3 +1,5 @@
+import type { GameRoundResult } from "./GameRoundResultModels.ts";
+
 export const Wind = {
     EAST: 'EAST',
     SOUTH: 'SOUTH',
@@ -15,15 +17,13 @@ export const GameStatus = {
 
 export type GameStatus = typeof GameStatus[keyof typeof GameStatus];
 
-export type RoundResult = unknown;
-
 export interface GameRound {
     gameId: number;
     roundNumber: number;
     wind: Wind;
     counters: number;
     riichiSticks: number;
-    result: RoundResult;
+    result: GameRoundResult;
 }
 
 export interface GameState {

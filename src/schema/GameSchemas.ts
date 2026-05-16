@@ -3,6 +3,7 @@ import { userIdParamSchema, userIdSchema } from './UserSchemas.ts';
 import { eventIdParamSchema, eventIdSchema } from './EventSchemas.ts';
 import { clubIdParamSchema } from './ClubSchemas.ts';
 import { dateSchema } from './CommonSchemas.ts';
+import { gameRoundResultWithoutPointsSchema } from './GameRoundResultSchemas.ts';
 
 export const windSchema = z.enum(['EAST', 'WEST', 'NORTH', 'SOUTH']);
 
@@ -90,4 +91,14 @@ export const gameDeletionSchema = z.object({
     params: z.object({
         gameId: gameIdParamSchema
     })
+});
+
+export const roundIdParamSchema = z.coerce.number().int('Round ID must be an integer').positive();
+
+export const gameRoundPostSchema = z.object({
+    params: z.object({
+        gameId: gameIdParamSchema,
+        roundId: roundIdParamSchema
+    }),
+    body: gameRoundResultWithoutPointsSchema
 });

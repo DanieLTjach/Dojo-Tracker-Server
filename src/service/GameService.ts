@@ -11,9 +11,16 @@ import {
     DuplicateGameTimestampInEventError,
     YouHaveToBeAdminToCreateGameWithCustomTime,
     PointsNotWithinRange,
-    YouHaveToBeAdminToHideNewGameMessage
+    YouHaveToBeAdminToHideNewGameMessage,
+    GameNotInProgressError,
+    InvalidRoundIdError,
+    RoundAlreadyExistsError,
+    NotAuthorizedToModifyGameError,
+    InvalidRoundResultPlayerError
 } from '../error/GameErrors.ts';
-import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData } from '../model/GameModels.ts';
+import type { DetailedGame, GameState, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound } from '../model/GameModels.ts';
+import { GameStatus } from '../model/GameModels.ts';
+import type { GameRoundResult, GameRoundResultWithoutPoints, PlayerPointChange } from '../model/GameRoundResultModels.ts';
 import { EventService } from './EventService.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
@@ -111,13 +118,37 @@ export class GameService {
 
     getDetailedGameById(gameId: number): DetailedGame {
         const game = this.getGameById(gameId);
+        const rounds = this.gameRepository.findGameRoundsByGameId(gameId);
 
         return {
             ...game,
-            rounds: this.gameRepository.findGameRoundsByGameId(gameId),
-            // TODO: implement later — derive from last round when game is IN_PROGRESS
-            currentState: null
+            rounds,
+            currentState: this.calculateCurrentGameState(game, rounds)
         };
+    }
+
+    addGameRoundResult(
+        gameId: number,
+        roundId: number,
+        resultWithoutPoints: GameRoundResultWithoutPoints,
+        modifiedBy: number
+    ): DetailedGame {
+        const game = this.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+
+        this.authorizeGameRoundAction(game, event, modifiedBy);
+        this.validateGameIsInProgress(game);
+        this.validateCurrentRoundId(game, roundId);
+        this.validateRoundResultPlayers(resultWithoutPoints, game.players);
+
+        const playerPointChanges = this.calculateRoundPointChanges(game, resultWithoutPoints);
+        const result: GameRoundResult = { ...resultWithoutPoints, playerPointChanges };
+
+        this.gameRepository.createGameRound(gameId, roundId, game.currentState!, result);
+        this.gameRepository.applyPlayerPointChanges(gameId, playerPointChanges, modifiedBy);
+        this.gameRepository.touchGame(gameId, modifiedBy);
+
+        return this.getDetailedGameById(gameId);
     }
 
     getGames(filters: GameFilters): GameWithPlayers[] {
@@ -200,6 +231,113 @@ export class GameService {
                 throw new YouNeedToBeModeratorToCreateGamesWithNonClubMembersError();
             }
         }
+    }
+
+    private authorizeGameRoundAction(game: GameWithPlayers, event: Event, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (game.players.some((player) => player.userId === userId)) {
+            return;
+        }
+
+        if (event.clubId !== null) {
+            const role = this.clubMembershipService.getUserClubRole(event.clubId, userId);
+            if (role === 'OWNER' || role === 'MODERATOR') {
+                return;
+            }
+        }
+
+        throw new NotAuthorizedToModifyGameError();
+    }
+
+    private validateGameIsInProgress(game: GameWithPlayers): void {
+        if (game.status !== GameStatus.IN_PROGRESS) {
+            throw new GameNotInProgressError();
+        }
+    }
+
+    private validateCurrentRoundId(game: DetailedGame, roundId: number): void {
+        if (game.rounds.some((round) => round.roundNumber === roundId)) {
+            throw new RoundAlreadyExistsError();
+        }
+
+        const expectedRoundId = game.rounds.length + 1;
+        if (roundId !== expectedRoundId) {
+            throw new InvalidRoundIdError(expectedRoundId, roundId);
+        }
+    }
+
+    private validateRoundResultPlayers(result: GameRoundResultWithoutPoints, players: GamePlayer[]): void {
+        const playerIds = new Set(players.map((player) => player.userId));
+
+        const validatePlayerId = (playerId: number) => {
+            if (!playerIds.has(playerId)) {
+                throw new InvalidRoundResultPlayerError(playerId);
+            }
+        };
+
+        const validatePlayerIds = (ids: number[]) => {
+            for (const id of ids) {
+                validatePlayerId(id);
+            }
+        };
+
+        switch (result.type) {
+            case 'TSUMO':
+                validatePlayerId(result.winningHandData.winnerPlayerId);
+                if (result.winningHandData.yakumanLiabilityPlayerId !== undefined) {
+                    validatePlayerId(result.winningHandData.yakumanLiabilityPlayerId);
+                }
+                validatePlayerIds(result.riichiPlayerIds);
+                break;
+            case 'RON':
+                validatePlayerId(result.dealInPlayerId);
+                for (const hand of result.winningHandData) {
+                    validatePlayerId(hand.winnerPlayerId);
+                    if (hand.yakumanLiabilityPlayerId !== undefined) {
+                        validatePlayerId(hand.yakumanLiabilityPlayerId);
+                    }
+                }
+                validatePlayerIds(result.riichiPlayerIds);
+                break;
+            case 'EXHAUSTIVE_DRAW':
+                validatePlayerIds(result.riichiPlayerIds);
+                validatePlayerIds(result.tenpaiPlayerIds);
+                validatePlayerIds(result.nagashiManganPlayerIds);
+                break;
+            case 'CHOMBO':
+                validatePlayerId(result.offenderPlayerId);
+                break;
+            case 'ABORTIVE_DRAW':
+                break;
+        }
+    }
+
+    private calculateCurrentGameState(game: GameWithPlayers, rounds: GameRound[]): GameState | null {
+        if (game.status !== GameStatus.IN_PROGRESS) {
+            return null;
+        }
+
+        return this.nextRoundState(rounds[rounds.length - 1]);
+    }
+
+    private nextRoundState(round: GameRound | undefined): GameState | null {
+        if (round === undefined) {
+            return { wind: 'EAST', counters: 0, riichiSticks: 0 };
+        }
+        // TODO: implement later
+        return { wind: round.wind, counters: round.counters, riichiSticks: round.riichiSticks };
+    }
+
+    private calculateRoundPointChanges(
+        _game: DetailedGame,
+        _result: GameRoundResultWithoutPoints
+    ): PlayerPointChange[] {
+        // TODO: implement later
+        return [];
     }
 
     private authorizeClubScopedAction(clubId: number | null, userId: number, allowedRoles: ClubRole[]): void {

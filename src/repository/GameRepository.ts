@@ -1,5 +1,6 @@
 import type { Statement } from 'better-sqlite3';
-import type { Game, GameFilters, GamePlayer, GameRound } from '../model/GameModels.ts';
+import type { Game, GameFilters, GamePlayer, GameRound, GameState } from '../model/GameModels.ts';
+import type { GameRoundResult, PlayerPointChange } from '../model/GameRoundResultModels.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { RATING_TO_POINTS_COEFFICIENT } from '../service/RatingService.ts';
 import { parseGameStatus, parseWind } from '../util/EnumUtil.ts';
@@ -121,6 +122,78 @@ export class GameRepository {
 
     findGameRoundsByGameId(gameId: number): GameRound[] {
         return this.findGameRoundsByGameIdStatement().all({ gameId }).map(gameRoundFromDBEntity);
+    }
+
+    private createGameRoundStatement(): Statement<{
+        gameId: number,
+        roundNumber: number,
+        wind: string,
+        counters: number,
+        riichiSticks: number,
+        result: string
+    }, void> {
+        return dbManager.db.prepare(`
+            INSERT INTO gameRound (gameId, roundNumber, wind, counters, riichiSticks, result)
+            VALUES (:gameId, :roundNumber, :wind, :counters, :riichiSticks, :result)`
+        );
+    }
+
+    createGameRound(
+        gameId: number,
+        roundNumber: number,
+        roundState: GameState,
+        result: GameRoundResult
+    ): void {
+        this.createGameRoundStatement().run({
+            gameId,
+            roundNumber,
+            wind: roundState.wind,
+            counters: roundState.counters,
+            riichiSticks: roundState.riichiSticks,
+            result: JSON.stringify(result)
+        });
+    }
+
+    private updatePlayerPointsStatement(): Statement<{
+        gameId: number,
+        userId: number,
+        pointChange: number,
+        modifiedBy: number,
+        modifiedAt: string
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE userToGame
+            SET points = points + :pointChange, modifiedAt = :modifiedAt, modifiedBy = :modifiedBy
+            WHERE gameId = :gameId AND userId = :userId`
+        );
+    }
+
+    applyPlayerPointChanges(
+        gameId: number,
+        pointChanges: PlayerPointChange[],
+        modifiedBy: number
+    ): void {
+        const modifiedAt = new Date().toISOString();
+        for (const { playerId, pointChange } of pointChanges) {
+            if (pointChange === 0) {
+                continue;
+            }
+            this.updatePlayerPointsStatement().run({ gameId, userId: playerId, pointChange, modifiedBy, modifiedAt });
+        }
+    }
+
+    private touchGameStatement(): Statement<{ id: number, modifiedBy: number, modifiedAt: string }, void> {
+        return dbManager.db.prepare(`
+            UPDATE game SET modifiedBy = :modifiedBy, modifiedAt = :modifiedAt WHERE id = :id`
+        );
+    }
+
+    touchGame(gameId: number, modifiedBy: number): void {
+        this.touchGameStatement().run({
+            id: gameId,
+            modifiedBy,
+            modifiedAt: new Date().toISOString()
+        });
     }
 
     findGamePlayersByGameIds(gameIds: number[]): GamePlayer[] {
@@ -290,7 +363,7 @@ function gameRoundFromDBEntity(dbEntity: GameRoundDBEntity): GameRound {
         wind: parseWind(dbEntity.wind),
         counters: dbEntity.counters,
         riichiSticks: dbEntity.riichiSticks,
-        result: JSON.parse(dbEntity.result) as GameRound['result']
+        result: JSON.parse(dbEntity.result)
     };
 }
 

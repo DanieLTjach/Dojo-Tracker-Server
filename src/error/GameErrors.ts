@@ -65,3 +65,39 @@ export class YouHaveToBeAdminToHideNewGameMessage extends ForbiddenError {
         super('Щоб сховати повідомлення про нову гру, ви повинні бути адміністратором', 'youHaveToBeAdminToHideNewGameMessage');
     }
 }
+
+export class GameNotInProgressError extends BadRequestError {
+    constructor() {
+        super('Результат раунду можна додати лише до гри, що триває', 'gameNotInProgress');
+    }
+}
+
+export class InvalidRoundIdError extends BadRequestError {
+    constructor(expectedRoundId: number, actualRoundId: number) {
+        super(
+            `Очікується раунд ${expectedRoundId}, отримано ${actualRoundId}`,
+            'invalidRoundId'
+        );
+    }
+}
+
+export class RoundAlreadyExistsError extends BadRequestError {
+    constructor() {
+        super(`Цей раунд вже завершено`, 'roundAlreadyExists');
+    }
+}
+
+export class NotAuthorizedToModifyGameError extends ForbiddenError {
+    constructor() {
+        super(
+            'Лише гравці, модератори клубу та адміністратори можуть змінювати гру',
+            'notAuthorizedToModifyGame'
+        );
+    }
+}
+
+export class InvalidRoundResultPlayerError extends BadRequestError {
+    constructor(playerId: number) {
+        super(`Гравець з id ${playerId} не бере участі в цій грі`, 'invalidRoundResultPlayer');
+    }
+}
