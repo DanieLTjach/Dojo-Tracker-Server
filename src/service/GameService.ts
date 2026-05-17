@@ -22,7 +22,7 @@ import {
     NoRoundsCompletedError
 } from '../error/GameErrors.ts';
 import type { DetailedGame, GameState, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound } from '../model/GameModels.ts';
-import { GameStatus } from '../model/GameModels.ts';
+import { GameStatus, Wind } from '../model/GameModels.ts';
 import type { GameRoundResult, GameRoundResultWithoutPoints, PlayerPointChange } from '../model/GameRoundResultModels.ts';
 import { EventService } from './EventService.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
@@ -41,6 +41,7 @@ import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
+import { calculateRoundPointChanges } from '../util/PointCalculationUtil.ts';
 
 export class GameService {
 
@@ -144,7 +145,7 @@ export class GameService {
         this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
         this.validateRoundResultPlayers(resultWithoutPoints, game.players);
 
-        const playerPointChanges = this.calculateRoundPointChanges(game, resultWithoutPoints);
+        const playerPointChanges = calculateRoundPointChanges(game, resultWithoutPoints, event.gameRules);
         const result: GameRoundResult = { ...resultWithoutPoints, playerPointChanges };
 
         this.gameRepository.createGameRound(gameId, roundId, game.currentState!, result);
@@ -435,15 +436,8 @@ export class GameService {
             return { wind: 'EAST', counters: 0, riichiSticks: 0 };
         }
         // TODO: implement later
-        return { wind: round.wind, counters: round.counters, riichiSticks: round.riichiSticks };
-    }
-
-    private calculateRoundPointChanges(
-        _game: DetailedGame,
-        _result: GameRoundResultWithoutPoints
-    ): PlayerPointChange[] {
-        // TODO: implement later
-        return [];
+        const nextWindMock = Object.values(Wind)[(Object.values(Wind).indexOf(round.wind) + 1) % 4]!;
+        return { wind: nextWindMock, counters: round.counters + 1, riichiSticks: round.riichiSticks + 1 };
     }
 
     private authorizeClubScopedAction(clubId: number | null, userId: number, allowedRoles: ClubRole[]): void {

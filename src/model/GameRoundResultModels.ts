@@ -9,20 +9,20 @@ export interface PlayerPointChange {
     pointChange: number;
 }
 
-interface Tsumo {
+export interface Tsumo {
     type: 'TSUMO';
     winningHandData: WinningHandData;
     riichiPlayerIds: number[];
 }
 
-interface Ron {
+export interface Ron {
     type: 'RON';
     dealInPlayerId: number;
     winningHandData: WinningHandData[];
     riichiPlayerIds: number[];
 }
 
-interface WinningHandData {
+export interface WinningHandData {
     winnerPlayerId: number;
     yakumanCount: number; // 0 if no yakuman
     yakumanLiabilityPlayerId?: number | undefined;
@@ -30,7 +30,7 @@ interface WinningHandData {
     fu?: number | undefined; // fu are undefined for hands with at least 5 hans
 }
 
-interface ExhaustiveDraw {
+export interface ExhaustiveDraw {
     type: 'EXHAUSTIVE_DRAW';
     riichiPlayerIds: number[];
     tenpaiPlayerIds: number[];
@@ -40,6 +40,7 @@ interface ExhaustiveDraw {
 interface AbortiveDraw {
     type: 'ABORTIVE_DRAW';
     drawType: AbortiveDrawType;
+    riichiPlayerIds: number[];
 }
 
 export const AbortiveDrawType = {

@@ -4,14 +4,17 @@ import { AbortiveDrawType } from '../model/GameRoundResultModels.ts';
 
 const winningHandDataSchema = z.object({
     winnerPlayerId: userIdSchema,
-    yakumanCount: z.number().int().nonnegative(),
+    yakumanCount: z.number().int().min(0).max(6),
     yakumanLiabilityPlayerId: userIdSchema.optional(),
     han: z.number().int().min(1).max(100).optional(),
     fu: z.number().int().min(20).max(200).optional().refine(
         (fu) => fu === undefined || fu % 10 === 0 || fu === 25,
         { message: 'fu must a multiple of 10 or equal to 25' }
     )
-});
+}).refine(
+    (winningHandData) => winningHandData.yakumanLiabilityPlayerId !== winningHandData.winnerPlayerId,
+    { message: 'Yakuman liability player cannot be the same as winner' }
+);
 
 const tsumoSchema = z.object({
     type: z.literal('TSUMO'),
@@ -41,6 +44,7 @@ const exhaustiveDrawSchema = z.object({
 
 const abortiveDrawSchema = z.object({
     type: z.literal('ABORTIVE_DRAW'),
+    riichiPlayerIds: z.array(userIdSchema),
     drawType: z.enum(Object.values(AbortiveDrawType))
 });
 

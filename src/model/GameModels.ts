@@ -9,6 +9,10 @@ export const Wind = {
 
 export type Wind = typeof Wind[keyof typeof Wind];
 
+export const WIND_ORDER: Record<Wind, number> = Object.fromEntries(
+    Object.values(Wind).map((wind, index) => [wind, index])
+) as Record<Wind, number>;
+
 export const GameStatus = {
     HAS_NOT_STARTED: 'HAS_NOT_STARTED',
     IN_PROGRESS: 'IN_PROGRESS',

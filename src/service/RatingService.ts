@@ -1,7 +1,7 @@
 import { booleanToInteger } from "../db/dbUtils.ts";
 import { PleaseProvideStartPlaceForAllPlayersToResolveTie, UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
 import type { GameRules, UmaTieBreak } from "../model/EventModels.ts";
-import type { GameWithPlayers, PlayerData, Wind } from "../model/GameModels.ts";
+import { WIND_ORDER, type GameWithPlayers, type PlayerData, type Wind } from "../model/GameModels.ts";
 import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO, UserRatingWithPlace } from "../model/RatingModels.ts";
 import { RatingRepository } from "../repository/RatingRepository.ts";
 import { EventService } from "./EventService.ts";
@@ -217,10 +217,6 @@ export class RatingService {
 }
 
 export const RATING_TO_POINTS_COEFFICIENT: number = 1000;
-
-const WIND_ORDER: Record<Wind, number> = {
-    EAST: 0, SOUTH: 1, WEST: 2, NORTH: 3
-};
 
 function normalizeUserRating(userRating: UserRating): UserRating {
     return { ...userRating, rating: userRating.rating / RATING_TO_POINTS_COEFFICIENT };
