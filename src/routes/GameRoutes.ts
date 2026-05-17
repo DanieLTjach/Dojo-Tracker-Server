@@ -14,6 +14,7 @@ router.get('/:gameId', requireAuth, withTransaction((req, res) => gameController
 router.post('/tracked', requireAuth, withTransaction((req, res) => gameController.addTrackedGame(req, res)));
 router.post('/', requireAuth, withTransaction((req, res) => gameController.addGame(req, res)));
 router.post('/:gameId/rounds/:roundId', requireAuth, withTransaction((req, res) => gameController.postRoundResult(req, res)));
+router.delete('/:gameId/rounds/:roundId', requireAuth, withTransaction((req, res) => gameController.deleteRoundResult(req, res)));
 
 router.put('/:gameId', requireAuth, withTransaction((req, res) => gameController.editGame(req, res)));
 router.delete('/:gameId', requireAuth, withTransaction((req, res) => gameController.deleteGame(req, res)));

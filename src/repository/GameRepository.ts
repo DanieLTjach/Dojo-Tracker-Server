@@ -4,6 +4,7 @@ import type { GameRoundResult, PlayerPointChange } from '../model/GameRoundResul
 import { dbManager } from '../db/dbInit.ts';
 import { RATING_TO_POINTS_COEFFICIENT } from '../service/RatingService.ts';
 import { parseGameStatus, parseWind } from '../util/EnumUtil.ts';
+import { booleanToInteger } from '../db/dbUtils.ts';
 
 export class GameRepository {
 
@@ -191,6 +192,38 @@ export class GameRepository {
     touchGame(gameId: number, modifiedBy: number): void {
         this.touchGameStatement().run({
             id: gameId,
+            modifiedBy,
+            modifiedAt: new Date().toISOString()
+        });
+    }
+
+    private deleteGameRoundStatement(): Statement<{ gameId: number, roundNumber: number }, void> {
+        return dbManager.db.prepare(`
+            DELETE FROM gameRound WHERE gameId = :gameId AND roundNumber = :roundNumber`
+        );
+    }
+
+    deleteGameRound(gameId: number, roundNumber: number): void {
+        this.deleteGameRoundStatement().run({ gameId, roundNumber });
+    }
+
+    private setLastRoundWasDeletedStatement(): Statement<{
+        id: number,
+        lastRoundWasDeleted: number,
+        modifiedBy: number,
+        modifiedAt: string
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE game
+            SET lastRoundWasDeleted = :lastRoundWasDeleted, modifiedBy = :modifiedBy, modifiedAt = :modifiedAt
+            WHERE id = :id`
+        );
+    }
+
+    setLastRoundWasDeleted(gameId: number, value: boolean, modifiedBy: number): void {
+        this.setLastRoundWasDeletedStatement().run({
+            id: gameId,
+            lastRoundWasDeleted: booleanToInteger(value),
             modifiedBy,
             modifiedAt: new Date().toISOString()
         });

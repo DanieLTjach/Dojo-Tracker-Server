@@ -16,7 +16,9 @@ import {
     InvalidRoundIdError,
     RoundAlreadyExistsError,
     NotAuthorizedToModifyGameError,
-    InvalidRoundResultPlayerError
+    InvalidRoundResultPlayerError,
+    NoRoundsToRollbackError,
+    LastRoundRollbackAlreadyUsedError
 } from '../error/GameErrors.ts';
 import type { DetailedGame, GameState, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
@@ -138,7 +140,7 @@ export class GameService {
 
         this.authorizeGameRoundAction(game, event, modifiedBy);
         this.validateGameIsInProgress(game);
-        this.validateCurrentRoundId(game, roundId);
+        this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
         this.validateRoundResultPlayers(resultWithoutPoints, game.players);
 
         const playerPointChanges = this.calculateRoundPointChanges(game, resultWithoutPoints);
@@ -146,6 +148,30 @@ export class GameService {
 
         this.gameRepository.createGameRound(gameId, roundId, game.currentState!, result);
         this.gameRepository.applyPlayerPointChanges(gameId, playerPointChanges, modifiedBy);
+        this.gameRepository.setLastRoundWasDeleted(gameId, false, modifiedBy);
+        this.gameRepository.touchGame(gameId, modifiedBy);
+
+        return this.getDetailedGameById(gameId);
+    }
+
+    deleteGameRoundResult(gameId: number, roundId: number, modifiedBy: number): DetailedGame {
+        const game = this.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+
+        this.authorizeGameRoundAction(game, event, modifiedBy);
+        this.validateGameIsInProgress(game);
+        this.validateLastRoundIdBeforeDeleting(game.rounds, roundId);
+        this.validatePlayerCanRollbackLastRound(game, event, modifiedBy);
+
+        const lastRound = game.rounds[game.rounds.length - 1]!;
+        const reversedPointChanges = lastRound.result.playerPointChanges.map((change) => ({
+            playerId: change.playerId,
+            pointChange: -change.pointChange
+        }));
+
+        this.gameRepository.deleteGameRound(gameId, roundId);
+        this.gameRepository.applyPlayerPointChanges(gameId, reversedPointChanges, modifiedBy);
+        this.gameRepository.setLastRoundWasDeleted(gameId, true, modifiedBy);
         this.gameRepository.touchGame(gameId, modifiedBy);
 
         return this.getDetailedGameById(gameId);
@@ -259,15 +285,52 @@ export class GameService {
         }
     }
 
-    private validateCurrentRoundId(game: DetailedGame, roundId: number): void {
-        if (game.rounds.some((round) => round.roundNumber === roundId)) {
+    private validateCurrentRoundIdBeforeAdding(rounds: GameRound[], roundId: number): void {
+        if (rounds.some((round) => round.roundNumber === roundId)) {
             throw new RoundAlreadyExistsError();
         }
 
-        const expectedRoundId = game.rounds.length + 1;
+        const expectedRoundId = rounds.length + 1;
         if (roundId !== expectedRoundId) {
             throw new InvalidRoundIdError(expectedRoundId, roundId);
         }
+    }
+
+    private validateLastRoundIdBeforeDeleting(rounds: GameRound[], roundId: number): void {
+        if (rounds.length === 0) {
+            throw new NoRoundsToRollbackError();
+        }
+
+        const lastRoundNumber = rounds[rounds.length - 1]!.roundNumber;
+        if (roundId !== lastRoundNumber) {
+            throw new InvalidRoundIdError(lastRoundNumber, roundId);
+        }
+    }
+
+    private validatePlayerCanRollbackLastRound(game: GameWithPlayers, event: Event, userId: number): void {
+        if (this.canBypassLastRoundRollbackLimit(event, userId)) {
+            return;
+        }
+
+        if (game.lastRoundWasDeleted) {
+            throw new LastRoundRollbackAlreadyUsedError();
+        }
+    }
+
+    private canBypassLastRoundRollbackLimit(event: Event, userId: number): boolean {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return true;
+        }
+
+        if (event.clubId !== null) {
+            const role = this.clubMembershipService.getUserClubRole(event.clubId, userId);
+            if (role === 'OWNER' || role === 'MODERATOR') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private validateRoundResultPlayers(result: GameRoundResultWithoutPoints, players: GamePlayer[]): void {

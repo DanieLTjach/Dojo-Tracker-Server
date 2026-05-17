@@ -102,3 +102,10 @@ export const gameRoundPostSchema = z.object({
     }),
     body: gameRoundResultWithoutPointsSchema
 });
+
+export const gameRoundDeleteSchema = z.object({
+    params: z.object({
+        gameId: gameIdParamSchema,
+        roundId: roundIdParamSchema
+    })
+});

@@ -8,7 +8,8 @@ import {
     gameGetListSchema, 
     gameUpdateSchema, 
     gameDeletionSchema,
-    gameRoundPostSchema
+    gameRoundPostSchema,
+    gameRoundDeleteSchema
 } from '../schema/GameSchemas.ts';
 
 export class GameController {
@@ -45,6 +46,13 @@ export class GameController {
         const { params: { gameId, roundId }, body } = gameRoundPostSchema.parse(req);
         const modifiedBy = req.user!.userId;
         const game = this.gameService.addGameRoundResult(gameId, roundId, body, modifiedBy);
+        return res.status(StatusCodes.OK).json(game);
+    }
+
+    deleteRoundResult(req: Request, res: Response) {
+        const { params: { gameId, roundId } } = gameRoundDeleteSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const game = this.gameService.deleteGameRoundResult(gameId, roundId, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
     }
 

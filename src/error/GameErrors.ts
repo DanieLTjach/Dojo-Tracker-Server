@@ -101,3 +101,15 @@ export class InvalidRoundResultPlayerError extends BadRequestError {
         super(`Гравець з id ${playerId} не бере участі в цій грі`, 'invalidRoundResultPlayer');
     }
 }
+
+export class NoRoundsToRollbackError extends BadRequestError {
+    constructor() {
+        super('У цій грі немає раундів для відкату', 'noRoundsToRollback');
+    }
+}
+
+export class LastRoundRollbackAlreadyUsedError extends BadRequestError {
+    constructor() {
+        super('Ви вже відкатували останній раунд у цій грі', 'lastRoundRollbackAlreadyUsed');
+    }
+}
