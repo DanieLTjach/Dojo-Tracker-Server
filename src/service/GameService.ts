@@ -18,7 +18,8 @@ import {
     NotAuthorizedToModifyGameError,
     InvalidRoundResultPlayerError,
     NoRoundsToRollbackError,
-    LastRoundRollbackAlreadyUsedError
+    LastRoundRollbackAlreadyUsedError,
+    NoRoundsCompletedError
 } from '../error/GameErrors.ts';
 import type { DetailedGame, GameState, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
@@ -138,7 +139,7 @@ export class GameService {
         const game = this.getDetailedGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
 
-        this.authorizeGameRoundAction(game, event, modifiedBy);
+        this.authorizeTrackedGameAction(game, event, modifiedBy);
         this.validateGameIsInProgress(game);
         this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
         this.validateRoundResultPlayers(resultWithoutPoints, game.players);
@@ -158,7 +159,7 @@ export class GameService {
         const game = this.getDetailedGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
 
-        this.authorizeGameRoundAction(game, event, modifiedBy);
+        this.authorizeTrackedGameAction(game, event, modifiedBy);
         this.validateGameIsInProgress(game);
         this.validateLastRoundIdBeforeDeleting(game.rounds, roundId);
         this.validatePlayerCanRollbackLastRound(game, event, modifiedBy);
@@ -175,6 +176,40 @@ export class GameService {
         this.gameRepository.touchGame(gameId, modifiedBy);
 
         return this.getDetailedGameById(gameId);
+    }
+
+    finishGame(gameId: number, modifiedBy: number): DetailedGame {
+        const game = this.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+
+        this.authorizeTrackedGameAction(game, event, modifiedBy);
+        this.validateGameIsInProgress(game);
+        this.validateGameHasAtLeastOneRound(game.rounds);
+
+        const finishedAt = new Date();
+        const standingsBefore = this.ratingService.calculateStandings(event.id);
+
+        this.gameRepository.finishGame(gameId, modifiedBy, finishedAt);
+        this.ratingService.addRatingChangesFromGame(
+            gameId,
+            finishedAt,
+            game.players,
+            event.id,
+            event.gameRules,
+            event.startingRating
+        );
+
+        const finishedGame = this.getDetailedGameById(gameId);
+        this.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
+        this.logRatingUpdateForGame(
+            finishedGame,
+            event,
+            standingsBefore,
+            this.ratingService.calculateStandings(event.id),
+            modifiedBy
+        );
+
+        return finishedGame;
     }
 
     getGames(filters: GameFilters): GameWithPlayers[] {
@@ -259,7 +294,7 @@ export class GameService {
         }
     }
 
-    private authorizeGameRoundAction(game: GameWithPlayers, event: Event, userId: number): void {
+    private authorizeTrackedGameAction(game: GameWithPlayers, event: Event, userId: number): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
             return;
@@ -282,6 +317,12 @@ export class GameService {
     private validateGameIsInProgress(game: GameWithPlayers): void {
         if (game.status !== GameStatus.IN_PROGRESS) {
             throw new GameNotInProgressError();
+        }
+    }
+
+    private validateGameHasAtLeastOneRound(rounds: GameRound[]): void {
+        if (rounds.length === 0) {
+            throw new NoRoundsCompletedError();
         }
     }
 

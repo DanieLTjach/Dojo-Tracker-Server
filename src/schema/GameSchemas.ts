@@ -109,3 +109,9 @@ export const gameRoundDeleteSchema = z.object({
         roundId: roundIdParamSchema
     })
 });
+
+export const gameFinishSchema = z.object({
+    params: z.object({
+        gameId: gameIdParamSchema
+    })
+});

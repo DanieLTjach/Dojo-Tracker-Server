@@ -113,3 +113,9 @@ export class LastRoundRollbackAlreadyUsedError extends BadRequestError {
         super('Ви вже відкатували останній раунд у цій грі', 'lastRoundRollbackAlreadyUsed');
     }
 }
+
+export class NoRoundsCompletedError extends BadRequestError {
+    constructor() {
+        super('Гру можна завершити лише після щонайменше одного раунду', 'noRoundsCompleted');
+    }
+}

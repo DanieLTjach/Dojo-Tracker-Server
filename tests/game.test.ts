@@ -1015,6 +1015,136 @@ describe('Game API Endpoints', () => {
         });
     });
 
+    describe('POST /api/games/:gameId/finish - Finish Game', () => {
+        const exhaustiveDrawResult = {
+            type: 'EXHAUSTIVE_DRAW',
+            riichiPlayerIds: [] as number[],
+            tenpaiPlayerIds: [] as number[],
+            nagashiManganPlayerIds: [] as number[]
+        };
+
+        const postRound = (gameId: number, roundId: number, authHeader: string) =>
+            request(app)
+                .post(`/api/games/${gameId}/rounds/${roundId}`)
+                .set('Authorization', authHeader)
+                .send(exhaustiveDrawResult);
+
+        const finishGame = (gameId: number, authHeader: string) =>
+            request(app)
+                .post(`/api/games/${gameId}/finish`)
+                .set('Authorization', authHeader);
+
+        test('should finish an in-progress game with at least one round', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+
+            await postRound(gameId, 1, user1AuthHeader);
+
+            const response = await finishGame(gameId, user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.id).toBe(gameId);
+            expect(response.body.status).toBe('FINISHED');
+            expect(response.body.endedAt).not.toBeNull();
+            expect(response.body.currentState).toBeNull();
+            expect(response.body.rounds).toHaveLength(1);
+            response.body.players.forEach((player: { ratingChange: number }) => {
+                expect(typeof player.ratingChange).toBe('number');
+            });
+        });
+
+        test('should reject finishing a game with no rounds', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const response = await finishGame(createResponse.body.id, user1AuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('noRoundsCompleted');
+        });
+
+        test('should reject finishing an already finished game', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+
+            const firstFinish = await finishGame(gameId, user1AuthHeader);
+            expect(firstFinish.status).toBe(200);
+
+            const secondFinish = await finishGame(gameId, user1AuthHeader);
+            expect(secondFinish.status).toBe(400);
+            expect(secondFinish.body.errorCode).toBe('gameNotInProgress');
+        });
+
+        test('should reject finishing a score-only game that is already finished', async () => {
+            const response = await finishGame(testGameId, user1AuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameNotInProgress');
+        });
+
+        test('should reject user who is not a player or club moderator', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+
+            const outsiderId = await createTestUser('Finish Outsider', 555555557);
+            const outsiderAuth = createAuthHeader(outsiderId);
+
+            const response = await finishGame(gameId, outsiderAuth);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('notAuthorizedToModifyGame');
+        });
+    });
+
     describe('GET /api/games/:gameId - Get Game by ID', () => {
         test('should retrieve a game by ID', async () => {
             const response = await request(app)

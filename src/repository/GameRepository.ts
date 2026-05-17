@@ -229,6 +229,29 @@ export class GameRepository {
         });
     }
 
+    private finishGameStatement(): Statement<{
+        id: number,
+        modifiedBy: number,
+        endedAt: string,
+        modifiedAt: string
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE game
+            SET status = 'FINISHED', endedAt = :endedAt, modifiedBy = :modifiedBy, modifiedAt = :modifiedAt
+            WHERE id = :id`
+        );
+    }
+
+    finishGame(gameId: number, modifiedBy: number, endedAt: Date): void {
+        const timestamp = endedAt.toISOString();
+        this.finishGameStatement().run({
+            id: gameId,
+            modifiedBy,
+            endedAt: timestamp,
+            modifiedAt: timestamp
+        });
+    }
+
     findGamePlayersByGameIds(gameIds: number[]): GamePlayer[] {
         if (gameIds.length === 0) {
             return [];
