@@ -175,7 +175,9 @@ export class GameService {
         this.gameRepository.setLastRoundWasDeleted(gameId, true, modifiedBy);
         this.gameRepository.touchGame(gameId, modifiedBy);
 
-        return this.getDetailedGameById(gameId);
+        const updatedGame = this.getDetailedGameById(gameId);
+        this.logGameRoundRollback(updatedGame, event, lastRound, modifiedBy);
+        return updatedGame;
     }
 
     finishGame(gameId: number, modifiedBy: number): DetailedGame {
@@ -479,6 +481,29 @@ export class GameService {
         this.logMessageToGameLogsTopics(message, event);
     }
 
+    private logGameRoundRollback(
+        game: DetailedGame,
+        event: Event,
+        deletedRound: GameRound,
+        modifiedBy: number
+    ): void {
+        const user = this.userService.getUserById(modifiedBy);
+        const pointChangesSection = deletedRound.result.playerPointChanges.length > 0
+            ? `\n\n<b>Point changes removed:</b>\n` + this.printRoundPointChangesLog(deletedRound.result.playerPointChanges)
+            : '';
+
+        const message = dedent`
+            <b>↩️ Last Round Rolled Back</b>
+
+            <b>Game ID:</b> <code>${game.id}</code>
+            <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>Round:</b> <code>${deletedRound.wind} ${deletedRound.counters} (${deletedRound.roundNumber})</code>
+            <b>Result type:</b> <code>${deletedRound.result.type}</code>
+            <b>Rolled back by:</b> ${user.name} <code>(ID: ${user.id})</code>
+        ` + pointChangesSection;
+        this.logMessageToGameLogsTopics(message, event);
+    }
+
     private logEditedGame(oldGame: GameWithPlayers, newGame: GameWithPlayers, event: Event, modifiedBy: number): void {
         const user = this.userService.getUserById(modifiedBy);
 
@@ -582,6 +607,14 @@ export class GameService {
             const user = this.userService.getUserById(p.userId);
             return `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>\n   • Start Place: <b>${p.startPlace}</b>`;
         }).join('\n\n');
+    }
+
+    private printRoundPointChangesLog(pointChanges: PlayerPointChange[]): string {
+        return pointChanges.map((change) => {
+            const user = this.userService.getUserById(change.playerId);
+            const sign = change.pointChange >= 0 ? '+' : '';
+            return `• <b>${user.name}</b> <code>(ID: ${user.id})</code>: <b>${sign}${change.pointChange}</b>`;
+        }).join('\n');
     }
 
     private logRatingUpdateForGame(
