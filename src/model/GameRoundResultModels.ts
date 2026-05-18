@@ -37,7 +37,7 @@ export interface ExhaustiveDraw {
     nagashiManganPlayerIds: number[];
 }
 
-interface AbortiveDraw {
+export interface AbortiveDraw {
     type: 'ABORTIVE_DRAW';
     drawType: AbortiveDrawType;
     riichiPlayerIds: number[];
@@ -53,7 +53,7 @@ export const AbortiveDrawType = {
 
 export type AbortiveDrawType = typeof AbortiveDrawType[keyof typeof AbortiveDrawType];
 
-interface Chombo {
+export interface Chombo {
     type: 'CHOMBO';
     offenderPlayerId: number;
 }

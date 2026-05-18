@@ -145,7 +145,8 @@ export class GameService {
         this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
         this.validateRoundResultPlayers(resultWithoutPoints, game.players);
 
-        const playerPointChanges = calculateRoundPointChanges(game, resultWithoutPoints, event.gameRules);
+        // TODO: handle remaining riichi deposits if the game ends
+        const playerPointChanges = calculateRoundPointChanges(game, event.gameRules, resultWithoutPoints);
         const result: GameRoundResult = { ...resultWithoutPoints, playerPointChanges };
 
         this.gameRepository.createGameRound(gameId, roundId, game.currentState!, result);

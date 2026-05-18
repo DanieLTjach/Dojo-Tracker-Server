@@ -6,6 +6,7 @@ import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createTestEvent, createCustomEvent, createTelegramInitData } from './testHelpers.ts';
+import { ExhaustiveDraw } from '../src/model/GameRoundResultModels.ts';
 
 const app = express();
 app.use(express.json());
@@ -631,7 +632,7 @@ describe('Game API Endpoints', () => {
                     playerPointChanges: []
                 }
             });
-            expect(response.body.currentState).toEqual({ wind: 'EAST', counters: 0, riichiSticks: 0 });
+            expect(response.body.currentState).toEqual({ wind: 'SOUTH', counters: 1, riichiSticks: 1 });
 
             const duplicateRoundResponse = await request(app)
                 .post(`/api/games/${trackedGameId}/rounds/1`)
@@ -643,22 +644,24 @@ describe('Game API Endpoints', () => {
         });
 
         test('should post the next round when previous rounds exist', async () => {
-            const chomboResult = {
-                type: 'CHOMBO',
-                offenderPlayerId: testUser3Id
+            const exhaustiveDrawResult: ExhaustiveDraw = {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [],
+                tenpaiPlayerIds: [],
+                nagashiManganPlayerIds: []
             };
 
             const response = await request(app)
                 .post(`/api/games/${trackedGameId}/rounds/2`)
                 .set('Authorization', user1AuthHeader)
-                .send(chomboResult);
+                .send(exhaustiveDrawResult);
 
             expect(response.status).toBe(200);
             expect(response.body.rounds).toHaveLength(2);
             expect(response.body.rounds[1]).toMatchObject({
                 roundNumber: 2,
                 result: {
-                    ...chomboResult,
+                    ...exhaustiveDrawResult,
                     playerPointChanges: []
                 }
             });
@@ -666,7 +669,7 @@ describe('Game API Endpoints', () => {
             const duplicateRoundResponse = await request(app)
                 .post(`/api/games/${trackedGameId}/rounds/2`)
                 .set('Authorization', user1AuthHeader)
-                .send(chomboResult);
+                .send(exhaustiveDrawResult);
 
             expect(duplicateRoundResponse.status).toBe(400);
             expect(duplicateRoundResponse.body.errorCode).toBe('roundAlreadyExists');
