@@ -80,6 +80,7 @@ CREATE TABLE gameRound (
     gameId INTEGER NOT NULL REFERENCES game(id),
     roundNumber INTEGER NOT NULL,
     wind TEXT NOT NULL REFERENCES wind(wind),
+    dealerNumber INTEGER NOT NULL,
     counters INTEGER NOT NULL,
     riichiSticks INTEGER NOT NULL,
     result TEXT NOT NULL,

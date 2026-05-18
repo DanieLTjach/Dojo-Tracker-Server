@@ -114,7 +114,7 @@ export class GameRepository {
 
     private findGameRoundsByGameIdStatement(): Statement<{ gameId: number }, GameRoundDBEntity> {
         return dbManager.db.prepare(`
-            SELECT gameId, roundNumber, wind, counters, riichiSticks, result
+            SELECT gameId, roundNumber, wind, dealerNumber, counters, riichiSticks, result
             FROM gameRound
             WHERE gameId = :gameId
             ORDER BY roundNumber`
@@ -129,13 +129,14 @@ export class GameRepository {
         gameId: number,
         roundNumber: number,
         wind: string,
+        dealerNumber: number,
         counters: number,
         riichiSticks: number,
         result: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO gameRound (gameId, roundNumber, wind, counters, riichiSticks, result)
-            VALUES (:gameId, :roundNumber, :wind, :counters, :riichiSticks, :result)`
+            INSERT INTO gameRound (gameId, roundNumber, wind, dealerNumber,counters, riichiSticks, result)
+            VALUES (:gameId, :roundNumber, :wind, :dealerNumber, :counters, :riichiSticks, :result)`
         );
     }
 
@@ -149,6 +150,7 @@ export class GameRepository {
             gameId,
             roundNumber,
             wind: roundState.wind,
+            dealerNumber: roundState.dealerNumber,
             counters: roundState.counters,
             riichiSticks: roundState.riichiSticks,
             result: JSON.stringify(result)
@@ -407,6 +409,7 @@ interface GameRoundDBEntity {
     gameId: number;
     roundNumber: number;
     wind: string;
+    dealerNumber: number;
     counters: number;
     riichiSticks: number;
     result: string;
@@ -417,6 +420,7 @@ function gameRoundFromDBEntity(dbEntity: GameRoundDBEntity): GameRound {
         gameId: dbEntity.gameId,
         roundNumber: dbEntity.roundNumber,
         wind: parseWind(dbEntity.wind),
+        dealerNumber: dbEntity.dealerNumber,
         counters: dbEntity.counters,
         riichiSticks: dbEntity.riichiSticks,
         result: JSON.parse(dbEntity.result)

@@ -1,7 +1,8 @@
 import type { GameRulesValues } from "../data/gameRulesCatalog.ts";
-import { GameNotInProgressError } from "../error/GameErrors.ts";
+import { GameNotInProgressWhenAddingNewRoundError } from "../error/GameErrors.ts";
 import {
     CannotDetermineDealerError,
+    CannotDetermineDealerPlacementError,
     CannotFindHeadBumpPlayerError,
     DealInPlayerCannotBeWinnerError,
     DealInPlayerNotInGameError,
@@ -18,17 +19,18 @@ import {
     YakumanLiabilityRequiresYakumanError,
 } from "../error/PointCalculationErrors.ts";
 import type { GameRules } from "../model/EventModels.ts";
-import { GamePlayer, Wind, type DetailedGame, type GameState } from "../model/GameModels.ts";
-import type { AbortiveDraw, Chombo, ExhaustiveDraw, GameRoundResultWithoutPoints, PlayerPointChange, Ron, Tsumo, WinningHandData } from "../model/GameRoundResultModels.ts";
+import type { GamePlayer, DetailedGame, GameState } from "../model/GameModels.ts";
+import { nextWind, Wind, WIND_ORDER } from "../model/GameModels.ts";
+import type { AbortiveDraw, Chombo, ExhaustiveDraw, GameRoundResult, GameRoundResultInputDTO, PlayerPointChange, Ron, Tsumo, WinningHandData } from "../model/GameRoundResultModels.ts";
 
-export function calculateRoundPointChanges(
+export function calculateGameRoundResult(
     game: DetailedGame,
     rules: GameRules,
-    result: GameRoundResultWithoutPoints
-): PlayerPointChange[] {
+    result: GameRoundResultInputDTO
+): GameRoundResult {
     const currentGameState = game.currentState;
     if (currentGameState === null) {
-        throw new GameNotInProgressError();
+        throw new GameNotInProgressWhenAddingNewRoundError();
     }
 
     if (rules.details === null) {
@@ -36,17 +38,46 @@ export function calculateRoundPointChanges(
     }
     const detailedRules = rules.details.rules;
 
+    const roundPointChanges = calculateRoundPointChanges(currentGameState, game.players, detailedRules, result);
+
+    const updatedGamePlayers = game.players.map(player => updatePlayerPoints(player, roundPointChanges));
+    const nextRoundState = calculateNextRoundState(currentGameState, updatedGamePlayers, result);
+
+    if (!shouldFinishGame(currentGameState, nextRoundState, updatedGamePlayers, rules, detailedRules, result)) {
+        return {
+            ...result,
+            playerPointChanges: roundPointChanges,
+            nextState: nextRoundState
+        };
+    }
+
+    return {
+        ...result,
+        playerPointChanges: mergePlayerPointChanges(
+            roundPointChanges,
+            giveRemainingRiichiSticksToGameWinner(updatedGamePlayers, rules, nextRoundState.riichiSticks)
+        ),
+        nextState: undefined
+    };
+}
+
+function calculateRoundPointChanges(
+    gameState: GameState,
+    players: GamePlayer[],
+    rules: GameRulesValues,
+    result: GameRoundResultInputDTO
+): PlayerPointChange[] {
     switch (result.type) {
         case "TSUMO":
-            return calculateTsumoPointChanges(currentGameState, game.players, detailedRules, result);
+            return calculateTsumoPointChanges(gameState, players, rules, result);
         case "RON":
-            return calculateRonPointChanges(currentGameState, game.players, detailedRules, result);
+            return calculateRonPointChanges(gameState, players, rules, result);
         case "EXHAUSTIVE_DRAW":
-            return calculateExhaustiveDrawPointChanges(currentGameState, game.players, detailedRules, result);
+            return calculateExhaustiveDrawPointChanges(gameState, players, rules, result);
         case "ABORTIVE_DRAW":
             return calculateAbortiveDrawPointChanges(result);
         case "CHOMBO":
-            return calculateChomboPointChanges(currentGameState, game.players, detailedRules, result);
+            return calculateChomboPointChanges(gameState, players, rules, result);
     }
 }
 
@@ -149,10 +180,9 @@ function findHeadBumpPlayerId(players: GamePlayer[], dealInPlayerId: number, win
         throw new DealInPlayerNotInGameError();
     }
 
-    let windNumber = Object.values(Wind).indexOf(dealInPlayerWind);
+    let curWind = dealInPlayerWind;
     for (let i = 0; i < 4; i++) {
-        windNumber = (windNumber + 1) % 4;
-        const curWind = Object.values(Wind)[windNumber]!;
+        curWind = nextWind(curWind);
         const curPlayer = players.find(player => player.startPlace === curWind);
         if (curPlayer === undefined) {
             throw new MissingPlayerForWindError(curWind);
@@ -335,7 +365,7 @@ function calculateNotenPaymentPointChanges(
     const notenPlayerIds = players
         .map(player => player.userId)
         .filter(playerId => !exhaustiveDraw.tenpaiPlayerIds.includes(playerId));
-    
+
     return mergePlayerPointChanges(
         notenPlayerIds.map(playerId => ({
             playerId,
@@ -409,7 +439,7 @@ function roundUpToHundreds(value: number): number {
 }
 
 function getCurrentDealerPlayerId(gameState: GameState, players: GamePlayer[]): number {
-    const dealer = players.find(player => player.startPlace === gameState.wind);
+    const dealer = players.find(player => player.startPlace === Object.values(Wind)[gameState.dealerNumber - 1]);
     if (dealer === undefined) {
         throw new CannotDetermineDealerError();
     }
@@ -465,4 +495,236 @@ function limitHandBaseValue(han: number): number {
     if (han <= 7) return 3000;
     if (han <= 10) return 4000;
     return 6000;
+}
+
+function calculateNextRoundState(
+    gameState: GameState,
+    players: GamePlayer[],
+    result: GameRoundResultInputDTO,
+): GameState {
+    switch (result.type) {
+        case "TSUMO":
+            return nextRoundStateAfterWin(gameState, players, [result.winningHandData.winnerPlayerId]);
+        case "RON":
+            return nextRoundStateAfterWin(
+                gameState,
+                players,
+                result.winningHandData.map(winningHandData => winningHandData.winnerPlayerId)
+            );
+        case "EXHAUSTIVE_DRAW":
+            return nextRoundStateAfterExhaustiveDraw(gameState, players, result);
+        case "ABORTIVE_DRAW":
+            return nextRoundStateAfterAbortiveDraw(gameState, result);
+        case "CHOMBO":
+            return gameState;
+    }
+}
+
+function updatePlayerPoints(player: GamePlayer, pointChanges: PlayerPointChange[]): GamePlayer {
+    const pointChange = pointChanges
+        .find(pointChange => pointChange.playerId === player.userId)
+        ?.pointChange ?? 0;
+
+    return {
+        ...player,
+        points: player.points + pointChange
+    }
+}
+
+function shouldFinishGame(
+    gameState: GameState,
+    nextRoundState: GameState,
+    players: GamePlayer[],
+    rules: GameRules,
+    detailedRules: GameRulesValues,
+    result: GameRoundResultInputDTO,
+): boolean {
+    if (shouldFinishGameByBankruptcy(players, detailedRules)) {
+        return true;
+    }
+
+    const nextRoundIsSouth4Repeat = isSouth4Repeat(gameState, nextRoundState);
+    if (nextRoundState.wind === "EAST" || (nextRoundState.wind === "SOUTH" && !nextRoundIsSouth4Repeat)) {
+        return false;
+    }
+
+    if (nextRoundIsSouth4Repeat) {
+        return shouldFinishGameWithAgariOrTenpaiYame(nextRoundState, players, rules, detailedRules, result);
+    }
+
+    if (nextRoundState.wind === "NORTH") {
+        return true;
+    }
+
+    // not EAST, SOUTH or NORTH, we're in WEST round
+    const clearedGoal = detailedRules.goal === undefined
+        || players.some(player => player.points > detailedRules.goal!);
+    if (gameState.wind === "SOUTH") {
+        // just got into WEST, end if someone is above goal
+        return clearedGoal;
+    }
+
+    // previous round was also WEST, only end if someone is above goal and round ended by win
+    return clearedGoal && (result.type === "TSUMO" || result.type === "RON");
+}
+
+function shouldFinishGameByBankruptcy(players: GamePlayer[], rules: GameRulesValues) {
+    switch (rules.bankrupt ?? "below_zero") {
+        case "none":
+            return false;
+        case "below_zero":
+            return players.some(player => player.points < 0);
+        case "zero_or_less":
+            return players.some(player => player.points <= 0);
+    }
+}
+
+function nextRoundStateAfterWin(
+    gameState: GameState,
+    players: GamePlayer[],
+    winningPlayerIds: number[]
+): GameState {
+    return winningPlayerIds.includes(getCurrentDealerPlayerId(gameState, players))
+        ? {
+            ...gameState,
+            counters: gameState.counters + 1,
+            riichiSticks: 0
+        }
+        : nextDealer({
+            ...gameState,
+            counters: 0,
+            riichiSticks: 0
+        });
+}
+
+function nextRoundStateAfterExhaustiveDraw(
+    gameState: GameState,
+    players: GamePlayer[],
+    exhaustiveDraw: ExhaustiveDraw
+): GameState {
+    const result = {
+        ...gameState,
+        counters: gameState.counters + 1,
+        riichiSticks: gameState.riichiSticks + exhaustiveDraw.riichiPlayerIds.length
+    }
+    return exhaustiveDraw.tenpaiPlayerIds.includes(getCurrentDealerPlayerId(gameState, players))
+        ? result
+        : nextDealer(result);
+}
+
+function nextRoundStateAfterAbortiveDraw(
+    gameState: GameState,
+    abortiveDraw: AbortiveDraw
+): GameState {
+    return {
+        ...gameState,
+        counters: gameState.counters + 1,
+        riichiSticks: gameState.riichiSticks + abortiveDraw.riichiPlayerIds.length
+    };
+}
+
+function nextDealer(gameState: GameState): GameState {
+    const nextDealerNumber = gameState.dealerNumber + 1;
+    return nextDealerNumber <= 4
+        ? {
+            ...gameState,
+            dealerNumber: nextDealerNumber
+        }
+        : {
+            ...gameState,
+            wind: nextWind(gameState.wind),
+            dealerNumber: 1
+        }
+}
+
+function isSouth4Repeat(state: GameState, nextState: GameState) {
+    return state.wind === "SOUTH" && state.dealerNumber === 4
+        && nextState.wind === "SOUTH" && nextState.dealerNumber === 4;
+}
+
+function shouldFinishGameWithAgariOrTenpaiYame(
+    gameState: GameState,
+    players: GamePlayer[],
+    rules: GameRules,
+    detailedRules: GameRulesValues,
+    result: GameRoundResultInputDTO
+) {
+    const dealerId = getCurrentDealerPlayerId(gameState, players);
+    const dealerPlacement = getPlayerPlacement(rules, players, dealerId);
+
+    switch (result.type) {
+        case "EXHAUSTIVE_DRAW":
+            return shouldFinishGameWithTenpaiYame(detailedRules, dealerPlacement);
+        case "TSUMO":
+        case "RON":
+            return shouldFinishGameWithAgariYame(detailedRules, dealerPlacement);
+        default:
+            return false;
+    }
+}
+
+function getPlayerPlacement(
+    rules: GameRules,
+    players: GamePlayer[],
+    playerId: number
+): number {
+    const sortedPlayers = sortPlayersByPoints(players);
+
+    let numPlayersAbove = 0;
+    for (const [index, player] of sortedPlayers.entries()) {
+        if (index !== 0) {
+            const prevPlayer = sortedPlayers[index - 1]!;
+            if (prevPlayer.points > player.points || rules.umaTieBreak === "WIND") {
+                numPlayersAbove = index;
+            }
+        }
+
+        if (player.userId === playerId) {
+            return numPlayersAbove + 1;
+        }
+    }
+
+    throw new CannotDetermineDealerPlacementError();
+}
+
+function sortPlayersByPoints(players: GamePlayer[]): GamePlayer[] {
+    return players.toSorted((a, b) => b.points - a.points || WIND_ORDER[a.startPlace!] - WIND_ORDER[b.startPlace!]);
+}
+
+function shouldFinishGameWithTenpaiYame(
+    rules: GameRulesValues,
+    dealerPlacement: number
+): boolean {
+    switch (rules.tenpai_yame ?? "no") {
+        case "no":
+            return false;
+        case "rank_1":
+            return dealerPlacement === 1;
+        case "rank_1_2":
+            return dealerPlacement <= 2;
+    }
+}
+
+function shouldFinishGameWithAgariYame(
+    rules: GameRulesValues,
+    dealerPlacement: number
+): boolean {
+    switch (rules.agari_yame ?? "rank_1") {
+        case "no":
+            return false;
+        case "rank_1":
+            return dealerPlacement === 1;
+        case "rank_1_2":
+            return dealerPlacement <= 2;
+    }
+}
+
+function giveRemainingRiichiSticksToGameWinner(
+    _players: GamePlayer[],
+    _rules: GameRules,
+    _riichiStickCount: number
+): PlayerPointChange[] {
+    return [];
+    // TODO: implement
+    // const sortedPlayers = sortPlayersByPoints(players);
 }

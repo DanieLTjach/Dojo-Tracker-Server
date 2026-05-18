@@ -1,7 +1,7 @@
 import { booleanToInteger } from "../db/dbUtils.ts";
 import { PleaseProvideStartPlaceForAllPlayersToResolveTie, UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
 import type { GameRules, UmaTieBreak } from "../model/EventModels.ts";
-import { WIND_ORDER, type GameWithPlayers, type PlayerData, type Wind } from "../model/GameModels.ts";
+import { WIND_ORDER, type GameWithPlayers, type PlayerData } from "../model/GameModels.ts";
 import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO, UserRatingWithPlace } from "../model/RatingModels.ts";
 import { RatingRepository } from "../repository/RatingRepository.ts";
 import { EventService } from "./EventService.ts";

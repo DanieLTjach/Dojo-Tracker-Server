@@ -9,6 +9,10 @@ export const Wind = {
 
 export type Wind = typeof Wind[keyof typeof Wind];
 
+export function nextWind(wind: Wind): Wind {
+    return Object.values(Wind)[(Object.values(Wind).indexOf(wind) + 1) % 4]!;
+}
+
 export const WIND_ORDER: Record<Wind, number> = Object.fromEntries(
     Object.values(Wind).map((wind, index) => [wind, index])
 ) as Record<Wind, number>;
@@ -21,19 +25,17 @@ export const GameStatus = {
 
 export type GameStatus = typeof GameStatus[keyof typeof GameStatus];
 
-export interface GameRound {
-    gameId: number;
-    roundNumber: number;
-    wind: Wind;
-    counters: number;
-    riichiSticks: number;
-    result: GameRoundResult;
-}
-
 export interface GameState {
     wind: Wind;
+    dealerNumber: number;
     counters: number;
     riichiSticks: number;
+}
+
+export interface GameRound extends GameState {
+    gameId: number;
+    roundNumber: number;
+    result: GameRoundResult;
 }
 
 export interface Game {

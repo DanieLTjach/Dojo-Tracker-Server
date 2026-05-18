@@ -127,6 +127,15 @@ export class CannotDetermineDealerError extends InternalServerError {
     }
 }
 
+export class CannotDetermineDealerPlacementError extends InternalServerError {
+    constructor() {
+        super(
+            'Не вдалося визначити місце дилера: некоректний стан гри',
+            'cannotDetermineDealerPlacement'
+        );
+    }
+}
+
 export class InvalidHonbaFormatError extends InternalServerError {
     constructor() {
         super(

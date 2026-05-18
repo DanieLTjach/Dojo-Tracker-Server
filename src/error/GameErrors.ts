@@ -66,7 +66,7 @@ export class YouHaveToBeAdminToHideNewGameMessage extends ForbiddenError {
     }
 }
 
-export class GameNotInProgressError extends BadRequestError {
+export class GameNotInProgressWhenAddingNewRoundError extends BadRequestError {
     constructor() {
         super('Результат раунду можна додати лише до гри, що триває', 'gameNotInProgress');
     }

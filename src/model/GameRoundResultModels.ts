@@ -1,8 +1,11 @@
-export type GameRoundResult = GameRoundResultWithoutPoints & {
+import type { GameState } from "./GameModels.ts";
+
+export type GameRoundResult = GameRoundResultInputDTO & {
     playerPointChanges: PlayerPointChange[];
+    nextState: GameState | undefined;
 }
 
-export type GameRoundResultWithoutPoints = Tsumo | Ron | ExhaustiveDraw | AbortiveDraw | Chombo;
+export type GameRoundResultInputDTO = Tsumo | Ron | ExhaustiveDraw | AbortiveDraw | Chombo;
 
 export interface PlayerPointChange {
     playerId: number;

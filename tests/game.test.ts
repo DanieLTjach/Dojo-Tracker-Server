@@ -485,7 +485,7 @@ describe('Game API Endpoints', () => {
             expect(response.body.endedAt).toBeNull();
             expect(response.body.lastRoundWasDeleted).toBe(false);
             expect(response.body.rounds).toEqual([]);
-            expect(response.body.currentState).toEqual({ wind: 'EAST', counters: 0, riichiSticks: 0 });
+            expect(response.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 });
             expect(response.body.players).toHaveLength(4);
             expect(response.body.players).toEqual(expect.arrayContaining([
                 expect.objectContaining({
@@ -526,7 +526,7 @@ describe('Game API Endpoints', () => {
             expect(getResponse.body.status).toBe('IN_PROGRESS');
             expect(getResponse.body.startedAt).toBe(getResponse.body.createdAt);
             expect(getResponse.body.rounds).toEqual([]);
-            expect(getResponse.body.currentState).toEqual({ wind: 'EAST', counters: 0, riichiSticks: 0 });
+            expect(getResponse.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 });
         });
 
         test('should fail with incorrect number of players', async () => {
@@ -632,7 +632,7 @@ describe('Game API Endpoints', () => {
                     playerPointChanges: []
                 }
             });
-            expect(response.body.currentState).toEqual({ wind: 'SOUTH', counters: 1, riichiSticks: 1 });
+            expect(response.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 2, counters: 1, riichiSticks: 0 });
 
             const duplicateRoundResponse = await request(app)
                 .post(`/api/games/${trackedGameId}/rounds/1`)
@@ -1201,9 +1201,9 @@ describe('Game API Endpoints', () => {
             };
 
             dbManager.db.prepare(`
-                INSERT INTO gameRound (gameId, roundNumber, wind, counters, riichiSticks, result)
-                VALUES (?, 2, 'SOUTH', 1, 0, ?),
-                       (?, 1, 'EAST', 0, 1, ?)
+                INSERT INTO gameRound (gameId, roundNumber, wind, dealerNumber, counters, riichiSticks, result)
+                VALUES (?, 2, 'EAST', 2, 1, 0, ?),
+                       (?, 1, 'EAST', 1, 0, 1, ?)
             `).run(
                 gameId,
                 JSON.stringify(roundTwoResult),
@@ -1221,6 +1221,7 @@ describe('Game API Endpoints', () => {
                     gameId,
                     roundNumber: 1,
                     wind: 'EAST',
+                    dealerNumber: 1,
                     counters: 0,
                     riichiSticks: 1,
                     result: roundOneResult
@@ -1228,7 +1229,8 @@ describe('Game API Endpoints', () => {
                 {
                     gameId,
                     roundNumber: 2,
-                    wind: 'SOUTH',
+                    wind: 'EAST',
+                    dealerNumber: 2,
                     counters: 1,
                     riichiSticks: 0,
                     result: roundTwoResult

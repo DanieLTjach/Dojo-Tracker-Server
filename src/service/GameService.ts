@@ -12,7 +12,7 @@ import {
     YouHaveToBeAdminToCreateGameWithCustomTime,
     PointsNotWithinRange,
     YouHaveToBeAdminToHideNewGameMessage,
-    GameNotInProgressError,
+    GameNotInProgressWhenAddingNewRoundError,
     InvalidRoundIdError,
     RoundAlreadyExistsError,
     NotAuthorizedToModifyGameError,
@@ -22,8 +22,8 @@ import {
     NoRoundsCompletedError
 } from '../error/GameErrors.ts';
 import type { DetailedGame, GameState, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound } from '../model/GameModels.ts';
-import { GameStatus, Wind } from '../model/GameModels.ts';
-import type { GameRoundResult, GameRoundResultWithoutPoints, PlayerPointChange } from '../model/GameRoundResultModels.ts';
+import { GameStatus } from '../model/GameModels.ts';
+import type { GameRoundResult, GameRoundResultInputDTO, PlayerPointChange } from '../model/GameRoundResultModels.ts';
 import { EventService } from './EventService.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
@@ -41,7 +41,7 @@ import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
-import { calculateRoundPointChanges } from '../util/PointCalculationUtil.ts';
+import { calculateGameRoundResult } from '../util/PointCalculationUtil.ts';
 
 export class GameService {
 
@@ -134,7 +134,7 @@ export class GameService {
     addGameRoundResult(
         gameId: number,
         roundId: number,
-        resultWithoutPoints: GameRoundResultWithoutPoints,
+        resultInputDTO: GameRoundResultInputDTO,
         modifiedBy: number
     ): DetailedGame {
         const game = this.getDetailedGameById(gameId);
@@ -143,14 +143,14 @@ export class GameService {
         this.authorizeTrackedGameAction(game, event, modifiedBy);
         this.validateGameIsInProgress(game);
         this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
-        this.validateRoundResultPlayers(resultWithoutPoints, game.players);
+        this.validateRoundResultPlayers(resultInputDTO, game.players);
 
-        // TODO: handle remaining riichi deposits if the game ends
-        const playerPointChanges = calculateRoundPointChanges(game, event.gameRules, resultWithoutPoints);
-        const result: GameRoundResult = { ...resultWithoutPoints, playerPointChanges };
+        const result: GameRoundResult = calculateGameRoundResult(game, event.gameRules, resultInputDTO);
+        // TODO: finish game properly if necessary (like recording rating change)
 
         this.gameRepository.createGameRound(gameId, roundId, game.currentState!, result);
-        this.gameRepository.applyPlayerPointChanges(gameId, playerPointChanges, modifiedBy);
+        // TODO: update player chombo count
+        this.gameRepository.applyPlayerPointChanges(gameId, result.playerPointChanges, modifiedBy);
         this.gameRepository.setLastRoundWasDeleted(gameId, false, modifiedBy);
         this.gameRepository.touchGame(gameId, modifiedBy);
 
@@ -320,7 +320,7 @@ export class GameService {
 
     private validateGameIsInProgress(game: GameWithPlayers): void {
         if (game.status !== GameStatus.IN_PROGRESS) {
-            throw new GameNotInProgressError();
+            throw new GameNotInProgressWhenAddingNewRoundError();
         }
     }
 
@@ -378,7 +378,7 @@ export class GameService {
         return false;
     }
 
-    private validateRoundResultPlayers(result: GameRoundResultWithoutPoints, players: GamePlayer[]): void {
+    private validateRoundResultPlayers(result: GameRoundResultInputDTO, players: GamePlayer[]): void {
         const playerIds = new Set(players.map((player) => player.userId));
 
         const validatePlayerId = (playerId: number) => {
@@ -429,16 +429,11 @@ export class GameService {
             return null;
         }
 
-        return this.nextRoundState(rounds[rounds.length - 1]);
-    }
-
-    private nextRoundState(round: GameRound | undefined): GameState | null {
-        if (round === undefined) {
-            return { wind: 'EAST', counters: 0, riichiSticks: 0 };
+        if (rounds.length === 0) {
+            return { wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 };
         }
-        // TODO: implement later
-        const nextWindMock = Object.values(Wind)[(Object.values(Wind).indexOf(round.wind) + 1) % 4]!;
-        return { wind: nextWindMock, counters: round.counters + 1, riichiSticks: round.riichiSticks + 1 };
+
+        return rounds[rounds.length - 1]!.result.nextState ?? null;
     }
 
     private authorizeClubScopedAction(clubId: number | null, userId: number, allowedRoles: ClubRole[]): void {
@@ -492,7 +487,7 @@ export class GameService {
 
             <b>Game ID:</b> <code>${game.id}</code>
             <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Round:</b> <code>${deletedRound.wind} ${deletedRound.counters} (${deletedRound.roundNumber})</code>
+            <b>Round:</b> <code>${deletedRound.wind} ${deletedRound.dealerNumber} Repeat ${deletedRound.counters} (${deletedRound.roundNumber})</code>
             <b>Result type:</b> <code>${deletedRound.result.type}</code>
             <b>Rolled back by:</b> ${user.name} <code>(ID: ${user.id})</code>
         ` + pointChangesSection;
