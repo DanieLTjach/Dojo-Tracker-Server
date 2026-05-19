@@ -185,6 +185,36 @@ export class GameRepository {
         }
     }
 
+    private updatePlayerChomboCountStatement(): Statement<{
+        gameId: number,
+        userId: number,
+        chomboCountChange: number,
+        modifiedBy: number,
+        modifiedAt: string
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE userToGame
+            SET chomboCount = chomboCount + :chomboCountChange, modifiedAt = :modifiedAt, modifiedBy = :modifiedBy
+            WHERE gameId = :gameId AND userId = :userId`
+        );
+    }
+
+    updatePlayerChomboCount(
+        gameId: number,
+        userId: number,
+        chomboCountChange: number,
+        modifiedBy: number
+    ): void {
+        const modifiedAt = new Date().toISOString();
+        this.updatePlayerChomboCountStatement().run({
+            gameId,
+            userId,
+            chomboCountChange,
+            modifiedBy,
+            modifiedAt
+        });
+    }
+
     private touchGameStatement(): Statement<{ id: number, modifiedBy: number, modifiedAt: string }, void> {
         return dbManager.db.prepare(`
             UPDATE game SET modifiedBy = :modifiedBy, modifiedAt = :modifiedAt WHERE id = :id`

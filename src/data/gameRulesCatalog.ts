@@ -87,7 +87,7 @@ export const gameRulesCatalog = {
         { key: 'open_riichi', type: 'boolean' },
         { key: 'open_tanyao', type: 'boolean' },
         { key: 'red_fives', type: 'enumString', enum: ['none','three_one_per_suit','two_red_fives_five_pin_and_five_sou'] },
-        { key: 'remaining_riichi_deposits', type: 'enumString', enum: ['final_winner','take_back','lost'] },
+        { key: 'remaining_riichi_deposits', type: 'enumString', enum: ['final_winner','lost'] },
         { key: 'riichi_1000_points_min', type: 'boolean' },
         { key: 'riichi_deposit_is_returned_if_one_of_multiple_ron', type: 'boolean' },
         { key: 'riichi_deposits_payment_on_multiple_ron', type: 'enumString', enum: ['bump'] },

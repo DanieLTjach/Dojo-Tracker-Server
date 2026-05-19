@@ -25,6 +25,18 @@ export const GameStatus = {
 
 export type GameStatus = typeof GameStatus[keyof typeof GameStatus];
 
+export const GameFinishReason = {
+    BANKRUPTCY: 'BANKRUPTCY',
+    MAX_POINTS: 'MAX_POINTS',
+    TENPAI_YAME: 'TENPAI_YAME',
+    AGARI_YAME: 'AGARI_YAME',
+    REACHED_NORTH_ROUND: 'REACHED_NORTH_ROUND',
+    PLAYED_ALL_ROUNDS: 'PLAYED_ALL_ROUNDS',
+    GOAL_EXCEEDED_IN_WEST_ROUND: 'GOAL_EXCEEDED_IN_WEST_ROUND'
+} as const;
+
+export type GameFinishReason = typeof GameFinishReason[keyof typeof GameFinishReason];
+
 export interface GameState {
     wind: Wind;
     dealerNumber: number;

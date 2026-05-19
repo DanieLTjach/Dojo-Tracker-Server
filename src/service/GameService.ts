@@ -146,15 +146,16 @@ export class GameService {
         this.validateRoundResultPlayers(resultInputDTO, game.players);
 
         const result: GameRoundResult = calculateGameRoundResult(game, event.gameRules, resultInputDTO);
-        // TODO: finish game properly if necessary (like recording rating change)
 
         this.gameRepository.createGameRound(gameId, roundId, game.currentState!, result);
-        // TODO: update player chombo count
         this.gameRepository.applyPlayerPointChanges(gameId, result.playerPointChanges, modifiedBy);
+        this.addChomboFromRoundResult(gameId, result, modifiedBy);
         this.gameRepository.setLastRoundWasDeleted(gameId, false, modifiedBy);
         this.gameRepository.touchGame(gameId, modifiedBy);
 
-        return this.getDetailedGameById(gameId);
+        return result.gameFinishReason
+            ? this.finishGame(gameId, modifiedBy)
+            : this.getDetailedGameById(gameId);
     }
 
     deleteGameRoundResult(gameId: number, roundId: number, modifiedBy: number): DetailedGame {
@@ -174,6 +175,7 @@ export class GameService {
 
         this.gameRepository.deleteGameRound(gameId, roundId);
         this.gameRepository.applyPlayerPointChanges(gameId, reversedPointChanges, modifiedBy);
+        this.subtractChomboFromRoundResult(gameId, lastRound.result, modifiedBy);
         this.gameRepository.setLastRoundWasDeleted(gameId, true, modifiedBy);
         this.gameRepository.touchGame(gameId, modifiedBy);
 
@@ -421,6 +423,18 @@ export class GameService {
                 break;
             case 'ABORTIVE_DRAW':
                 break;
+        }
+    }
+
+    private addChomboFromRoundResult(gameId: number, result: GameRoundResult, modifiedBy: number) {
+        if (result.type === 'CHOMBO') {
+            this.gameRepository.updatePlayerChomboCount(gameId, result.offenderPlayerId, 1, modifiedBy);
+        }
+    }
+
+    private subtractChomboFromRoundResult(gameId: number, result: GameRoundResult, modifiedBy: number) {
+        if (result.type === 'CHOMBO') {
+            this.gameRepository.updatePlayerChomboCount(gameId, result.offenderPlayerId, -1, modifiedBy);
         }
     }
 

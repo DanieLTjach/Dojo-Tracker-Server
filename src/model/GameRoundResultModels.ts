@@ -1,8 +1,9 @@
-import type { GameState } from "./GameModels.ts";
+import type { GameFinishReason, GameState } from "./GameModels.ts";
 
 export type GameRoundResult = GameRoundResultInputDTO & {
     playerPointChanges: PlayerPointChange[];
     nextState: GameState | undefined;
+    gameFinishReason: GameFinishReason | undefined;
 }
 
 export type GameRoundResultInputDTO = Tsumo | Ron | ExhaustiveDraw | AbortiveDraw | Chombo;

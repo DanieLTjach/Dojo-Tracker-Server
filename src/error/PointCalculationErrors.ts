@@ -55,6 +55,15 @@ export class DealInPlayerCannotBeWinnerError extends BadRequestError {
     }
 }
 
+export class AbortiveDrawNotInRulesetError extends BadRequestError {
+    constructor() {
+        super(
+            'Перездачі не передбачено в цьому наборі правил',
+            'abortiveDrawNotInRuleset'
+        );
+    }
+}
+
 export class NagashiManganNotInRulesetError extends BadRequestError {
     constructor() {
         super(
@@ -87,6 +96,15 @@ export class FuRequiredForLowHanHandError extends BadRequestError {
         super(
             'Для рук з менш ніж п’ятьма хан потрібно вказати фу',
             'fuRequiredForLowHanHand'
+        );
+    }
+}
+
+export class TwoHanMinimumIsRequiredError extends BadRequestError {
+    constructor() {
+        super(
+            'За цими правилами рука повинна мати хоча б два хани',
+            'twoHanMinimumIsRequired'
         );
     }
 }
@@ -127,11 +145,11 @@ export class CannotDetermineDealerError extends InternalServerError {
     }
 }
 
-export class CannotDetermineDealerPlacementError extends InternalServerError {
+export class CannotDeterminePlayerPlacementError extends InternalServerError {
     constructor() {
         super(
-            'Не вдалося визначити місце дилера: некоректний стан гри',
-            'cannotDetermineDealerPlacement'
+            'Не вдалося визначити місце гравця в грі: некоректний стан гри',
+            'cannotDeterminePlayerPlacement'
         );
     }
 }
@@ -142,5 +160,11 @@ export class InvalidHonbaFormatError extends InternalServerError {
             'Некоректний формат значення хонби в правилах',
             'invalidHonbaFormat'
         );
+    }
+}
+
+export class NoPlayersInTheGameError extends InternalServerError {
+    constructor() {
+        super('Гра не має гравців', 'noPlayersInTheGame');
     }
 }
