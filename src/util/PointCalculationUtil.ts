@@ -459,7 +459,7 @@ function takeRiichiSticksFromPlayers(riichiPlayerIds: number[]): PlayerPointChan
     return riichiPlayerIds.map(playerId => ({ playerId, pointChange: -1000 }));
 }
 
-function mergePlayerPointChanges(...arrays: PlayerPointChange[][]): PlayerPointChange[] {
+export function mergePlayerPointChanges(...arrays: PlayerPointChange[][]): PlayerPointChange[] {
     const merged = new Map<number, number>();
 
     for (const change of arrays.flat()) {
@@ -803,6 +803,18 @@ function shouldFinishGameWithAgariYame(
         case "rank_1_2":
             return dealerPlacement <= 2;
     }
+}
+
+export function calculateRemainingRiichiSticksPointChanges(
+    players: GamePlayer[],
+    gameRules: GameRules,
+    riichiStickCount: number
+): PlayerPointChange[] {
+    if (gameRules.details === null) {
+        throw new RulesetShouldContainDetailedRulesError();
+    }
+
+    return handleRemaningRiichiSticksAfterGameFinished(players, gameRules, gameRules.details.rules, riichiStickCount);
 }
 
 function handleRemaningRiichiSticksAfterGameFinished(

@@ -157,6 +157,26 @@ export class GameRepository {
         });
     }
 
+    private updateGameRoundResultStatement(): Statement<{
+        gameId: number,
+        roundNumber: number,
+        result: string
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE gameRound
+            SET result = :result
+            WHERE gameId = :gameId AND roundNumber = :roundNumber`
+        );
+    }
+
+    updateGameRoundResult(gameId: number, roundNumber: number, result: GameRoundResult): void {
+        this.updateGameRoundResultStatement().run({
+            gameId,
+            roundNumber,
+            result: JSON.stringify(result)
+        });
+    }
+
     private updatePlayerPointsStatement(): Statement<{
         gameId: number,
         userId: number,

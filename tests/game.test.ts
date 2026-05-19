@@ -1134,6 +1134,56 @@ describe('Game API Endpoints', () => {
             expect(response.body.errorCode).toBe('gameNotInProgressWhenFinishing');
         });
 
+        test('should distribute leftover riichi sticks to winners when finishing', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+
+            const roundWithRiichi = await postRound(gameId, 1, user1AuthHeader).send({
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [testUser1Id],
+                tenpaiPlayerIds: [],
+                nagashiManganPlayerIds: []
+            });
+            expect(roundWithRiichi.status).toBe(200);
+            expect(roundWithRiichi.body.currentState.riichiSticks).toBe(1);
+
+            const response = await finishGame(gameId, user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toBe('FINISHED');
+
+            const lastRound = response.body.rounds[response.body.rounds.length - 1];
+            expect(lastRound.result.playerPointChanges).toEqual(
+                expect.arrayContaining([
+                    { playerId: testUser1Id, pointChange: -1000 },
+                    { playerId: testUser2Id, pointChange: 333 },
+                    { playerId: testUser3Id, pointChange: 333 },
+                    { playerId: testUser4Id, pointChange: 333 }
+                ])
+            );
+
+            const playerPoints = Object.fromEntries(
+                response.body.players.map((player: { userId: number; points: number }) => [player.userId, player.points])
+            );
+            expect(playerPoints[testUser1Id]).toBe(29000);
+            expect(playerPoints[testUser2Id]).toBe(30333);
+            expect(playerPoints[testUser3Id]).toBe(30333);
+            expect(playerPoints[testUser4Id]).toBe(30333);
+        });
+
         test('should reject user who is not a player or club moderator', async () => {
             const createResponse = await request(app)
                 .post('/api/games/tracked')

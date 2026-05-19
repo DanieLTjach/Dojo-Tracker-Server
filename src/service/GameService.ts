@@ -46,7 +46,11 @@ import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
-import { calculateGameRoundResult } from '../util/PointCalculationUtil.ts';
+import {
+    calculateGameRoundResult,
+    calculateRemainingRiichiSticksPointChanges,
+    mergePlayerPointChanges
+} from '../util/PointCalculationUtil.ts';
 import { BadRequestError } from '../error/BaseErrors.ts';
 
 export class GameService {
@@ -198,6 +202,8 @@ export class GameService {
         this.validateGameIsInProgress(game, () => new GameNotInProgressWhenFinishingError());
         this.validateGameHasAtLeastOneRound(game.rounds);
 
+        const players = this.applyRemainingRiichiSticksOnFinish(game, event.gameRules, modifiedBy);
+
         const finishedAt = new Date();
         const standingsBefore = this.ratingService.calculateStandings(event.id);
 
@@ -205,7 +211,7 @@ export class GameService {
         this.ratingService.addRatingChangesFromGame(
             gameId,
             finishedAt,
-            game.players,
+            players,
             event.id,
             event.gameRules,
             event.startingRating
@@ -505,6 +511,41 @@ export class GameService {
         if (result.type === 'CHOMBO') {
             this.gameRepository.updatePlayerChomboCount(gameId, result.offenderPlayerId, -1, modifiedBy);
         }
+    }
+
+    private applyRemainingRiichiSticksOnFinish(
+        game: DetailedGame,
+        gameRules: GameRules,
+        modifiedBy: number
+    ): GamePlayer[] {
+        const riichiStickCount = game.currentState?.riichiSticks ?? 0;
+        if (riichiStickCount === 0) {
+            return game.players;
+        }
+
+        const extraPointChanges = calculateRemainingRiichiSticksPointChanges(
+            game.players,
+            gameRules,
+            riichiStickCount
+        );
+        if (extraPointChanges.length === 0) {
+            return game.players;
+        }
+
+        const lastRound = game.rounds[game.rounds.length - 1]!;
+        const updatedResult: GameRoundResult = {
+            ...lastRound.result,
+            playerPointChanges: mergePlayerPointChanges(
+                lastRound.result.playerPointChanges,
+                extraPointChanges
+            )
+        };
+
+        this.gameRepository.updateGameRoundResult(game.id, lastRound.roundNumber, updatedResult);
+        this.gameRepository.applyPlayerPointChanges(game.id, extraPointChanges, modifiedBy);
+        this.gameRepository.touchGame(game.id, modifiedBy);
+
+        return this.gameRepository.findGamePlayersByGameId(game.id);
     }
 
     private calculateCurrentGameState(game: GameWithPlayers, rounds: GameRound[]): GameState | null {
