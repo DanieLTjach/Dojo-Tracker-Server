@@ -5,6 +5,7 @@ import { CannotDeleteGameRulesInUseError, CannotUpdateGameRulesInUseError } from
 import { InsufficientClubPermissionsError } from '../src/error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../src/error/AuthErrors.ts';
 import { dbManager } from '../src/db/dbInit.ts';
+import type { GameRulesDetails } from '../src/model/EventModels.ts';
 import { cleanupTestDatabase } from './setup.ts';
 
 const TEST_CLUB_ID = 800;
@@ -255,7 +256,7 @@ describe('Game Rules CRUD', () => {
         });
 
         test('updateGameRulesDetails with preset stores only overrides', () => {
-            const fullRules = {
+            const fullRules: GameRulesDetails = {
                 preset: 'ema_2025',
                 rules: {
                     number_of_players: 4,
@@ -295,7 +296,7 @@ describe('Game Rules CRUD', () => {
         });
 
         test('updateGameRulesDetails without preset stores all rules', () => {
-            const details = {
+            const details: GameRulesDetails = {
                 rules: {
                     number_of_players: 4,
                     starting_points: 30000,

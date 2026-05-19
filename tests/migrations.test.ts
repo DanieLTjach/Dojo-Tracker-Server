@@ -251,7 +251,7 @@ describe('Database Migrations', () => {
     });
 
     const gameStatuses = db.prepare('SELECT status FROM gameStatus ORDER BY status').all() as Array<{ status: string }>;
-    expect(gameStatuses.map(({ status }) => status)).toEqual(['FINISHED', 'HAS_NOT_STARTED', 'IN_PROGRESS']);
+    expect(gameStatuses.map(({ status }) => status)).toEqual(['CREATED', 'FINISHED', 'IN_PROGRESS']);
 
     const gameColumns = (db.prepare('PRAGMA table_info(game)').all() as Array<{ name: string; type: string }>)
       .map(({ name, type }) => ({ name, type }));

@@ -18,7 +18,7 @@ export const WIND_ORDER: Record<Wind, number> = Object.fromEntries(
 ) as Record<Wind, number>;
 
 export const GameStatus = {
-    HAS_NOT_STARTED: 'HAS_NOT_STARTED',
+    CREATED: 'CREATED',
     IN_PROGRESS: 'IN_PROGRESS',
     FINISHED: 'FINISHED'
 } as const;
