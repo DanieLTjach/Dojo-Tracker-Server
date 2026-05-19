@@ -19,7 +19,12 @@ import {
     InvalidRoundResultPlayerError,
     NoRoundsToRollbackError,
     LastRoundRollbackAlreadyUsedError,
-    NoRoundsCompletedError
+    NoRoundsCompletedError,
+    GameNotFinishedWhenUpdatingError,
+    GameNotInProgressWhenDeletingRoundError,
+    GameNotInProgressWhenFinishingError,
+    GameNotFinishedWhenUndoingFinishError,
+    CannotUndoFinishOnNonTrackedGameError
 } from '../error/GameErrors.ts';
 import type { DetailedGame, GameState, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
@@ -42,6 +47,7 @@ import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { calculateGameRoundResult } from '../util/PointCalculationUtil.ts';
+import { BadRequestError } from '../error/BaseErrors.ts';
 
 export class GameService {
 
@@ -141,7 +147,7 @@ export class GameService {
         const event = this.eventService.getEventById(game.eventId);
 
         this.authorizeTrackedGameAction(game, event, modifiedBy);
-        this.validateGameIsInProgress(game);
+        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenAddingNewRoundError());
         this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
         this.validateRoundResultPlayers(resultInputDTO, game.players);
 
@@ -163,7 +169,7 @@ export class GameService {
         const event = this.eventService.getEventById(game.eventId);
 
         this.authorizeTrackedGameAction(game, event, modifiedBy);
-        this.validateGameIsInProgress(game);
+        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenDeletingRoundError());
         this.validateLastRoundIdBeforeDeleting(game.rounds, roundId);
         this.validatePlayerCanRollbackLastRound(game, event, modifiedBy);
 
@@ -189,7 +195,7 @@ export class GameService {
         const event = this.eventService.getEventById(game.eventId);
 
         this.authorizeTrackedGameAction(game, event, modifiedBy);
-        this.validateGameIsInProgress(game);
+        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenFinishingError());
         this.validateGameHasAtLeastOneRound(game.rounds);
 
         const finishedAt = new Date();
@@ -216,6 +222,21 @@ export class GameService {
         );
 
         return finishedGame;
+    }
+
+    undoFinishGame(gameId: number, modifiedBy: number): DetailedGame {
+        const game = this.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+
+        this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']); 
+        this.validateCanUndoGameFinish(game);
+
+        this.ratingService.deleteRatingChangesFromGame(game);
+        this.gameRepository.undoFinishGame(gameId, modifiedBy);
+
+        const reopenedGame = this.getDetailedGameById(gameId);
+        this.logGameAction(reopenedGame, event, modifiedBy, '↩️ Game Finish Undone', 'Undone by');
+        return reopenedGame;
     }
 
     getGames(filters: GameFilters): GameWithPlayers[] {
@@ -246,6 +267,9 @@ export class GameService {
     ): GameWithPlayers {
         const oldGame = this.getGameById(gameId);
         const oldEvent = this.eventService.getEventById(oldGame.eventId);
+        if (oldGame.status !== GameStatus.FINISHED) {
+            throw new GameNotFinishedWhenUpdatingError();
+        }
         this.authorizeClubScopedAction(oldEvent.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
 
         const event = this.eventService.getEventById(eventId);
@@ -352,9 +376,22 @@ export class GameService {
         throw new NotAuthorizedToModifyGameError();
     }
 
-    private validateGameIsInProgress(game: GameWithPlayers): void {
+    private validateGameIsInProgress(game: GameWithPlayers, error: (() => BadRequestError)): void {
         if (game.status !== GameStatus.IN_PROGRESS) {
-            throw new GameNotInProgressWhenAddingNewRoundError();
+            throw error();
+        }
+    }
+
+    private validateGameIsFinished(game: GameWithPlayers, error: (() => BadRequestError)): void {
+        if (game.status !== GameStatus.FINISHED) {
+            throw error();
+        }
+    }
+
+    private validateCanUndoGameFinish(game: DetailedGame): void {
+        this.validateGameIsFinished(game, () => new GameNotFinishedWhenUndoingFinishError());
+        if (game.rounds.length === 0) {
+            throw new CannotUndoFinishOnNonTrackedGameError();
         }
     }
 

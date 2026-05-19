@@ -292,6 +292,26 @@ export class GameRepository {
         });
     }
 
+    private undoFinishGameStatement(): Statement<{
+        id: number,
+        modifiedBy: number,
+        modifiedAt: string
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE game
+            SET status = 'IN_PROGRESS', endedAt = NULL, modifiedBy = :modifiedBy, modifiedAt = :modifiedAt
+            WHERE id = :id`
+        );
+    }
+
+    undoFinishGame(gameId: number, modifiedBy: number): void {
+        this.undoFinishGameStatement().run({
+            id: gameId,
+            modifiedBy,
+            modifiedAt: new Date().toISOString()
+        });
+    }
+
     findGamePlayersByGameIds(gameIds: number[]): GamePlayer[] {
         if (gameIds.length === 0) {
             return [];

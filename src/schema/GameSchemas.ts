@@ -115,3 +115,9 @@ export const gameFinishSchema = z.object({
         gameId: gameIdParamSchema
     })
 });
+
+export const gameUndoFinishSchema = z.object({
+    params: z.object({
+        gameId: gameIdParamSchema
+    })
+});

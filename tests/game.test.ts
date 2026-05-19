@@ -1001,7 +1001,7 @@ describe('Game API Endpoints', () => {
             const response = await deleteRound(testGameId, 1, user1AuthHeader);
 
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('gameNotInProgress');
+            expect(response.body.errorCode).toBe('gameNotInProgressWhenDeletingRound');
         });
 
         test('should reject user who is not a player or club moderator', async () => {
@@ -1124,14 +1124,14 @@ describe('Game API Endpoints', () => {
 
             const secondFinish = await finishGame(gameId, user1AuthHeader);
             expect(secondFinish.status).toBe(400);
-            expect(secondFinish.body.errorCode).toBe('gameNotInProgress');
+            expect(secondFinish.body.errorCode).toBe('gameNotInProgressWhenFinishing');
         });
 
         test('should reject finishing a score-only game that is already finished', async () => {
             const response = await finishGame(testGameId, user1AuthHeader);
 
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('gameNotInProgress');
+            expect(response.body.errorCode).toBe('gameNotInProgressWhenFinishing');
         });
 
         test('should reject user who is not a player or club moderator', async () => {
@@ -1158,6 +1158,146 @@ describe('Game API Endpoints', () => {
 
             expect(response.status).toBe(403);
             expect(response.body.errorCode).toBe('notAuthorizedToModifyGame');
+        });
+    });
+
+    describe('POST /api/games/:gameId/undo-finish - Undo Finish Game', () => {
+        const exhaustiveDrawResult = {
+            type: 'EXHAUSTIVE_DRAW',
+            riichiPlayerIds: [] as number[],
+            tenpaiPlayerIds: [] as number[],
+            nagashiManganPlayerIds: [] as number[]
+        };
+
+        const createTrackedGame = () =>
+            request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({ eventId: TEST_EVENT_ID, players: trackedPlayersPayload() });
+
+        const postRound = (gameId: number, roundId: number) =>
+            request(app)
+                .post(`/api/games/${gameId}/rounds/${roundId}`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+        const finishGame = (gameId: number, authHeader: string) =>
+            request(app)
+                .post(`/api/games/${gameId}/finish`)
+                .set('Authorization', authHeader);
+
+        const undoFinishGame = (gameId: number, authHeader: string) =>
+            request(app)
+                .post(`/api/games/${gameId}/undo-finish`)
+                .set('Authorization', authHeader);
+
+        const createFinishedTrackedGame = async () => {
+            const createResponse = await createTrackedGame();
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1);
+            await finishGame(gameId, user1AuthHeader);
+            return gameId;
+        };
+
+        test('should undo finish for club moderator and return in-progress game', async () => {
+            const gameId = await createFinishedTrackedGame();
+
+            setClubRole(1, testUser2Id, 'MODERATOR');
+
+            const response = await undoFinishGame(gameId, createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(200);
+            expect(response.body.id).toBe(gameId);
+            expect(response.body.status).toBe('IN_PROGRESS');
+            expect(response.body.endedAt).toBeNull();
+            expect(response.body.currentState).not.toBeNull();
+            expect(response.body.rounds).toHaveLength(1);
+            response.body.players.forEach((player: { ratingChange: number }) => {
+                expect(player.ratingChange).toBe(0);
+            });
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should allow club owner to undo finish', async () => {
+            const gameId = await createFinishedTrackedGame();
+
+            setClubRole(1, testUser2Id, 'OWNER');
+
+            const response = await undoFinishGame(gameId, createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toBe('IN_PROGRESS');
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should allow admin to undo finish', async () => {
+            const gameId = await createFinishedTrackedGame();
+
+            const response = await undoFinishGame(gameId, adminAuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toBe('IN_PROGRESS');
+        });
+
+        test('should reject player who is not club moderator or administrator', async () => {
+            const gameId = await createFinishedTrackedGame();
+
+            const response = await undoFinishGame(gameId, user1AuthHeader);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('insufficientClubPermissions');
+        });
+
+        test('should reject undo finish on in-progress game', async () => {
+            const createResponse = await createTrackedGame();
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1);
+
+            setClubRole(1, testUser2Id, 'MODERATOR');
+
+            const response = await undoFinishGame(gameId, createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameNotFinishedWhenUndoingFinish');
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should reject undo finish on score-only game', async () => {
+            const createResponse = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 30000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 30000 }
+                    ]
+                });
+
+            setClubRole(1, testUser2Id, 'MODERATOR');
+
+            const response = await undoFinishGame(createResponse.body.id, createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('cannotUndoFinishOnNonTrackedGame');
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should reject outsider', async () => {
+            const gameId = await createFinishedTrackedGame();
+            const outsiderId = await createTestUser('Undo Finish Outsider', 555555559);
+            const outsiderAuth = createAuthHeader(outsiderId);
+
+            const response = await undoFinishGame(gameId, outsiderAuth);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('insufficientClubPermissions');
         });
     });
 

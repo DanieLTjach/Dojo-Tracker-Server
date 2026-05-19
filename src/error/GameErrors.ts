@@ -72,6 +72,18 @@ export class GameNotInProgressWhenAddingNewRoundError extends BadRequestError {
     }
 }
 
+export class GameNotInProgressWhenDeletingRoundError extends BadRequestError {
+    constructor() {
+        super('Результат раунду можна видалити лише з гри, що триває', 'gameNotInProgressWhenDeletingRound');
+    }
+}
+
+export class GameNotInProgressWhenFinishingError extends BadRequestError {
+    constructor() {
+        super('Можна завершити лише гру, що триває', 'gameNotInProgressWhenFinishing');
+    }
+}
+
 export class InvalidRoundIdError extends BadRequestError {
     constructor(expectedRoundId: number, actualRoundId: number) {
         super(
@@ -117,5 +129,23 @@ export class LastRoundRollbackAlreadyUsedError extends BadRequestError {
 export class NoRoundsCompletedError extends BadRequestError {
     constructor() {
         super('Гру можна завершити лише після щонайменше одного раунду', 'noRoundsCompleted');
+    }
+}
+
+export class GameNotFinishedWhenUpdatingError extends BadRequestError {
+    constructor() {
+        super('Гру можна редагувати лише після завершення', 'gameNotFinishedWhenUpdating');
+    }
+}
+
+export class GameNotFinishedWhenUndoingFinishError extends BadRequestError {
+    constructor() {
+        super('Скасувати завершення можна лише для завершеної гри', 'gameNotFinishedWhenUndoingFinish');
+    }
+}
+
+export class CannotUndoFinishOnNonTrackedGameError extends BadRequestError {
+    constructor() {
+        super('Скасувати завершення можна лише для відстежуваної гри з раундами', 'cannotUndoFinishOnNonTrackedGame');
     }
 }

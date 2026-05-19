@@ -16,6 +16,7 @@ router.post('/', requireAuth, withTransaction((req, res) => gameController.addGa
 router.post('/:gameId/rounds/:roundId', requireAuth, withTransaction((req, res) => gameController.postRoundResult(req, res)));
 router.delete('/:gameId/rounds/:roundId', requireAuth, withTransaction((req, res) => gameController.deleteRoundResult(req, res)));
 router.post('/:gameId/finish', requireAuth, withTransaction((req, res) => gameController.finishGame(req, res)));
+router.post('/:gameId/undo-finish', requireAuth, withTransaction((req, res) => gameController.undoFinishGame(req, res)));
 
 router.put('/:gameId', requireAuth, withTransaction((req, res) => gameController.editGame(req, res)));
 router.delete('/:gameId', requireAuth, withTransaction((req, res) => gameController.deleteGame(req, res)));

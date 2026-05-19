@@ -10,7 +10,8 @@ import {
     gameDeletionSchema,
     gameRoundPostSchema,
     gameRoundDeleteSchema,
-    gameFinishSchema
+    gameFinishSchema,
+    gameUndoFinishSchema
 } from '../schema/GameSchemas.ts';
 
 export class GameController {
@@ -61,6 +62,13 @@ export class GameController {
         const { params: { gameId } } = gameFinishSchema.parse(req);
         const modifiedBy = req.user!.userId;
         const game = this.gameService.finishGame(gameId, modifiedBy);
+        return res.status(StatusCodes.OK).json(game);
+    }
+
+    undoFinishGame(req: Request, res: Response) {
+        const { params: { gameId } } = gameUndoFinishSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const game = this.gameService.undoFinishGame(gameId, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
     }
 
