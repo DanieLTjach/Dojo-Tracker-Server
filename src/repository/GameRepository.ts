@@ -239,6 +239,14 @@ export class GameRepository {
         this.deleteGameRoundStatement().run({ gameId, roundNumber });
     }
 
+    private deleteGameRoundsByGameIdStatement(): Statement<{ gameId: number }, void> {
+        return dbManager.db.prepare('DELETE FROM gameRound WHERE gameId = :gameId');
+    }
+
+    deleteGameRoundsByGameId(gameId: number): void {
+        this.deleteGameRoundsByGameIdStatement().run({ gameId });
+    }
+
     private setLastRoundWasDeletedStatement(): Statement<{
         id: number,
         lastRoundWasDeleted: number,

@@ -1,8 +1,8 @@
 import { booleanToInteger } from "../db/dbUtils.ts";
-import { PleaseProvideStartPlaceForAllPlayersToResolveTie, UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
+import { PleaseProvideStartPlaceForAllPlayersToResolveTie } from "../error/RatingErrors.ts";
 import type { GameRules, UmaTieBreak } from "../model/EventModels.ts";
 import { WIND_ORDER, type GameWithPlayers, type PlayerData } from "../model/GameModels.ts";
-import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO, UserRatingWithPlace } from "../model/RatingModels.ts";
+import type { RatingSnapshot, UserRating, UserRatingChangeShortDTO, UserRatingWithPlace } from "../model/RatingModels.ts";
 import { RatingRepository } from "../repository/RatingRepository.ts";
 import { EventService } from "./EventService.ts";
 import { UserService } from "./UserService.ts";
@@ -94,7 +94,10 @@ export class RatingService {
 
     deleteRatingChangesFromGame(game: GameWithPlayers) {
         for (const player of game.players) {
-            const userRatingChange = this.findUserRatingChangeInGameOrThrow(player.userId, game.id);
+            const userRatingChange = this.ratingRepository.findUserRatingChangeInGame(player.userId, game.id);
+            if (userRatingChange === undefined) {
+                continue;
+            }
             this.ratingRepository.updateUserRatingChangesAfterDate(
                 player.userId,
                 game.eventId,
@@ -103,14 +106,6 @@ export class RatingService {
             );
         }
         this.ratingRepository.deleteRatingChangesFromGame(game.id);
-    }
-
-    private findUserRatingChangeInGameOrThrow(userId: number, gameId: number): UserRatingChange {
-        const userRatingChange = this.ratingRepository.findUserRatingChangeInGame(userId, gameId);
-        if (userRatingChange === undefined) {
-            throw new UserRatingChangeInGameNotFound(userId, gameId);
-        }
-        return userRatingChange;
     }
 
     private sortPlayersData(playersData: PlayerData[], umaTieBreak: UmaTieBreak) {

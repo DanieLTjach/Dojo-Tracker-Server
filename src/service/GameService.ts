@@ -271,14 +271,46 @@ export class GameService {
     deleteGame(gameId: number, deletedBy: number): void {
         const game = this.getGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
-        this.authorizeClubScopedAction(event.clubId, deletedBy, ['OWNER']);
+        const rounds = this.gameRepository.findGameRoundsByGameId(gameId);
+
+        this.authorizeGameDeletion(game, event, deletedBy, rounds.length);
 
         this.ratingService.deleteRatingChangesFromGame(game);
 
+        this.gameRepository.deleteGameRoundsByGameId(gameId);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.gameRepository.deleteGameById(gameId);
 
         this.logDeletedGame(game, event, deletedBy);
+    }
+
+    private authorizeGameDeletion(
+        game: GameWithPlayers,
+        event: Event,
+        userId: number,
+        roundCount: number
+    ): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (game.status === GameStatus.FINISHED) {
+            this.authorizeClubScopedAction(event.clubId, userId, ['OWNER']);
+            return;
+        }
+
+        if (roundCount > 0) {
+            this.authorizeClubScopedAction(event.clubId, userId, ['OWNER', 'MODERATOR']);
+            return;
+        }
+
+        if (event.type === 'TOURNAMENT') {
+            this.authorizeClubScopedAction(event.clubId, userId, ['OWNER', 'MODERATOR']);
+            return;
+        }
+        
+        this.authorizeTrackedGameAction(game, event, userId);
     }
 
     private authorizeGameCreation(event: Event, playersData: Array<{ userId: number }>, createdBy: number): void {

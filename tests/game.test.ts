@@ -59,6 +59,19 @@ describe('Game API Endpoints', () => {
         ).run(clubId, userId, ts, ts);
     }
 
+    function setClubRole(clubId: number, userId: number, role: 'MEMBER' | 'MODERATOR' | 'OWNER') {
+        dbManager.db.prepare(
+            'UPDATE clubMembership SET role = ? WHERE clubId = ? AND userId = ?'
+        ).run(role, clubId, userId);
+    }
+
+    const trackedPlayersPayload = () => [
+        { userId: testUser1Id, startPlace: 'EAST' as const },
+        { userId: testUser2Id, startPlace: 'SOUTH' as const },
+        { userId: testUser3Id, startPlace: 'WEST' as const },
+        { userId: testUser4Id, startPlace: 'NORTH' as const }
+    ];
+
     beforeAll(async () => {
         // Create test event
         createTestEvent();
@@ -1535,11 +1548,41 @@ describe('Game API Endpoints', () => {
     });
 
     describe('DELETE /api/games/:gameId - Delete Game', () => {
-        let gameToDeleteId: number;
+        const TOURNAMENT_EVENT_ID = 1001;
 
-        beforeAll(async () => {
-            // Create a game to delete
-            const response = await request(app)
+        const exhaustiveDrawResult = {
+            type: 'EXHAUSTIVE_DRAW',
+            riichiPlayerIds: [] as number[],
+            tenpaiPlayerIds: [] as number[],
+            nagashiManganPlayerIds: [] as number[]
+        };
+
+        beforeAll(() => {
+            createCustomEvent(
+                TOURNAMENT_EVENT_ID,
+                'Test Tournament',
+                '2024-01-01T00:00:00.000Z',
+                '2026-12-31T23:59:59.999Z',
+                2,
+                1,
+                'TOURNAMENT'
+            );
+        });
+
+        const createTrackedGame = (eventId: number = TEST_EVENT_ID) =>
+            request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({ eventId, players: trackedPlayersPayload() });
+
+        const postRound = (gameId: number, roundId: number) =>
+            request(app)
+                .post(`/api/games/${gameId}/rounds/${roundId}`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+        test('should allow admin to delete a finished score-only game', async () => {
+            const createResponse = await request(app)
                 .post('/api/games')
                 .set('Authorization', user1AuthHeader)
                 .send({
@@ -1551,30 +1594,126 @@ describe('Game API Endpoints', () => {
                         { userId: testUser4Id, points: 30000 }
                     ]
                 });
-            gameToDeleteId = response.body.id;
-        });
 
-        test('should delete a game successfully', async () => {
+            const gameId = createResponse.body.id;
+
             const response = await request(app)
-                .delete(`/api/games/${gameToDeleteId}`)
+                .delete(`/api/games/${gameId}`)
                 .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(204);
-            expect(response.body).toEqual({});
 
-            // Verify game is deleted
             const getResponse = await request(app)
-                .get(`/api/games/${gameToDeleteId}`)
+                .get(`/api/games/${gameId}`)
                 .set('Authorization', adminAuthHeader);
             expect(getResponse.status).toBe(404);
         });
 
-        test('should fail to delete game without admin privileges', async () => {
+        test('should allow club owner to delete a finished game', async () => {
+            const createResponse = await request(app)
+                .post('/api/games')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 30000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 30000 }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            setClubRole(1, testUser2Id, 'OWNER');
+
+            const response = await request(app)
+                .delete(`/api/games/${gameId}`)
+                .set('Authorization', createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(204);
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should reject player deleting a finished game', async () => {
             const response = await request(app)
                 .delete(`/api/games/${testGameId}`)
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('insufficientClubPermissions');
+        });
+
+        test('should allow a player to delete a tracked game with no rounds', async () => {
+            const createResponse = await createTrackedGame();
+            expect(createResponse.status).toBe(201);
+
+            const response = await request(app)
+                .delete(`/api/games/${createResponse.body.id}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(204);
+
+            const getResponse = await request(app)
+                .get(`/api/games/${createResponse.body.id}`)
+                .set('Authorization', user1AuthHeader);
+            expect(getResponse.status).toBe(404);
+        });
+
+        test('should reject player deleting a tracked game with rounds', async () => {
+            const createResponse = await createTrackedGame();
+            const gameId = createResponse.body.id;
+
+            await postRound(gameId, 1);
+
+            const response = await request(app)
+                .delete(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('insufficientClubPermissions');
+        });
+
+        test('should allow club moderator to delete a tracked game with rounds', async () => {
+            const createResponse = await createTrackedGame();
+            const gameId = createResponse.body.id;
+
+            await postRound(gameId, 1);
+
+            setClubRole(1, testUser2Id, 'MODERATOR');
+
+            const response = await request(app)
+                .delete(`/api/games/${gameId}`)
+                .set('Authorization', createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(204);
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should reject outsider deleting a tracked game with no rounds', async () => {
+            const createResponse = await createTrackedGame();
+            const outsiderId = await createTestUser('Delete Outsider', 555555558);
+            const outsiderAuth = createAuthHeader(outsiderId);
+
+            const response = await request(app)
+                .delete(`/api/games/${createResponse.body.id}`)
+                .set('Authorization', outsiderAuth);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('notAuthorizedToModifyGame');
+        });
+
+        test('should reject player deleting a tracked game in a tournament event', async () => {
+            const createResponse = await createTrackedGame(TOURNAMENT_EVENT_ID);
+            expect(createResponse.status).toBe(201);
+
+            const response = await request(app)
+                .delete(`/api/games/${createResponse.body.id}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('insufficientClubPermissions');
         });
 
         test('should fail to delete non-existent game', async () => {
