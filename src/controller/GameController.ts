@@ -13,10 +13,12 @@ import {
     gameFinishSchema,
     gameUndoFinishSchema
 } from '../schema/GameSchemas.ts';
+import { TrackedGameService } from '../service/TrackedGameService.ts';
 
 export class GameController {
 
     private gameService: GameService = new GameService();
+    private trackedGameService: TrackedGameService = new TrackedGameService();
 
     addGame(req: Request, res: Response) {
         const { body: { eventId, playersData, createdAt, hideNewGameMessage, tournamentRound, tournamentTable } } = gameCreationSchema.parse(req);
@@ -28,7 +30,7 @@ export class GameController {
     addTrackedGame(req: Request, res: Response) {
         const { body: { eventId, players } } = trackedGameCreationSchema.parse(req);
         const createdBy = req.user!.userId;
-        const newGame = this.gameService.addTrackedGame(eventId, players, createdBy);
+        const newGame = this.trackedGameService.addTrackedGame(eventId, players, createdBy);
         return res.status(StatusCodes.CREATED).json(newGame);
     }
 
@@ -47,28 +49,28 @@ export class GameController {
     postRoundResult(req: Request, res: Response) {
         const { params: { gameId, roundId }, body } = gameRoundPostSchema.parse(req);
         const modifiedBy = req.user!.userId;
-        const game = this.gameService.addGameRoundResult(gameId, roundId, body, modifiedBy);
+        const game = this.trackedGameService.addGameRoundResult(gameId, roundId, body, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
     }
 
     deleteRoundResult(req: Request, res: Response) {
         const { params: { gameId, roundId } } = gameRoundDeleteSchema.parse(req);
         const modifiedBy = req.user!.userId;
-        const game = this.gameService.deleteGameRoundResult(gameId, roundId, modifiedBy);
+        const game = this.trackedGameService.deleteGameRoundResult(gameId, roundId, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
     }
 
     finishGame(req: Request, res: Response) {
         const { params: { gameId } } = gameFinishSchema.parse(req);
         const modifiedBy = req.user!.userId;
-        const game = this.gameService.finishGame(gameId, modifiedBy);
+        const game = this.trackedGameService.finishGame(gameId, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
     }
 
     undoFinishGame(req: Request, res: Response) {
         const { params: { gameId } } = gameUndoFinishSchema.parse(req);
         const modifiedBy = req.user!.userId;
-        const game = this.gameService.undoFinishGame(gameId, modifiedBy);
+        const game = this.trackedGameService.undoFinishGame(gameId, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
     }
 
