@@ -12,24 +12,11 @@ import {
     YouHaveToBeAdminToCreateGameWithCustomTime,
     PointsNotWithinRange,
     YouHaveToBeAdminToHideNewGameMessage,
-    GameNotInProgressWhenAddingNewRoundError,
-    InvalidRoundIdError,
-    RoundAlreadyExistsError,
-    NotAuthorizedToModifyGameError,
-    InvalidRoundResultPlayerError,
-    NoRoundsToRollbackError,
-    LastRoundRollbackAlreadyUsedError,
-    NoRoundsCompletedError,
     GameNotFinishedWhenUpdatingError,
-    GameNotInProgressWhenDeletingRoundError,
-    GameNotInProgressWhenFinishingError,
-    GameNotFinishedWhenUndoingFinishError,
-    CannotUndoFinishOnNonTrackedGameError
+    NotAuthorizedToModifyGameError,
 } from '../error/GameErrors.ts';
-import type { DetailedGame, GameState, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound } from '../model/GameModels.ts';
+import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound, GameState } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
-import type { GameRoundResult, GameRoundResultInputDTO, PlayerPointChange } from '../model/GameRoundResultModels.ts';
-import { EventService } from './EventService.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
 import LogService from './LogService.ts';
@@ -46,12 +33,7 @@ import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
-import {
-    calculateGameRoundResult,
-    calculateRemainingRiichiSticksPointChanges,
-    mergePlayerPointChanges
-} from '../util/PointCalculationUtil.ts';
-import { BadRequestError } from '../error/BaseErrors.ts';
+import { EventService } from './EventService.ts';
 
 export class GameService {
 
@@ -101,23 +83,6 @@ export class GameService {
         return newGame;
     }
 
-    addTrackedGame(eventId: number, players: TrackedGamePlayerData[], createdBy: number): DetailedGame {
-        const gameTimestamp = new Date();
-
-        const event = this.eventService.getEventById(eventId);
-        this.authorizeGameCreation(event, players, createdBy);
-        this.validateTrackedGamePlayers(players, event.gameRules);
-        this.validateGameWithinEventDates(event, gameTimestamp, createdBy);
-        this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
-
-        const newGameId = this.gameRepository.createTrackedGame(eventId, createdBy, gameTimestamp);
-        this.addPlayersToTrackedGame(newGameId, players, event.gameRules.startingPoints, createdBy);
-
-        const newGame = this.getDetailedGameById(newGameId);
-        this.logNewTrackedGame(newGame, event);
-        return newGame;
-    }
-
     getGameById(gameId: number): GameWithPlayers {
         const game = this.gameRepository.findGameById(gameId);
         if (!game) {
@@ -139,110 +104,6 @@ export class GameService {
             rounds,
             currentState: this.calculateCurrentGameState(game, rounds)
         };
-    }
-
-    addGameRoundResult(
-        gameId: number,
-        roundId: number,
-        resultInputDTO: GameRoundResultInputDTO,
-        modifiedBy: number
-    ): DetailedGame {
-        const game = this.getDetailedGameById(gameId);
-        const event = this.eventService.getEventById(game.eventId);
-
-        this.authorizeTrackedGameAction(game, event, modifiedBy);
-        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenAddingNewRoundError());
-        this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
-        this.validateRoundResultPlayers(resultInputDTO, game.players);
-
-        const result: GameRoundResult = calculateGameRoundResult(game, event.gameRules, resultInputDTO);
-
-        this.gameRepository.createGameRound(gameId, roundId, game.currentState!, result);
-        this.gameRepository.applyPlayerPointChanges(gameId, result.playerPointChanges, modifiedBy);
-        this.addChomboFromRoundResult(gameId, result, modifiedBy);
-        this.gameRepository.setLastRoundWasDeleted(gameId, false, modifiedBy);
-        this.gameRepository.touchGame(gameId, modifiedBy);
-
-        return result.gameFinishReason
-            ? this.finishGame(gameId, modifiedBy)
-            : this.getDetailedGameById(gameId);
-    }
-
-    deleteGameRoundResult(gameId: number, roundId: number, modifiedBy: number): DetailedGame {
-        const game = this.getDetailedGameById(gameId);
-        const event = this.eventService.getEventById(game.eventId);
-
-        this.authorizeTrackedGameAction(game, event, modifiedBy);
-        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenDeletingRoundError());
-        this.validateLastRoundIdBeforeDeleting(game.rounds, roundId);
-        this.validatePlayerCanRollbackLastRound(game, event, modifiedBy);
-
-        const lastRound = game.rounds[game.rounds.length - 1]!;
-        const reversedPointChanges = lastRound.result.playerPointChanges.map((change) => ({
-            playerId: change.playerId,
-            pointChange: -change.pointChange
-        }));
-
-        this.gameRepository.deleteGameRound(gameId, roundId);
-        this.gameRepository.applyPlayerPointChanges(gameId, reversedPointChanges, modifiedBy);
-        this.subtractChomboFromRoundResult(gameId, lastRound.result, modifiedBy);
-        this.gameRepository.setLastRoundWasDeleted(gameId, true, modifiedBy);
-        this.gameRepository.touchGame(gameId, modifiedBy);
-
-        const updatedGame = this.getDetailedGameById(gameId);
-        this.logGameRoundRollback(updatedGame, event, lastRound, modifiedBy);
-        return updatedGame;
-    }
-
-    finishGame(gameId: number, modifiedBy: number): DetailedGame {
-        const game = this.getDetailedGameById(gameId);
-        const event = this.eventService.getEventById(game.eventId);
-
-        this.authorizeTrackedGameAction(game, event, modifiedBy);
-        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenFinishingError());
-        this.validateGameHasAtLeastOneRound(game.rounds);
-
-        const players = this.applyRemainingRiichiSticksOnFinish(game, event.gameRules, modifiedBy);
-
-        const finishedAt = new Date();
-        const standingsBefore = this.ratingService.calculateStandings(event.id);
-
-        this.gameRepository.finishGame(gameId, modifiedBy, finishedAt);
-        this.ratingService.addRatingChangesFromGame(
-            gameId,
-            finishedAt,
-            players,
-            event.id,
-            event.gameRules,
-            event.startingRating
-        );
-
-        const finishedGame = this.getDetailedGameById(gameId);
-        this.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
-        this.logRatingUpdateForGame(
-            finishedGame,
-            event,
-            standingsBefore,
-            this.ratingService.calculateStandings(event.id),
-            modifiedBy
-        );
-
-        return finishedGame;
-    }
-
-    undoFinishGame(gameId: number, modifiedBy: number): DetailedGame {
-        const game = this.getDetailedGameById(gameId);
-        const event = this.eventService.getEventById(game.eventId);
-
-        this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']); 
-        this.validateCanUndoGameFinish(game);
-
-        this.ratingService.deleteRatingChangesFromGame(game);
-        this.gameRepository.undoFinishGame(gameId, modifiedBy);
-
-        const reopenedGame = this.getDetailedGameById(gameId);
-        this.logGameAction(reopenedGame, event, modifiedBy, '↩️ Game Finish Undone', 'Undone by');
-        return reopenedGame;
     }
 
     getGames(filters: GameFilters): GameWithPlayers[] {
@@ -339,11 +200,11 @@ export class GameService {
             this.authorizeClubScopedAction(event.clubId, userId, ['OWNER', 'MODERATOR']);
             return;
         }
-        
+
         this.authorizeTrackedGameAction(game, event, userId);
     }
 
-    private authorizeGameCreation(event: Event, playersData: Array<{ userId: number }>, createdBy: number): void {
+    public authorizeGameCreation(event: Event, playersData: Array<{ userId: number }>, createdBy: number): void {
         const user = this.userService.getUserById(createdBy);
         if (user.isAdmin || event.clubId === null) {
             return;
@@ -362,7 +223,7 @@ export class GameService {
         }
     }
 
-    private authorizeTrackedGameAction(game: GameWithPlayers, event: Event, userId: number): void {
+    public authorizeTrackedGameAction(game: GameWithPlayers, event: Event, userId: number): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
             return;
@@ -382,186 +243,7 @@ export class GameService {
         throw new NotAuthorizedToModifyGameError();
     }
 
-    private validateGameIsInProgress(game: GameWithPlayers, error: (() => BadRequestError)): void {
-        if (game.status !== GameStatus.IN_PROGRESS) {
-            throw error();
-        }
-    }
-
-    private validateGameIsFinished(game: GameWithPlayers, error: (() => BadRequestError)): void {
-        if (game.status !== GameStatus.FINISHED) {
-            throw error();
-        }
-    }
-
-    private validateCanUndoGameFinish(game: DetailedGame): void {
-        this.validateGameIsFinished(game, () => new GameNotFinishedWhenUndoingFinishError());
-        if (game.rounds.length === 0) {
-            throw new CannotUndoFinishOnNonTrackedGameError();
-        }
-    }
-
-    private validateGameHasAtLeastOneRound(rounds: GameRound[]): void {
-        if (rounds.length === 0) {
-            throw new NoRoundsCompletedError();
-        }
-    }
-
-    private validateCurrentRoundIdBeforeAdding(rounds: GameRound[], roundId: number): void {
-        if (rounds.some((round) => round.roundNumber === roundId)) {
-            throw new RoundAlreadyExistsError();
-        }
-
-        const expectedRoundId = rounds.length + 1;
-        if (roundId !== expectedRoundId) {
-            throw new InvalidRoundIdError(expectedRoundId, roundId);
-        }
-    }
-
-    private validateLastRoundIdBeforeDeleting(rounds: GameRound[], roundId: number): void {
-        if (rounds.length === 0) {
-            throw new NoRoundsToRollbackError();
-        }
-
-        const lastRoundNumber = rounds[rounds.length - 1]!.roundNumber;
-        if (roundId !== lastRoundNumber) {
-            throw new InvalidRoundIdError(lastRoundNumber, roundId);
-        }
-    }
-
-    private validatePlayerCanRollbackLastRound(game: GameWithPlayers, event: Event, userId: number): void {
-        if (this.canBypassLastRoundRollbackLimit(event, userId)) {
-            return;
-        }
-
-        if (game.lastRoundWasDeleted) {
-            throw new LastRoundRollbackAlreadyUsedError();
-        }
-    }
-
-    private canBypassLastRoundRollbackLimit(event: Event, userId: number): boolean {
-        const user = this.userService.getUserById(userId);
-        if (user.isAdmin) {
-            return true;
-        }
-
-        if (event.clubId !== null) {
-            const role = this.clubMembershipService.getUserClubRole(event.clubId, userId);
-            if (role === 'OWNER' || role === 'MODERATOR') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private validateRoundResultPlayers(result: GameRoundResultInputDTO, players: GamePlayer[]): void {
-        const playerIds = new Set(players.map((player) => player.userId));
-
-        const validatePlayerId = (playerId: number) => {
-            if (!playerIds.has(playerId)) {
-                throw new InvalidRoundResultPlayerError(playerId);
-            }
-        };
-
-        const validatePlayerIds = (ids: number[]) => {
-            for (const id of ids) {
-                validatePlayerId(id);
-            }
-        };
-
-        switch (result.type) {
-            case 'TSUMO':
-                validatePlayerId(result.winningHandData.winnerPlayerId);
-                if (result.winningHandData.yakumanLiabilityPlayerId !== undefined) {
-                    validatePlayerId(result.winningHandData.yakumanLiabilityPlayerId);
-                }
-                validatePlayerIds(result.riichiPlayerIds);
-                break;
-            case 'RON':
-                validatePlayerId(result.dealInPlayerId);
-                for (const hand of result.winningHandData) {
-                    validatePlayerId(hand.winnerPlayerId);
-                    if (hand.yakumanLiabilityPlayerId !== undefined) {
-                        validatePlayerId(hand.yakumanLiabilityPlayerId);
-                    }
-                }
-                validatePlayerIds(result.riichiPlayerIds);
-                break;
-            case 'EXHAUSTIVE_DRAW':
-                validatePlayerIds(result.riichiPlayerIds);
-                validatePlayerIds(result.tenpaiPlayerIds);
-                validatePlayerIds(result.nagashiManganPlayerIds);
-                break;
-            case 'CHOMBO':
-                validatePlayerId(result.offenderPlayerId);
-                break;
-            case 'ABORTIVE_DRAW':
-                validatePlayerIds(result.riichiPlayerIds);
-                break;
-        }
-    }
-
-    private addChomboFromRoundResult(gameId: number, result: GameRoundResult, modifiedBy: number) {
-        if (result.type === 'CHOMBO') {
-            this.gameRepository.updatePlayerChomboCount(gameId, result.offenderPlayerId, 1, modifiedBy);
-        }
-    }
-
-    private subtractChomboFromRoundResult(gameId: number, result: GameRoundResult, modifiedBy: number) {
-        if (result.type === 'CHOMBO') {
-            this.gameRepository.updatePlayerChomboCount(gameId, result.offenderPlayerId, -1, modifiedBy);
-        }
-    }
-
-    private applyRemainingRiichiSticksOnFinish(
-        game: DetailedGame,
-        gameRules: GameRules,
-        modifiedBy: number
-    ): GamePlayer[] {
-        const riichiStickCount = game.currentState?.riichiSticks ?? 0;
-        if (riichiStickCount === 0) {
-            return game.players;
-        }
-
-        const extraPointChanges = calculateRemainingRiichiSticksPointChanges(
-            game.players,
-            gameRules,
-            riichiStickCount
-        );
-        if (extraPointChanges.length === 0) {
-            return game.players;
-        }
-
-        const lastRound = game.rounds[game.rounds.length - 1]!;
-        const updatedResult: GameRoundResult = {
-            ...lastRound.result,
-            playerPointChanges: mergePlayerPointChanges(
-                lastRound.result.playerPointChanges,
-                extraPointChanges
-            )
-        };
-
-        this.gameRepository.updateGameRoundResult(game.id, lastRound.roundNumber, updatedResult);
-        this.gameRepository.applyPlayerPointChanges(game.id, extraPointChanges, modifiedBy);
-        this.gameRepository.touchGame(game.id, modifiedBy);
-
-        return this.gameRepository.findGamePlayersByGameId(game.id);
-    }
-
-    private calculateCurrentGameState(game: GameWithPlayers, rounds: GameRound[]): GameState | null {
-        if (game.status !== GameStatus.IN_PROGRESS) {
-            return null;
-        }
-
-        if (rounds.length === 0) {
-            return { wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 };
-        }
-
-        return rounds[rounds.length - 1]!.result.nextState ?? null;
-    }
-
-    private authorizeClubScopedAction(clubId: number | null, userId: number, allowedRoles: ClubRole[]): void {
+    public authorizeClubScopedAction(clubId: number | null, userId: number, allowedRoles: ClubRole[]): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
             return;
@@ -577,46 +259,20 @@ export class GameService {
         }
     }
 
+    private calculateCurrentGameState(game: GameWithPlayers, rounds: GameRound[]): GameState | null {
+        if (game.status !== GameStatus.IN_PROGRESS) {
+            return null;
+        }
+
+        if (rounds.length === 0) {
+            return { wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 };
+        }
+
+        return rounds[rounds.length - 1]!.result.nextState ?? null;
+    }
+
     private logNewGame(game: GameWithPlayers, event: Event): void {
         this.logGameAction(game, event, game.modifiedBy, '🎮 New Game Added', 'Created by');
-    }
-
-    private logNewTrackedGame(game: GameWithPlayers, event: Event): void {
-        const user = this.userService.getUserById(game.modifiedBy);
-        const message = dedent`
-            <b>🎮 New Tracked Game Started</b>
-
-            <b>Game ID:</b> <code>${game.id}</code>
-            <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Timestamp:</b> <code>${game.createdAt.toISOString()}</code>
-            <b>Created by:</b> ${user.name} <code>(ID: ${user.id})</code>
-
-            <b>Players:</b>\n
-        ` + this.printTrackedGamePlayersLog(game.players);
-        this.logMessageToGameLogsTopics(message, event);
-    }
-
-    private logGameRoundRollback(
-        game: DetailedGame,
-        event: Event,
-        deletedRound: GameRound,
-        modifiedBy: number
-    ): void {
-        const user = this.userService.getUserById(modifiedBy);
-        const pointChangesSection = deletedRound.result.playerPointChanges.length > 0
-            ? `\n\n<b>Point changes removed:</b>\n` + this.printRoundPointChangesLog(deletedRound.result.playerPointChanges)
-            : '';
-
-        const message = dedent`
-            <b>↩️ Last Round Rolled Back</b>
-
-            <b>Game ID:</b> <code>${game.id}</code>
-            <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Round:</b> <code>${deletedRound.wind} ${deletedRound.dealerNumber} Repeat ${deletedRound.counters} (${deletedRound.roundNumber})</code>
-            <b>Result type:</b> <code>${deletedRound.result.type}</code>
-            <b>Rolled back by:</b> ${user.name} <code>(ID: ${user.id})</code>
-        ` + pointChangesSection;
-        this.logMessageToGameLogsTopics(message, event);
     }
 
     private logEditedGame(oldGame: GameWithPlayers, newGame: GameWithPlayers, event: Event, modifiedBy: number): void {
@@ -668,7 +324,7 @@ export class GameService {
         this.logGameAction(game, event, deletedBy, '🗑️ Game Deleted', 'Deleted by');
     }
 
-    private logGameAction(
+    public logGameAction(
         game: GameWithPlayers,
         event: Event,
         userId: number,
@@ -689,7 +345,7 @@ export class GameService {
         this.logMessageToGameLogsTopics(message, event);
     }
 
-    private logMessageToGameLogsTopics(message: string, event: Event) {
+    public logMessageToGameLogsTopics(message: string, event: Event) {
         let clubPrefix = '';
         if (event.clubId !== null) {
             const club = this.clubService.getClubById(event.clubId);
@@ -717,22 +373,7 @@ export class GameService {
         }).join('\n\n');
     }
 
-    private printTrackedGamePlayersLog(players: GamePlayer[]): string {
-        return players.map((p, index) => {
-            const user = this.userService.getUserById(p.userId);
-            return `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>\n   • Start Place: <b>${p.startPlace}</b>`;
-        }).join('\n\n');
-    }
-
-    private printRoundPointChangesLog(pointChanges: PlayerPointChange[]): string {
-        return pointChanges.map((change) => {
-            const user = this.userService.getUserById(change.playerId);
-            const sign = change.pointChange >= 0 ? '+' : '';
-            return `• <b>${user.name}</b> <code>(ID: ${user.id})</code>: <b>${sign}${change.pointChange}</b>`;
-        }).join('\n');
-    }
-
-    private logRatingUpdateForGame(
+    public logRatingUpdateForGame(
         game: GameWithPlayers,
         event: Event,
         standingsBefore: Map<number, number>,
@@ -837,25 +478,7 @@ export class GameService {
         }
     }
 
-    private addPlayersToTrackedGame(
-        gameId: number,
-        players: TrackedGamePlayerData[],
-        startingPoints: number,
-        modifiedBy: number
-    ): void {
-        for (const player of players) {
-            this.gameRepository.addGamePlayer(
-                gameId,
-                player.userId,
-                startingPoints,
-                player.startPlace,
-                0,
-                modifiedBy
-            );
-        }
-    }
-
-    private validateNoDuplicatePlayers(players: Array<{ userId: number }>): void {
+    public validateNoDuplicatePlayers(players: Array<{ userId: number }>): void {
         const userIds = players.map(p => p.userId);
         const uniqueUserIds = new Set(userIds);
 
@@ -888,7 +511,7 @@ export class GameService {
         }
     }
 
-    private validateGameWithinEventDates(event: Event, gameTimestamp: Date, createdBy: number): void {
+    public validateGameWithinEventDates(event: Event, gameTimestamp: Date, createdBy: number): void {
         if (event.dateFrom !== null && gameTimestamp < event.dateFrom) {
             throw new EventHasntStartedError(event.name);
         }
@@ -901,7 +524,7 @@ export class GameService {
     }
 
     // rating calculation relies on unique game timestamps within an event
-    private validateNoDuplicateGameTimestamp(eventId: number, timestamp: Date): void {
+    public validateNoDuplicateGameTimestamp(eventId: number, timestamp: Date): void {
         const existingGame = this.gameRepository.findGameByEventAndTimestamp(eventId, timestamp);
         if (existingGame !== undefined) {
             throw new DuplicateGameTimestampInEventError();

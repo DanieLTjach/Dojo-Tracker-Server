@@ -1349,6 +1349,59 @@ describe('Game API Endpoints', () => {
             expect(response.status).toBe(403);
             expect(response.body.errorCode).toBe('insufficientClubPermissions');
         });
+
+        test('should not double-apply leftover riichi sticks after finish, undo-finish, and finish again', async () => {
+            const createResponse = await createTrackedGame();
+            const gameId = createResponse.body.id;
+
+            const roundWithRiichi = await request(app)
+                .post(`/api/games/${gameId}/rounds/1`)
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [testUser1Id],
+                    tenpaiPlayerIds: [],
+                    nagashiManganPlayerIds: []
+                });
+            expect(roundWithRiichi.status).toBe(200);
+            expect(roundWithRiichi.body.currentState.riichiSticks).toBe(1);
+
+            const firstFinish = await finishGame(gameId, user1AuthHeader);
+            expect(firstFinish.status).toBe(200);
+
+            const expectedPlayerPoints = Object.fromEntries(
+                firstFinish.body.players.map((player: { userId: number; points: number }) => [
+                    player.userId,
+                    player.points
+                ])
+            );
+            const expectedLastRoundPointChanges =
+                firstFinish.body.rounds[firstFinish.body.rounds.length - 1].result.playerPointChanges;
+
+            setClubRole(1, testUser2Id, 'MODERATOR');
+
+            const undoResponse = await undoFinishGame(gameId, createAuthHeader(testUser2Id));
+            expect(undoResponse.status).toBe(200);
+            expect(undoResponse.body.status).toBe('IN_PROGRESS');
+            expect(undoResponse.body.currentState.riichiSticks).toBe(1);
+
+            const secondFinish = await finishGame(gameId, user1AuthHeader);
+            expect(secondFinish.status).toBe(200);
+
+            const actualPlayerPoints = Object.fromEntries(
+                secondFinish.body.players.map((player: { userId: number; points: number }) => [
+                    player.userId,
+                    player.points
+                ])
+            );
+            expect(actualPlayerPoints).toEqual(expectedPlayerPoints);
+
+            const actualLastRoundPointChanges =
+                secondFinish.body.rounds[secondFinish.body.rounds.length - 1].result.playerPointChanges;
+            expect(actualLastRoundPointChanges).toEqual(expectedLastRoundPointChanges);
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
     });
 
     describe('GET /api/games/:gameId - Get Game by ID', () => {
