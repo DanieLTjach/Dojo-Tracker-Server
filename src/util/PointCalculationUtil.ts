@@ -177,6 +177,7 @@ function calculateRonPointChanges(
 ): PlayerPointChange[] {
     const headBumpPlayerId = findHeadBumpPlayerId(
         players,
+        rules,
         ron.dealInPlayerId,
         ron.winningHandData.map(hand => hand.winnerPlayerId)
     );
@@ -205,15 +206,23 @@ function calculateRonPointChanges(
     );
 }
 
-function findHeadBumpPlayerId(players: GamePlayer[], dealInPlayerId: number, winningPlayerIds: number[]): number {
+function findHeadBumpPlayerId(
+    players: GamePlayer[],
+    rules: GameRulesValues,
+    dealInPlayerId: number,
+    winningPlayerIds: number[]
+): number {
     const dealInPlayerWind = players.find(player => player.userId === dealInPlayerId)?.startPlace;
     if (!dealInPlayerWind) {
         throw new DealInPlayerNotInGameError();
     }
 
     let curWind = dealInPlayerWind;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < getNumberOfPlayers(rules) - 1; i++) {
         curWind = nextWind(curWind);
+        if (curWind === "NORTH" && getNumberOfPlayers(rules) === 3) {
+            curWind = "EAST";
+        }
         const curPlayer = players.find(player => player.startPlace === curWind);
         if (curPlayer === undefined) {
             throw new MissingPlayerForWindError(curWind);
@@ -559,6 +568,7 @@ function nextRoundStateAfterRon(
 ): GameState {
     const headBumpPlayerId = findHeadBumpPlayerId(
         players,
+        rules,
         ron.dealInPlayerId,
         ron.winningHandData.map(hand => hand.winnerPlayerId)
     );
