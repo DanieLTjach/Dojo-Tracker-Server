@@ -537,7 +537,7 @@ function updatePlayerPoints(player: GamePlayer, pointChanges: PlayerPointChange[
     }
 }
 
-function calculateNextRoundState(
+export function calculateNextRoundState(
     gameState: GameState,
     players: GamePlayer[],
     rules: GameRulesValues,
@@ -654,7 +654,7 @@ function nextDealer(rules: GameRulesValues, gameState: GameState): GameState {
         }
 }
 
-function shouldFinishGame(
+export function shouldFinishGame(
     gameState: GameState,
     nextRoundState: GameState,
     players: GamePlayer[],
