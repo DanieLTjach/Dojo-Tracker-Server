@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { userIdSchema } from './UserSchemas.ts';
+import { uniqueUserIdsSchema, userIdSchema } from './UserSchemas.ts';
 import { AbortiveDrawType } from '../model/GameRoundResultModels.ts';
 
 const winningHandDataSchema = z.object({
@@ -9,17 +9,17 @@ const winningHandDataSchema = z.object({
     han: z.number().int().min(1).max(100).optional(),
     fu: z.number().int().min(20).max(200).optional().refine(
         (fu) => fu === undefined || fu % 10 === 0 || fu === 25,
-        { message: 'fu must a multiple of 10 or equal to 25' }
+        { error: 'fu must a multiple of 10 or equal to 25' }
     )
 }).refine(
     (winningHandData) => winningHandData.yakumanLiabilityPlayerId !== winningHandData.winnerPlayerId,
-    { message: 'Yakuman liability player cannot be the same as winner' }
+    { error: 'Yakuman liability player cannot be the same as winner' }
 );
 
 const tsumoSchema = z.object({
     type: z.literal('TSUMO'),
     winningHandData: winningHandDataSchema,
-    riichiPlayerIds: z.array(userIdSchema)
+    riichiPlayerIds: uniqueUserIdsSchema("riichi")
 });
 
 const ronSchema = z.object({
@@ -30,21 +30,21 @@ const ronSchema = z.object({
             const uniquePlayerIds = new Set(winningHandData.map(hand => hand.winnerPlayerId));
             return uniquePlayerIds.size === winningHandData.length;
         },
-        { message: 'Each winning player must be unique' }
+        { error: 'Each winning player must be unique' }
     ),
-    riichiPlayerIds: z.array(userIdSchema)
+    riichiPlayerIds: uniqueUserIdsSchema("riichi")
 });
 
 const exhaustiveDrawSchema = z.object({
     type: z.literal('EXHAUSTIVE_DRAW'),
-    riichiPlayerIds: z.array(userIdSchema),
-    tenpaiPlayerIds: z.array(userIdSchema),
-    nagashiManganPlayerIds: z.array(userIdSchema)
+    riichiPlayerIds: uniqueUserIdsSchema("riichi"),
+    tenpaiPlayerIds: uniqueUserIdsSchema("tenpai"),
+    nagashiManganPlayerIds: uniqueUserIdsSchema("nagashi mangan")
 });
 
 const abortiveDrawSchema = z.object({
     type: z.literal('ABORTIVE_DRAW'),
-    riichiPlayerIds: z.array(userIdSchema),
+    riichiPlayerIds: uniqueUserIdsSchema("riichi"),
     drawType: z.enum(Object.values(AbortiveDrawType))
 });
 

@@ -22,7 +22,7 @@ const playerListSchema = z.array(playerDataSchema).refine((players) => {
         .filter((sp) => sp !== undefined);
     return new Set(startPlaces).size === startPlaces.length;
 }, {
-    message: "Each player must have a unique start place"
+    error: "Each player must have a unique start place"
 });
 
 const trackedGamePlayerDataSchema = z.object({
@@ -34,7 +34,7 @@ const trackedGamePlayerListSchema = z.array(trackedGamePlayerDataSchema).refine(
     const startPlaces = players.map(p => p.startPlace);
     return new Set(startPlaces).size === startPlaces.length;
 }, {
-    message: "Each player must have a unique start place"
+    error: "Each player must have a unique start place"
 });
 
 export const trackedGameCreationSchema = z.object({

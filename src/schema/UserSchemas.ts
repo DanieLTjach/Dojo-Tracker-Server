@@ -11,6 +11,13 @@ export const telegramIdParamSchema = z.coerce.number().int("Telegram ID must be 
 export const userIdSchema = z.number().int("User ID must be an integer");
 export const userIdParamSchema = z.coerce.number().int("User ID must be an integer");
 
+export function uniqueUserIdsSchema(purpose: string) {
+    return z.array(userIdSchema).refine(
+        (userIds) => new Set(userIds).size === userIds.length,
+        { error: `Each ${purpose} user id must be unique` }
+    );
+}
+
 export const userRegistrationSchema = z.object({
     body: z.object({
         name: userNameSchema
@@ -44,7 +51,7 @@ export const userEditSchema = z.object({
         telegramUsername: telegramUsernameSchema.nullish()
     })
 }).refine((data) => data.body.name || data.body.telegramUsername, {
-    message: "At least one of 'name' or 'telegramUsername' must be provided"
+    error: "At least one of 'name' or 'telegramUsername' must be provided"
 });
 
 export const userActivationSchema = z.object({

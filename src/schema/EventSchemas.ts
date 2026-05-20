@@ -33,7 +33,7 @@ const eventSchema = z.object({
         }
         return true;
     },
-    { message: "dateFrom must be before dateTo", path: ["dateTo"] }
+    { error: "dateFrom must be before dateTo", path: ["dateTo"] }
 );
 
 export const eventCreateSchema = z.object({
