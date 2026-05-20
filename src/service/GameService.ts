@@ -497,6 +497,7 @@ export class GameService {
                 validatePlayerId(result.offenderPlayerId);
                 break;
             case 'ABORTIVE_DRAW':
+                validatePlayerIds(result.riichiPlayerIds);
                 break;
         }
     }
