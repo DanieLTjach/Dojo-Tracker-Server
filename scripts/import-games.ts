@@ -5,7 +5,7 @@
 //
 // CSV format (see ImportService for full spec):
 //   player{1..N}_username, player{1..N}_points, player{1..N}_startPlace, player{1..N}_chombo,
-//   [createdAt], [tournamentHanchanNumber], [tournamentTableNumber]
+//   [createdAt], [tournamentRound], [tournamentTable]
 //
 // Users are matched by their telegramUsername (including the leading '@').
 

@@ -65,3 +65,87 @@ export class YouHaveToBeAdminToHideNewGameMessage extends ForbiddenError {
         super('Щоб сховати повідомлення про нову гру, ви повинні бути адміністратором', 'youHaveToBeAdminToHideNewGameMessage');
     }
 }
+
+export class GameNotInProgressWhenAddingNewRoundError extends BadRequestError {
+    constructor() {
+        super('Результат раунду можна додати лише до гри, що триває', 'gameNotInProgress');
+    }
+}
+
+export class GameNotInProgressWhenDeletingRoundError extends BadRequestError {
+    constructor() {
+        super('Результат раунду можна видалити лише з гри, що триває', 'gameNotInProgressWhenDeletingRound');
+    }
+}
+
+export class GameNotInProgressWhenFinishingError extends BadRequestError {
+    constructor() {
+        super('Можна завершити лише гру, що триває', 'gameNotInProgressWhenFinishing');
+    }
+}
+
+export class InvalidRoundIdError extends BadRequestError {
+    constructor(expectedRoundId: number, actualRoundId: number) {
+        super(
+            `Очікується раунд ${expectedRoundId}, отримано ${actualRoundId}`,
+            'invalidRoundId'
+        );
+    }
+}
+
+export class RoundAlreadyExistsError extends BadRequestError {
+    constructor() {
+        super(`Цей раунд вже завершено`, 'roundAlreadyExists');
+    }
+}
+
+export class NotAuthorizedToModifyGameError extends ForbiddenError {
+    constructor() {
+        super(
+            'Лише гравці, модератори клубу та адміністратори можуть змінювати гру',
+            'notAuthorizedToModifyGame'
+        );
+    }
+}
+
+export class InvalidRoundResultPlayerError extends BadRequestError {
+    constructor(playerId: number) {
+        super(`Гравець з id ${playerId} не бере участі в цій грі`, 'invalidRoundResultPlayer');
+    }
+}
+
+export class NoRoundsToRollbackError extends BadRequestError {
+    constructor() {
+        super('У цій грі немає раундів для відкату', 'noRoundsToRollback');
+    }
+}
+
+export class LastRoundRollbackAlreadyUsedError extends BadRequestError {
+    constructor() {
+        super('Ви вже відкатували останній раунд у цій грі', 'lastRoundRollbackAlreadyUsed');
+    }
+}
+
+export class NoRoundsCompletedError extends BadRequestError {
+    constructor() {
+        super('Гру можна завершити лише після щонайменше одного раунду', 'noRoundsCompleted');
+    }
+}
+
+export class GameNotFinishedWhenUpdatingError extends BadRequestError {
+    constructor() {
+        super('Гру можна редагувати лише після завершення', 'gameNotFinishedWhenUpdating');
+    }
+}
+
+export class GameNotFinishedWhenUndoingFinishError extends BadRequestError {
+    constructor() {
+        super('Скасувати завершення можна лише для завершеної гри', 'gameNotFinishedWhenUndoingFinish');
+    }
+}
+
+export class CannotUndoFinishOnNonTrackedGameError extends BadRequestError {
+    constructor() {
+        super('Скасувати завершення можна лише для відстежуваної гри з раундами', 'cannotUndoFinishOnNonTrackedGame');
+    }
+}

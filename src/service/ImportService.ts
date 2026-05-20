@@ -3,8 +3,7 @@ import { EventService } from './EventService.ts';
 import { UserRepository } from '../repository/UserRepository.ts';
 import { CsvParsingError, NoValidGamesInCsvError } from '../error/ImportErrors.ts';
 import { dbManager } from '../db/dbInit.ts';
-import type { PlayerData } from '../model/GameModels.ts';
-import type { GameWithPlayers } from '../model/GameModels.ts';
+import type { GameWithPlayers, PlayerData, Wind } from '../model/GameModels.ts';
 import type { Event } from '../model/EventModels.ts';
 
 interface RowError {
@@ -21,12 +20,12 @@ interface ImportResult {
 interface ParsedGameRow {
     players: PlayerData[];
     createdAt: Date | undefined;
-    tournamentHanchanNumber: number | null;
-    tournamentTableNumber: number | null;
+    tournamentRound: number | null;
+    tournamentTable: string | null;
 }
 
 const PLAYER_COLUMNS = ['username', 'points', 'startPlace', 'chombo'] as const;
-const VALID_START_PLACES = ['EAST', 'SOUTH', 'WEST', 'NORTH'] as const;
+const VALID_WINDS = ['EAST', 'SOUTH', 'WEST', 'NORTH'] as const satisfies readonly Wind[];
 
 // Sentinel error: thrown inside the import transaction to force a rollback after collecting all per-row errors.
 class ImportRollbackError extends Error {}
@@ -83,8 +82,8 @@ export class ImportService {
                             importedBy,
                             createdAt,
                             true, // hideNewGameMessage
-                            parsed.tournamentHanchanNumber,
-                            parsed.tournamentTableNumber
+                            parsed.tournamentRound,
+                            parsed.tournamentTable
                         );
                         games.push(game);
                     } catch (error: any) {
@@ -189,12 +188,12 @@ export class ImportService {
                 throw new Error(`Row ${rowNumber}: player${p}_points must be an integer`);
             }
 
-            let startPlace: 'EAST' | 'SOUTH' | 'WEST' | 'NORTH' | undefined = undefined;
+            let startPlace: Wind | undefined = undefined;
             if (startPlaceStr) {
-                if (!VALID_START_PLACES.includes(startPlaceStr as any)) {
-                    throw new Error(`Row ${rowNumber}: player${p}_startPlace must be one of: ${VALID_START_PLACES.join(', ')}`);
+                if (!VALID_WINDS.includes(startPlaceStr as Wind)) {
+                    throw new Error(`Row ${rowNumber}: player${p}_startPlace must be one of: ${VALID_WINDS.join(', ')}`);
                 }
-                startPlace = startPlaceStr as typeof VALID_START_PLACES[number];
+                startPlace = startPlaceStr as Wind;
             }
 
             const chomboCount = chomboStr ? Number(chomboStr) : 0;
@@ -219,19 +218,16 @@ export class ImportService {
             }
         }
 
-        const hanchanStr = getValue('tournamentHanchanNumber');
-        const tableStr = getValue('tournamentTableNumber');
+        const roundStr = getValue('tournamentRound');
+        const tableStr = getValue('tournamentTable');
 
-        const tournamentHanchanNumber = hanchanStr ? Number(hanchanStr) : null;
-        const tournamentTableNumber = tableStr ? Number(tableStr) : null;
+        const tournamentRound = roundStr ? Number(roundStr) : null;
+        const tournamentTable = tableStr || null;
 
-        if (tournamentHanchanNumber !== null && (isNaN(tournamentHanchanNumber) || tournamentHanchanNumber < 1)) {
-            throw new Error(`Row ${rowNumber}: tournamentHanchanNumber must be a positive integer`);
-        }
-        if (tournamentTableNumber !== null && (isNaN(tournamentTableNumber) || tournamentTableNumber < 1)) {
-            throw new Error(`Row ${rowNumber}: tournamentTableNumber must be a positive integer`);
+        if (tournamentRound !== null && (isNaN(tournamentRound) || tournamentRound < 1)) {
+            throw new Error(`Row ${rowNumber}: tournamentRound must be a positive integer`);
         }
 
-        return { players, createdAt, tournamentHanchanNumber, tournamentTableNumber };
+        return { players, createdAt, tournamentRound, tournamentTable };
     }
 }

@@ -1,5 +1,3 @@
-import type { RuleValue } from '../model/EventModels.ts';
-
 interface RuleSpecBase {
     key: string;
     required?: boolean;
@@ -63,7 +61,7 @@ export const gameRulesCatalog = {
         { key: 'continuation_when_abortion', type: 'boolean' },
         { key: 'counted_yakuman', type: 'boolean' },
         { key: 'dora', type: 'boolean' },
-        { key: 'double_ron', type: 'enumString', enum: ['yes','head_bump','first','cancel'] },
+        { key: 'double_ron', type: 'enumString', enum: ['yes','head_bump','first'] },
         { key: 'double_wind_fu', type: 'enumString', enum: ['two_fu','four_fu'] },
         { key: 'double_yakuman', type: 'boolean' },
         { key: 'furiten_from_kita', type: 'boolean' },
@@ -89,8 +87,9 @@ export const gameRulesCatalog = {
         { key: 'open_riichi', type: 'boolean' },
         { key: 'open_tanyao', type: 'boolean' },
         { key: 'red_fives', type: 'enumString', enum: ['none','three_one_per_suit','two_red_fives_five_pin_and_five_sou'] },
-        { key: 'remaining_riichi_deposits', type: 'enumString', enum: ['final_winner','take_back','lost'] },
+        { key: 'remaining_riichi_deposits', type: 'enumString', enum: ['final_winner','lost'] },
         { key: 'riichi_1000_points_min', type: 'boolean' },
+        { key: 'riichi_deposit_is_returned_if_one_of_multiple_ron', type: 'boolean' },
         { key: 'riichi_deposits_payment_on_multiple_ron', type: 'enumString', enum: ['bump'] },
         { key: 'riichi_on_the_last_tile', type: 'boolean' },
         { key: 'riichi_without_a_next_draw', type: 'boolean' },
@@ -117,4 +116,21 @@ export const gameRulesCatalogByKey = new Map<GameRuleKey, RuleSpec>(
 
 export type GameRuleKey = typeof gameRulesCatalog.rules[number]['key'];
 
-export type GameRulesValues = Partial<Record<GameRuleKey, RuleValue>>;
+// Helper type to extract the value type from a RuleSpec
+type RuleValueType<T extends RuleSpec> = 
+    T extends { type: 'boolean' } ? boolean :
+    T extends { type: 'string' } ? string :
+    T extends { type: 'integer' } ? number :
+    T extends { type: 'enumString'; enum: readonly (infer E)[] } ? E :
+    T extends { type: 'enumInteger'; enum: readonly (infer E)[] } ? E :
+    never;
+
+type RulesUnion = typeof gameRulesCatalog.rules[number];
+
+// Helper to find a rule by key
+type FindRule<K extends GameRuleKey> = Extract<RulesUnion, { key: K }>;
+
+// Strongly-typed GameRulesValues
+export type GameRulesValues = {
+    [K in GameRuleKey]?: RuleValueType<FindRule<K>>;
+};

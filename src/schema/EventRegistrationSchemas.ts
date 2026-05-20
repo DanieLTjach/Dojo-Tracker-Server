@@ -50,7 +50,7 @@ export const eventRegistrationEditProfileSchema = z.object({
         lastName: z.string().trim().min(1).nullish()
     }).refine(
         (data) => data.firstName !== undefined || data.lastName !== undefined,
-        { message: 'At least one of firstName or lastName must be provided' }
+        { error: 'At least one of firstName or lastName must be provided' }
     )
 });
 

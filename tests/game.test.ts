@@ -6,6 +6,7 @@ import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createTestEvent, createCustomEvent, createTelegramInitData } from './testHelpers.ts';
+import { ExhaustiveDraw } from '../src/model/GameRoundResultModels.ts';
 
 const app = express();
 app.use(express.json());
@@ -58,6 +59,19 @@ describe('Game API Endpoints', () => {
         ).run(clubId, userId, ts, ts);
     }
 
+    function setClubRole(clubId: number, userId: number, role: 'MEMBER' | 'MODERATOR' | 'OWNER') {
+        dbManager.db.prepare(
+            'UPDATE clubMembership SET role = ? WHERE clubId = ? AND userId = ?'
+        ).run(role, clubId, userId);
+    }
+
+    const trackedPlayersPayload = () => [
+        { userId: testUser1Id, startPlace: 'EAST' as const },
+        { userId: testUser2Id, startPlace: 'SOUTH' as const },
+        { userId: testUser3Id, startPlace: 'WEST' as const },
+        { userId: testUser4Id, startPlace: 'NORTH' as const }
+    ];
+
     beforeAll(async () => {
         // Create test event
         createTestEvent();
@@ -107,8 +121,8 @@ describe('Game API Endpoints', () => {
                 points: 40000,
                 startPlace: 'EAST'
             });
-            expect(response.body.tournamentHanchanNumber).toBeNull();
-            expect(response.body.tournamentTableNumber).toBeNull();
+            expect(response.body.tournamentRound).toBeNull();
+            expect(response.body.tournamentTable).toBeNull();
 
             testGameId = response.body.id; // Save for later tests
         });
@@ -125,16 +139,16 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 25000 },
                         { userId: testUser4Id, points: 20000 }
                     ],
-                    tournamentHanchanNumber: 1,
-                    tournamentTableNumber: 3
+                    tournamentRound: 1,
+                    tournamentTable: '3'
                 });
 
             expect(response.status).toBe(201);
-            expect(response.body.tournamentHanchanNumber).toBe(1);
-            expect(response.body.tournamentTableNumber).toBe(3);
+            expect(response.body.tournamentRound).toBe(1);
+            expect(response.body.tournamentTable).toBe('3');
         });
 
-        test('should reject non-positive tournamentHanchanNumber', async () => {
+        test('should reject non-positive tournamentRound', async () => {
             const response = await request(app)
                 .post('/api/games')
                 .set('Authorization', user1AuthHeader)
@@ -146,13 +160,13 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
                     ],
-                    tournamentHanchanNumber: 0
+                    tournamentRound: 0
                 });
 
             expect(response.status).toBe(400);
         });
 
-        test('should reject non-integer tournamentTableNumber', async () => {
+        test('should reject empty tournamentTable', async () => {
             const response = await request(app)
                 .post('/api/games')
                 .set('Authorization', user1AuthHeader)
@@ -164,7 +178,7 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 }
                     ],
-                    tournamentTableNumber: 1.5
+                    tournamentTable: ''
                 });
 
             expect(response.status).toBe(400);
@@ -458,6 +472,885 @@ describe('Game API Endpoints', () => {
         });
     });
 
+    describe('POST /api/games/tracked - Create Tracked Game', () => {
+        const STARTING_POINTS = 30000;
+
+        const trackedPlayers = () => [
+            { userId: testUser1Id, startPlace: 'EAST' as const },
+            { userId: testUser2Id, startPlace: 'SOUTH' as const },
+            { userId: testUser3Id, startPlace: 'WEST' as const },
+            { userId: testUser4Id, startPlace: 'NORTH' as const }
+        ];
+
+        test('should create a tracked game and return detailed game response', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayers()
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body.eventId).toBe(TEST_EVENT_ID);
+            expect(response.body.status).toBe('IN_PROGRESS');
+            expect(response.body.startedAt).toBe(response.body.createdAt);
+            expect(response.body.endedAt).toBeNull();
+            expect(response.body.lastRoundWasDeleted).toBe(false);
+            expect(response.body.rounds).toEqual([]);
+            expect(response.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 });
+            expect(response.body.players).toHaveLength(4);
+            expect(response.body.players).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    userId: testUser1Id,
+                    points: STARTING_POINTS,
+                    startPlace: 'EAST',
+                    chomboCount: 0,
+                    ratingChange: 0
+                }),
+                expect.objectContaining({
+                    userId: testUser2Id,
+                    points: STARTING_POINTS,
+                    startPlace: 'SOUTH',
+                    chomboCount: 0,
+                    ratingChange: 0
+                }),
+                expect.objectContaining({
+                    userId: testUser3Id,
+                    points: STARTING_POINTS,
+                    startPlace: 'WEST',
+                    chomboCount: 0,
+                    ratingChange: 0
+                }),
+                expect.objectContaining({
+                    userId: testUser4Id,
+                    points: STARTING_POINTS,
+                    startPlace: 'NORTH',
+                    chomboCount: 0,
+                    ratingChange: 0
+                })
+            ]));
+
+            const getResponse = await request(app)
+                .get(`/api/games/${response.body.id}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(getResponse.status).toBe(200);
+            expect(getResponse.body.status).toBe('IN_PROGRESS');
+            expect(getResponse.body.startedAt).toBe(getResponse.body.createdAt);
+            expect(getResponse.body.rounds).toEqual([]);
+            expect(getResponse.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 });
+        });
+
+        test('should fail with incorrect number of players', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe('Для гри потрібно 4 гравців');
+        });
+
+        test('should fail with duplicate start places', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'EAST' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
+        });
+
+        test('should fail when startPlace is missing', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
+        });
+    });
+
+    describe('POST /api/games/:gameId/rounds/:roundId - Post Round Result', () => {
+        let trackedGameId: number;
+
+        const exhaustiveDrawResult = {
+            type: 'EXHAUSTIVE_DRAW',
+            riichiPlayerIds: [] as number[],
+            tenpaiPlayerIds: [] as number[],
+            nagashiManganPlayerIds: [] as number[]
+        };
+
+        beforeAll(async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(response.status).toBe(201);
+            trackedGameId = response.body.id;
+        });
+
+        test('should post current round result and return detailed game', async () => {
+            const response = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/1`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(200);
+            expect(response.body.id).toBe(trackedGameId);
+            expect(response.body.status).toBe('IN_PROGRESS');
+            expect(response.body.rounds).toHaveLength(1);
+            expect(response.body.rounds[0]).toMatchObject({
+                gameId: trackedGameId,
+                roundNumber: 1,
+                wind: 'EAST',
+                counters: 0,
+                riichiSticks: 0,
+                result: {
+                    ...exhaustiveDrawResult,
+                    playerPointChanges: []
+                }
+            });
+            expect(response.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 2, counters: 1, riichiSticks: 0 });
+
+            const duplicateRoundResponse = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/1`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(duplicateRoundResponse.status).toBe(400);
+            expect(duplicateRoundResponse.body.errorCode).toBe('roundAlreadyExists');
+        });
+
+        test('should post the next round when previous rounds exist', async () => {
+            const exhaustiveDrawResult: ExhaustiveDraw = {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [],
+                tenpaiPlayerIds: [],
+                nagashiManganPlayerIds: []
+            };
+
+            const response = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/2`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(200);
+            expect(response.body.rounds).toHaveLength(2);
+            expect(response.body.rounds[1]).toMatchObject({
+                roundNumber: 2,
+                result: {
+                    ...exhaustiveDrawResult,
+                    playerPointChanges: []
+                }
+            });
+
+            const duplicateRoundResponse = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/2`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(duplicateRoundResponse.status).toBe(400);
+            expect(duplicateRoundResponse.body.errorCode).toBe('roundAlreadyExists');
+        });
+
+        test('should reject round id that is not the current round', async () => {
+            const response = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/99`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('invalidRoundId');
+        });
+
+        test('should reject posting to a finished game', async () => {
+            const response = await request(app)
+                .post(`/api/games/${testGameId}/rounds/1`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameNotInProgress');
+        });
+
+        test('should reject player not in the game', async () => {
+            const response = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/3`)
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    type: 'CHOMBO',
+                    offenderPlayerId: 99999
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('invalidRoundResultPlayer');
+        });
+
+        test('should reject user who is not a player or club moderator', async () => {
+            const outsiderApp = express();
+            outsiderApp.use(express.json());
+            outsiderApp.use('/api/users', userRoutes);
+            outsiderApp.use(handleErrors);
+
+            const outsiderId = await createTestUser('Outsider', 555555555);
+            const outsiderAuth = createAuthHeader(outsiderId);
+
+            const response = await request(app)
+                .post(`/api/games/${trackedGameId}/rounds/3`)
+                .set('Authorization', outsiderAuth)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('notAuthorizedToModifyGame');
+        });
+    });
+
+    describe('DELETE /api/games/:gameId/rounds/:roundId - Rollback Last Round', () => {
+        const exhaustiveDrawResult = {
+            type: 'EXHAUSTIVE_DRAW',
+            riichiPlayerIds: [] as number[],
+            tenpaiPlayerIds: [] as number[],
+            nagashiManganPlayerIds: [] as number[]
+        };
+
+        const postRound = (gameId: number, roundId: number, authHeader: string) =>
+            request(app)
+                .post(`/api/games/${gameId}/rounds/${roundId}`)
+                .set('Authorization', authHeader)
+                .send(exhaustiveDrawResult);
+
+        const deleteRound = (gameId: number, roundId: number, authHeader: string) =>
+            request(app)
+                .delete(`/api/games/${gameId}/rounds/${roundId}`)
+                .set('Authorization', authHeader);
+
+        test('should rollback the last round and return detailed game', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+
+            await postRound(gameId, 1, user1AuthHeader);
+            await postRound(gameId, 2, user1AuthHeader);
+
+            const response = await deleteRound(gameId, 2, user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.id).toBe(gameId);
+            expect(response.body.status).toBe('IN_PROGRESS');
+            expect(response.body.rounds).toHaveLength(1);
+            expect(response.body.rounds[0].roundNumber).toBe(1);
+            expect(response.body.lastRoundWasDeleted).toBe(true);
+        });
+
+        test('should rollback points applied by the last round', async () => {
+            const STARTING_POINTS = 30000;
+
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+            await postRound(gameId, 2, user1AuthHeader);
+
+            const round2PointChanges = [
+                { playerId: testUser1Id, pointChange: 5000 },
+                { playerId: testUser3Id, pointChange: -5000 }
+            ];
+
+            const roundRow = dbManager.db.prepare(
+                'SELECT result FROM gameRound WHERE gameId = ? AND roundNumber = 2'
+            ).get(gameId) as { result: string };
+            const roundResult = JSON.parse(roundRow.result);
+            roundResult.playerPointChanges = round2PointChanges;
+            dbManager.db.prepare(
+                'UPDATE gameRound SET result = ? WHERE gameId = ? AND roundNumber = 2'
+            ).run(JSON.stringify(roundResult), gameId);
+
+            for (const { playerId, pointChange } of round2PointChanges) {
+                dbManager.db.prepare(
+                    'UPDATE userToGame SET points = points + ? WHERE gameId = ? AND userId = ?'
+                ).run(pointChange, gameId, playerId);
+            }
+
+            const beforeRollback = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(beforeRollback.body.players.find((p: { userId: number }) => p.userId === testUser1Id).points).toBe(35000);
+            expect(beforeRollback.body.players.find((p: { userId: number }) => p.userId === testUser3Id).points).toBe(25000);
+
+            const response = await deleteRound(gameId, 2, user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            for (const userId of [testUser1Id, testUser2Id, testUser3Id, testUser4Id]) {
+                expect(response.body.players.find((p: { userId: number }) => p.userId === userId).points).toBe(STARTING_POINTS);
+            }
+        });
+
+        test('should reject rollback when round id is not the last round', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+            await postRound(gameId, 2, user1AuthHeader);
+
+            const response = await deleteRound(gameId, 1, user1AuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('invalidRoundId');
+        });
+
+        test('should reject rollback when round id is bigger than the last round', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+            await postRound(gameId, 2, user1AuthHeader);
+
+            const response = await deleteRound(gameId, 3, user1AuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('invalidRoundId');
+        });
+
+        test('should reject rollback when the game has no rounds', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const response = await deleteRound(createResponse.body.id, 1, user1AuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('noRoundsToRollback');
+        });
+
+        test('should allow a player to rollback only once', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+            await postRound(gameId, 2, user1AuthHeader);
+
+            const firstRollback = await deleteRound(gameId, 2, user1AuthHeader);
+            expect(firstRollback.status).toBe(200);
+            expect(firstRollback.body.lastRoundWasDeleted).toBe(true);
+
+            const secondRollback = await deleteRound(gameId, 1, user1AuthHeader);
+            expect(secondRollback.status).toBe(400);
+            expect(secondRollback.body.errorCode).toBe('lastRoundRollbackAlreadyUsed');
+        });
+
+        test('should allow admins to rollback multiple times in a row', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+            await postRound(gameId, 2, user1AuthHeader);
+
+            const firstRollback = await deleteRound(gameId, 2, adminAuthHeader);
+            expect(firstRollback.status).toBe(200);
+            expect(firstRollback.body.lastRoundWasDeleted).toBe(true);
+
+            const secondRollback = await deleteRound(gameId, 1, adminAuthHeader);
+            expect(secondRollback.status).toBe(200);
+            expect(secondRollback.body.rounds).toHaveLength(0);
+        });
+
+        test('should allow rollback after the round was rollbacked than added back', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+            await postRound(gameId, 2, user1AuthHeader);
+
+            const firstRollback = await deleteRound(gameId, 2, user1AuthHeader);
+            expect(firstRollback.status).toBe(200);
+            expect(firstRollback.body.lastRoundWasDeleted).toBe(true);
+
+            const secondRound = await postRound(gameId, 2, user1AuthHeader);
+            expect(secondRound.status).toBe(200);
+            expect(secondRound.body.lastRoundWasDeleted).toBe(false);
+
+            const secondRollback = await deleteRound(gameId, 2, user1AuthHeader);
+            expect(secondRollback.status).toBe(200);
+            expect(secondRollback.body.lastRoundWasDeleted).toBe(true);
+        });
+
+        test('should reject rollback on a finished game', async () => {
+            const response = await deleteRound(testGameId, 1, user1AuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameNotInProgressWhenDeletingRound');
+        });
+
+        test('should reject user who is not a player or club moderator', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+
+            const outsiderId = await createTestUser('Rollback Outsider', 555555556);
+            const outsiderAuth = createAuthHeader(outsiderId);
+
+            const response = await deleteRound(gameId, 1, outsiderAuth);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('notAuthorizedToModifyGame');
+        });
+    });
+
+    describe('POST /api/games/:gameId/finish - Finish Game', () => {
+        const exhaustiveDrawResult = {
+            type: 'EXHAUSTIVE_DRAW',
+            riichiPlayerIds: [] as number[],
+            tenpaiPlayerIds: [] as number[],
+            nagashiManganPlayerIds: [] as number[]
+        };
+
+        const postRound = (gameId: number, roundId: number, authHeader: string) =>
+            request(app)
+                .post(`/api/games/${gameId}/rounds/${roundId}`)
+                .set('Authorization', authHeader)
+                .send(exhaustiveDrawResult);
+
+        const finishGame = (gameId: number, authHeader: string) =>
+            request(app)
+                .post(`/api/games/${gameId}/finish`)
+                .set('Authorization', authHeader);
+
+        test('should finish an in-progress game with at least one round', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+
+            await postRound(gameId, 1, user1AuthHeader);
+
+            const response = await finishGame(gameId, user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.id).toBe(gameId);
+            expect(response.body.status).toBe('FINISHED');
+            expect(response.body.endedAt).not.toBeNull();
+            expect(response.body.currentState).toBeNull();
+            expect(response.body.rounds).toHaveLength(1);
+            response.body.players.forEach((player: { ratingChange: number }) => {
+                expect(typeof player.ratingChange).toBe('number');
+            });
+        });
+
+        test('should reject finishing a game with no rounds', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const response = await finishGame(createResponse.body.id, user1AuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('noRoundsCompleted');
+        });
+
+        test('should reject finishing an already finished game', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+
+            const firstFinish = await finishGame(gameId, user1AuthHeader);
+            expect(firstFinish.status).toBe(200);
+
+            const secondFinish = await finishGame(gameId, user1AuthHeader);
+            expect(secondFinish.status).toBe(400);
+            expect(secondFinish.body.errorCode).toBe('gameNotInProgressWhenFinishing');
+        });
+
+        test('should reject finishing a score-only game that is already finished', async () => {
+            const response = await finishGame(testGameId, user1AuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameNotInProgressWhenFinishing');
+        });
+
+        test('should distribute leftover riichi sticks to winners when finishing', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+
+            const roundWithRiichi = await postRound(gameId, 1, user1AuthHeader).send({
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [testUser1Id],
+                tenpaiPlayerIds: [],
+                nagashiManganPlayerIds: []
+            });
+            expect(roundWithRiichi.status).toBe(200);
+            expect(roundWithRiichi.body.currentState.riichiSticks).toBe(1);
+
+            const response = await finishGame(gameId, user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toBe('FINISHED');
+
+            const lastRound = response.body.rounds[response.body.rounds.length - 1];
+            expect(lastRound.result.playerPointChanges).toEqual(
+                expect.arrayContaining([
+                    { playerId: testUser1Id, pointChange: -1000 },
+                    { playerId: testUser2Id, pointChange: 333 },
+                    { playerId: testUser3Id, pointChange: 333 },
+                    { playerId: testUser4Id, pointChange: 333 }
+                ])
+            );
+
+            const playerPoints = Object.fromEntries(
+                response.body.players.map((player: { userId: number; points: number }) => [player.userId, player.points])
+            );
+            expect(playerPoints[testUser1Id]).toBe(29000);
+            expect(playerPoints[testUser2Id]).toBe(30333);
+            expect(playerPoints[testUser3Id]).toBe(30333);
+            expect(playerPoints[testUser4Id]).toBe(30333);
+        });
+
+        test('should reject user who is not a player or club moderator', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: [
+                        { userId: testUser1Id, startPlace: 'EAST' },
+                        { userId: testUser2Id, startPlace: 'SOUTH' },
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                        { userId: testUser4Id, startPlace: 'NORTH' }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1, user1AuthHeader);
+
+            const outsiderId = await createTestUser('Finish Outsider', 555555557);
+            const outsiderAuth = createAuthHeader(outsiderId);
+
+            const response = await finishGame(gameId, outsiderAuth);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('notAuthorizedToModifyGame');
+        });
+    });
+
+    describe('POST /api/games/:gameId/undo-finish - Undo Finish Game', () => {
+        const exhaustiveDrawResult = {
+            type: 'EXHAUSTIVE_DRAW',
+            riichiPlayerIds: [] as number[],
+            tenpaiPlayerIds: [] as number[],
+            nagashiManganPlayerIds: [] as number[]
+        };
+
+        const createTrackedGame = () =>
+            request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({ eventId: TEST_EVENT_ID, players: trackedPlayersPayload() });
+
+        const postRound = (gameId: number, roundId: number) =>
+            request(app)
+                .post(`/api/games/${gameId}/rounds/${roundId}`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+        const finishGame = (gameId: number, authHeader: string) =>
+            request(app)
+                .post(`/api/games/${gameId}/finish`)
+                .set('Authorization', authHeader);
+
+        const undoFinishGame = (gameId: number, authHeader: string) =>
+            request(app)
+                .post(`/api/games/${gameId}/undo-finish`)
+                .set('Authorization', authHeader);
+
+        const createFinishedTrackedGame = async () => {
+            const createResponse = await createTrackedGame();
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1);
+            await finishGame(gameId, user1AuthHeader);
+            return gameId;
+        };
+
+        test('should undo finish for club moderator and return in-progress game', async () => {
+            const gameId = await createFinishedTrackedGame();
+
+            setClubRole(1, testUser2Id, 'MODERATOR');
+
+            const response = await undoFinishGame(gameId, createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(200);
+            expect(response.body.id).toBe(gameId);
+            expect(response.body.status).toBe('IN_PROGRESS');
+            expect(response.body.endedAt).toBeNull();
+            expect(response.body.currentState).not.toBeNull();
+            expect(response.body.rounds).toHaveLength(1);
+            response.body.players.forEach((player: { ratingChange: number }) => {
+                expect(player.ratingChange).toBe(0);
+            });
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should allow club owner to undo finish', async () => {
+            const gameId = await createFinishedTrackedGame();
+
+            setClubRole(1, testUser2Id, 'OWNER');
+
+            const response = await undoFinishGame(gameId, createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toBe('IN_PROGRESS');
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should allow admin to undo finish', async () => {
+            const gameId = await createFinishedTrackedGame();
+
+            const response = await undoFinishGame(gameId, adminAuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toBe('IN_PROGRESS');
+        });
+
+        test('should reject player who is not club moderator or administrator', async () => {
+            const gameId = await createFinishedTrackedGame();
+
+            const response = await undoFinishGame(gameId, user1AuthHeader);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('insufficientClubPermissions');
+        });
+
+        test('should reject undo finish on in-progress game', async () => {
+            const createResponse = await createTrackedGame();
+            const gameId = createResponse.body.id;
+            await postRound(gameId, 1);
+
+            setClubRole(1, testUser2Id, 'MODERATOR');
+
+            const response = await undoFinishGame(gameId, createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameNotFinishedWhenUndoingFinish');
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should reject undo finish on score-only game', async () => {
+            const createResponse = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 30000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 30000 }
+                    ]
+                });
+
+            setClubRole(1, testUser2Id, 'MODERATOR');
+
+            const response = await undoFinishGame(createResponse.body.id, createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('cannotUndoFinishOnNonTrackedGame');
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should reject outsider', async () => {
+            const gameId = await createFinishedTrackedGame();
+            const outsiderId = await createTestUser('Undo Finish Outsider', 555555559);
+            const outsiderAuth = createAuthHeader(outsiderId);
+
+            const response = await undoFinishGame(gameId, outsiderAuth);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('insufficientClubPermissions');
+        });
+    });
+
     describe('GET /api/games/:gameId - Get Game by ID', () => {
         test('should retrieve a game by ID', async () => {
             const response = await request(app)
@@ -470,12 +1363,82 @@ describe('Game API Endpoints', () => {
             expect(response.body.players).toHaveLength(4);
             expect(response.body).toHaveProperty('createdAt');
             expect(response.body).toHaveProperty('modifiedAt');
+            expect(response.body.status).toBe('FINISHED');
+            expect(response.body.lastRoundWasDeleted).toBe(false);
+            expect(response.body.rounds).toEqual([]);
+            expect(response.body.currentState).toBeNull();
 
             // Verify players have ratingChange field
             response.body.players.forEach((player: any) => {
                 expect(player).toHaveProperty('ratingChange');
                 expect(typeof player.ratingChange === 'number' || player.ratingChange === null).toBe(true);
             });
+        });
+
+        test('should return game rounds in roundNumber order with parsed result', async () => {
+            const createResponse = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 30000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 30000 }
+                    ]
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+
+            const roundOneResult = {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [testUser1Id],
+                tenpaiPlayerIds: [testUser1Id, testUser2Id],
+                nagashiManganPlayerIds: []
+            };
+            const roundTwoResult = {
+                type: 'CHOMBO',
+                offenderPlayerId: testUser3Id
+            };
+
+            dbManager.db.prepare(`
+                INSERT INTO gameRound (gameId, roundNumber, wind, dealerNumber, counters, riichiSticks, result)
+                VALUES (?, 2, 'EAST', 2, 1, 0, ?),
+                       (?, 1, 'EAST', 1, 0, 1, ?)
+            `).run(
+                gameId,
+                JSON.stringify(roundTwoResult),
+                gameId,
+                JSON.stringify(roundOneResult)
+            );
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.rounds).toEqual([
+                {
+                    gameId,
+                    roundNumber: 1,
+                    wind: 'EAST',
+                    dealerNumber: 1,
+                    counters: 0,
+                    riichiSticks: 1,
+                    result: roundOneResult
+                },
+                {
+                    gameId,
+                    roundNumber: 2,
+                    wind: 'EAST',
+                    dealerNumber: 2,
+                    counters: 1,
+                    riichiSticks: 0,
+                    result: roundTwoResult
+                }
+            ]);
         });
 
         test('should fail with non-existent game ID', async () => {
@@ -674,13 +1637,13 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 25000 },
                         { userId: testUser4Id, points: 15000 }
                     ],
-                    tournamentHanchanNumber: 2,
-                    tournamentTableNumber: 5
+                    tournamentRound: 2,
+                    tournamentTable: '5'
                 });
 
             expect(response.status).toBe(200);
-            expect(response.body.tournamentHanchanNumber).toBe(2);
-            expect(response.body.tournamentTableNumber).toBe(5);
+            expect(response.body.tournamentRound).toBe(2);
+            expect(response.body.tournamentTable).toBe('5');
         });
 
         test('should clear tournament metadata by passing null', async () => {
@@ -695,13 +1658,13 @@ describe('Game API Endpoints', () => {
                         { userId: testUser3Id, points: 25000 },
                         { userId: testUser4Id, points: 15000 }
                     ],
-                    tournamentHanchanNumber: null,
-                    tournamentTableNumber: null
+                    tournamentRound: null,
+                    tournamentTable: null
                 });
 
             expect(response.status).toBe(200);
-            expect(response.body.tournamentHanchanNumber).toBeNull();
-            expect(response.body.tournamentTableNumber).toBeNull();
+            expect(response.body.tournamentRound).toBeNull();
+            expect(response.body.tournamentTable).toBeNull();
         });
 
         test('should fail to update game without admin privileges', async () => {
@@ -775,11 +1738,41 @@ describe('Game API Endpoints', () => {
     });
 
     describe('DELETE /api/games/:gameId - Delete Game', () => {
-        let gameToDeleteId: number;
+        const TOURNAMENT_EVENT_ID = 1001;
 
-        beforeAll(async () => {
-            // Create a game to delete
-            const response = await request(app)
+        const exhaustiveDrawResult = {
+            type: 'EXHAUSTIVE_DRAW',
+            riichiPlayerIds: [] as number[],
+            tenpaiPlayerIds: [] as number[],
+            nagashiManganPlayerIds: [] as number[]
+        };
+
+        beforeAll(() => {
+            createCustomEvent(
+                TOURNAMENT_EVENT_ID,
+                'Test Tournament',
+                '2024-01-01T00:00:00.000Z',
+                '2026-12-31T23:59:59.999Z',
+                2,
+                1,
+                'TOURNAMENT'
+            );
+        });
+
+        const createTrackedGame = (eventId: number = TEST_EVENT_ID) =>
+            request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({ eventId, players: trackedPlayersPayload() });
+
+        const postRound = (gameId: number, roundId: number) =>
+            request(app)
+                .post(`/api/games/${gameId}/rounds/${roundId}`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+        test('should allow admin to delete a finished score-only game', async () => {
+            const createResponse = await request(app)
                 .post('/api/games')
                 .set('Authorization', user1AuthHeader)
                 .send({
@@ -791,30 +1784,126 @@ describe('Game API Endpoints', () => {
                         { userId: testUser4Id, points: 30000 }
                     ]
                 });
-            gameToDeleteId = response.body.id;
-        });
 
-        test('should delete a game successfully', async () => {
+            const gameId = createResponse.body.id;
+
             const response = await request(app)
-                .delete(`/api/games/${gameToDeleteId}`)
+                .delete(`/api/games/${gameId}`)
                 .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(204);
-            expect(response.body).toEqual({});
 
-            // Verify game is deleted
             const getResponse = await request(app)
-                .get(`/api/games/${gameToDeleteId}`)
+                .get(`/api/games/${gameId}`)
                 .set('Authorization', adminAuthHeader);
             expect(getResponse.status).toBe(404);
         });
 
-        test('should fail to delete game without admin privileges', async () => {
+        test('should allow club owner to delete a finished game', async () => {
+            const createResponse = await request(app)
+                .post('/api/games')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 30000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 30000 }
+                    ]
+                });
+
+            const gameId = createResponse.body.id;
+            setClubRole(1, testUser2Id, 'OWNER');
+
+            const response = await request(app)
+                .delete(`/api/games/${gameId}`)
+                .set('Authorization', createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(204);
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should reject player deleting a finished game', async () => {
             const response = await request(app)
                 .delete(`/api/games/${testGameId}`)
                 .set('Authorization', user1AuthHeader);
 
             expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('insufficientClubPermissions');
+        });
+
+        test('should allow a player to delete a tracked game with no rounds', async () => {
+            const createResponse = await createTrackedGame();
+            expect(createResponse.status).toBe(201);
+
+            const response = await request(app)
+                .delete(`/api/games/${createResponse.body.id}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(204);
+
+            const getResponse = await request(app)
+                .get(`/api/games/${createResponse.body.id}`)
+                .set('Authorization', user1AuthHeader);
+            expect(getResponse.status).toBe(404);
+        });
+
+        test('should reject player deleting a tracked game with rounds', async () => {
+            const createResponse = await createTrackedGame();
+            const gameId = createResponse.body.id;
+
+            await postRound(gameId, 1);
+
+            const response = await request(app)
+                .delete(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('insufficientClubPermissions');
+        });
+
+        test('should allow club moderator to delete a tracked game with rounds', async () => {
+            const createResponse = await createTrackedGame();
+            const gameId = createResponse.body.id;
+
+            await postRound(gameId, 1);
+
+            setClubRole(1, testUser2Id, 'MODERATOR');
+
+            const response = await request(app)
+                .delete(`/api/games/${gameId}`)
+                .set('Authorization', createAuthHeader(testUser2Id));
+
+            expect(response.status).toBe(204);
+
+            setClubRole(1, testUser2Id, 'MEMBER');
+        });
+
+        test('should reject outsider deleting a tracked game with no rounds', async () => {
+            const createResponse = await createTrackedGame();
+            const outsiderId = await createTestUser('Delete Outsider', 555555558);
+            const outsiderAuth = createAuthHeader(outsiderId);
+
+            const response = await request(app)
+                .delete(`/api/games/${createResponse.body.id}`)
+                .set('Authorization', outsiderAuth);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('notAuthorizedToModifyGame');
+        });
+
+        test('should reject player deleting a tracked game in a tournament event', async () => {
+            const createResponse = await createTrackedGame(TOURNAMENT_EVENT_ID);
+            expect(createResponse.status).toBe(201);
+
+            const response = await request(app)
+                .delete(`/api/games/${createResponse.body.id}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(403);
+            expect(response.body.errorCode).toBe('insufficientClubPermissions');
         });
 
         test('should fail to delete non-existent game', async () => {

@@ -1,8 +1,8 @@
 import { booleanToInteger } from "../db/dbUtils.ts";
-import { PleaseProvideStartPlaceForAllPlayersToResolveTie, UserRatingChangeInGameNotFound } from "../error/RatingErrors.ts";
+import { PleaseProvideStartPlaceForAllPlayersToResolveTie } from "../error/RatingErrors.ts";
 import type { GameRules, UmaTieBreak } from "../model/EventModels.ts";
-import type { GameWithPlayers, PlayerData, StartPlace } from "../model/GameModels.ts";
-import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO, UserRatingWithPlace } from "../model/RatingModels.ts";
+import { WIND_ORDER, type GameWithPlayers, type PlayerData } from "../model/GameModels.ts";
+import type { RatingSnapshot, UserRating, UserRatingChangeShortDTO, UserRatingWithPlace } from "../model/RatingModels.ts";
 import { RatingRepository } from "../repository/RatingRepository.ts";
 import { EventService } from "./EventService.ts";
 import { UserService } from "./UserService.ts";
@@ -72,7 +72,7 @@ export class RatingService {
             const gainedPoints = playerData.points - gameRules.startingPoints;
             const ratingChange = gainedPoints
                 + uma[index]! * RATING_TO_POINTS_COEFFICIENT
-                - (gameRules.chomboPointsAfterUma ?? 0) * (playerData.chomboCount ?? 0);
+                - (gameRules.details?.rules?.chombo === "mangan" ? 0 : 20000) * (playerData.chomboCount ?? 0);
             const newRating = currentRating + ratingChange;
 
             this.ratingRepository.addUserRatingChange({
@@ -94,7 +94,10 @@ export class RatingService {
 
     deleteRatingChangesFromGame(game: GameWithPlayers) {
         for (const player of game.players) {
-            const userRatingChange = this.findUserRatingChangeInGameOrThrow(player.userId, game.id);
+            const userRatingChange = this.ratingRepository.findUserRatingChangeInGame(player.userId, game.id);
+            if (userRatingChange === undefined) {
+                continue;
+            }
             this.ratingRepository.updateUserRatingChangesAfterDate(
                 player.userId,
                 game.eventId,
@@ -103,14 +106,6 @@ export class RatingService {
             );
         }
         this.ratingRepository.deleteRatingChangesFromGame(game.id);
-    }
-
-    private findUserRatingChangeInGameOrThrow(userId: number, gameId: number): UserRatingChange {
-        const userRatingChange = this.ratingRepository.findUserRatingChangeInGame(userId, gameId);
-        if (userRatingChange === undefined) {
-            throw new UserRatingChangeInGameNotFound(userId, gameId);
-        }
-        return userRatingChange;
     }
 
     private sortPlayersData(playersData: PlayerData[], umaTieBreak: UmaTieBreak) {
@@ -217,10 +212,6 @@ export class RatingService {
 }
 
 export const RATING_TO_POINTS_COEFFICIENT: number = 1000;
-
-const WIND_ORDER: Record<StartPlace, number> = {
-    EAST: 0, SOUTH: 1, WEST: 2, NORTH: 3
-};
 
 function normalizeUserRating(userRating: UserRating): UserRating {
     return { ...userRating, rating: userRating.rating / RATING_TO_POINTS_COEFFICIENT };

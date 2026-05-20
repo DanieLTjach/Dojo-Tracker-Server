@@ -85,7 +85,7 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
             const preset = gameRulesPresetsByKey.get(key);
             return preset !== undefined && !preset.internal;
         },
-        { message: 'Unknown preset' }
+        { error: 'Unknown preset' }
     );
 
     const customRulesSchema = z.array(customRuleEntrySchema);

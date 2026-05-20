@@ -140,7 +140,7 @@ function compactDetails(details: GameRulesDetails): GameRulesDetails {
         if (value === undefined) continue;
         const presetValue = preset.rules[key as keyof GameRulesValues];
         if (presetValue === undefined || !ruleValuesEqual(value, presetValue)) {
-            overrides[key as keyof GameRulesValues] = value;
+            (overrides as Record<string, RuleValue>)[key] = value;
         }
     }
 

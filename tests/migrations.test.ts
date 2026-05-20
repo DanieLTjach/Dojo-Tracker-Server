@@ -199,6 +199,79 @@ describe('Database Migrations', () => {
     db.close();
   });
 
+  test('migration 7 renames gameStartPlace to wind and tournament columns on game', () => {
+    const db = createMigratedDb('6.sql');
+
+    db.prepare(`
+      INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, tournamentHanchanNumber, tournamentTableNumber)
+      VALUES (1, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0, 2, 5)
+    `).run();
+
+    db.prepare(`
+      INSERT INTO userToGame (userId, gameId, startPlace, points, chomboCount, createdAt, modifiedAt, modifiedBy)
+      VALUES (0, 1, 'EAST', 30000, 0, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
+    `).run();
+
+    runMigration(db, '7.sql');
+    db.pragma('foreign_keys = ON');
+
+    const winds = db.prepare('SELECT wind FROM wind ORDER BY wind').all() as Array<{ wind: string }>;
+    expect(winds.map(({ wind }) => wind)).toEqual(['EAST', 'NORTH', 'SOUTH', 'WEST']);
+
+    const gameStartPlaceTable = db.prepare(`
+      SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'gameStartPlace'
+    `).get();
+    expect(gameStartPlaceTable).toBeUndefined();
+
+    const userToGame = db.prepare(`
+      SELECT userId, gameId, startPlace, points, chomboCount
+      FROM userToGame
+      WHERE userId = 0 AND gameId = 1
+    `).get() as Record<string, unknown>;
+    expect(userToGame).toEqual({
+      userId: 0,
+      gameId: 1,
+      startPlace: 'EAST',
+      points: 30000,
+      chomboCount: 0,
+    });
+
+    const game = db.prepare(`
+      SELECT tournamentRound, tournamentTable, status, startedAt, endedAt, lastRoundWasDeleted
+      FROM game
+      WHERE id = 1
+    `).get() as Record<string, unknown>;
+    expect(game).toEqual({
+      tournamentRound: 2,
+      tournamentTable: '5',
+      status: 'FINISHED',
+      startedAt: '2026-01-01T00:00:00.000Z',
+      endedAt: '2026-01-01T00:00:00.000Z',
+      lastRoundWasDeleted: 0,
+    });
+
+    const gameStatuses = db.prepare('SELECT status FROM gameStatus ORDER BY status').all() as Array<{ status: string }>;
+    expect(gameStatuses.map(({ status }) => status)).toEqual(['CREATED', 'FINISHED', 'IN_PROGRESS']);
+
+    const gameColumns = (db.prepare('PRAGMA table_info(game)').all() as Array<{ name: string; type: string }>)
+      .map(({ name, type }) => ({ name, type }));
+    expect(gameColumns).toEqual(expect.arrayContaining([
+      { name: 'tournamentRound', type: 'INTEGER' },
+      { name: 'tournamentTable', type: 'TEXT' },
+      { name: 'status', type: 'TEXT' },
+      { name: 'startedAt', type: 'TIMESTAMP' },
+      { name: 'endedAt', type: 'TIMESTAMP' },
+      { name: 'lastRoundWasDeleted', type: 'BOOL' },
+    ]));
+    expect(gameColumns.find(column => column.name === 'tournamentHanchanNumber')).toBeUndefined();
+    expect(gameColumns.find(column => column.name === 'tournamentTableNumber')).toBeUndefined();
+
+    const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+    expect(foreignKeyViolations).toEqual([]);
+
+    db.close();
+  });
+
   test('migration 5 seeds game rules details in current compact format', () => {
     const db = createMigratedDb('5.sql');
 
