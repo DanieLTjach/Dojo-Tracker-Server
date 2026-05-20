@@ -239,6 +239,7 @@ export class GameService {
 
         this.ratingService.deleteRatingChangesFromGame(game);
         this.gameRepository.undoFinishGame(gameId, modifiedBy);
+        this.undoRemainingRiichiSticksOnFinish(game, event.gameRules, modifiedBy);
 
         const reopenedGame = this.getDetailedGameById(gameId);
         this.logGameAction(reopenedGame, event, modifiedBy, '↩️ Game Finish Undone', 'Undone by');
@@ -519,34 +520,68 @@ export class GameService {
         gameRules: GameRules,
         modifiedBy: number
     ): GamePlayer[] {
-        const riichiStickCount = game.currentState?.riichiSticks ?? 0;
-        if (riichiStickCount === 0) {
-            return game.players;
-        }
-
-        const extraPointChanges = calculateRemainingRiichiSticksPointChanges(
-            game.players,
-            gameRules,
-            riichiStickCount
-        );
+        const extraPointChanges = this.calculateRemainingRiichiSticksPointChangesForGame(game, gameRules);
         if (extraPointChanges.length === 0) {
             return game.players;
         }
 
+        this.persistRemainingRiichiSticksPointChanges(game, extraPointChanges, modifiedBy);
+
+        return this.gameRepository.findGamePlayersByGameId(game.id);
+    }
+
+    private undoRemainingRiichiSticksOnFinish(
+        game: DetailedGame,
+        gameRules: GameRules,
+        modifiedBy: number
+    ): void {
+        const extraPointChanges = this.calculateRemainingRiichiSticksPointChangesForGame(game, gameRules);
+        if (extraPointChanges.length === 0) {
+            return;
+        }
+
+        const reversedPointChanges = extraPointChanges.map((change) => ({
+            playerId: change.playerId,
+            pointChange: -change.pointChange
+        }));
+
+        this.persistRemainingRiichiSticksPointChanges(game, reversedPointChanges, modifiedBy);
+    }
+
+    private calculateRemainingRiichiSticksPointChangesForGame(
+        game: DetailedGame,
+        gameRules: GameRules
+    ): PlayerPointChange[] {
+        const riichiStickCount = this.getRemainingRiichiStickCount(game);
+        if (riichiStickCount === 0) {
+            return [];
+        }
+
+        return calculateRemainingRiichiSticksPointChanges(game.players, gameRules, riichiStickCount);
+    }
+
+    private getRemainingRiichiStickCount(game: DetailedGame): number {
+        const lastRound = game.rounds[game.rounds.length - 1];
+        return lastRound?.result.nextState?.riichiSticks ?? 0;
+    }
+
+    private persistRemainingRiichiSticksPointChanges(
+        game: DetailedGame,
+        pointChanges: PlayerPointChange[],
+        modifiedBy: number
+    ): void {
         const lastRound = game.rounds[game.rounds.length - 1]!;
         const updatedResult: GameRoundResult = {
             ...lastRound.result,
             playerPointChanges: mergePlayerPointChanges(
                 lastRound.result.playerPointChanges,
-                extraPointChanges
+                pointChanges
             )
         };
 
         this.gameRepository.updateGameRoundResult(game.id, lastRound.roundNumber, updatedResult);
-        this.gameRepository.applyPlayerPointChanges(game.id, extraPointChanges, modifiedBy);
+        this.gameRepository.applyPlayerPointChanges(game.id, pointChanges, modifiedBy);
         this.gameRepository.touchGame(game.id, modifiedBy);
-
-        return this.gameRepository.findGamePlayersByGameId(game.id);
     }
 
     private calculateCurrentGameState(game: GameWithPlayers, rounds: GameRound[]): GameState | null {
