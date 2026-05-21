@@ -76,6 +76,7 @@ export interface GamePlayer {
     ratingChange: number;
     startPlace: Wind | null;
     chomboCount: number;
+    isSubstitutePlayer: boolean;
 }
 
 export interface GameWithPlayers extends Game {
@@ -92,11 +93,13 @@ export interface PlayerData {
     points: number;
     startPlace?: Wind | undefined | null;
     chomboCount?: number | undefined | null;
+    isSubstitutePlayer?: boolean | undefined | null;
 }
 
 export interface TrackedGamePlayerData {
     userId: number;
     startPlace: Wind;
+    isSubstitutePlayer?: boolean | undefined;
 }
 
 export interface GameFilters {

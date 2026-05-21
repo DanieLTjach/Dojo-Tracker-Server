@@ -10,6 +10,7 @@ CREATE TABLE userToGame_new (
     startPlace TEXT REFERENCES wind(wind),
     points INTEGER NOT NULL,
     chomboCount INTEGER NOT NULL,
+    isSubstitutePlayer BOOL NOT NULL DEFAULT false,
     createdAt TIMESTAMP NOT NULL,
     modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id),

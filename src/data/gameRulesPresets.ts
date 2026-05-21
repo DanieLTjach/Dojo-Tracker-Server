@@ -76,6 +76,8 @@ const ema2025Def: GameRulesPresetDef = {
         riichi_deposit_is_returned_if_one_of_multiple_ron: true,
         riichi_without_a_next_draw: true,
         starting_points: 30000,
+        substitute_player_penalty_before_uma: 15000,
+        substitute_player_uma: -15,
         west_round: false,
         yakuman_stacking: false,
     }

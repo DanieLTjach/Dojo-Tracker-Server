@@ -14,6 +14,7 @@ import {
     GameNotFinishedWhenUpdatingError,
     NotAuthorizedToModifyGameError,
     NotGamePlayerError,
+    GamePlayerNotFoundError,
 } from '../error/GameErrors.ts';
 import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound, GameState, Game } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
@@ -166,6 +167,45 @@ export class GameService {
         const updatedGame = this.getGameById(gameId);
         this.logEditedGame(oldGame, updatedGame, event, modifiedBy);
         return updatedGame;
+    }
+
+    setSubstitutePlayer(
+        gameId: number,
+        targetUserId: number,
+        isSubstitutePlayer: boolean,
+        modifiedBy: number
+    ): GamePlayer {
+        const game = this.getGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+        this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
+
+        const player = game.players.find((p) => p.userId === targetUserId);
+        if (player === undefined) {
+            throw new GamePlayerNotFoundError(gameId, targetUserId);
+        }
+
+        this.gameRepository.updatePlayerIsSubstitutePlayer(gameId, targetUserId, isSubstitutePlayer, modifiedBy);
+        this.gameRepository.touchGame(gameId, modifiedBy);
+
+        if (game.status === GameStatus.FINISHED) {
+            this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
+        }
+
+        return this.gameRepository.findGamePlayersByGameId(gameId)
+            .find((p) => p.userId === targetUserId)!;
+    }
+
+    private recalculateRatingForFinishedGame(gameId: number, gameTimestamp: Date, event: Event): void {
+        const game = this.getGameById(gameId);
+        this.ratingService.deleteRatingChangesFromGame(game);
+        this.ratingService.addRatingChangesFromGame(
+            gameId,
+            gameTimestamp,
+            game.players,
+            event.id,
+            event.gameRules,
+            event.startingRating
+        );
     }
 
     deleteGame(gameId: number, deletedBy: number): void {
@@ -498,6 +538,7 @@ export class GameService {
                 player.points,
                 player.startPlace ?? undefined,
                 player.chomboCount ?? 0,
+                player.isSubstitutePlayer ?? false,
                 modifiedBy
             );
         }

@@ -77,12 +77,13 @@ export class GameRepository {
         points: number,
         startPlace: string | undefined,
         chomboCount: number,
+        isSubstitutePlayer: number,
         modifiedBy: number,
         timestamp: string
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO userToGame (gameId, userId, points, startPlace, chomboCount, modifiedBy, createdAt, modifiedAt)
-            VALUES (:gameId, :userId, :points, :startPlace, :chomboCount, :modifiedBy, :timestamp, :timestamp)`
+            INSERT INTO userToGame (gameId, userId, points, startPlace, chomboCount, isSubstitutePlayer, modifiedBy, createdAt, modifiedAt)
+            VALUES (:gameId, :userId, :points, :startPlace, :chomboCount, :isSubstitutePlayer, :modifiedBy, :timestamp, :timestamp)`
         );
     }
 
@@ -92,6 +93,7 @@ export class GameRepository {
         points: number,
         startPlace: string | undefined,
         chomboCount: number,
+        isSubstitutePlayer: boolean,
         modifiedBy: number
     ): void {
         this.addGamePlayerStatement().run({
@@ -100,8 +102,38 @@ export class GameRepository {
             points,
             startPlace,
             chomboCount,
+            isSubstitutePlayer: booleanToInteger(isSubstitutePlayer),
             modifiedBy,
             timestamp: new Date().toISOString()
+        });
+    }
+
+    private updatePlayerIsSubstitutePlayerStatement(): Statement<{
+        gameId: number,
+        userId: number,
+        isSubstitutePlayer: number,
+        modifiedBy: number,
+        modifiedAt: string
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE userToGame
+            SET isSubstitutePlayer = :isSubstitutePlayer, modifiedAt = :modifiedAt, modifiedBy = :modifiedBy
+            WHERE gameId = :gameId AND userId = :userId`
+        );
+    }
+
+    updatePlayerIsSubstitutePlayer(
+        gameId: number,
+        userId: number,
+        isSubstitutePlayer: boolean,
+        modifiedBy: number
+    ): void {
+        this.updatePlayerIsSubstitutePlayerStatement().run({
+            gameId,
+            userId,
+            isSubstitutePlayer: booleanToInteger(isSubstitutePlayer),
+            modifiedBy,
+            modifiedAt: new Date().toISOString()
         });
     }
 
@@ -588,6 +620,7 @@ export interface GamePlayerDBEntity {
     ratingChange: number;
     startPlace: string | null;
     chomboCount: number;
+    isSubstitutePlayer: number;
 }
 
 function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
@@ -595,6 +628,7 @@ function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
         ...dbEntity,
         profileHidden: Boolean(dbEntity.profileHidden),
         startPlace: dbEntity.startPlace !== null ? parseWind(dbEntity.startPlace) : null,
-        ratingChange: dbEntity.ratingChange / RATING_TO_POINTS_COEFFICIENT
+        ratingChange: dbEntity.ratingChange / RATING_TO_POINTS_COEFFICIENT,
+        isSubstitutePlayer: Boolean(dbEntity.isSubstitutePlayer)
     }
 }

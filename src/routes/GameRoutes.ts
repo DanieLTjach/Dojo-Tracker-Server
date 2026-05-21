@@ -21,6 +21,11 @@ router.post('/:gameId/finish', requireAuth, withTransaction((req, res) => gameCo
 router.post('/:gameId/undo-finish', requireAuth, withTransaction((req, res) => gameController.undoFinishGame(req, res)));
 
 router.put('/:gameId', requireAuth, withTransaction((req, res) => gameController.editGame(req, res)));
+router.patch(
+    '/:gameId/players/:userId/substitute-player',
+    requireAuth,
+    withTransaction((req, res) => gameController.setSubstitutePlayer(req, res))
+);
 router.delete('/:gameId', requireAuth, withTransaction((req, res) => gameController.deleteGame(req, res)));
 
 export default router;

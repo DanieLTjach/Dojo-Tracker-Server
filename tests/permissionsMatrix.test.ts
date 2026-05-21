@@ -181,6 +181,14 @@ describe('Permissions matrix integration specification', () => {
         ).run(gameId, eventId, timestamp, timestamp, SYSTEM_USER_ID, null, null, 'FINISHED', timestamp, timestamp);
     }
 
+    function insertGamePlayer(gameId: number, userId: number, points: number): void {
+        const timestamp = nextTimestamp();
+        dbManager.db.prepare(
+            `INSERT INTO userToGame (userId, gameId, startPlace, points, chomboCount, isSubstitutePlayer, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, 'EAST', ?, 0, 0, ?, ?, ?)`
+        ).run(userId, gameId, points, timestamp, timestamp, SYSTEM_USER_ID);
+    }
+
     function cleanupEventCascade(eventId: number): void {
         dbManager.db.prepare('DELETE FROM userRatingChange WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
         dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
@@ -979,6 +987,74 @@ describe('Permissions matrix integration specification', () => {
                 .put(`/api/games/${editableGameId}`)
                 .set('Authorization', authHeader)
                 .send(buildGamePayload(editableEventId, false))
+        );
+    });
+
+    describe('Set substitute player (in own club)', () => {
+        let substituteEventId: number;
+        let substituteGameId: number;
+
+        beforeEach(() => {
+            substituteEventId = nextId();
+            insertEvent(
+                substituteEventId,
+                `Permissions Matrix Substitute Player Event ${substituteEventId}`,
+                TEST_CLUB_ID,
+                OWN_CLUB_GAME_RULES_ID
+            );
+
+            substituteGameId = nextId();
+            insertGame(substituteGameId, substituteEventId);
+            insertGamePlayer(substituteGameId, MEMBER_USER_ID, 30000);
+        });
+
+        afterEach(() => {
+            cleanupEventCascade(substituteEventId);
+        });
+
+        createRoleTest(
+            'admin',
+            200,
+            (authHeader) => request(app)
+                .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
+                .set('Authorization', authHeader)
+                .send({ isSubstitutePlayer: true })
+        );
+
+        createRoleTest(
+            'owner',
+            200,
+            (authHeader) => request(app)
+                .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
+                .set('Authorization', authHeader)
+                .send({ isSubstitutePlayer: true })
+        );
+
+        createRoleTest(
+            'moderator',
+            200,
+            (authHeader) => request(app)
+                .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
+                .set('Authorization', authHeader)
+                .send({ isSubstitutePlayer: true })
+        );
+
+        createRoleTest(
+            'member',
+            403,
+            (authHeader) => request(app)
+                .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
+                .set('Authorization', authHeader)
+                .send({ isSubstitutePlayer: true })
+        );
+
+        createRoleTest(
+            'nonMember',
+            403,
+            (authHeader) => request(app)
+                .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
+                .set('Authorization', authHeader)
+                .send({ isSubstitutePlayer: true })
         );
     });
 
