@@ -86,3 +86,5 @@ CREATE TABLE gameRound (
     result TEXT NOT NULL,
     PRIMARY KEY (gameId, roundNumber)
 );
+
+ALTER TABLE event ADD COLUMN info TEXT;

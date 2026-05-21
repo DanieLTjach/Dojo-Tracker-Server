@@ -4,6 +4,7 @@ import type { Event } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
+import type { EventInfo } from '../model/EventModels.ts';
 
 export class EventRepository {
     private findAllEventsStatement(): Statement<[], EventWithGameRulesDBEntity> {
@@ -270,6 +271,7 @@ interface EventWithGameRulesDBEntity {
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
+    info: string | null;
     gr_id: number;
     gr_name: string;
     gr_clubId: number | null;
@@ -307,6 +309,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
         maxParticipants: dbEntity.maxParticipants,
         registrationDeadline: dbEntity.registrationDeadline !== null ? new Date(dbEntity.registrationDeadline) : null,
+        info: dbEntity.info !== null ? JSON.parse(dbEntity.info) as EventInfo : null,
         gameCount: dbEntity.gameCount,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
