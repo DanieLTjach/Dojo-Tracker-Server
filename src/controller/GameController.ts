@@ -11,7 +11,8 @@ import {
     gameRoundPostSchema,
     gameRoundDeleteSchema,
     gameFinishSchema,
-    gameUndoFinishSchema
+    gameUndoFinishSchema,
+    gameStartSchema
 } from '../schema/GameSchemas.ts';
 import { TrackedGameService } from '../service/TrackedGameService.ts';
 
@@ -57,6 +58,13 @@ export class GameController {
         const { params: { gameId, roundId } } = gameRoundDeleteSchema.parse(req);
         const modifiedBy = req.user!.userId;
         const game = this.trackedGameService.deleteGameRoundResult(gameId, roundId, modifiedBy);
+        return res.status(StatusCodes.OK).json(game);
+    }
+
+    startTrackedGame(req: Request, res: Response) {
+        const { params: { gameId } } = gameStartSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const game = this.trackedGameService.startTrackedGame(gameId, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
     }
 

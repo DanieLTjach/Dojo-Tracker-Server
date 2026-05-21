@@ -149,3 +149,15 @@ export class CannotUndoFinishOnNonTrackedGameError extends BadRequestError {
         super('Скасувати завершення можна лише для відстежуваної гри з раундами', 'cannotUndoFinishOnNonTrackedGame');
     }
 }
+
+export class GameNotCreatedWhenStartingError extends BadRequestError {
+    constructor() {
+        super('Можна розпочати лише гру в статусі CREATED', 'gameNotCreatedWhenStarting');
+    }
+}
+
+export class NotGamePlayerError extends ForbiddenError {
+    constructor() {
+        super('Лише гравці цієї гри можуть виконати цю дію', 'notGamePlayer');
+    }
+}

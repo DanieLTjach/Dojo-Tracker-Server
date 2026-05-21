@@ -13,6 +13,7 @@ import {
     YouHaveToBeAdminToHideNewGameMessage,
     GameNotFinishedWhenUpdatingError,
     NotAuthorizedToModifyGameError,
+    NotGamePlayerError,
 } from '../error/GameErrors.ts';
 import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound, GameState, Game } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
@@ -249,6 +250,12 @@ export class GameService {
         }
 
         throw new NotAuthorizedToModifyGameError();
+    }
+
+    authorizeGamePlayerAction(game: GameWithPlayers, userId: number): void {
+        if (!game.players.some((player) => player.userId === userId)) {
+            throw new NotGamePlayerError();
+        }
     }
 
     authorizeClubScopedAction(clubId: number | null, userId: number, allowedRoles: ClubRole[]): void {
