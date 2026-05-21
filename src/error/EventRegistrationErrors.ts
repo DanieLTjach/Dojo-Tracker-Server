@@ -7,6 +7,21 @@ export class EventRegistrationNotFoundError extends NotFoundError {
     }
 }
 
+export class UserNotRegisteredForTournamentError extends BadRequestError {
+    constructor(eventName: string, userId: number) {
+        super(`Користувач ${userId} не зареєстрований на турнір "${eventName}"`, 'userNotRegisteredForTournament');
+    }
+}
+
+export class UserNotApprovedForTournamentError extends BadRequestError {
+    constructor(eventName: string, userId: number, status: EventRegistrationStatus) {
+        super(
+            `Користувач ${userId} не схвалений для турніру "${eventName}" (статус реєстрації: ${status})`,
+            'userNotApprovedForTournament'
+        );
+    }
+}
+
 export class InvalidEventRegistrationStateError extends BadRequestError {
     constructor(action: string, currentStatus: EventRegistrationStatus, allowedStatuses: EventRegistrationStatus[]) {
         super(

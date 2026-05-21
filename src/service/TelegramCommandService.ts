@@ -1,6 +1,7 @@
 import { Context } from "telegraf";
+import { message } from "telegraf/filters";
 import config from "../../config/config.ts";
-import { TelegramReplyError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from "../error/TelegramErrors.ts";
+import { TelegramReplyError, UserNotAdminTelegramError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from "../error/TelegramErrors.ts";
 import { ClubMembershipService } from "./ClubMembershipService.ts";
 import LogService from "./LogService.ts";
 import { telegramBot } from "./TelegramBot.ts";
@@ -17,6 +18,8 @@ import { parseClubTelegramTopicType } from "../util/EnumUtil.ts";
 import { PollRepository } from "../repository/PollRepository.ts";
 import type { ClubPollConfig } from "../model/PollModels.ts";
 import PollSchedulerService from "./PollSchedulerService.ts";
+import { EventService } from "./EventService.ts";
+import { TournamentRoundImportService } from "./TournamentRoundImportService.ts";
 
 type TelegramCommandContext = Context<{
     message: Update.New & Update.NonChannel & Message.TextMessage;
@@ -27,12 +30,26 @@ type TelegramCallbackQueryContext = Context<Update.CallbackQueryUpdate<CallbackQ
 
 type ClubData = { clubId: number; clubName: string };
 
+type TournamentImportStep = 'awaiting_round' | 'awaiting_data';
+
+type TournamentImportPending = {
+    eventId: number;
+    step: TournamentImportStep;
+    round?: number;
+    updatedAt: number;
+};
+
+const PENDING_TTL_MS = 30 * 60 * 1000;
+
 class TelegramCommandService {
 
     private userService: UserService = new UserService();
     private clubService: ClubService = new ClubService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private pollRepository: PollRepository = new PollRepository();
+    private eventService: EventService = new EventService();
+    private tournamentRoundImportService: TournamentRoundImportService = new TournamentRoundImportService();
+    private tournamentImportPending = new Map<number, TournamentImportPending>();
 
     init() {
         telegramBot.command('help', (ctx) => {
@@ -118,6 +135,16 @@ class TelegramCommandService {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleSendPollConfirmCallback.bind(this));
         });
 
+        telegramBot.command('import_tournament_round', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handleImportTournamentRoundCommand.bind(this));
+        });
+        telegramBot.action(/import_round_event_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleImportRoundEventCallback.bind(this));
+        });
+        telegramBot.on(message('text'), (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handleTextMessage.bind(this));
+        });
+
         telegramBot.telegram.setMyCommands([
             { command: 'help', description: 'Показати список команд' },
             { command: 'post_app_link', description: 'Опублікувати посилання на додаток' },
@@ -158,6 +185,12 @@ class TelegramCommandService {
                 + `<code>/set_topic</code> — Налаштувати сповіщення в поточному топіку\n`
                 + `<code>/unset_topic</code> — Скинути налаштування топіка\n`
                 + `<code>/diagnose_topics</code> — Перевірити налаштування топіків\n`;
+        }
+
+        if (user.isAdmin) {
+            text += `\n`
+                + `<b>Турнір:</b>\n`
+                + `<code>/import_tournament_round</code> — Імпорт розсадки раунду турніру\n`;
         }
 
         ctx.replyWithHTML(text);
@@ -694,6 +727,145 @@ class TelegramCommandService {
             ? '✅ Опитування відправлено і закріплено!'
             : '✅ Опитування відправлено, але не вдалося закріпити. Перевірте, що бот має право закріплювати повідомлення.'
         );
+    }
+
+    private handleImportTournamentRoundCommand(ctx: TelegramCommandContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserIsGlobalAdmin(user);
+
+        this.clearTournamentImportPending(ctx.from.id);
+
+        const tournaments = this.eventService.getActiveTournaments()
+            .sort((a, b) => b.id - a.id);
+
+        if (tournaments.length === 0) {
+            ctx.reply('Немає активних турнірів.');
+            return;
+        }
+
+        ctx.reply('Виберіть турнір:', {
+            reply_markup: {
+                inline_keyboard: tournaments.map(event => ([{
+                    text: event.name,
+                    callback_data: `import_round_event_${event.id}`
+                }]))
+            }
+        });
+    }
+
+    private handleImportRoundEventCallback(ctx: TelegramCallbackQueryContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserIsGlobalAdmin(user);
+
+        const eventId = parseInt(ctx.match[1]!);
+        const event = this.eventService.getEventById(eventId);
+        if (event.type !== 'TOURNAMENT') {
+            ctx.reply('Вибрана подія не є турніром.');
+            return;
+        }
+        if (this.eventService.hasEventEnded(event)) {
+            ctx.reply('Цей турнір вже закінчився.');
+            return;
+        }
+
+        this.setTournamentImportPending(ctx.from.id, {
+            eventId,
+            step: 'awaiting_round',
+            updatedAt: Date.now()
+        });
+
+        ctx.reply('Надішліть номер раунду (наприклад, 3):');
+    }
+
+    private handleTextMessage(ctx: TelegramCommandContext) {
+        const text = ctx.message.text;
+        if (text.startsWith('/')) {
+            return;
+        }
+
+        const pending = this.getTournamentImportPending(ctx.from.id);
+        if (pending === undefined) {
+            return;
+        }
+
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserIsGlobalAdmin(user);
+
+        this.handleTournamentImportText(ctx, pending, text, user.id);
+    }
+
+    private handleTournamentImportText(
+        ctx: TelegramCommandContext,
+        pending: TournamentImportPending,
+        text: string,
+        appUserId: number
+    ) {
+        if (pending.step === 'awaiting_round') {
+            const round = Number(text.trim());
+            if (!Number.isInteger(round) || round < 1) {
+                ctx.reply('Номер раунду має бути додатним цілим числом.');
+                return;
+            }
+
+            this.setTournamentImportPending(ctx.from.id, {
+                eventId: pending.eventId,
+                step: 'awaiting_data',
+                round,
+                updatedAt: Date.now()
+            });
+
+            ctx.reply(
+                `Надішліть розсадку одним повідомленням:\n`
+                + `Round ${round}\n`
+                + `<id1> <id2> <id3> <id4>\n`
+                + `...`
+            );
+            return;
+        }
+
+        if (pending.step === 'awaiting_data' && pending.round !== undefined) {
+            const result = this.tournamentRoundImportService.parseAndImport(
+                pending.eventId,
+                pending.round,
+                text,
+                appUserId
+            );
+
+            this.clearTournamentImportPending(ctx.from.id);
+
+            if (result.errors.length > 0) {
+                ctx.reply('❌ Помилки імпорту:\n' + result.errors.map(e => `• ${e}`).join('\n'));
+                return;
+            }
+
+            ctx.reply(`✅ Імпортовано ${result.imported} ігор`);
+        }
+    }
+
+    private getTournamentImportPending(telegramId: number): TournamentImportPending | undefined {
+        const pending = this.tournamentImportPending.get(telegramId);
+        if (pending === undefined) {
+            return undefined;
+        }
+        if (Date.now() - pending.updatedAt > PENDING_TTL_MS) {
+            this.tournamentImportPending.delete(telegramId);
+            return undefined;
+        }
+        return pending;
+    }
+
+    private setTournamentImportPending(telegramId: number, pending: TournamentImportPending): void {
+        this.tournamentImportPending.set(telegramId, pending);
+    }
+
+    private clearTournamentImportPending(telegramId: number): void {
+        this.tournamentImportPending.delete(telegramId);
+    }
+
+    private validateUserIsGlobalAdmin(user: User): void {
+        if (!user.isAdmin) {
+            throw new UserNotAdminTelegramError();
+        }
     }
 
     private getUserByTelegramId(userTelegramId: number): User {

@@ -4,7 +4,9 @@ import {
     EventCapacityReachedError,
     EventRegistrationNotFoundError,
     InvalidEventRegistrationStateError,
-    MissingProfileNamesForTournamentRegistrationError
+    MissingProfileNamesForTournamentRegistrationError,
+    UserNotApprovedForTournamentError,
+    UserNotRegisteredForTournamentError
 } from '../error/EventRegistrationErrors.ts';
 import { BadRequestError } from '../error/BaseErrors.ts';
 import type { Event } from '../model/EventModels.ts';
@@ -225,6 +227,19 @@ export class EventRegistrationService {
             return this.registrationRepository.findRegistrationsByUserIdAndStatus(userId, status);
         }
         return this.registrationRepository.findRegistrationsByUserId(userId);
+    }
+
+    validateUserIsApprovedParticipant(eventId: number, userId: number): void {
+        const event = this.eventService.getEventById(eventId);
+        this.validateEventIsTournament(event);
+
+        const registration = this.registrationRepository.findRegistration(eventId, userId);
+        if (registration === undefined) {
+            throw new UserNotRegisteredForTournamentError(event.name, userId);
+        }
+        if (registration.status !== 'APPROVED') {
+            throw new UserNotApprovedForTournamentError(event.name, userId, registration.status);
+        }
     }
 
     private getRegistration(eventId: number, userId: number): EventRegistration {

@@ -22,20 +22,28 @@ export class TrackedGameService {
     private ratingService: RatingService = new RatingService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
 
-    addTrackedGame(eventId: number, players: TrackedGamePlayerData[], createdBy: number): DetailedGame {
-        const gameTimestamp = new Date();
+    createTrackedGame(
+        eventId: number,
+        players: TrackedGamePlayerData[],
+        createdBy: number,
+        status: GameStatus,
+        createdAt?: Date,
+        tournamentRound?: number,
+        tournamentTable?: string
+    ): DetailedGame {
+        const gameTimestamp = createdAt ?? new Date();
 
         const event = this.eventService.getEventById(eventId);
         this.gameService.authorizeGameCreation(event, players, createdBy);
         this.validateTrackedGamePlayers(players, event.gameRules);
-        this.gameService.validateGameWithinEventDates(event, gameTimestamp, createdBy);
+        this.gameService.validateGameWithinEventDates(event, gameTimestamp, createdBy, status);
         this.gameService.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
 
-        const newGameId = this.gameRepository.createTrackedGame(eventId, createdBy, gameTimestamp);
+        const newGameId = this.gameRepository.createTrackedGame(eventId, createdBy, gameTimestamp, status, tournamentRound, tournamentTable);
         this.addPlayersToTrackedGame(newGameId, players, event.gameRules.startingPoints, createdBy);
 
         const newGame = this.gameService.getDetailedGameById(newGameId);
-        this.logNewTrackedGame(newGame, event);
+        this.logNewTrackedGame(newGame, event, status);
         return newGame;
     }
 
@@ -375,13 +383,13 @@ export class TrackedGameService {
         this.gameService.validateNoDuplicatePlayers(players);
     }
 
-    private logNewTrackedGame(game: GameWithPlayers, event: Event): void {
+    private logNewTrackedGame(game: GameWithPlayers, event: Event, status: GameStatus): void {
         const user = this.userService.getUserById(game.modifiedBy);
         const message = dedent`
-            <b>🎮 New Tracked Game Started</b>
+            <b>🎮 New Tracked Game ${status === GameStatus.CREATED ? 'Created' : 'Started'}</b>
 
             <b>Game ID:</b> <code>${game.id}</code>
-            <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
+            ${this.gameService.formatEventGameLogSection(game, event)}
             <b>Timestamp:</b> <code>${game.createdAt.toISOString()}</code>
             <b>Created by:</b> ${user.name} <code>(ID: ${user.id})</code>
 
@@ -405,7 +413,7 @@ export class TrackedGameService {
             <b>↩️ Last Round Rolled Back</b>
 
             <b>Game ID:</b> <code>${game.id}</code>
-            <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
+            ${this.gameService.formatEventGameLogSection(game, event)}
             <b>Round:</b> <code>${deletedRound.wind} ${deletedRound.dealerNumber} Repeat ${deletedRound.counters} (${deletedRound.roundNumber})</code>
             <b>Result type:</b> <code>${deletedRound.result.type}</code>
             <b>Rolled back by:</b> ${user.name} <code>(ID: ${user.id})</code>
