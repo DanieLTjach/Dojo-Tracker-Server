@@ -57,7 +57,13 @@ export class RatingRepository {
                 WHERE g.eventId = :eventId
                 GROUP BY utg.userId
             ) gc ON u.id = gc.userId
-            WHERE urc.rn = 1`
+            WHERE urc.rn = 1
+              AND NOT EXISTS (
+                  SELECT 1 FROM eventRegistration er
+                  WHERE er.eventId = :eventId
+                    AND er.userId = u.id
+                    AND er.isFillerPlayer = 1
+              )`
         );
     }
 

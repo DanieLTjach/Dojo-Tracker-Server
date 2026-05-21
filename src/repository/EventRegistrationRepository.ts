@@ -1,5 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
+import { booleanToInteger } from '../db/dbUtils.ts';
 import type { EventRegistration, EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
 import { parseEventRegistrationStatus } from '../util/EnumUtil.ts';
 
@@ -11,6 +12,7 @@ const REGISTRATION_SELECT_COLUMNS = `
     p.firstName as firstName,
     p.lastName as lastName,
     p.hideProfile as hideProfile,
+    er.isFillerPlayer as isFillerPlayer,
     er.status,
     er.createdAt,
     er.modifiedAt,
@@ -98,19 +100,21 @@ export class EventRegistrationRepository {
         eventId: number;
         userId: number;
         status: EventRegistrationStatus;
+        isFillerPlayer: number;
         createdAt: string;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO eventRegistration (eventId, userId, status, createdAt, modifiedAt, modifiedBy)
-            VALUES (:eventId, :userId, :status, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO eventRegistration (eventId, userId, status, isFillerPlayer, createdAt, modifiedAt, modifiedBy)
+            VALUES (:eventId, :userId, :status, :isFillerPlayer, :createdAt, :modifiedAt, :modifiedBy)
         `);
     }
 
     createRegistration(params: EventRegistrationCreateParams): void {
         this.createRegistrationStatement().run({
             ...params,
+            isFillerPlayer: booleanToInteger(params.isFillerPlayer ?? false),
             createdAt: params.createdAt.toISOString(),
             modifiedAt: params.modifiedAt.toISOString()
         });
@@ -138,6 +142,33 @@ export class EventRegistrationRepository {
             eventId,
             userId,
             status,
+            modifiedAt: new Date().toISOString(),
+            modifiedBy
+        });
+    }
+
+    private updateRegistrationIsFillerPlayerStatement(): Statement<{
+        eventId: number;
+        userId: number;
+        isFillerPlayer: number;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE eventRegistration
+            SET isFillerPlayer = :isFillerPlayer,
+                modifiedAt = :modifiedAt,
+                modifiedBy = :modifiedBy
+            WHERE eventId = :eventId
+              AND userId = :userId
+        `);
+    }
+
+    updateRegistrationIsFillerPlayer(eventId: number, userId: number, isFillerPlayer: boolean, modifiedBy: number): void {
+        this.updateRegistrationIsFillerPlayerStatement().run({
+            eventId,
+            userId,
+            isFillerPlayer: booleanToInteger(isFillerPlayer),
             modifiedAt: new Date().toISOString(),
             modifiedBy
         });
@@ -185,6 +216,7 @@ export interface EventRegistrationCreateParams {
     eventId: number;
     userId: number;
     status: EventRegistrationStatus;
+    isFillerPlayer?: boolean;
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;
@@ -198,6 +230,7 @@ interface EventRegistrationDBEntity {
     firstName: string | null;
     lastName: string | null;
     hideProfile: number | null;
+    isFillerPlayer: number;
     status: string;
     createdAt: string;
     modifiedAt: string;
@@ -213,6 +246,7 @@ function eventRegistrationFromDBEntity(dbEntity: EventRegistrationDBEntity): Eve
         firstName: dbEntity.firstName,
         lastName: dbEntity.lastName,
         hideProfile: Boolean(dbEntity.hideProfile),
+        isFillerPlayer: Boolean(dbEntity.isFillerPlayer),
         status: parseEventRegistrationStatus(dbEntity.status),
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),

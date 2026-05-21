@@ -93,5 +93,11 @@ router.patch(
     requireEventManagementRole,
     withTransaction((req, res) => registrationController.editParticipantProfileNames(req, res))
 );
+router.patch(
+    '/:eventId/registrations/:userId/filler-player',
+    requireAuth,
+    requireEventManagementRole,
+    withTransaction((req, res) => registrationController.setFillerPlayer(req, res))
+);
 
 export default router;

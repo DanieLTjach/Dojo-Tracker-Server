@@ -79,6 +79,14 @@ describe('Rating API Endpoints', () => {
         ).run(clubId, userId, ts, ts);
     }
 
+    function seedEventRegistration(eventId: number, userId: number, isFillerPlayer: boolean) {
+        const ts = new Date().toISOString();
+        dbManager.db.prepare(
+            `INSERT OR REPLACE INTO eventRegistration (eventId, userId, status, isFillerPlayer, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, 'APPROVED', ?, ?, ?, 0)`
+        ).run(eventId, userId, isFillerPlayer ? 1 : 0, ts, ts);
+    }
+
     async function createGameSetupWithPoints(points: number[]) {
         const user1Id = await createTestUser('Player1', 1);
         const user2Id = await createTestUser('Player2', 2);
@@ -174,6 +182,39 @@ describe('Rating API Endpoints', () => {
             for (const rating of response.body) {
                 expect(rating.gamesPlayed).toBe(2);
             }
+        });
+
+        test('excludes filler players from current rating standings', async () => {
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetup();
+
+            seedEventRegistration(TEST_EVENT_ID, user2Id, true);
+
+            const response = await request(app)
+                .get(`/api/events/${TEST_EVENT_ID}/rating`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveLength(3);
+            const userIds = response.body.map((r: { user: { id: number } }) => r.user.id);
+            expect(userIds).toContain(user1Id);
+            expect(userIds).toContain(user3Id);
+            expect(userIds).toContain(user4Id);
+            expect(userIds).not.toContain(user2Id);
+        });
+
+        test('includes players with non-filler registration', async () => {
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetup();
+
+            seedEventRegistration(TEST_EVENT_ID, user2Id, false);
+
+            const response = await request(app)
+                .get(`/api/events/${TEST_EVENT_ID}/rating`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveLength(4);
+            const userIds = response.body.map((r: { user: { id: number } }) => r.user.id);
+            expect(userIds).toEqual(expect.arrayContaining([user1Id, user2Id, user3Id, user4Id]));
         });
 
     });

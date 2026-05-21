@@ -292,6 +292,35 @@ describe('Event registration permissions matrix', () => {
         }
     });
 
+    describe('set filler player — admin/owner/moderator only', () => {
+        beforeEach(() => seedRegistration(NON_MEMBER_USER_ID, 'APPROVED'));
+        afterEach(() => clearRegistrations());
+
+        const cases: Array<[MatrixRole, number]> = [
+            ['admin', 200], ['owner', 200], ['moderator', 200],
+            ['member', 403], ['nonMember', 403], ['pending', 403], ['otherClubOwner', 403]
+        ];
+        for (const [role, expected] of cases) {
+            createRoleTest(
+                role,
+                expected,
+                (authHeader) => request(app)
+                    .patch(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/filler-player`)
+                    .set('Authorization', authHeader)
+                    .send({ isFillerPlayer: true })
+            );
+        }
+
+        it('persists isFillerPlayer when owner sets it', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/filler-player`)
+                .set('Authorization', authHeaders.owner)
+                .send({ isFillerPlayer: true });
+            expect(response.status).toBe(200);
+            expect(response.body.isFillerPlayer).toBe(true);
+        });
+    });
+
     describe('withdraw — only the applicant', () => {
         beforeEach(() => {
             seedRegistration(MEMBER_USER_ID, 'PENDING');

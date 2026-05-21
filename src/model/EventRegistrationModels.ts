@@ -14,6 +14,7 @@ export interface EventRegistration {
     firstName: string | null;
     lastName: string | null;
     hideProfile: boolean;
+    isFillerPlayer: boolean;
     status: EventRegistrationStatus;
     createdAt: Date;
     modifiedAt: Date;
