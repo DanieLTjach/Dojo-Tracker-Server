@@ -71,6 +71,7 @@ export interface GamePlayer {
     telegramUsername: string | null;
     profileFirstName: string | null;
     profileLastName: string | null;
+    profileHidden: boolean;
     points: number;
     ratingChange: number;
     startPlace: Wind | null;

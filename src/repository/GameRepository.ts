@@ -121,6 +121,7 @@ export class GameRepository {
                 u.telegramUsername,
                 p.firstName AS profileFirstName,
                 p.lastName AS profileLastName,
+                p.hideProfile AS profileHidden,
                 utg.*,
                 COALESCE(urc.ratingChange, 0) AS ratingChange
             FROM userToGame utg
@@ -391,6 +392,7 @@ export class GameRepository {
                 u.telegramUsername,
                 p.firstName AS profileFirstName,
                 p.lastName AS profileLastName,
+                p.hideProfile AS profileHidden,
                 utg.*,
                 COALESCE(urc.ratingChange, 0) AS ratingChange
             FROM userToGame utg
@@ -581,6 +583,7 @@ export interface GamePlayerDBEntity {
     telegramUsername: string | null;
     profileFirstName: string | null;
     profileLastName: string | null;
+    profileHidden: number | null;
     points: number;
     ratingChange: number;
     startPlace: string | null;
@@ -590,6 +593,7 @@ export interface GamePlayerDBEntity {
 function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
     return {
         ...dbEntity,
+        profileHidden: Boolean(dbEntity.profileHidden),
         startPlace: dbEntity.startPlace !== null ? parseWind(dbEntity.startPlace) : null,
         ratingChange: dbEntity.ratingChange / RATING_TO_POINTS_COEFFICIENT
     }
