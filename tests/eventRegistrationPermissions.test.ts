@@ -188,6 +188,40 @@ describe('Event registration permissions matrix', () => {
         }
     });
 
+    describe('list registrations ?status=APPROVED — open to any authenticated user', () => {
+        const cases: Array<[MatrixRole, number]> = [
+            ['admin', 200], ['owner', 200], ['moderator', 200],
+            ['member', 200], ['nonMember', 200], ['pending', 200], ['otherClubOwner', 200]
+        ];
+        for (const [role, expected] of cases) {
+            createRoleTest(
+                role,
+                expected,
+                (authHeader) => request(app)
+                    .get(`/api/events/${TOURNAMENT_EVENT_ID}/registrations`)
+                    .query({ status: 'APPROVED' })
+                    .set('Authorization', authHeader)
+            );
+        }
+    });
+
+    describe('list registrations ?status=PENDING — still admin/owner/moderator only', () => {
+        const cases: Array<[MatrixRole, number]> = [
+            ['admin', 200], ['owner', 200], ['moderator', 200],
+            ['member', 403], ['nonMember', 403], ['pending', 403], ['otherClubOwner', 403]
+        ];
+        for (const [role, expected] of cases) {
+            createRoleTest(
+                role,
+                expected,
+                (authHeader) => request(app)
+                    .get(`/api/events/${TOURNAMENT_EVENT_ID}/registrations`)
+                    .query({ status: 'PENDING' })
+                    .set('Authorization', authHeader)
+            );
+        }
+    });
+
     describe('approve registration — admin/owner/moderator only', () => {
         beforeEach(() => seedRegistration(NON_MEMBER_USER_ID, 'PENDING'));
         afterEach(() => clearRegistrations());

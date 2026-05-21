@@ -10,6 +10,7 @@ const REGISTRATION_SELECT_COLUMNS = `
     u.name as userName,
     p.firstName as firstName,
     p.lastName as lastName,
+    p.hideProfile as hideProfile,
     er.status,
     er.createdAt,
     er.modifiedAt,
@@ -196,6 +197,7 @@ interface EventRegistrationDBEntity {
     userName: string;
     firstName: string | null;
     lastName: string | null;
+    hideProfile: number | null;
     status: string;
     createdAt: string;
     modifiedAt: string;
@@ -210,6 +212,7 @@ function eventRegistrationFromDBEntity(dbEntity: EventRegistrationDBEntity): Eve
         userName: dbEntity.userName,
         firstName: dbEntity.firstName,
         lastName: dbEntity.lastName,
+        hideProfile: Boolean(dbEntity.hideProfile),
         status: parseEventRegistrationStatus(dbEntity.status),
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),

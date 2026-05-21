@@ -116,9 +116,16 @@ export class GameRepository {
 
     private findGamePlayersByGameIdStatement(): Statement<{ gameId: number }, GamePlayerDBEntity> {
         return dbManager.db.prepare(`
-            SELECT u.name, u.telegramUsername, utg.*, COALESCE(urc.ratingChange, 0) AS ratingChange
+            SELECT
+                u.name,
+                u.telegramUsername,
+                p.firstName AS profileFirstName,
+                p.lastName AS profileLastName,
+                utg.*,
+                COALESCE(urc.ratingChange, 0) AS ratingChange
             FROM userToGame utg
             JOIN user u ON utg.userId = u.id
+            LEFT JOIN profile p ON p.userId = utg.userId
             LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
             WHERE utg.gameId = :gameId
             ORDER BY points DESC, userId`
@@ -356,9 +363,16 @@ export class GameRepository {
 
         const placeholders = gameIds.map(() => '?').join(',');
         const query = `
-            SELECT u.name, u.telegramUsername, utg.*, COALESCE(urc.ratingChange, 0) AS ratingChange
+            SELECT
+                u.name,
+                u.telegramUsername,
+                p.firstName AS profileFirstName,
+                p.lastName AS profileLastName,
+                utg.*,
+                COALESCE(urc.ratingChange, 0) AS ratingChange
             FROM userToGame utg
             JOIN user u ON utg.userId = u.id
+            LEFT JOIN profile p ON p.userId = utg.userId
             LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
             WHERE utg.gameId IN (${placeholders})
         `;
@@ -542,6 +556,8 @@ export interface GamePlayerDBEntity {
     userId: number;
     name: string;
     telegramUsername: string | null;
+    profileFirstName: string | null;
+    profileLastName: string | null;
     points: number;
     ratingChange: number;
     startPlace: string | null;

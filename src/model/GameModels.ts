@@ -69,6 +69,8 @@ export interface GamePlayer {
     userId: number;
     name: string;
     telegramUsername: string | null;
+    profileFirstName: string | null;
+    profileLastName: string | null;
     points: number;
     ratingChange: number;
     startPlace: Wind | null;

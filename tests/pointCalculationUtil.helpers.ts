@@ -10,10 +10,10 @@ export function fourPlayers(
     [p0, p1, p2, p3]: [number, number, number, number] = DEFAULT_POINTS,
 ): GamePlayer[] {
     return [
-        { gameId: 1, userId: 1, name: 'player-1', telegramUsername: null, points: p0, ratingChange: 0, startPlace: Wind.EAST, chomboCount: 0 },
-        { gameId: 1, userId: 2, name: 'player-2', telegramUsername: null, points: p1, ratingChange: 0, startPlace: Wind.SOUTH, chomboCount: 0 },
-        { gameId: 1, userId: 3, name: 'player-3', telegramUsername: null, points: p2, ratingChange: 0, startPlace: Wind.WEST, chomboCount: 0 },
-        { gameId: 1, userId: 4, name: 'player-4', telegramUsername: null, points: p3, ratingChange: 0, startPlace: Wind.NORTH, chomboCount: 0 },
+        { gameId: 1, userId: 1, name: 'player-1', telegramUsername: null, profileFirstName: null, profileLastName: null, points: p0, ratingChange: 0, startPlace: Wind.EAST, chomboCount: 0 },
+        { gameId: 1, userId: 2, name: 'player-2', telegramUsername: null, profileFirstName: null, profileLastName: null, points: p1, ratingChange: 0, startPlace: Wind.SOUTH, chomboCount: 0 },
+        { gameId: 1, userId: 3, name: 'player-3', telegramUsername: null, profileFirstName: null, profileLastName: null, points: p2, ratingChange: 0, startPlace: Wind.WEST, chomboCount: 0 },
+        { gameId: 1, userId: 4, name: 'player-4', telegramUsername: null, profileFirstName: null, profileLastName: null, points: p3, ratingChange: 0, startPlace: Wind.NORTH, chomboCount: 0 },
     ];
 }
 

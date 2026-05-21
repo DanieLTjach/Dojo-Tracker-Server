@@ -3,7 +3,10 @@ import { withTransaction } from '../db/TransactionManagement.ts';
 import { EventController } from '../controller/EventController.ts';
 import { EventRegistrationController } from '../controller/EventRegistrationController.ts';
 import { requireAuth } from '../middleware/AuthMiddleware.ts';
-import { requireEventManagementRole } from '../middleware/EventManagementMiddleware.ts';
+import {
+    requireEventManagementRole,
+    requireEventManagementRoleOrApprovedFilter
+} from '../middleware/EventManagementMiddleware.ts';
 
 const router = Router();
 const eventController = new EventController();
@@ -63,7 +66,7 @@ router.post(
 router.get(
     '/:eventId/registrations',
     requireAuth,
-    requireEventManagementRole,
+    requireEventManagementRoleOrApprovedFilter,
     withTransaction((req, res) => registrationController.listForEvent(req, res))
 );
 router.post(
