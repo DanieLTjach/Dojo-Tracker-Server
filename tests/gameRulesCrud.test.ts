@@ -380,7 +380,7 @@ describe('Game Rules CRUD', () => {
                 preset: 'ema_2025',
                 rules: {
                     open_tanyao: true,
-                    starting_points: 30000,
+                    starting_points: 35000,
                 }
             };
 
@@ -389,7 +389,7 @@ describe('Game Rules CRUD', () => {
             const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
             const stored = JSON.parse(raw.details);
             expect(stored.rules.open_tanyao).toBeUndefined();
-            expect(stored.rules.starting_points).toBe(30000);
+            expect(stored.rules.starting_points).toBe(35000);
         });
     });
 });

@@ -75,7 +75,7 @@ const ema2025Def: GameRulesPresetDef = {
         red_fives: 'none',
         riichi_deposit_is_returned_if_one_of_multiple_ron: true,
         riichi_without_a_next_draw: true,
-        starting_points: 0,
+        starting_points: 30000,
         west_round: false,
         yakuman_stacking: false,
     }
