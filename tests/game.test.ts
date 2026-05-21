@@ -549,6 +549,8 @@ describe('Game API Endpoints', () => {
             // testUser2Id has no profile row; profile fields should be null
             // testUser3Id has profile but only firstName
             profileRepo.upsertProfile(testUser3Id, null, null, 'Іван', null, null, false, SYSTEM_USER_ID);
+            // testUser4Id has a profile name but opted to hide it.
+            profileRepo.upsertProfile(testUser4Id, null, null, 'Олександр', 'Прихований', null, true, SYSTEM_USER_ID);
 
             try {
                 const response = await request(app)
@@ -568,12 +570,18 @@ describe('Game API Endpoints', () => {
                 // New profile fields surfaced separately so the FE can choose how to render.
                 expect(byUserId(testUser1Id).profileFirstName).toBe('Роман');
                 expect(byUserId(testUser1Id).profileLastName).toBe('Дорошенко');
+                expect(byUserId(testUser1Id).profileHidden).toBe(false);
                 expect(byUserId(testUser2Id).profileFirstName).toBeNull();
                 expect(byUserId(testUser2Id).profileLastName).toBeNull();
+                expect(byUserId(testUser2Id).profileHidden).toBe(false);
                 expect(byUserId(testUser3Id).profileFirstName).toBe('Іван');
                 expect(byUserId(testUser3Id).profileLastName).toBeNull();
+                expect(byUserId(testUser3Id).profileHidden).toBe(false);
+                expect(byUserId(testUser4Id).profileFirstName).toBe('Олександр');
+                expect(byUserId(testUser4Id).profileLastName).toBe('Прихований');
+                expect(byUserId(testUser4Id).profileHidden).toBe(true);
             } finally {
-                dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?)').run(testUser1Id, testUser3Id);
+                dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?, ?)').run(testUser1Id, testUser3Id, testUser4Id);
             }
         });
 
