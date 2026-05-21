@@ -149,6 +149,72 @@ describe('Game API Endpoints', () => {
             expect(response.body.tournamentTable).toBe('3');
         });
 
+        test('should reject game creation for members when event blocks game creation', async () => {
+            dbManager.db.prepare('UPDATE event SET blockGameCreation = 1 WHERE id = ?').run(TEST_EVENT_ID);
+
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000 },
+                        { userId: testUser2Id, points: 35000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 20000 }
+                    ]
+                });
+
+            dbManager.db.prepare('UPDATE event SET blockGameCreation = 0 WHERE id = ?').run(TEST_EVENT_ID);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameCreationBlocked');
+        });
+
+        test('should allow admin to create game when event blocks game creation', async () => {
+            dbManager.db.prepare('UPDATE event SET blockGameCreation = 1 WHERE id = ?').run(TEST_EVENT_ID);
+
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000 },
+                        { userId: testUser2Id, points: 35000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 20000 }
+                    ]
+                });
+
+            dbManager.db.prepare('UPDATE event SET blockGameCreation = 0 WHERE id = ?').run(TEST_EVENT_ID);
+
+            expect(response.status).toBe(201);
+        });
+
+        test('should allow club moderator to create game when event blocks game creation', async () => {
+            dbManager.db.prepare('UPDATE event SET blockGameCreation = 1 WHERE id = ?').run(TEST_EVENT_ID);
+            setClubRole(1, testUser1Id, 'MODERATOR');
+
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000 },
+                        { userId: testUser2Id, points: 35000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 20000 }
+                    ]
+                });
+
+            setClubRole(1, testUser1Id, 'MEMBER');
+            dbManager.db.prepare('UPDATE event SET blockGameCreation = 0 WHERE id = ?').run(TEST_EVENT_ID);
+
+            expect(response.status).toBe(201);
+        });
+
         test('should reject non-positive tournamentRound', async () => {
             const response = await request(app)
                 .post('/api/games')
@@ -541,6 +607,39 @@ describe('Game API Endpoints', () => {
             expect(getResponse.body.startedAt).toBe(getResponse.body.createdAt);
             expect(getResponse.body.rounds).toEqual([]);
             expect(getResponse.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 });
+        });
+
+        test('should reject tracked game creation for members when event blocks game creation', async () => {
+            dbManager.db.prepare('UPDATE event SET blockGameCreation = 1 WHERE id = ?').run(TEST_EVENT_ID);
+
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayers()
+                });
+
+            dbManager.db.prepare('UPDATE event SET blockGameCreation = 0 WHERE id = ?').run(TEST_EVENT_ID);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameCreationBlocked');
+        });
+
+        test('should allow admin to create tracked game when event blocks game creation', async () => {
+            dbManager.db.prepare('UPDATE event SET blockGameCreation = 1 WHERE id = ?').run(TEST_EVENT_ID);
+
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayers()
+                });
+
+            dbManager.db.prepare('UPDATE event SET blockGameCreation = 0 WHERE id = ?').run(TEST_EVENT_ID);
+
+            expect(response.status).toBe(201);
         });
 
         test('should expose profileFirstName/profileLastName alongside user.name in players[]', async () => {

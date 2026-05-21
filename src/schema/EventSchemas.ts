@@ -85,6 +85,7 @@ const eventSchema = z.object({
     registrationDeadline: dateSchema.nullish(),
     startingRating: z.number().int("startingRating must be an integer").default(0),
     minimumGamesForRating: z.number().int("minimumGamesForRating must be an integer").min(0).default(0),
+    blockGameCreation: z.boolean().default(false),
     info: eventInfoSchema.nullish()
 }).refine(
     (data) => {

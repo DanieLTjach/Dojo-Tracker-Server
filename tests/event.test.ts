@@ -62,6 +62,8 @@ describe('Event API Endpoints', () => {
             expect(event).toHaveProperty('dateFrom');
             expect(event).toHaveProperty('dateTo');
             expect(event).toHaveProperty('gameCount');
+            expect(event).toHaveProperty('blockGameCreation');
+            expect(typeof event.blockGameCreation).toBe('boolean');
             expect(event).toHaveProperty('createdAt');
             expect(event).toHaveProperty('modifiedAt');
             expect(event).toHaveProperty('modifiedBy');
@@ -290,6 +292,19 @@ describe('Event API Endpoints', () => {
             expect(response.body.gameRules.id).toBe(createPayload.gameRulesId);
             expect(response.body.clubId).toBeNull();
             expect(response.body.isCurrentRating).toBe(false);
+            expect(response.body.blockGameCreation).toBe(false);
+        });
+
+        test('should create event with blockGameCreation when requested', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, blockGameCreation: true });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.blockGameCreation).toBe(true);
         });
 
         test('should create current rating season for club when no other current season exists', async () => {
@@ -417,6 +432,17 @@ describe('Event API Endpoints', () => {
             expect(response.body.gameRules.id).toBe(updatePayload.gameRulesId);
             expect(response.body.clubId).toBe(updatePayload.clubId);
             expect(response.body.isCurrentRating).toBe(false);
+            expect(response.body.blockGameCreation).toBe(false);
+        });
+
+        test('should update blockGameCreation flag', async () => {
+            const response = await request(app)
+                .put(`/api/events/${baseEventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ ...updatePayload, blockGameCreation: true });
+
+            expect(response.status).toBe(200);
+            expect(response.body.blockGameCreation).toBe(true);
         });
 
         test('should update event to current rating season when club has no other one', async () => {
