@@ -13,6 +13,65 @@ export const eventGetByIdSchema = z.object({
 
 const eventTypeEnum = z.enum(["SEASON", "TOURNAMENT"]);
 
+const scheduleItemKindSchema = z.enum(['default', 'muted', 'milestone']);
+
+const scheduleItemSchema = z.strictObject({
+    time: z.string().trim().min(1, "Schedule item time cannot be empty"),
+    title: z.string().trim().min(1, "Schedule item title cannot be empty"),
+    kind: scheduleItemKindSchema.optional()
+});
+
+const scheduleDaySchema = z.strictObject({
+    date: dateSchema.transform(d => d.toISOString()).nullable(),
+    title: z.string().trim().min(1, "Schedule day title cannot be empty").optional(),
+    items: z.array(scheduleItemSchema)
+});
+
+const venueSchema = z.strictObject({
+    name: z.string().trim().min(1).optional(),
+    address: z.string().trim().min(1).optional(),
+    city: z.string().trim().min(1).optional(),
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
+    mapUrl: z.url("Venue mapUrl must be a valid URL").optional(),
+    contactName: z.string().trim().min(1).optional(),
+    contactTelegram: z.string().trim().min(1).optional()
+});
+
+const contactsSchema = z.strictObject({
+    phone: z.string().trim().min(1).optional(),
+    email: z.email("contacts.email must be a valid email").optional(),
+    telegram: z.string().trim().min(1).optional()
+});
+
+const linksSchema = z.strictObject({
+    site: z.url("links.site must be a valid URL").optional(),
+    registrationForm: z.url("links.registrationForm must be a valid URL").optional(),
+    googleMaps: z.url("links.googleMaps must be a valid URL").optional()
+});
+
+const pairingsSchema = z.array(
+    z.array(
+        z.array(z.number().int("Pairing player id must be an integer"))
+            .length(4, "Each table must have exactly 4 players")
+    )
+).refine(
+    (rounds) => {
+        if (rounds.length === 0) return true;
+        const firstTableCount = rounds[0]!.length;
+        return rounds.every(r => r.length === firstTableCount);
+    },
+    { error: "All rounds must have the same number of tables" }
+);
+
+export const eventInfoSchema = z.strictObject({
+    schedule: z.array(scheduleDaySchema).optional(),
+    venue: venueSchema.optional(),
+    contacts: contactsSchema.optional(),
+    links: linksSchema.optional(),
+    pairings: pairingsSchema.optional()
+});
+
 const eventSchema = z.object({
     name: z.string().min(1, "Name is required").max(100, "Name must be 100 characters or less"),
     description: z.string().max(500, "Description must be 500 characters or less").nullish(),
@@ -25,7 +84,8 @@ const eventSchema = z.object({
     maxParticipants: z.number().int("maxParticipants must be an integer").min(1, "maxParticipants must be at least 1").nullish(),
     registrationDeadline: dateSchema.nullish(),
     startingRating: z.number().int("startingRating must be an integer").default(0),
-    minimumGamesForRating: z.number().int("minimumGamesForRating must be an integer").min(0).default(0)
+    minimumGamesForRating: z.number().int("minimumGamesForRating must be an integer").min(0).default(0),
+    info: eventInfoSchema.nullish()
 }).refine(
     (data) => {
         if (data.dateFrom && data.dateTo) {

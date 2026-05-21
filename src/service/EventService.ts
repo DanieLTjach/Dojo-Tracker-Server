@@ -10,7 +10,7 @@ import {
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
-import type { Event } from '../model/EventModels.ts';
+import type { Event, EventInfo } from '../model/EventModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
@@ -80,6 +80,7 @@ export class EventService {
             registrationDeadline: data.registrationDeadline ?? null,
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
+            info: data.info ?? null,
             createdAt: now,
             modifiedAt: now,
             modifiedBy
@@ -121,6 +122,7 @@ export class EventService {
             registrationDeadline: data.registrationDeadline ?? null,
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
+            info: data.info ?? null,
             modifiedAt: now,
             modifiedBy
         });
@@ -252,4 +254,5 @@ export interface EventData {
     gameRulesId: number;
     startingRating: number;
     minimumGamesForRating: number;
+    info?: EventInfo | null | undefined;
 }
