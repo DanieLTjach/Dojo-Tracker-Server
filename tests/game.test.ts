@@ -7,6 +7,7 @@ import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createTestEvent, createCustomEvent, createTelegramInitData } from './testHelpers.ts';
 import { ExhaustiveDraw } from '../src/model/GameRoundResultModels.ts';
+import { ProfileRepository } from '../src/repository/ProfileRepository.ts';
 
 const app = express();
 app.use(express.json());
@@ -540,6 +541,30 @@ describe('Game API Endpoints', () => {
             expect(getResponse.body.startedAt).toBe(getResponse.body.createdAt);
             expect(getResponse.body.rounds).toEqual([]);
             expect(getResponse.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 });
+        });
+
+        test('should prefer profile firstName+lastName over user.name in players[]', async () => {
+            const profileRepo = new ProfileRepository();
+            profileRepo.upsertProfile(testUser1Id, null, null, 'Роман', 'Дорошенко', null, false, SYSTEM_USER_ID);
+            // testUser2Id has no profile row; should fall back to user.name
+            // testUser3Id has profile but only firstName
+            profileRepo.upsertProfile(testUser3Id, null, null, 'Іван', null, null, false, SYSTEM_USER_ID);
+
+            try {
+                const response = await request(app)
+                    .post('/api/games/tracked')
+                    .set('Authorization', user1AuthHeader)
+                    .send({ eventId: TEST_EVENT_ID, players: trackedPlayers() });
+
+                expect(response.status).toBe(201);
+                const byUserId = (id: number) => response.body.players.find((p: { userId: number }) => p.userId === id);
+                expect(byUserId(testUser1Id).name).toBe('Роман Дорошенко');
+                expect(byUserId(testUser2Id).name).toBe('Player2'); // user.name fallback
+                expect(byUserId(testUser3Id).name).toBe('Іван'); // single-name still trimmed
+                expect(byUserId(testUser4Id).name).toBe('Player4');
+            } finally {
+                dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?)').run(testUser1Id, testUser3Id);
+            }
         });
 
         test('should fail with incorrect number of players', async () => {
