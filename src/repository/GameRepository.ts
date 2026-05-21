@@ -356,6 +356,29 @@ export class GameRepository {
         });
     }
 
+    private startTrackedGameStatement(): Statement<{
+        id: number,
+        modifiedBy: number,
+        startedAt: string,
+        modifiedAt: string
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE game
+            SET status = 'IN_PROGRESS', startedAt = :startedAt, modifiedBy = :modifiedBy, modifiedAt = :modifiedAt
+            WHERE id = :id`
+        );
+    }
+
+    startTrackedGame(gameId: number, modifiedBy: number, startedAt: Date): void {
+        const timestamp = startedAt.toISOString();
+        this.startTrackedGameStatement().run({
+            id: gameId,
+            modifiedBy,
+            startedAt: timestamp,
+            modifiedAt: timestamp
+        });
+    }
+
     findGamePlayersByGameIds(gameIds: number[]): GamePlayer[] {
         if (gameIds.length === 0) {
             return [];

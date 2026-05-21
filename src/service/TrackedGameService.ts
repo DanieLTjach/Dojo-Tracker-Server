@@ -1,6 +1,6 @@
 import dedent from "dedent";
 import { BadRequestError } from "../error/BaseErrors.ts";
-import { CannotUndoFinishOnNonTrackedGameError, GameNotFinishedWhenUndoingFinishError, GameNotInProgressWhenAddingNewRoundError, GameNotInProgressWhenDeletingRoundError, GameNotInProgressWhenFinishingError, IncorrectPlayerCountError, InvalidRoundIdError, InvalidRoundResultPlayerError, LastRoundRollbackAlreadyUsedError, NoRoundsCompletedError, NoRoundsToRollbackError, RoundAlreadyExistsError } from "../error/GameErrors.ts";
+import { CannotUndoFinishOnNonTrackedGameError, GameNotCreatedWhenStartingError, GameNotFinishedWhenUndoingFinishError, GameNotInProgressWhenAddingNewRoundError, GameNotInProgressWhenDeletingRoundError, GameNotInProgressWhenFinishingError, IncorrectPlayerCountError, InvalidRoundIdError, InvalidRoundResultPlayerError, LastRoundRollbackAlreadyUsedError, NoRoundsCompletedError, NoRoundsToRollbackError, RoundAlreadyExistsError } from "../error/GameErrors.ts";
 import type { Event, GameRules } from "../model/EventModels.ts";
 import type { DetailedGame, GamePlayer, GameRound, GameWithPlayers, TrackedGamePlayerData } from "../model/GameModels.ts";
 import { GameStatus } from "../model/GameModels.ts";
@@ -12,6 +12,14 @@ import { EventService } from "./EventService.ts";
 import { GameService } from "./GameService.ts";
 import { RatingService } from "./RatingService.ts";
 import { UserService } from "./UserService.ts";
+
+const TRACKED_GAME_LOG_ACTIONS = {
+    CREATED: { heading: 'New Tracked Game Created', actorLabel: 'Created by' },
+    STARTED_ON_CREATE: { heading: 'New Tracked Game Started', actorLabel: 'Created by' },
+    STARTED: { heading: 'Tracked Game Started', actorLabel: 'Started by' }
+} as const;
+
+type TrackedGameLogAction = keyof typeof TRACKED_GAME_LOG_ACTIONS;
 
 export class TrackedGameService {
 
@@ -43,7 +51,8 @@ export class TrackedGameService {
         this.addPlayersToTrackedGame(newGameId, players, event.gameRules.startingPoints, createdBy);
 
         const newGame = this.gameService.getDetailedGameById(newGameId);
-        this.logNewTrackedGame(newGame, event, status);
+        const logAction = status === GameStatus.CREATED ? 'CREATED' : 'STARTED_ON_CREATE';
+        this.logTrackedGameAction(newGame, event, logAction, createdBy);
         return newGame;
     }
 
@@ -56,10 +65,7 @@ export class TrackedGameService {
         const game = this.gameService.getDetailedGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
 
-        this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
-        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenAddingNewRoundError());
-        this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
-        this.validateRoundResultPlayers(resultInputDTO, game.players);
+        this.validateRoundResultInput(game, event, roundId, resultInputDTO, modifiedBy);
 
         const result: GameRoundResult = calculateGameRoundResult(game, event.gameRules, resultInputDTO);
 
@@ -72,6 +78,20 @@ export class TrackedGameService {
         return result.gameFinishReason
             ? this.finishGame(gameId, modifiedBy)
             : this.gameService.getDetailedGameById(gameId);
+    }
+
+    previewGameRoundResult(
+        gameId: number,
+        roundId: number,
+        resultInputDTO: GameRoundResultInputDTO,
+        modifiedBy: number
+    ): GameRoundResult {
+        const game = this.gameService.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+        
+        this.validateRoundResultInput(game, event, roundId, resultInputDTO, modifiedBy);
+
+        return calculateGameRoundResult(game, event.gameRules, resultInputDTO);
     }
 
     deleteGameRoundResult(gameId: number, roundId: number, modifiedBy: number): DetailedGame {
@@ -136,6 +156,23 @@ export class TrackedGameService {
         return finishedGame;
     }
 
+    startTrackedGame(gameId: number, modifiedBy: number): DetailedGame {
+        const game = this.gameService.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+
+        this.gameService.authorizeGamePlayerAction(game, modifiedBy);
+        this.validateGameIsCreated(game);
+
+        const startedAt = new Date();
+        this.gameService.validateGameWithinEventDates(event, startedAt, modifiedBy, GameStatus.IN_PROGRESS);
+
+        this.gameRepository.startTrackedGame(gameId, modifiedBy, startedAt);
+
+        const startedGame = this.gameService.getDetailedGameById(gameId);
+        this.logTrackedGameAction(startedGame, event, 'STARTED', modifiedBy);
+        return startedGame;
+    }
+
     undoFinishGame(gameId: number, modifiedBy: number): DetailedGame {
         const game = this.gameService.getDetailedGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
@@ -170,6 +207,12 @@ export class TrackedGameService {
         }
     }
 
+    private validateGameIsCreated(game: GameWithPlayers): void {
+        if (game.status !== GameStatus.CREATED) {
+            throw new GameNotCreatedWhenStartingError();
+        }
+    }
+
     private validateGameIsInProgress(game: GameWithPlayers, error: (() => BadRequestError)): void {
         if (game.status !== GameStatus.IN_PROGRESS) {
             throw error();
@@ -193,6 +236,19 @@ export class TrackedGameService {
         if (rounds.length === 0) {
             throw new NoRoundsCompletedError();
         }
+    }
+
+    private validateRoundResultInput(
+        game: DetailedGame,
+        event: Event,
+        roundId: number,
+        resultInputDTO: GameRoundResultInputDTO,
+        modifiedBy: number
+    ): void {
+        this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
+        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenAddingNewRoundError());
+        this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
+        this.validateRoundResultPlayers(resultInputDTO, game.players);
     }
 
     private validateCurrentRoundIdBeforeAdding(rounds: GameRound[], roundId: number): void {
@@ -383,15 +439,21 @@ export class TrackedGameService {
         this.gameService.validateNoDuplicatePlayers(players);
     }
 
-    private logNewTrackedGame(game: GameWithPlayers, event: Event, status: GameStatus): void {
-        const user = this.userService.getUserById(game.modifiedBy);
+    private logTrackedGameAction(
+        game: GameWithPlayers,
+        event: Event,
+        action: TrackedGameLogAction,
+        actorId: number
+    ): void {
+        const { heading, actorLabel } = TRACKED_GAME_LOG_ACTIONS[action];
+        const user = this.userService.getUserById(actorId);
         const message = dedent`
-            <b>🎮 New Tracked Game ${status === GameStatus.CREATED ? 'Created' : 'Started'}</b>
+            <b>🎮 ${heading}</b>
 
             <b>Game ID:</b> <code>${game.id}</code>
             ${this.gameService.formatEventGameLogSection(game, event)}
             <b>Timestamp:</b> <code>${game.createdAt.toISOString()}</code>
-            <b>Created by:</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>${actorLabel}:</b> ${user.name} <code>(ID: ${user.id})</code>
 
             <b>Players:</b>\n
         ` + this.printTrackedGamePlayersLog(game.players);

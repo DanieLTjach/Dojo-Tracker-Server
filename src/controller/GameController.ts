@@ -9,9 +9,11 @@ import {
     gameUpdateSchema, 
     gameDeletionSchema,
     gameRoundPostSchema,
+    gameRoundPreviewSchema,
     gameRoundDeleteSchema,
     gameFinishSchema,
-    gameUndoFinishSchema
+    gameUndoFinishSchema,
+    gameStartSchema
 } from '../schema/GameSchemas.ts';
 import { TrackedGameService } from '../service/TrackedGameService.ts';
 
@@ -53,10 +55,24 @@ export class GameController {
         return res.status(StatusCodes.OK).json(game);
     }
 
+    previewRoundResult(req: Request, res: Response) {
+        const { params: { gameId, roundId }, body } = gameRoundPreviewSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const result = this.trackedGameService.previewGameRoundResult(gameId, roundId, body, modifiedBy);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
     deleteRoundResult(req: Request, res: Response) {
         const { params: { gameId, roundId } } = gameRoundDeleteSchema.parse(req);
         const modifiedBy = req.user!.userId;
         const game = this.trackedGameService.deleteGameRoundResult(gameId, roundId, modifiedBy);
+        return res.status(StatusCodes.OK).json(game);
+    }
+
+    startTrackedGame(req: Request, res: Response) {
+        const { params: { gameId } } = gameStartSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const game = this.trackedGameService.startTrackedGame(gameId, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
     }
 

@@ -303,6 +303,130 @@ describe('TournamentRoundImportService', () => {
     });
 });
 
+describe('POST /api/games/:gameId/start', () => {
+    const importService = new TournamentRoundImportService();
+    const user1AuthHeader = createAuthHeader(99101);
+    const user2AuthHeader = createAuthHeader(99102);
+    const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
+
+    function importCreatedGame(round: number): number {
+        const text = `Round ${round}\n99101 99102 99103 99104`;
+        const result = importService.parseAndImport(TOURNAMENT_EVENT_ID, round, text, SYSTEM_USER_ID);
+        expect(result.imported).toBe(1);
+        return result.games[0]!.id;
+    }
+
+    beforeEach(() => {
+        for (const userId of [99101, 99102, 99103, 99104]) {
+            insertApprovedRegistration(TOURNAMENT_EVENT_ID, userId);
+        }
+        dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(TOURNAMENT_EVENT_ID);
+        dbManager.db.prepare('DELETE FROM gameRound WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(TOURNAMENT_EVENT_ID);
+        dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(TOURNAMENT_EVENT_ID);
+    });
+
+    test('transitions CREATED game to IN_PROGRESS for a game player', async () => {
+        const gameId = importCreatedGame(20);
+
+        const response = await request(app)
+            .post(`/api/games/${gameId}/start`)
+            .set('Authorization', user1AuthHeader);
+
+        expect(response.status).toBe(200);
+        expect(response.body.status).toBe('IN_PROGRESS');
+        expect(response.body.startedAt).not.toBeNull();
+        expect(response.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 });
+    });
+
+    test('allows any game player to start', async () => {
+        const gameId = importCreatedGame(21);
+
+        const response = await request(app)
+            .post(`/api/games/${gameId}/start`)
+            .set('Authorization', user2AuthHeader);
+
+        expect(response.status).toBe(200);
+        expect(response.body.status).toBe('IN_PROGRESS');
+    });
+
+    test('rejects non-players including admin', async () => {
+        const gameId = importCreatedGame(22);
+
+        const adminResponse = await request(app)
+            .post(`/api/games/${gameId}/start`)
+            .set('Authorization', adminAuthHeader);
+
+        expect(adminResponse.status).toBe(403);
+        expect(adminResponse.body.errorCode).toBe('notGamePlayer');
+
+        const unregisteredResponse = await request(app)
+            .post(`/api/games/${gameId}/start`)
+            .set('Authorization', createAuthHeader(UNREGISTERED_USER_ID));
+
+        expect(unregisteredResponse.status).toBe(403);
+        expect(unregisteredResponse.body.errorCode).toBe('notGamePlayer');
+    });
+
+    test('rejects club moderator who is not a game player', async () => {
+        const gameId = importCreatedGame(23);
+        const ts = new Date().toISOString();
+        dbManager.db.prepare(
+            `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, 'MODERATOR', 'ACTIVE', ?, ?, 0)`
+        ).run(TEST_CLUB_ID, UNREGISTERED_USER_ID, ts, ts);
+
+        const response = await request(app)
+            .post(`/api/games/${gameId}/start`)
+            .set('Authorization', createAuthHeader(UNREGISTERED_USER_ID));
+
+        expect(response.status).toBe(403);
+        expect(response.body.errorCode).toBe('notGamePlayer');
+    });
+
+    test('rejects when game is not CREATED', async () => {
+        const gameId = importCreatedGame(24);
+
+        await request(app)
+            .post(`/api/games/${gameId}/start`)
+            .set('Authorization', user1AuthHeader);
+
+        const response = await request(app)
+            .post(`/api/games/${gameId}/start`)
+            .set('Authorization', user1AuthHeader);
+
+        expect(response.status).toBe(400);
+        expect(response.body.errorCode).toBe('gameNotCreatedWhenStarting');
+    });
+
+    test('rejects when event has ended', async () => {
+        const trackedGameService = new TrackedGameService();
+        const game = trackedGameService.createTrackedGame(
+            ENDED_TOURNAMENT_EVENT_ID,
+            [
+                { userId: 99101, startPlace: 'EAST' },
+                { userId: 99102, startPlace: 'SOUTH' },
+                { userId: 99103, startPlace: 'WEST' },
+                { userId: 99104, startPlace: 'NORTH' }
+            ],
+            SYSTEM_USER_ID,
+            'CREATED',
+            new Date('2000-06-01T12:00:00.000Z'),
+            1,
+            '1'
+        );
+
+        const response = await request(app)
+            .post(`/api/games/${game.id}/start`)
+            .set('Authorization', user1AuthHeader);
+
+        expect(response.status).toBe(400);
+        expect(response.body.errorCode).toBe('eventHasEnded');
+
+        dbManager.db.prepare('DELETE FROM userToGame WHERE gameId = ?').run(game.id);
+        dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(game.id);
+    });
+});
+
 describe('createTrackedGame options', () => {
     const trackedGameService = new TrackedGameService();
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);

@@ -775,6 +775,77 @@ describe('Game API Endpoints', () => {
         });
     });
 
+    describe('POST /api/games/:gameId/rounds/:roundId/preview - Preview Round Result', () => {
+        let previewGameId: number;
+
+        const exhaustiveDrawResult = {
+            type: 'EXHAUSTIVE_DRAW',
+            riichiPlayerIds: [] as number[],
+            tenpaiPlayerIds: [] as number[],
+            nagashiManganPlayerIds: [] as number[]
+        };
+
+        beforeAll(async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayersPayload()
+                });
+
+            expect(response.status).toBe(201);
+            previewGameId = response.body.id;
+        });
+
+        test('should return calculated round result without persisting', async () => {
+            const beforeGame = await request(app)
+                .get(`/api/games/${previewGameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(beforeGame.status).toBe(200);
+            expect(beforeGame.body.rounds).toHaveLength(0);
+
+            const previewResponse = await request(app)
+                .post(`/api/games/${previewGameId}/rounds/1/preview`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(previewResponse.status).toBe(200);
+            expect(previewResponse.body).toEqual({
+                ...exhaustiveDrawResult,
+                playerPointChanges: [],
+                nextState: { wind: 'EAST', dealerNumber: 2, counters: 1, riichiSticks: 0 },
+                gameFinishReason: undefined
+            });
+
+            const afterGame = await request(app)
+                .get(`/api/games/${previewGameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(afterGame.status).toBe(200);
+            expect(afterGame.body.rounds).toHaveLength(0);
+            expect(afterGame.body).toEqual(beforeGame.body);
+        });
+
+        test('should reject preview for an already posted round', async () => {
+            const postResponse = await request(app)
+                .post(`/api/games/${previewGameId}/rounds/1`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(postResponse.status).toBe(200);
+
+            const previewResponse = await request(app)
+                .post(`/api/games/${previewGameId}/rounds/1/preview`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(previewResponse.status).toBe(400);
+            expect(previewResponse.body.errorCode).toBe('roundAlreadyExists');
+        });
+    });
+
     describe('DELETE /api/games/:gameId/rounds/:roundId - Rollback Last Round', () => {
         const exhaustiveDrawResult = {
             type: 'EXHAUSTIVE_DRAW',
