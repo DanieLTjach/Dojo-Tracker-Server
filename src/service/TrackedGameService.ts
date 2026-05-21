@@ -65,10 +65,7 @@ export class TrackedGameService {
         const game = this.gameService.getDetailedGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
 
-        this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
-        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenAddingNewRoundError());
-        this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
-        this.validateRoundResultPlayers(resultInputDTO, game.players);
+        this.validateRoundResultInput(game, event, roundId, resultInputDTO, modifiedBy);
 
         const result: GameRoundResult = calculateGameRoundResult(game, event.gameRules, resultInputDTO);
 
@@ -81,6 +78,20 @@ export class TrackedGameService {
         return result.gameFinishReason
             ? this.finishGame(gameId, modifiedBy)
             : this.gameService.getDetailedGameById(gameId);
+    }
+
+    previewGameRoundResult(
+        gameId: number,
+        roundId: number,
+        resultInputDTO: GameRoundResultInputDTO,
+        modifiedBy: number
+    ): GameRoundResult {
+        const game = this.gameService.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+        
+        this.validateRoundResultInput(game, event, roundId, resultInputDTO, modifiedBy);
+
+        return calculateGameRoundResult(game, event.gameRules, resultInputDTO);
     }
 
     deleteGameRoundResult(gameId: number, roundId: number, modifiedBy: number): DetailedGame {
@@ -225,6 +236,19 @@ export class TrackedGameService {
         if (rounds.length === 0) {
             throw new NoRoundsCompletedError();
         }
+    }
+
+    private validateRoundResultInput(
+        game: DetailedGame,
+        event: Event,
+        roundId: number,
+        resultInputDTO: GameRoundResultInputDTO,
+        modifiedBy: number
+    ): void {
+        this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
+        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenAddingNewRoundError());
+        this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
+        this.validateRoundResultPlayers(resultInputDTO, game.players);
     }
 
     private validateCurrentRoundIdBeforeAdding(rounds: GameRound[], roundId: number): void {

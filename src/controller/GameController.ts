@@ -9,6 +9,7 @@ import {
     gameUpdateSchema, 
     gameDeletionSchema,
     gameRoundPostSchema,
+    gameRoundPreviewSchema,
     gameRoundDeleteSchema,
     gameFinishSchema,
     gameUndoFinishSchema,
@@ -52,6 +53,13 @@ export class GameController {
         const modifiedBy = req.user!.userId;
         const game = this.trackedGameService.addGameRoundResult(gameId, roundId, body, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
+    }
+
+    previewRoundResult(req: Request, res: Response) {
+        const { params: { gameId, roundId }, body } = gameRoundPreviewSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const result = this.trackedGameService.previewGameRoundResult(gameId, roundId, body, modifiedBy);
+        return res.status(StatusCodes.OK).json(result);
     }
 
     deleteRoundResult(req: Request, res: Response) {
