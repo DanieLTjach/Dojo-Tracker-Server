@@ -531,6 +531,165 @@ describe('Event API Endpoints', () => {
         });
     });
 
+    describe('Event info JSON field', () => {
+        const basePayload = {
+            name: 'Info Event',
+            description: 'desc',
+            type: 'TOURNAMENT' as const,
+            clubId: 1,
+            gameRulesId: 1,
+            dateFrom: '2026-05-23T00:00:00.000Z',
+            dateTo: '2026-05-24T00:00:00.000Z'
+        };
+
+        const fullInfo = {
+            schedule: [
+                {
+                    date: '2026-05-23T00:00:00.000Z',
+                    title: 'Перший день, субота, 23 травня',
+                    items: [
+                        { time: '10:00', title: 'Початок реєстрації' },
+                        { time: '10:30–12:00', title: 'Перший ханчан', kind: 'milestone' }
+                    ]
+                }
+            ],
+            venue: {
+                name: 'Shogi Dojo',
+                address: 'Khreshchatyk 1',
+                city: 'Kyiv',
+                latitude: 50.45,
+                longitude: 30.52,
+                mapUrl: 'https://maps.google.com/?q=50.45,30.52',
+                contactTelegram: 'shogidojo'
+            },
+            contacts: { phone: '+380501112233', email: 'info@example.com', telegram: 'organizer' },
+            links: {
+                site: 'https://example.com',
+                registrationForm: 'https://forms.example.com/x',
+                googleMaps: 'https://maps.google.com/?q=Kyiv'
+            },
+            pairings: [
+                [[12,29,38,39], [1,6,9,25], [2,7,20,43]],
+                [[4,25,26,29], [11,18,42,43], [14,16,23,40]]
+            ]
+        };
+
+        let createdEventId: number | undefined;
+
+        afterEach(() => {
+            if (createdEventId !== undefined) {
+                deleteEventById(createdEventId);
+                createdEventId = undefined;
+            }
+        });
+
+        test('round-trips full info payload on create + GET', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...basePayload, info: fullInfo });
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.info).toEqual(fullInfo);
+
+            const fetched = await request(app)
+                .get(`/api/events/${createdEventId}`)
+                .set('Authorization', adminAuthHeader);
+            expect(fetched.body.info).toEqual(fullInfo);
+            expect(fetched.body.info.pairings[0][0]).toEqual([12, 29, 38, 39]);
+        });
+
+        test('stores null when info omitted or explicitly null', async () => {
+            const omitted = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send(basePayload);
+            createdEventId = omitted.body.id;
+            expect(omitted.status).toBe(201);
+            expect(omitted.body.info).toBeNull();
+
+            deleteEventById(createdEventId!);
+
+            const explicit = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...basePayload, info: null });
+            createdEventId = explicit.body.id;
+            expect(explicit.status).toBe(201);
+            expect(explicit.body.info).toBeNull();
+        });
+
+        test('updates info and can clear it back to null', async () => {
+            const created = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...basePayload, info: fullInfo });
+            createdEventId = created.body.id;
+
+            const updated = await request(app)
+                .put(`/api/events/${createdEventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ ...basePayload, info: { contacts: { phone: '+380999998877' } } });
+            expect(updated.status).toBe(200);
+            expect(updated.body.info).toEqual({ contacts: { phone: '+380999998877' } });
+
+            const cleared = await request(app)
+                .put(`/api/events/${createdEventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ ...basePayload, info: null });
+            expect(cleared.status).toBe(200);
+            expect(cleared.body.info).toBeNull();
+        });
+
+        test('rejects pairings with a table that does not have exactly 4 players', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...basePayload, info: { pairings: [[[1, 2, 3]]] } });
+            expect(response.status).toBe(400);
+        });
+
+        test('rejects pairings with mismatched table counts across rounds', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...basePayload,
+                    info: {
+                        pairings: [
+                            [[1, 2, 3, 4], [5, 6, 7, 8]],
+                            [[9, 10, 11, 12]]
+                        ]
+                    }
+                });
+            expect(response.status).toBe(400);
+        });
+
+        test('rejects malformed schedule item (missing time)', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...basePayload,
+                    info: {
+                        schedule: [
+                            { date: '2026-05-23T00:00:00.000Z', items: [{ title: 'No time' }] }
+                        ]
+                    }
+                });
+            expect(response.status).toBe(400);
+        });
+
+        test('rejects invalid URL in links.site', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...basePayload, info: { links: { site: 'not-a-url' } } });
+            expect(response.status).toBe(400);
+        });
+    });
+
     describe('DELETE /api/events/:eventId - Delete Event', () => {
         const deletableEventId = 2002;
         const clubOwnerUserId = 88001;

@@ -297,6 +297,19 @@ describe('EventRegistrationService', () => {
                 .toThrow(MissingProfileNamesForTournamentRegistrationError);
         });
 
+        it('sets profile names supplied in profileNames before the names check', () => {
+            const result = service.manualRegister(
+                TOURNAMENT_EVENT_ID,
+                NO_NAMES_USER_ID,
+                OWNER_USER_ID,
+                { firstName: 'Гема', lastName: 'Власова' }
+            );
+            expect(result.status).toBe('APPROVED');
+            const profile = profileRepo.findProfileByUserId(NO_NAMES_USER_ID);
+            expect(profile?.firstName).toBe('Гема');
+            expect(profile?.lastName).toBe('Власова');
+        });
+
         it('respects maxParticipants', () => {
             service.manualRegister(TOURNAMENT_LIMITED_EVENT_ID, CAPACITY_USER_A, OWNER_USER_ID);
             expect(() => service.manualRegister(TOURNAMENT_LIMITED_EVENT_ID, CAPACITY_USER_B, OWNER_USER_ID))

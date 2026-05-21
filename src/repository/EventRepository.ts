@@ -4,6 +4,7 @@ import type { Event } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
+import type { EventInfo } from '../model/EventModels.ts';
 
 export class EventRepository {
     private findAllEventsStatement(): Statement<[], EventWithGameRulesDBEntity> {
@@ -101,13 +102,14 @@ export class EventRepository {
         registrationDeadline: string | null;
         startingRating: number;
         minimumGamesForRating: number;
+        info: string | null;
         createdAt: string;
         modifiedAt: string;
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :maxParticipants, :registrationDeadline, :startingRating, :minimumGamesForRating, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, info, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :maxParticipants, :registrationDeadline, :startingRating, :minimumGamesForRating, :info, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -118,6 +120,7 @@ export class EventRepository {
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             registrationDeadline: params.registrationDeadline?.toISOString() ?? null,
+            info: params.info !== null ? JSON.stringify(params.info) : null,
             createdAt: params.createdAt.toISOString(),
             modifiedAt: params.modifiedAt.toISOString()
         });
@@ -137,6 +140,7 @@ export class EventRepository {
         registrationDeadline: string | null;
         startingRating: number;
         minimumGamesForRating: number;
+        info: string | null;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
@@ -153,6 +157,7 @@ export class EventRepository {
                 registrationDeadline = :registrationDeadline,
                 startingRating = :startingRating,
                 minimumGamesForRating = :minimumGamesForRating,
+                info = :info,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
             WHERE id = :id
@@ -165,6 +170,7 @@ export class EventRepository {
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             registrationDeadline: params.registrationDeadline?.toISOString() ?? null,
+            info: params.info !== null ? JSON.stringify(params.info) : null,
             modifiedAt: params.modifiedAt.toISOString()
         });
     }
@@ -231,6 +237,7 @@ export interface EventCreateParams {
     registrationDeadline: Date | null;
     startingRating: number;
     minimumGamesForRating: number;
+    info: EventInfo | null;
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;
@@ -249,6 +256,7 @@ export interface EventUpdateParams {
     registrationDeadline: Date | null;
     startingRating: number;
     minimumGamesForRating: number;
+    info: EventInfo | null;
     modifiedAt: Date;
     modifiedBy: number;
 }
@@ -270,6 +278,7 @@ interface EventWithGameRulesDBEntity {
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
+    info: string | null;
     gr_id: number;
     gr_name: string;
     gr_clubId: number | null;
@@ -307,6 +316,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
         maxParticipants: dbEntity.maxParticipants,
         registrationDeadline: dbEntity.registrationDeadline !== null ? new Date(dbEntity.registrationDeadline) : null,
+        info: dbEntity.info !== null ? JSON.parse(dbEntity.info) as EventInfo : null,
         gameCount: dbEntity.gameCount,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),

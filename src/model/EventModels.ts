@@ -40,6 +40,49 @@ export interface GameRules {
     details: GameRulesDetails | null;
 }
 
+export interface EventInfoScheduleItem {
+    time: string;
+    title: string;
+    kind?: 'default' | 'muted' | 'milestone' | undefined;
+}
+
+export interface EventInfoScheduleDay {
+    date: string | null;
+    title?: string | undefined;
+    items: EventInfoScheduleItem[];
+}
+
+export interface EventInfoVenue {
+    name?: string | undefined;
+    address?: string | undefined;
+    city?: string | undefined;
+    latitude?: number | undefined;
+    longitude?: number | undefined;
+    mapUrl?: string | undefined;
+    contactName?: string | undefined;
+    contactTelegram?: string | undefined;
+}
+
+export interface EventInfoContacts {
+    phone?: string | undefined;
+    email?: string | undefined;
+    telegram?: string | undefined;
+}
+
+export interface EventInfoLinks {
+    site?: string | undefined;
+    registrationForm?: string | undefined;
+    googleMaps?: string | undefined;
+}
+
+export interface EventInfo {
+    schedule?: EventInfoScheduleDay[] | undefined;
+    venue?: EventInfoVenue | undefined;
+    contacts?: EventInfoContacts | undefined;
+    links?: EventInfoLinks | undefined;
+    pairings?: number[][][] | undefined;
+}
+
 export interface Event {
     id: number;
     name: string;
@@ -54,6 +97,7 @@ export interface Event {
     dateTo: Date | null;
     maxParticipants: number | null;
     registrationDeadline: Date | null;
+    info: EventInfo | null;
     gameCount: number;
     createdAt: Date;
     modifiedAt: Date;

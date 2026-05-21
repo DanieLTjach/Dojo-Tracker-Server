@@ -132,11 +132,26 @@ export class EventRegistrationService {
         return updated;
     }
 
-    manualRegister(eventId: number, targetUserId: number, modifierId: number): EventRegistration {
+    manualRegister(
+        eventId: number,
+        targetUserId: number,
+        modifierId: number,
+        profileNames?: { firstName: string; lastName: string }
+    ): EventRegistration {
         const event = this.eventService.getEventById(eventId);
         this.validateEventIsTournament(event);
         const target = this.userService.getUserById(targetUserId);
         const modifier = this.userService.getUserById(modifierId);
+
+        if (profileNames !== undefined) {
+            this.profileService.updateProfileNames(
+                targetUserId,
+                profileNames.firstName,
+                profileNames.lastName,
+                modifierId
+            );
+        }
+
         this.validateProfileHasNames(targetUserId);
 
         const existing = this.registrationRepository.findRegistration(eventId, targetUserId);

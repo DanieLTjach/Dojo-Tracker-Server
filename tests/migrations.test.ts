@@ -253,6 +253,9 @@ describe('Database Migrations', () => {
     const gameStatuses = db.prepare('SELECT status FROM gameStatus ORDER BY status').all() as Array<{ status: string }>;
     expect(gameStatuses.map(({ status }) => status)).toEqual(['CREATED', 'FINISHED', 'IN_PROGRESS']);
 
+    const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; type: string; notnull: number }>;
+    expect(eventColumns.find(c => c.name === 'info')).toMatchObject({ name: 'info', type: 'TEXT', notnull: 0 });
+
     const gameColumns = (db.prepare('PRAGMA table_info(game)').all() as Array<{ name: string; type: string }>)
       .map(({ name, type }) => ({ name, type }));
     expect(gameColumns).toEqual(expect.arrayContaining([
