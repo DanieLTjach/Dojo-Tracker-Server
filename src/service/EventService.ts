@@ -30,6 +30,15 @@ export class EventService {
         return this.eventRepository.findAllEvents();
     }
 
+    hasEventEnded(event: Event, at: Date = new Date()): boolean {
+        return event.dateTo !== null && at > event.dateTo;
+    }
+
+    getActiveTournaments(): Event[] {
+        return this.getAllEvents()
+            .filter(event => event.type === 'TOURNAMENT' && !this.hasEventEnded(event));
+    }
+
     countEventsByGameRulesId(gameRulesId: number): number {
         return this.eventRepository.countEventsByGameRulesId(gameRulesId);
     }

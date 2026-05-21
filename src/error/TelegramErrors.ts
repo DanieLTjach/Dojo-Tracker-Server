@@ -16,3 +16,9 @@ export class UserNotClubOwnerTelegramError extends TelegramReplyError {
         super('Ви повинні бути власником клубу, щоб виконати цю дію');
     }
 }
+
+export class UserNotAdminTelegramError extends TelegramReplyError {
+    constructor() {
+        super('Ця команда доступна лише адміністраторам');
+    }
+}

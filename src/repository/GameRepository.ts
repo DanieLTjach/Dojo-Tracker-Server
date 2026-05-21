@@ -1,5 +1,5 @@
 import type { Statement } from 'better-sqlite3';
-import type { Game, GameFilters, GamePlayer, GameRound, GameState } from '../model/GameModels.ts';
+import type { Game, GameFilters, GamePlayer, GameRound, GameState, GameStatus } from '../model/GameModels.ts';
 import type { GameRoundResult, PlayerPointChange } from '../model/GameRoundResultModels.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { RATING_TO_POINTS_COEFFICIENT } from '../service/RatingService.ts';
@@ -36,20 +36,37 @@ export class GameRepository {
     private createTrackedGameStatement(): Statement<{
         eventId: number,
         modifiedBy: number,
-        timestamp: string
+        timestamp: string,
+        tournamentRound: number | null,
+        tournamentTable: string | null,
+        status: GameStatus,
+        startedAt: string | null
     }, void> {
         return dbManager.db.prepare(`
             INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt, tournamentRound, tournamentTable, status, startedAt, endedAt, lastRoundWasDeleted)
-            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, NULL, NULL, 'IN_PROGRESS', :timestamp, NULL, 0)`
+            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentRound, :tournamentTable, :status, :startedAt, NULL, 0)`
         );
     }
 
-    createTrackedGame(eventId: number, modifiedBy: number, timestamp: Date): number {
+    createTrackedGame(
+        eventId: number,
+        modifiedBy: number,
+        timestamp: Date,
+        status: GameStatus,
+        tournamentRound: number | undefined,
+        tournamentTable: string | undefined
+    ): number {
+        const timestampStr = timestamp.toISOString();
+
         return Number(
             this.createTrackedGameStatement().run({
                 eventId,
                 modifiedBy,
-                timestamp: timestamp.toISOString()
+                timestamp: timestampStr,
+                tournamentRound: tournamentRound ?? null,
+                tournamentTable: tournamentTable ?? null,
+                status,
+                startedAt: status === "CREATED" ? null : timestampStr
             }).lastInsertRowid
         );
     }
@@ -449,6 +466,21 @@ export class GameRepository {
 
     findGameByEventAndTimestamp(eventId: number, timestamp: Date): Game | undefined {
         const gameDBEntity = this.findGameByEventAndTimestampStatement().get({ eventId, timestamp: timestamp.toISOString() });
+        return gameDBEntity !== undefined ? gameFromDBEntity(gameDBEntity) : undefined;
+    }
+
+    private findGameByEventRoundAndTableStatement(): Statement<{
+        eventId: number,
+        tournamentRound: number,
+        tournamentTable: string
+    }, GameDBEntity> {
+        return dbManager.db.prepare(
+            'SELECT * FROM game WHERE eventId = :eventId AND tournamentRound = :tournamentRound AND tournamentTable = :tournamentTable'
+        );
+    }
+
+    findGameByEventRoundAndTable(eventId: number, tournamentRound: number, tournamentTable: string): Game | undefined {
+        const gameDBEntity = this.findGameByEventRoundAndTableStatement().get({ eventId, tournamentRound, tournamentTable });
         return gameDBEntity !== undefined ? gameFromDBEntity(gameDBEntity) : undefined;
     }
 }

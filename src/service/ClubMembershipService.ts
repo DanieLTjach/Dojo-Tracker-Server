@@ -11,7 +11,7 @@ import type { User } from '../model/UserModels.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
-import TelegramMessageService from './TelegramMessageService.ts';import LogService from './LogService.ts';
+import TelegramMessageService from './TelegramMessageService.ts'; import LogService from './LogService.ts';
 import { globalClubLogsTopic } from '../model/TelegramTopic.ts';
 export class ClubMembershipService {
     private clubService: ClubService = new ClubService();
@@ -51,6 +51,20 @@ export class ClubMembershipService {
         if (!this.getUserClubMembership(clubId, userId)?.permissions.canEditClub) {
             throw new InsufficientClubPermissionsError('OWNER');
         }
+    }
+
+    public userIsAdminOrHasClubRole(clubId: number | null, userId: number, allowedRoles: ClubRole[]): boolean {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            true;
+        }
+
+        if (clubId === null) {
+            return false;
+        }
+
+        const role = this.getUserClubRole(clubId, userId);
+        return role !== undefined && allowedRoles.includes(role);
     }
 
     getUserClubMemberships(userId: number): UserClubMembership[] {

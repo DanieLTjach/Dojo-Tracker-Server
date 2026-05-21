@@ -1,4 +1,3 @@
-import { GameRepository } from '../repository/GameRepository.ts';
 import { UserService } from '../service/UserService.ts';
 import {
     GameNotFoundById,
@@ -15,7 +14,7 @@ import {
     GameNotFinishedWhenUpdatingError,
     NotAuthorizedToModifyGameError,
 } from '../error/GameErrors.ts';
-import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound, GameState } from '../model/GameModels.ts';
+import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound, GameState, Game } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
@@ -30,10 +29,11 @@ import {
     YouNeedToBeModeratorToCreateGamesWithNonClubMembersError
 } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
-import type { ClubRole } from '../model/ClubModels.ts';
+import { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
+import { GameRepository } from '../repository/GameRepository.ts';
 
 export class GameService {
 
@@ -104,6 +104,14 @@ export class GameService {
             rounds,
             currentState: this.calculateCurrentGameState(game, rounds)
         };
+    }
+
+    findGameByEventRoundAndTable(
+        eventId: number,
+        tournamentRound: number,
+        tournamentTable: string
+    ): Game | undefined {
+        return this.gameRepository.findGameByEventRoundAndTable(eventId, tournamentRound, tournamentTable);
     }
 
     getGames(filters: GameFilters): GameWithPlayers[] {
@@ -204,7 +212,7 @@ export class GameService {
         this.authorizeTrackedGameAction(game, event, userId);
     }
 
-    public authorizeGameCreation(event: Event, playersData: Array<{ userId: number }>, createdBy: number): void {
+    authorizeGameCreation(event: Event, playersData: Array<{ userId: number }>, createdBy: number): void {
         const user = this.userService.getUserById(createdBy);
         if (user.isAdmin || event.clubId === null) {
             return;
@@ -223,7 +231,7 @@ export class GameService {
         }
     }
 
-    public authorizeTrackedGameAction(game: GameWithPlayers, event: Event, userId: number): void {
+    authorizeTrackedGameAction(game: GameWithPlayers, event: Event, userId: number): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
             return;
@@ -243,7 +251,7 @@ export class GameService {
         throw new NotAuthorizedToModifyGameError();
     }
 
-    public authorizeClubScopedAction(clubId: number | null, userId: number, allowedRoles: ClubRole[]): void {
+    authorizeClubScopedAction(clubId: number | null, userId: number, allowedRoles: ClubRole[]): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
             return;
@@ -293,7 +301,7 @@ export class GameService {
             <b>✏️ Game Edited</b>
 
             <b>Game ID:</b> <code>${newGame.id}</code>
-            <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
+            ${this.formatEventGameLogSection(newGame, event)}
         `;
 
         if (changes.length > 0) {
@@ -324,7 +332,17 @@ export class GameService {
         this.logGameAction(game, event, deletedBy, '🗑️ Game Deleted', 'Deleted by');
     }
 
-    public logGameAction(
+    formatEventGameLogSection(game: Game, event: Event): string {
+        let section = `<b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>`;
+        if (event.type === 'TOURNAMENT') {
+            const round = game.tournamentRound ?? '—';
+            const table = game.tournamentTable ?? '—';
+            section += `\n<b>Tournament round:</b> <code>${round}</code>\n<b>Tournament table:</b> <code>${table}</code>`;
+        }
+        return section;
+    }
+
+    logGameAction(
         game: GameWithPlayers,
         event: Event,
         userId: number,
@@ -336,7 +354,7 @@ export class GameService {
             <b>${title}</b>
 
             <b>Game ID:</b> <code>${game.id}</code>
-            <b>Event:</b> ${event.name} <code>(ID: ${event.id})</code>
+            ${this.formatEventGameLogSection(game, event)}
             <b>Timestamp:</b> <code>${game.createdAt.toISOString()}</code>
             <b>${userLabel}:</b> ${user.name} <code>(ID: ${user.id})</code>
 
@@ -345,7 +363,7 @@ export class GameService {
         this.logMessageToGameLogsTopics(message, event);
     }
 
-    public logMessageToGameLogsTopics(message: string, event: Event) {
+    logMessageToGameLogsTopics(message: string, event: Event) {
         let clubPrefix = '';
         if (event.clubId !== null) {
             const club = this.clubService.getClubById(event.clubId);
@@ -373,7 +391,7 @@ export class GameService {
         }).join('\n\n');
     }
 
-    public logRatingUpdateForGame(
+    logRatingUpdateForGame(
         game: GameWithPlayers,
         event: Event,
         standingsBefore: Map<number, number>,
@@ -478,7 +496,7 @@ export class GameService {
         }
     }
 
-    public validateNoDuplicatePlayers(players: Array<{ userId: number }>): void {
+    validateNoDuplicatePlayers(players: Array<{ userId: number }>): void {
         const userIds = players.map(p => p.userId);
         const uniqueUserIds = new Set(userIds);
 
@@ -511,20 +529,39 @@ export class GameService {
         }
     }
 
-    public validateGameWithinEventDates(event: Event, gameTimestamp: Date, createdBy: number): void {
+    validateGameWithinEventDates(
+        event: Event,
+        gameTimestamp: Date,
+        createdBy: number,
+        status?: GameStatus
+    ): void {
+        const isAdmin = this.clubMembershipService.userIsAdminOrHasClubRole(
+            event.clubId,
+            createdBy,
+            [ClubRole.OWNER, ClubRole.MODERATOR]
+        );
+        this.validateEventHasStarted(event, gameTimestamp, isAdmin, status);
+        if (!isAdmin && event.dateTo !== null && gameTimestamp > event.dateTo) {
+            throw new EventHasEndedError(event.name);
+        }
+    }
+
+    private validateEventHasStarted(
+        event: Event,
+        gameTimestamp: Date,
+        isAdmin: boolean,
+        status?: GameStatus
+    ) {
+        if (status === GameStatus.CREATED && isAdmin) {
+            return;
+        }
         if (event.dateFrom !== null && gameTimestamp < event.dateFrom) {
             throw new EventHasntStartedError(event.name);
-        }
-        if (event.dateTo !== null && gameTimestamp > event.dateTo) {
-            const user = this.userService.getUserById(createdBy);
-            if (!user.isAdmin) {
-                throw new EventHasEndedError(event.name);
-            }
         }
     }
 
     // rating calculation relies on unique game timestamps within an event
-    public validateNoDuplicateGameTimestamp(eventId: number, timestamp: Date): void {
+    validateNoDuplicateGameTimestamp(eventId: number, timestamp: Date): void {
         const existingGame = this.gameRepository.findGameByEventAndTimestamp(eventId, timestamp);
         if (existingGame !== undefined) {
             throw new DuplicateGameTimestampInEventError();
