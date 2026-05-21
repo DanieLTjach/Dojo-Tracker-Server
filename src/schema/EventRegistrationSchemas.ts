@@ -40,7 +40,14 @@ export const eventRegistrationRejectSchema = z.object({
 });
 
 export const eventRegistrationManualSchema = z.object({
-    params: eventUserParamsSchema
+    params: eventUserParamsSchema,
+    body: z.object({
+        firstName: z.string().trim().min(1).optional(),
+        lastName: z.string().trim().min(1).optional()
+    }).refine(
+        (data) => (data.firstName === undefined) === (data.lastName === undefined),
+        { error: 'firstName and lastName must both be provided or both be omitted' }
+    ).optional()
 });
 
 export const eventRegistrationEditProfileSchema = z.object({

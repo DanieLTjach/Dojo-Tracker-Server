@@ -50,9 +50,12 @@ export class EventRegistrationController {
     }
 
     manualRegister(req: Request, res: Response) {
-        const { params: { eventId, userId } } = eventRegistrationManualSchema.parse(req);
+        const { params: { eventId, userId }, body } = eventRegistrationManualSchema.parse(req);
         const modifierId = req.user!.userId;
-        const registration = this.registrationService.manualRegister(eventId, userId, modifierId);
+        const profileNames = body?.firstName !== undefined && body?.lastName !== undefined
+            ? { firstName: body.firstName, lastName: body.lastName }
+            : undefined;
+        const registration = this.registrationService.manualRegister(eventId, userId, modifierId, profileNames);
         return res.status(StatusCodes.OK).json(registration);
     }
 
