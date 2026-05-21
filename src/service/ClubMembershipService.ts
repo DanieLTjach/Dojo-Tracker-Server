@@ -56,7 +56,7 @@ export class ClubMembershipService {
     public userIsAdminOrHasClubRole(clubId: number | null, userId: number, allowedRoles: ClubRole[]): boolean {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
-            true;
+            return true;
         }
 
         if (clubId === null) {

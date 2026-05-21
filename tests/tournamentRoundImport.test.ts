@@ -207,6 +207,76 @@ describe('TournamentRoundImportService', () => {
         expect(second.errors.some(e => e.includes('вже існує'))).toBe(true);
     });
 
+    describe('event has not started yet', () => {
+        const FUTURE_TOURNAMENT_EVENT_ID = 99102_000;
+        const ADMIN_IMPORTER_USER_ID = 99102_001;
+        const NON_ADMIN_IMPORTER_USER_ID = 99102_002;
+
+        beforeAll(() => {
+            const ts = '2024-01-01T00:00:00.000Z';
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, 'Import Admin', '@import_admin', 9910201, 1, 1, 'ACTIVE', ?, ?, 0)`
+            ).run(ADMIN_IMPORTER_USER_ID, ts, ts);
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, 'Import NonAdmin', '@import_nonadmin', 9910202, 0, 1, 'ACTIVE', ?, ?, 0)`
+            ).run(NON_ADMIN_IMPORTER_USER_ID, ts, ts);
+
+            dbManager.db.prepare(
+                `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, 'MEMBER', 'ACTIVE', ?, ?, 0)`
+            ).run(TEST_CLUB_ID, NON_ADMIN_IMPORTER_USER_ID, ts, ts);
+
+            // Tournament that starts well in the future relative to "now".
+            const futureFrom = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+            const futureTo = new Date(Date.now() + 366 * 24 * 60 * 60 * 1000).toISOString();
+            createCustomEvent(
+                FUTURE_TOURNAMENT_EVENT_ID,
+                'Future Import Tournament',
+                futureFrom,
+                futureTo,
+                GAME_RULES_ID,
+                TEST_CLUB_ID,
+                'TOURNAMENT'
+            );
+            for (const userId of [user1Id, user2Id, user3Id, user4Id]) {
+                insertApprovedRegistration(FUTURE_TOURNAMENT_EVENT_ID, userId);
+            }
+        });
+
+        afterAll(() => {
+            dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(FUTURE_TOURNAMENT_EVENT_ID);
+            dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(FUTURE_TOURNAMENT_EVENT_ID);
+            dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId = ?').run(FUTURE_TOURNAMENT_EVENT_ID);
+            dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(FUTURE_TOURNAMENT_EVENT_ID);
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE userId IN (?, ?)').run(ADMIN_IMPORTER_USER_ID, NON_ADMIN_IMPORTER_USER_ID);
+            dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?)').run(ADMIN_IMPORTER_USER_ID, NON_ADMIN_IMPORTER_USER_ID);
+        });
+
+        test('system admin can import even before the event start date', () => {
+            const text = `Round 1\n${user1Id} ${user2Id} ${user3Id} ${user4Id}`;
+
+            const result = importService.parseAndImport(FUTURE_TOURNAMENT_EVENT_ID, 1, text, ADMIN_IMPORTER_USER_ID);
+
+            expect(result.errors).toEqual([]);
+            expect(result.imported).toBe(1);
+            expect(result.games[0]!.status).toBe('CREATED');
+        });
+
+        test('non-admin import is blocked with "ще не розпочався" per table', () => {
+            // Use a different round than the admin test above so we hit the dateFrom check,
+            // not a "round already exists" check.
+            const text = `Round 2\n${user1Id} ${user2Id} ${user3Id} ${user4Id}`;
+
+            const result = importService.parseAndImport(FUTURE_TOURNAMENT_EVENT_ID, 2, text, NON_ADMIN_IMPORTER_USER_ID);
+
+            expect(result.imported).toBe(0);
+            expect(result.errors).toHaveLength(1);
+            expect(result.errors[0]).toMatch(/Стіл 1: .*ще не розпочався/);
+        });
+    });
+
     test('imports two tables when players are unique across tables', () => {
         const ts = '2024-01-01T00:00:00.000Z';
         for (const [id, tg] of [[99105, 991005], [99106, 991006], [99107, 991007], [99108, 991008]] as const) {
