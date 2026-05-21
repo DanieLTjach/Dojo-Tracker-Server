@@ -13,6 +13,7 @@ export interface EventRegistration {
     userName: string;
     firstName: string | null;
     lastName: string | null;
+    hideProfile: boolean;
     status: EventRegistrationStatus;
     createdAt: Date;
     modifiedAt: Date;
