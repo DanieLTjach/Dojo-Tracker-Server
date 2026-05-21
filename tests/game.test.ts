@@ -543,10 +543,10 @@ describe('Game API Endpoints', () => {
             expect(getResponse.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 });
         });
 
-        test('should prefer profile firstName+lastName over user.name in players[]', async () => {
+        test('should expose profileFirstName/profileLastName alongside user.name in players[]', async () => {
             const profileRepo = new ProfileRepository();
             profileRepo.upsertProfile(testUser1Id, null, null, 'Роман', 'Дорошенко', null, false, SYSTEM_USER_ID);
-            // testUser2Id has no profile row; should fall back to user.name
+            // testUser2Id has no profile row; profile fields should be null
             // testUser3Id has profile but only firstName
             profileRepo.upsertProfile(testUser3Id, null, null, 'Іван', null, null, false, SYSTEM_USER_ID);
 
@@ -558,10 +558,20 @@ describe('Game API Endpoints', () => {
 
                 expect(response.status).toBe(201);
                 const byUserId = (id: number) => response.body.players.find((p: { userId: number }) => p.userId === id);
-                expect(byUserId(testUser1Id).name).toBe('Роман Дорошенко');
-                expect(byUserId(testUser2Id).name).toBe('Player2'); // user.name fallback
-                expect(byUserId(testUser3Id).name).toBe('Іван'); // single-name still trimmed
+
+                // `name` is always the raw user.name — unchanged for season-game compatibility.
+                expect(byUserId(testUser1Id).name).toBe('Player1');
+                expect(byUserId(testUser2Id).name).toBe('Player2');
+                expect(byUserId(testUser3Id).name).toBe('Player3');
                 expect(byUserId(testUser4Id).name).toBe('Player4');
+
+                // New profile fields surfaced separately so the FE can choose how to render.
+                expect(byUserId(testUser1Id).profileFirstName).toBe('Роман');
+                expect(byUserId(testUser1Id).profileLastName).toBe('Дорошенко');
+                expect(byUserId(testUser2Id).profileFirstName).toBeNull();
+                expect(byUserId(testUser2Id).profileLastName).toBeNull();
+                expect(byUserId(testUser3Id).profileFirstName).toBe('Іван');
+                expect(byUserId(testUser3Id).profileLastName).toBeNull();
             } finally {
                 dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?)').run(testUser1Id, testUser3Id);
             }
