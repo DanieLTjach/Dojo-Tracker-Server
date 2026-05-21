@@ -4,6 +4,7 @@ import { GameStatus, Wind } from '../model/GameModels.ts';
 import { EventRegistrationService } from './EventRegistrationService.ts';
 import { EventService } from './EventService.ts';
 import { GameService } from './GameService.ts';
+import LogService from './LogService.ts';
 import { TrackedGameService } from './TrackedGameService.ts';
 import { UserService } from './UserService.ts';
 
@@ -91,6 +92,10 @@ export class TournamentRoundImportService {
                         games.push(game);
                     } catch (error: unknown) {
                         const message = error instanceof Error ? error.message : String(error);
+                        LogService.logError(
+                            `Tournament round import failed for event ${eventId} round ${expectedRound} table ${table.tableNumber} (importedBy=${importedBy})`,
+                            error
+                        );
                         errors.push(`Стіл ${table.tableNumber}: ${message}`);
                     }
                 }
