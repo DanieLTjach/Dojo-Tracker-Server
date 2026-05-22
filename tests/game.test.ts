@@ -667,6 +667,103 @@ describe('Game API Endpoints', () => {
             expect(response.body.error).toBe('Invalid request data');
         });
 
+        test('should accept tournamentRound/tournamentTable on tracked game creation', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayers(),
+                    tournamentRound: 4,
+                    tournamentTable: '2'
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body.tournamentRound).toBe(4);
+            expect(response.body.tournamentTable).toBe('2');
+            expect(response.body.status).toBe('IN_PROGRESS');
+        });
+
+        test('should default status to IN_PROGRESS when not provided', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({ eventId: TEST_EVENT_ID, players: trackedPlayers() });
+
+            expect(response.status).toBe(201);
+            expect(response.body.status).toBe('IN_PROGRESS');
+        });
+
+        test('should allow club moderator to create a CREATED tracked game', async () => {
+            setClubRole(1, testUser1Id, 'MODERATOR');
+            try {
+                const response = await request(app)
+                    .post('/api/games/tracked')
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        eventId: TEST_EVENT_ID,
+                        players: trackedPlayers(),
+                        status: 'CREATED'
+                    });
+
+                expect(response.status).toBe(201);
+                expect(response.body.status).toBe('CREATED');
+                expect(response.body.startedAt).toBeNull();
+            } finally {
+                setClubRole(1, testUser1Id, 'MEMBER');
+            }
+        });
+
+        test('should reject regular member creating a CREATED tracked game', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayers(),
+                    status: 'CREATED'
+                });
+
+            expect(response.status).toBe(403);
+        });
+
+        test('should reject duplicate tournamentRound+tournamentTable on TOURNAMENT event', async () => {
+            const tournamentEventId = 1600;
+            createCustomEvent(
+                tournamentEventId,
+                'Tracked Uniqueness Tournament',
+                '2024-01-01T00:00:00.000Z',
+                '2026-12-31T23:59:59.999Z',
+                2,
+                1,
+                'TOURNAMENT'
+            );
+
+            const first = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: tournamentEventId,
+                    players: trackedPlayers(),
+                    tournamentRound: 1,
+                    tournamentTable: '9'
+                });
+            expect(first.status).toBe(201);
+
+            const dup = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: tournamentEventId,
+                    players: trackedPlayers(),
+                    tournamentRound: 1,
+                    tournamentTable: '9'
+                });
+
+            expect(dup.status).toBe(400);
+            expect(dup.body.errorCode).toBe('duplicateTournamentRoundTable');
+        });
+
         test('should fail when startPlace is missing', async () => {
             const response = await request(app)
                 .post('/api/games/tracked')
