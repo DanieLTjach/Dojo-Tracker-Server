@@ -90,6 +90,7 @@ export class EventService {
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
+            blockGameCreation: data.blockGameCreation ?? false,
             createdAt: now,
             modifiedAt: now,
             modifiedBy
@@ -132,6 +133,7 @@ export class EventService {
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
+            blockGameCreation: data.blockGameCreation ?? false,
             modifiedAt: now,
             modifiedBy
         });
@@ -264,4 +266,5 @@ export interface EventData {
     startingRating: number;
     minimumGamesForRating: number;
     info?: EventInfo | null | undefined;
+    blockGameCreation?: boolean | undefined;
 }

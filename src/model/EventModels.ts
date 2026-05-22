@@ -98,6 +98,7 @@ export interface Event {
     maxParticipants: number | null;
     registrationDeadline: Date | null;
     info: EventInfo | null;
+    blockGameCreation: boolean;
     gameCount: number;
     createdAt: Date;
     modifiedAt: Date;

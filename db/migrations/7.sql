@@ -88,6 +88,7 @@ CREATE TABLE gameRound (
 );
 
 ALTER TABLE event ADD COLUMN info TEXT;
+ALTER TABLE event ADD COLUMN blockGameCreation BOOL NOT NULL DEFAULT false;
 
 -- set EMA starting points to 30000
 UPDATE gameRules SET startingPoints = 30000 WHERE id = 4 OR id = 11;
