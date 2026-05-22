@@ -14,6 +14,7 @@ import {
     GameNotFinishedWhenUpdatingError,
     NotAuthorizedToModifyGameError,
     NotGamePlayerError,
+    DuplicateTournamentRoundTableError,
 } from '../error/GameErrors.ts';
 import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound, GameState, Game } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
@@ -67,6 +68,7 @@ export class GameService {
         this.validatePlayers(playersData, event.gameRules);
         this.validateGameWithinEventDates(event, gameTimestamp, createdBy);
         this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
+        this.validateUniqueTournamentRoundTable(event, tournamentRound, tournamentTable, null);
 
         const standingsBefore = this.ratingService.calculateStandings(eventId);
 
@@ -153,6 +155,7 @@ export class GameService {
             this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
         }
         this.validatePlayers(playersData, event.gameRules);
+        this.validateUniqueTournamentRoundTable(event, tournamentRound, tournamentTable, gameId);
 
         const newGameTimestamp = createdAt ?? oldGame.createdAt;
 
@@ -564,6 +567,21 @@ export class GameService {
         }
         if (event.dateFrom !== null && gameTimestamp < event.dateFrom) {
             throw new EventHasntStartedError(event.name);
+        }
+    }
+
+    validateUniqueTournamentRoundTable(
+        event: Event,
+        tournamentRound: number | null,
+        tournamentTable: string | null,
+        excludeGameId: number | null
+    ): void {
+        if (event.type !== 'TOURNAMENT' || tournamentRound === null || tournamentTable === null) {
+            return;
+        }
+        const existing = this.gameRepository.findGameByEventRoundAndTable(event.id, tournamentRound, tournamentTable);
+        if (existing !== undefined && existing.id !== excludeGameId) {
+            throw new DuplicateTournamentRoundTableError(tournamentRound, tournamentTable);
         }
     }
 

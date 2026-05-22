@@ -30,6 +30,15 @@ export class DuplicateGameTimestampInEventError extends BadRequestError {
     }
 }
 
+export class DuplicateTournamentRoundTableError extends BadRequestError {
+    constructor(tournamentRound: number, tournamentTable: string) {
+        super(
+            `Гра для раунду ${tournamentRound} та столу ${tournamentTable} вже існує в цьому турнірі`,
+            'duplicateTournamentRoundTable'
+        );
+    }
+}
+
 export class IncorrectTotalPointsError extends BadRequestError {
     constructor(expectedTotal: number, actualTotal: number) {
         super(`Сума очок повинна дорівнювати ${expectedTotal}, у вас ${actualTotal}`, 'incorrectTotalPoints');

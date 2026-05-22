@@ -167,6 +167,53 @@ describe('Game API Endpoints', () => {
             expect(response.status).toBe(400);
         });
 
+        test('should reject duplicate tournamentRound+tournamentTable for the same TOURNAMENT event', async () => {
+            const tournamentEventId = 1500;
+            createCustomEvent(
+                tournamentEventId,
+                'Uniqueness Tournament',
+                '2024-01-01T00:00:00.000Z',
+                '2026-12-31T23:59:59.999Z',
+                2,
+                1,
+                'TOURNAMENT'
+            );
+
+            const first = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: tournamentEventId,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 25000 }
+                    ],
+                    tournamentRound: 1,
+                    tournamentTable: '7'
+                });
+            expect(first.status).toBe(201);
+
+            const dup = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: tournamentEventId,
+                    playersData: [
+                        { userId: testUser1Id, points: 30000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 30000 },
+                        { userId: testUser4Id, points: 30000 }
+                    ],
+                    tournamentRound: 1,
+                    tournamentTable: '7'
+                });
+
+            expect(dup.status).toBe(400);
+            expect(dup.body.errorCode).toBe('duplicateTournamentRoundTable');
+        });
+
         test('should reject empty tournamentTable', async () => {
             const response = await request(app)
                 .post('/api/games')
