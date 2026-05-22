@@ -44,14 +44,7 @@ export class TrackedGameService {
         const event = this.eventService.getEventById(eventId);
         this.gameService.authorizeGameCreation(event, players, createdBy);
         this.validateTrackedGamePlayers(players, event.gameRules);
-        // Date check runs before the CREATED role gate so callers on an event
-        // that hasn't started yet see the more specific "ще не розпочався"
-        // error rather than a generic "insufficient permissions". The role
-        // gate still applies once the event is live.
         this.gameService.validateGameWithinEventDates(event, gameTimestamp, createdBy, status);
-        if (status === GameStatus.CREATED) {
-            this.gameService.authorizeClubScopedAction(event.clubId, createdBy, ['OWNER', 'MODERATOR']);
-        }
         this.gameService.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
         this.gameService.validateUniqueTournamentRoundTable(
             event,

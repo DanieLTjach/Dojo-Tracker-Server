@@ -793,27 +793,7 @@ describe('Game API Endpoints', () => {
             expect(response.body.status).toBe('IN_PROGRESS');
         });
 
-        test('should allow club moderator to create a CREATED tracked game', async () => {
-            setClubRole(1, testUser1Id, 'MODERATOR');
-            try {
-                const response = await request(app)
-                    .post('/api/games/tracked')
-                    .set('Authorization', user1AuthHeader)
-                    .send({
-                        eventId: TEST_EVENT_ID,
-                        players: trackedPlayers(),
-                        status: 'CREATED'
-                    });
-
-                expect(response.status).toBe(201);
-                expect(response.body.status).toBe('CREATED');
-                expect(response.body.startedAt).toBeNull();
-            } finally {
-                setClubRole(1, testUser1Id, 'MEMBER');
-            }
-        });
-
-        test('should reject regular member creating a CREATED tracked game', async () => {
+        test('should allow club member to create a CREATED tracked game', async () => {
             const response = await request(app)
                 .post('/api/games/tracked')
                 .set('Authorization', user1AuthHeader)
@@ -823,7 +803,9 @@ describe('Game API Endpoints', () => {
                     status: 'CREATED'
                 });
 
-            expect(response.status).toBe(403);
+            expect(response.status).toBe(201);
+            expect(response.body.status).toBe('CREATED');
+            expect(response.body.startedAt).toBeNull();
         });
 
         test('should reject duplicate tournamentRound+tournamentTable on TOURNAMENT event', async () => {
