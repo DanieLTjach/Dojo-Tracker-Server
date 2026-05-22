@@ -642,6 +642,22 @@ describe('Game API Endpoints', () => {
             expect(response.status).toBe(201);
         });
 
+        test('should create a tracked game with tournament metadata', async () => {
+            const response = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayers(),
+                    tournamentRound: 2,
+                    tournamentTable: '4'
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body.tournamentRound).toBe(2);
+            expect(response.body.tournamentTable).toBe('4');
+        });
+
         test('should expose profileFirstName/profileLastName alongside user.name in players[]', async () => {
             const profileRepo = new ProfileRepository();
             profileRepo.upsertProfile(testUser1Id, null, null, 'Роман', 'Дорошенко', null, false, SYSTEM_USER_ID);
