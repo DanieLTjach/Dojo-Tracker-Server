@@ -43,7 +43,8 @@ export const eventRegistrationManualSchema = z.object({
     params: eventUserParamsSchema,
     body: z.object({
         firstName: z.string().trim().min(1).optional(),
-        lastName: z.string().trim().min(1).optional()
+        lastName: z.string().trim().min(1).optional(),
+        isFillerPlayer: z.boolean().optional()
     }).refine(
         (data) => (data.firstName === undefined) === (data.lastName === undefined),
         { error: 'firstName and lastName must both be provided or both be omitted' }
@@ -59,6 +60,13 @@ export const eventRegistrationEditProfileSchema = z.object({
         (data) => data.firstName !== undefined || data.lastName !== undefined,
         { error: 'At least one of firstName or lastName must be provided' }
     )
+});
+
+export const eventRegistrationEditFillerPlayerSchema = z.object({
+    params: eventUserParamsSchema,
+    body: z.object({
+        isFillerPlayer: z.boolean()
+    })
 });
 
 export const myRegistrationsSchema = z.object({

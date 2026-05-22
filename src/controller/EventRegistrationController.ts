@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import {
     eventRegistrationApplySchema,
     eventRegistrationApproveSchema,
+    eventRegistrationEditFillerPlayerSchema,
     eventRegistrationEditProfileSchema,
     eventRegistrationListSchema,
     eventRegistrationManualSchema,
@@ -55,7 +56,7 @@ export class EventRegistrationController {
         const profileNames = body?.firstName !== undefined && body?.lastName !== undefined
             ? { firstName: body.firstName, lastName: body.lastName }
             : undefined;
-        const registration = this.registrationService.manualRegister(eventId, userId, modifierId, profileNames);
+        const registration = this.registrationService.manualRegister(eventId, userId, modifierId, profileNames, body?.isFillerPlayer);
         return res.status(StatusCodes.OK).json(registration);
     }
 
@@ -67,6 +68,16 @@ export class EventRegistrationController {
         const modifierId = req.user!.userId;
         const profile = this.registrationService.editParticipantProfileNames(eventId, userId, firstName, lastName, modifierId);
         return res.status(StatusCodes.OK).json(profile);
+    }
+
+    setFillerPlayer(req: Request, res: Response) {
+        const {
+            params: { eventId, userId },
+            body: { isFillerPlayer }
+        } = eventRegistrationEditFillerPlayerSchema.parse(req);
+        const modifierId = req.user!.userId;
+        const registration = this.registrationService.setFillerPlayer(eventId, userId, isFillerPlayer, modifierId);
+        return res.status(StatusCodes.OK).json(registration);
     }
 
     listForCurrentUser(req: Request, res: Response) {

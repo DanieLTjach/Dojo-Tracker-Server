@@ -13,7 +13,8 @@ const playerDataSchema = z.object({
     userId: userIdSchema,
     points: z.number().int("Points must be an integer"),
     startPlace: windSchema.nullish(),
-    chomboCount: z.number().int("Chombo count must be an integer").nonnegative().max(10).nullish()
+    chomboCount: z.number().int("Chombo count must be an integer").nonnegative().max(10).nullish(),
+    isSubstitutePlayer: z.boolean().nullish()
 });
 
 const playerListSchema = z.array(playerDataSchema).refine((players) => {
@@ -27,7 +28,8 @@ const playerListSchema = z.array(playerDataSchema).refine((players) => {
 
 const trackedGamePlayerDataSchema = z.object({
     userId: userIdSchema,
-    startPlace: windSchema
+    startPlace: windSchema,
+    isSubstitutePlayer: z.boolean().optional()
 });
 
 const trackedGamePlayerListSchema = z.array(trackedGamePlayerDataSchema).refine((players) => {
@@ -130,5 +132,15 @@ export const gameUndoFinishSchema = z.object({
 export const gameStartSchema = z.object({
     params: z.object({
         gameId: gameIdParamSchema
+    })
+});
+
+export const gamePlayerSubstitutePlayerSchema = z.object({
+    params: z.object({
+        gameId: gameIdParamSchema,
+        userId: userIdParamSchema
+    }),
+    body: z.object({
+        isSubstitutePlayer: z.boolean()
     })
 });

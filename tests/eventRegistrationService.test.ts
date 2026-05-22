@@ -315,6 +315,47 @@ describe('EventRegistrationService', () => {
             expect(() => service.manualRegister(TOURNAMENT_LIMITED_EVENT_ID, CAPACITY_USER_B, OWNER_USER_ID))
                 .toThrow(EventCapacityReachedError);
         });
+
+        it('sets isFillerPlayer when provided', () => {
+            const result = service.manualRegister(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID, OWNER_USER_ID, undefined, true);
+            expect(result.isFillerPlayer).toBe(true);
+        });
+
+        it('defaults isFillerPlayer to false when omitted', () => {
+            const result = service.manualRegister(TOURNAMENT_EVENT_ID, APPROVED_USER_ID, OWNER_USER_ID);
+            expect(result.isFillerPlayer).toBe(false);
+        });
+    });
+
+    describe('setFillerPlayer', () => {
+        beforeEach(() => {
+            service.apply(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID);
+            service.approve(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID, OWNER_USER_ID);
+        });
+
+        it('sets isFillerPlayer to true', () => {
+            const result = service.setFillerPlayer(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID, true, OWNER_USER_ID);
+            expect(result.isFillerPlayer).toBe(true);
+            const stored = registrationRepo.findRegistration(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID);
+            expect(stored?.isFillerPlayer).toBe(true);
+        });
+
+        it('sets isFillerPlayer back to false', () => {
+            service.setFillerPlayer(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID, true, OWNER_USER_ID);
+            const result = service.setFillerPlayer(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID, false, OWNER_USER_ID);
+            expect(result.isFillerPlayer).toBe(false);
+        });
+
+        it('defaults isFillerPlayer to false on new registrations', () => {
+            service.apply(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID);
+            const registration = registrationRepo.findRegistration(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID);
+            expect(registration?.isFillerPlayer).toBe(false);
+        });
+
+        it('refuses to update filler flag for a non-registered user', () => {
+            expect(() => service.setFillerPlayer(TOURNAMENT_EVENT_ID, APPROVED_USER_ID, true, OWNER_USER_ID))
+                .toThrow(EventRegistrationNotFoundError);
+        });
     });
 
     describe('editParticipantProfileNames', () => {

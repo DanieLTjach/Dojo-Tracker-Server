@@ -37,6 +37,14 @@ export function getChomboHandling(rules: GameRulesValues): "twenty_thousand_afte
     return rules.chombo ?? "twenty_thousand_after_uma";
 }
 
+export function getSubstitutePlayerPenaltyBeforeUma(rules: GameRulesValues): number {
+    return rules.substitute_player_penalty_before_uma ?? 0;
+}
+
+export function getSubstitutePlayerUma(rules: GameRulesValues): number | undefined {
+    return rules.substitute_player_uma;
+}
+
 export function isYakumanStackingEnabled(rules: GameRulesValues): boolean {
     return rules.yakuman_stacking ?? false;
 }

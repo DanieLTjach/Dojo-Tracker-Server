@@ -2129,6 +2129,83 @@ describe('Game API Endpoints', () => {
         });
     });
 
+    describe('PATCH /api/games/:gameId/players/:userId/substitute-player', () => {
+        let ownerAuthHeader: string;
+        let moderatorAuthHeader: string;
+
+        beforeAll(() => {
+            ownerAuthHeader = createAuthHeader(testUser2Id);
+            moderatorAuthHeader = createAuthHeader(testUser3Id);
+        });
+
+        afterEach(() => {
+            setClubRole(1, testUser2Id, 'MEMBER');
+            setClubRole(1, testUser3Id, 'MEMBER');
+        });
+
+        test('defaults isSubstitutePlayer to false on new games', async () => {
+            const response = await request(app)
+                .get(`/api/games/${testGameId}`)
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.players.every((p: { isSubstitutePlayer: boolean }) => p.isSubstitutePlayer === false)).toBe(true);
+        });
+
+        test('should allow admin to set substitute player flag', async () => {
+            const response = await request(app)
+                .patch(`/api/games/${testGameId}/players/${testUser1Id}/substitute-player`)
+                .set('Authorization', adminAuthHeader)
+                .send({ isSubstitutePlayer: true });
+
+            expect(response.status).toBe(200);
+            expect(response.body.isSubstitutePlayer).toBe(true);
+        });
+
+        test('should allow club owner to set substitute player flag', async () => {
+            setClubRole(1, testUser2Id, 'OWNER');
+
+            const response = await request(app)
+                .patch(`/api/games/${testGameId}/players/${testUser2Id}/substitute-player`)
+                .set('Authorization', ownerAuthHeader)
+                .send({ isSubstitutePlayer: true });
+
+            expect(response.status).toBe(200);
+            expect(response.body.isSubstitutePlayer).toBe(true);
+        });
+
+        test('should allow club moderator to set substitute player flag', async () => {
+            setClubRole(1, testUser3Id, 'MODERATOR');
+
+            const response = await request(app)
+                .patch(`/api/games/${testGameId}/players/${testUser3Id}/substitute-player`)
+                .set('Authorization', moderatorAuthHeader)
+                .send({ isSubstitutePlayer: true });
+
+            expect(response.status).toBe(200);
+            expect(response.body.isSubstitutePlayer).toBe(true);
+        });
+
+        test('should reject club member without management role', async () => {
+            const response = await request(app)
+                .patch(`/api/games/${testGameId}/players/${testUser4Id}/substitute-player`)
+                .set('Authorization', user1AuthHeader)
+                .send({ isSubstitutePlayer: true });
+
+            expect(response.status).toBe(403);
+        });
+
+        test('should return 404 when player is not in the game', async () => {
+            const response = await request(app)
+                .patch(`/api/games/${testGameId}/players/99999/substitute-player`)
+                .set('Authorization', adminAuthHeader)
+                .send({ isSubstitutePlayer: true });
+
+            expect(response.status).toBe(404);
+            expect(response.body.message).toBe(`Гравець з id 99999 не знайдений у грі ${testGameId}`);
+        });
+    });
+
     describe('DELETE /api/games/:gameId - Delete Game', () => {
         const TOURNAMENT_EVENT_ID = 1001;
 

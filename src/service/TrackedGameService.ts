@@ -208,6 +208,7 @@ export class TrackedGameService {
                 startingPoints,
                 player.startPlace,
                 0,
+                player.isSubstitutePlayer ?? false,
                 modifiedBy
             );
         }

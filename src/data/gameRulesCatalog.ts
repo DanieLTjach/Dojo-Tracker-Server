@@ -97,6 +97,8 @@ export const gameRulesCatalog = {
         { key: 'ron_on_kita', type: 'enumString', enum: ['yes_without_chankan'] },
         { key: 'shape_tenpai', type: 'boolean' },
         { key: 'starting_points', type: 'integer', min: 0, multipleOf: 100, required: true },
+        { key: 'substitute_player_penalty_before_uma', type: 'integer', min: 0, multipleOf: 100 },
+        { key: 'substitute_player_uma', type: 'integer' },
         { key: 'swap_calling', type: 'enumString', enum: ['yes','soft','hard'] },
         { key: 'temporary_furiten_duration', type: 'enumString', enum: ['players_discard','interrupt'] },
         { key: 'tenpai_with_fifth_tile_in_own_hand', type: 'boolean' },

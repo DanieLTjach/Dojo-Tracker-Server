@@ -123,6 +123,12 @@ export class InvalidRoundResultPlayerError extends BadRequestError {
     }
 }
 
+export class GamePlayerNotFoundError extends NotFoundError {
+    constructor(gameId: number, userId: number) {
+        super(`Гравець з id ${userId} не знайдений у грі ${gameId}`, 'gamePlayerNotFound');
+    }
+}
+
 export class NoRoundsToRollbackError extends BadRequestError {
     constructor() {
         super('У цій грі немає раундів для відкату', 'noRoundsToRollback');
