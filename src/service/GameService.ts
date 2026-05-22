@@ -36,6 +36,7 @@ import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
+import { GameCreationBlockedError } from '../error/EventErrors.ts';
 
 export class GameService {
 
@@ -217,21 +218,25 @@ export class GameService {
     }
 
     authorizeGameCreation(event: Event, playersData: Array<{ userId: number }>, createdBy: number): void {
-        const user = this.userService.getUserById(createdBy);
-        if (user.isAdmin || event.clubId === null) {
+        if (this.clubMembershipService.userIsAdminOrHasClubRole(event.clubId, createdBy, [ClubRole.OWNER, ClubRole.MODERATOR])) {
             return;
         }
 
-        const creatorRole = this.clubMembershipService.getUserClubRole(event.clubId, createdBy);
-        if (!creatorRole) {
+        if (event.blockGameCreation) {
+            throw new GameCreationBlockedError(event.name);
+        }
+
+        if (event.clubId === null) {
+            return;
+        }
+
+        if (this.clubMembershipService.getUserClubMembership(event.clubId, createdBy) === undefined) {
             throw new YouHaveToBeClubMemberError();
         }
 
-        if (creatorRole === 'MEMBER') {
-            const allPlayersInClub = playersData.every((player) => this.clubMembershipService.getUserClubRole(event.clubId!, player.userId) !== undefined);
-            if (!allPlayersInClub) {
-                throw new YouNeedToBeModeratorToCreateGamesWithNonClubMembersError();
-            }
+        const allPlayersInClub = playersData.every((player) => this.clubMembershipService.getUserClubRole(event.clubId!, player.userId) !== undefined);
+        if (!allPlayersInClub) {
+            throw new YouNeedToBeModeratorToCreateGamesWithNonClubMembersError();
         }
     }
 

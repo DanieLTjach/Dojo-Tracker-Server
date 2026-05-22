@@ -255,6 +255,7 @@ describe('Database Migrations', () => {
 
     const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; type: string; notnull: number }>;
     expect(eventColumns.find(c => c.name === 'info')).toMatchObject({ name: 'info', type: 'TEXT', notnull: 0 });
+    expect(eventColumns.find(c => c.name === 'blockGameCreation')).toMatchObject({ name: 'blockGameCreation', type: 'BOOL', notnull: 1 });
 
     const gameColumns = (db.prepare('PRAGMA table_info(game)').all() as Array<{ name: string; type: string }>)
       .map(({ name, type }) => ({ name, type }));

@@ -65,3 +65,9 @@ export class TournamentMustHaveClubError extends BadRequestError {
         super('Турнір повинен належати клубу', 'tournamentMustHaveClub');
     }
 }
+
+export class GameCreationBlockedError extends BadRequestError {
+    constructor(eventName: string) {
+        super(`Створення ігор для події "${eventName}" заблоковано`, 'gameCreationBlocked');
+    }
+}
