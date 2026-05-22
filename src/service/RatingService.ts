@@ -6,6 +6,7 @@ import type { RatingSnapshot, UserRating, UserRatingChangeShortDTO, UserRatingWi
 import { RatingRepository } from "../repository/RatingRepository.ts";
 import { EventService } from "./EventService.ts";
 import { UserService } from "./UserService.ts";
+import { getChomboHandling, getSubstitutePlayerPenaltyBeforeUma, getSubstitutePlayerUma } from "../util/RulesUtils.ts";
 
 export class RatingService {
 
@@ -59,7 +60,7 @@ export class RatingService {
         gameRules: GameRules,
         startingRating: number
     ): void {
-        const players = [...playersData];
+        const players = this.applySubstitutePenalty(playersData, gameRules);
         this.sortPlayersData(players, gameRules.umaTieBreak);
         const uma = this.calculateUma(players, gameRules);
 
@@ -69,10 +70,11 @@ export class RatingService {
             );
             const currentRating = latestRatingChange?.rating ?? startingRating * RATING_TO_POINTS_COEFFICIENT;
 
+            const detailedRules = gameRules.details?.rules;
             const gainedPoints = playerData.points - gameRules.startingPoints;
             const ratingChange = gainedPoints
                 + uma[index]! * RATING_TO_POINTS_COEFFICIENT
-                - (gameRules.details?.rules?.chombo === "mangan" ? 0 : 20000) * (playerData.chomboCount ?? 0);
+                - (detailedRules !== undefined && getChomboHandling(detailedRules) === "mangan" ? 0 : 20000) * (playerData.chomboCount ?? 0);
             const newRating = currentRating + ratingChange;
 
             this.ratingRepository.addUserRatingChange({
@@ -108,6 +110,23 @@ export class RatingService {
         this.ratingRepository.deleteRatingChangesFromGame(game.id);
     }
 
+    private applySubstitutePenalty(playersData: PlayerData[], gameRules: GameRules): PlayerData[] {
+        const detailedRules = gameRules.details?.rules;
+        if (detailedRules === undefined) {
+            return playersData.map((player) => ({ ...player }));
+        }
+    
+        const penalty = getSubstitutePlayerPenaltyBeforeUma(detailedRules);
+        if (penalty === 0) {
+            return playersData.map((player) => ({ ...player }));
+        }
+    
+        return playersData.map((player) => ({
+            ...player,
+            points: player.points - (player.isSubstitutePlayer ? penalty : 0)
+        }));
+    }
+
     private sortPlayersData(playersData: PlayerData[], umaTieBreak: UmaTieBreak) {
         if (umaTieBreak === 'WIND') {
             if (new Set(playersData.map(p => p.points)).size < playersData.length) {
@@ -131,6 +150,18 @@ export class RatingService {
         if (gameRules.umaTieBreak === 'DIVIDE') {
             uma = this.averageUma(uma, playerPoints, gameRules);
         }
+
+        const substituteUma = gameRules.details?.rules !== undefined
+            ? getSubstitutePlayerUma(gameRules.details.rules)
+            : undefined;
+        if (substituteUma !== undefined) {
+            for (const [index, player] of players.entries()) {
+                if (player.isSubstitutePlayer) {
+                    uma[index] = substituteUma;
+                }
+            }
+        }
+
         return uma;
     }
 

@@ -79,6 +79,14 @@ describe('Rating API Endpoints', () => {
         ).run(clubId, userId, ts, ts);
     }
 
+    function seedEventRegistration(eventId: number, userId: number, isFillerPlayer: boolean) {
+        const ts = new Date().toISOString();
+        dbManager.db.prepare(
+            `INSERT OR REPLACE INTO eventRegistration (eventId, userId, status, isFillerPlayer, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, 'APPROVED', ?, ?, ?, 0)`
+        ).run(eventId, userId, isFillerPlayer ? 1 : 0, ts, ts);
+    }
+
     async function createGameSetupWithPoints(points: number[]) {
         const user1Id = await createTestUser('Player1', 1);
         const user2Id = await createTestUser('Player2', 2);
@@ -174,6 +182,39 @@ describe('Rating API Endpoints', () => {
             for (const rating of response.body) {
                 expect(rating.gamesPlayed).toBe(2);
             }
+        });
+
+        test('excludes filler players from current rating standings', async () => {
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetup();
+
+            seedEventRegistration(TEST_EVENT_ID, user2Id, true);
+
+            const response = await request(app)
+                .get(`/api/events/${TEST_EVENT_ID}/rating`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveLength(3);
+            const userIds = response.body.map((r: { user: { id: number } }) => r.user.id);
+            expect(userIds).toContain(user1Id);
+            expect(userIds).toContain(user3Id);
+            expect(userIds).toContain(user4Id);
+            expect(userIds).not.toContain(user2Id);
+        });
+
+        test('includes players with non-filler registration', async () => {
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetup();
+
+            seedEventRegistration(TEST_EVENT_ID, user2Id, false);
+
+            const response = await request(app)
+                .get(`/api/events/${TEST_EVENT_ID}/rating`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveLength(4);
+            const userIds = response.body.map((r: { user: { id: number } }) => r.user.id);
+            expect(userIds).toEqual(expect.arrayContaining([user1Id, user2Id, user3Id, user4Id]));
         });
 
     });
@@ -580,6 +621,121 @@ describe('Rating API Endpoints', () => {
             for (const player of response.body.players) {
                 expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
             }
+        });
+    });
+
+    describe('Substitute player rating rules', () => {
+        const SUBSTITUTE_RULES_ID = 2;
+
+        function seedSubstitutePlayerRules(overrides: Record<string, number>) {
+            const row = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(SUBSTITUTE_RULES_ID) as { details: string | null };
+            const details = row.details !== null ? JSON.parse(row.details) : { preset: 'ema_2025', rules: {} };
+            details.rules = { ...details.rules, ...overrides };
+            dbManager.db.prepare('UPDATE gameRules SET details = ? WHERE id = ?').run(JSON.stringify(details), SUBSTITUTE_RULES_ID);
+        }
+
+        test('applies penalty before uma and replaces uma after tie averaging', async () => {
+            seedSubstitutePlayerRules({
+                substitute_player_penalty_before_uma: 5000,
+                substitute_player_uma: 0
+            });
+
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } =
+                await createGameSetupWithPoints([34000, 34000, 28000, 24000]);
+
+            const createResponse = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: user1Id, points: 34000, startPlace: 'EAST' },
+                        { userId: user2Id, points: 34000, startPlace: 'SOUTH', isSubstitutePlayer: true },
+                        { userId: user3Id, points: 28000, startPlace: 'WEST' },
+                        { userId: user4Id, points: 24000, startPlace: 'NORTH' }
+                    ]
+                });
+            expect(createResponse.status).toBe(201);
+
+            const gameResponse = await request(app)
+                .get(`/api/games/${createResponse.body.id}`)
+                .set('Authorization', user1AuthHeader);
+
+            const ratingByUserId = Object.fromEntries(
+                gameResponse.body.players.map((p: { userId: number; ratingChange: number }) => [p.userId, p.ratingChange])
+            );
+
+            // penalty lowers user2 to 29000 before uma (only user1 stays at/above starting points)
+            expect(ratingByUserId[user1Id]).toBe(28); // 4 + 24
+            expect(ratingByUserId[user2Id]).toBe(-1); // -1 + 0 uma
+            expect(ratingByUserId[user3Id]).toBe(-8); // -2 + (-6) uma
+            expect(ratingByUserId[user4Id]).toBe(-22); // -6 + (-16) uma
+        });
+
+        test('averages uma for tie created by penalty, then applies substitute uma override', async () => {
+            seedSubstitutePlayerRules({
+                substitute_player_penalty_before_uma: 5000,
+                substitute_player_uma: 0
+            });
+
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } =
+                await createGameSetupWithPoints([40000, 35000, 25000, 20000]);
+
+            const createResponse = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    playersData: [
+                        { userId: user1Id, points: 34000, startPlace: 'EAST' },
+                        { userId: user2Id, points: 39000, startPlace: 'SOUTH', isSubstitutePlayer: true },
+                        { userId: user3Id, points: 28000, startPlace: 'WEST' },
+                        { userId: user4Id, points: 19000, startPlace: 'NORTH' }
+                    ]
+                });
+            expect(createResponse.status).toBe(201);
+
+            const gameResponse = await request(app)
+                .get(`/api/games/${createResponse.body.id}`)
+                .set('Authorization', user1AuthHeader);
+
+            const ratingByUserId = Object.fromEntries(
+                gameResponse.body.players.map((p: { userId: number; ratingChange: number }) => [p.userId, p.ratingChange])
+            );
+
+            // 39000 - 5000 = 34000, tying user1; uma [16,8,-8,-16] -> averaged to 12 for both leaders
+            expect(ratingByUserId[user1Id]).toBe(16); // 4 + 12
+            expect(ratingByUserId[user2Id]).toBe(4); // 4 + 0 (substitute uma replaces averaged 12)
+            expect(ratingByUserId[user3Id]).toBe(-10); // -2 + (-8)
+            expect(ratingByUserId[user4Id]).toBe(-27); // -11 + (-16)
+        });
+
+        test('recalculates rating when substitute flag changes on a finished game', async () => {
+            seedSubstitutePlayerRules({
+                substitute_player_penalty_before_uma: 5000,
+                substitute_player_uma: 0
+            });
+
+            const { user4Id, user1AuthHeader, gameId } =
+                await createGameSetupWithPoints([40000, 35000, 25000, 20000]);
+
+            const beforeResponse = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+            const beforeRating = beforeResponse.body.players.find((p: { userId: number }) => p.userId === user4Id).ratingChange;
+            expect(beforeRating).toBe(-26);
+
+            const patchResponse = await request(app)
+                .patch(`/api/games/${gameId}/players/${user4Id}/substitute-player`)
+                .set('Authorization', adminAuthHeader)
+                .send({ isSubstitutePlayer: true });
+            expect(patchResponse.status).toBe(200);
+
+            const afterResponse = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+            const afterRating = afterResponse.body.players.find((p: { userId: number }) => p.userId === user4Id).ratingChange;
+            expect(afterRating).toBe(-15); // (15000 - 30000) + 0 uma after penalty applied before uma
         });
     });
 });

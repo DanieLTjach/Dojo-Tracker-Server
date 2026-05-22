@@ -138,7 +138,8 @@ export class EventRegistrationService {
         eventId: number,
         targetUserId: number,
         modifierId: number,
-        profileNames?: { firstName: string; lastName: string }
+        profileNames?: { firstName: string; lastName: string },
+        isFillerPlayer?: boolean
     ): EventRegistration {
         const event = this.eventService.getEventById(eventId);
         this.validateEventIsTournament(event);
@@ -167,12 +168,18 @@ export class EventRegistrationService {
                 eventId,
                 userId: targetUserId,
                 status: 'APPROVED',
+                isFillerPlayer: isFillerPlayer ?? false,
                 createdAt: now,
                 modifiedAt: now,
                 modifiedBy: modifierId
             });
-        } else if (existing.status !== 'APPROVED') {
-            this.registrationRepository.updateRegistrationStatus(eventId, targetUserId, 'APPROVED', modifierId);
+        } else {
+            if (existing.status !== 'APPROVED') {
+                this.registrationRepository.updateRegistrationStatus(eventId, targetUserId, 'APPROVED', modifierId);
+            }
+            if (isFillerPlayer !== undefined) {
+                this.registrationRepository.updateRegistrationIsFillerPlayer(eventId, targetUserId, isFillerPlayer, modifierId);
+            }
         }
 
         if (event.clubId !== null) {
@@ -183,6 +190,26 @@ export class EventRegistrationService {
         this.notifyTargetUser(target, event, '📝 Вас зареєстровано на турнір');
         this.logManualRegistered(event, target, modifier);
         return updated;
+    }
+
+    setFillerPlayer(
+        eventId: number,
+        targetUserId: number,
+        isFillerPlayer: boolean,
+        modifierId: number
+    ): EventRegistration {
+        const event = this.eventService.getEventById(eventId);
+        this.validateEventIsTournament(event);
+        this.userService.validateUserIsActiveById(targetUserId);
+        this.userService.validateUserIsActiveById(modifierId);
+
+        const registration = this.registrationRepository.findRegistration(eventId, targetUserId);
+        if (registration === undefined) {
+            throw new EventRegistrationNotFoundError(event.name, targetUserId);
+        }
+
+        this.registrationRepository.updateRegistrationIsFillerPlayer(eventId, targetUserId, isFillerPlayer, modifierId);
+        return this.getRegistration(eventId, targetUserId);
     }
 
     editParticipantProfileNames(

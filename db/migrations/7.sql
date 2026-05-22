@@ -10,6 +10,7 @@ CREATE TABLE userToGame_new (
     startPlace TEXT REFERENCES wind(wind),
     points INTEGER NOT NULL,
     chomboCount INTEGER NOT NULL,
+    isSubstitutePlayer BOOL NOT NULL DEFAULT false,
     createdAt TIMESTAMP NOT NULL,
     modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id),
@@ -92,3 +93,5 @@ ALTER TABLE event ADD COLUMN blockGameCreation BOOL NOT NULL DEFAULT false;
 
 -- set EMA starting points to 30000
 UPDATE gameRules SET startingPoints = 30000 WHERE id = 4 OR id = 11;
+
+ALTER TABLE eventRegistration ADD COLUMN isFillerPlayer BOOL NOT NULL DEFAULT false;

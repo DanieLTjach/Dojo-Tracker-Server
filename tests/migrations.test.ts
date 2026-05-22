@@ -224,7 +224,7 @@ describe('Database Migrations', () => {
     expect(gameStartPlaceTable).toBeUndefined();
 
     const userToGame = db.prepare(`
-      SELECT userId, gameId, startPlace, points, chomboCount
+      SELECT userId, gameId, startPlace, points, chomboCount, isSubstitutePlayer
       FROM userToGame
       WHERE userId = 0 AND gameId = 1
     `).get() as Record<string, unknown>;
@@ -234,6 +234,7 @@ describe('Database Migrations', () => {
       startPlace: 'EAST',
       points: 30000,
       chomboCount: 0,
+      isSubstitutePlayer: 0,
     });
 
     const game = db.prepare(`

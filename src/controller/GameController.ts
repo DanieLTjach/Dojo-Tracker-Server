@@ -13,7 +13,8 @@ import {
     gameRoundDeleteSchema,
     gameFinishSchema,
     gameUndoFinishSchema,
-    gameStartSchema
+    gameStartSchema,
+    gamePlayerSubstitutePlayerSchema
 } from '../schema/GameSchemas.ts';
 import { TrackedGameService } from '../service/TrackedGameService.ts';
 
@@ -115,5 +116,15 @@ export class GameController {
 
         this.gameService.deleteGame(gameId, deletedBy);
         return res.status(StatusCodes.NO_CONTENT).send();
+    }
+
+    setSubstitutePlayer(req: Request, res: Response) {
+        const {
+            params: { gameId, userId },
+            body: { isSubstitutePlayer }
+        } = gamePlayerSubstitutePlayerSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const player = this.gameService.setSubstitutePlayer(gameId, userId, isSubstitutePlayer, modifiedBy);
+        return res.status(StatusCodes.OK).json(player);
     }
 }
