@@ -4,7 +4,6 @@ import {
     CannotDeleteEventWithGamesError,
     CannotDeleteEventWithRegistrationsError,
     CurrentRatingEventMustBeClubScopedError,
-    CurrentRatingEventMustBeSeasonError,
     TournamentMustHaveClubError
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
@@ -227,10 +226,6 @@ export class EventService {
 
         if (data.clubId === null || data.clubId === undefined) {
             throw new CurrentRatingEventMustBeClubScopedError();
-        }
-
-        if (data.type !== 'SEASON') {
-            throw new CurrentRatingEventMustBeSeasonError();
         }
     }
 

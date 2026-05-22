@@ -54,12 +54,6 @@ export class CurrentRatingEventMustBeClubScopedError extends BadRequestError {
     }
 }
 
-export class CurrentRatingEventMustBeSeasonError extends BadRequestError {
-    constructor() {
-        super('Поточним рейтинговим сезоном може бути лише подія типу SEASON', 'currentRatingEventMustBeSeason');
-    }
-}
-
 export class TournamentMustHaveClubError extends BadRequestError {
     constructor() {
         super('Турнір повинен належати клубу', 'tournamentMustHaveClub');

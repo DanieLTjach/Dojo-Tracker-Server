@@ -330,14 +330,17 @@ describe('Event API Endpoints', () => {
             expect(response.body.errorCode).toBe('currentRatingEventMustBeClubScoped');
         });
 
-        test('should reject current rating event for tournament', async () => {
+        test('should allow current rating event for tournament', async () => {
             const response = await request(app)
                 .post('/api/events')
                 .set('Authorization', adminAuthHeader)
                 .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', isCurrentRating: true });
 
-            expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('currentRatingEventMustBeSeason');
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.type).toBe('TOURNAMENT');
+            expect(response.body.isCurrentRating).toBe(true);
         });
 
         test('should replace previous current rating season in same club on create', async () => {
