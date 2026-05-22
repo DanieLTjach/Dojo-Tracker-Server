@@ -43,9 +43,18 @@ export class TrackedGameService {
 
         const event = this.eventService.getEventById(eventId);
         this.gameService.authorizeGameCreation(event, players, createdBy);
+        if (status === GameStatus.CREATED) {
+            this.gameService.authorizeClubScopedAction(event.clubId, createdBy, ['OWNER', 'MODERATOR']);
+        }
         this.validateTrackedGamePlayers(players, event.gameRules);
         this.gameService.validateGameWithinEventDates(event, gameTimestamp, createdBy, status);
         this.gameService.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
+        this.gameService.validateUniqueTournamentRoundTable(
+            event,
+            tournamentRound ?? null,
+            tournamentTable ?? null,
+            null
+        );
 
         const newGameId = this.gameRepository.createTrackedGame(eventId, createdBy, gameTimestamp, status, tournamentRound, tournamentTable);
         this.addPlayersToTrackedGame(newGameId, players, event.gameRules.startingPoints, createdBy);
