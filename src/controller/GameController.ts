@@ -31,9 +31,17 @@ export class GameController {
     }
 
     addTrackedGame(req: Request, res: Response) {
-        const { body: { eventId, players } } = trackedGameCreationSchema.parse(req);
+        const { body: { eventId, players, tournamentRound, tournamentTable, status } } = trackedGameCreationSchema.parse(req);
         const createdBy = req.user!.userId;
-        const newGame = this.trackedGameService.createTrackedGame(eventId, players, createdBy, "IN_PROGRESS");
+        const newGame = this.trackedGameService.createTrackedGame(
+            eventId,
+            players,
+            createdBy,
+            status ?? "IN_PROGRESS",
+            undefined,
+            tournamentRound ?? undefined,
+            tournamentTable ?? undefined
+        );
         return res.status(StatusCodes.CREATED).json(newGame);
     }
 

@@ -42,7 +42,10 @@ const trackedGamePlayerListSchema = z.array(trackedGamePlayerDataSchema).refine(
 export const trackedGameCreationSchema = z.object({
     body: z.object({
         eventId: eventIdSchema,
-        players: trackedGamePlayerListSchema
+        players: trackedGamePlayerListSchema,
+        tournamentRound: z.number().int().positive().nullish(),
+        tournamentTable: z.string().min(1).nullish(),
+        status: z.enum(['CREATED', 'IN_PROGRESS']).nullish()
     })
 });
 
