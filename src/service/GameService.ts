@@ -38,6 +38,7 @@ import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { GameCreationBlockedError } from '../error/EventErrors.ts';
+import { AchievementService } from './AchievementService.ts';
 
 export class GameService {
 
@@ -47,6 +48,7 @@ export class GameService {
     private ratingService: RatingService = new RatingService();
     private clubService: ClubService = new ClubService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
+    private achievementService: AchievementService = new AchievementService();
 
     addGame(
         eventId: number,
@@ -79,6 +81,8 @@ export class GameService {
         this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules, event.startingRating);
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
+
+        this.achievementService.recomputeEventAchievements(event);
 
         const newGame = this.getGameById(newGameId);
         this.logNewGame(newGame, event);
@@ -168,6 +172,11 @@ export class GameService {
         this.ratingService.deleteRatingChangesFromGame(oldGame);
         this.ratingService.addRatingChangesFromGame(gameId, newGameTimestamp, playersData, eventId, event.gameRules, event.startingRating);
 
+        this.achievementService.recomputeEventAchievements(event);
+        if (oldEvent.id !== event.id) {
+            this.achievementService.recomputeEventAchievements(oldEvent);
+        }
+
         const updatedGame = this.getGameById(gameId);
         this.logEditedGame(oldGame, updatedGame, event, modifiedBy);
         return updatedGame;
@@ -193,6 +202,7 @@ export class GameService {
 
         if (game.status === GameStatus.FINISHED) {
             this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
+            this.achievementService.recomputeEventAchievements(event);
         }
 
         return this.gameRepository.findGamePlayersByGameId(gameId)
@@ -224,6 +234,10 @@ export class GameService {
         this.gameRepository.deleteGameRoundsByGameId(gameId);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.gameRepository.deleteGameById(gameId);
+
+        if (game.status === GameStatus.FINISHED) {
+            this.achievementService.recomputeEventAchievements(event);
+        }
 
         this.logDeletedGame(game, event, deletedBy);
     }

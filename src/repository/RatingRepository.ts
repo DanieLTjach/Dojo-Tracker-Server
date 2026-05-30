@@ -115,6 +115,28 @@ export class RatingRepository {
         return this.getUserRatingHistoryStatement().all({ userId, eventId }).map(ratingSnapshotFromDBEntity);
     }
 
+    private findZeroRatingChangesByEventStatement(): Statement<{ eventId: number }, { gameId: number, userId: number }> {
+        return dbManager.db.prepare(`
+            SELECT gameId, userId FROM userRatingChange
+            WHERE eventId = :eventId AND ratingChange = 0`
+        );
+    }
+
+    /** user ids whose rating change was exactly 0, grouped by game (used for the "Saki award"). */
+    findZeroRatingChangesByEvent(eventId: number): Map<number, number[]> {
+        const rows = this.findZeroRatingChangesByEventStatement().all({ eventId });
+        const byGame = new Map<number, number[]>();
+        for (const { gameId, userId } of rows) {
+            const userIds = byGame.get(gameId);
+            if (userIds === undefined) {
+                byGame.set(gameId, [userId]);
+            } else {
+                userIds.push(userId);
+            }
+        }
+        return byGame;
+    }
+
     private addUserRatingChangeStatement(): Statement<UserRatingChangeDBEntity, void> {
         return dbManager.db.prepare(`
             INSERT INTO userRatingChange (userId, eventId, gameId, ratingChange, rating, timestamp)

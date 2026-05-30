@@ -7,6 +7,7 @@ import { GameStatus } from "../model/GameModels.ts";
 import type { GameRoundResult, GameRoundResultInputDTO, PlayerPointChange } from "../model/GameRoundResultModels.ts";
 import { GameRepository } from "../repository/GameRepository.ts";
 import { calculateGameRoundResult, calculateRemainingRiichiSticksPointChanges, mergePlayerPointChanges } from "../util/PointCalculationUtil.ts";
+import { AchievementService } from "./AchievementService.ts";
 import { ClubMembershipService } from "./ClubMembershipService.ts";
 import { EventService } from "./EventService.ts";
 import { GameService } from "./GameService.ts";
@@ -29,6 +30,7 @@ export class TrackedGameService {
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
+    private achievementService: AchievementService = new AchievementService();
 
     createTrackedGame(
         eventId: number,
@@ -149,6 +151,8 @@ export class TrackedGameService {
             event.startingRating
         );
 
+        this.achievementService.recomputeEventAchievements(event);
+
         const finishedGame = this.gameService.getDetailedGameById(gameId);
         this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
         this.gameService.logRatingUpdateForGame(
@@ -189,6 +193,8 @@ export class TrackedGameService {
         this.ratingService.deleteRatingChangesFromGame(game);
         this.gameRepository.undoFinishGame(gameId, modifiedBy);
         this.undoRemainingRiichiSticksOnFinish(game, event.gameRules, modifiedBy);
+
+        this.achievementService.recomputeEventAchievements(event);
 
         const reopenedGame = this.gameService.getDetailedGameById(gameId);
         this.gameService.logGameAction(reopenedGame, event, modifiedBy, '↩️ Game Finish Undone', 'Undone by');

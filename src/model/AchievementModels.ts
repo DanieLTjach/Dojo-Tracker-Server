@@ -18,6 +18,8 @@ export interface EventAchievementRow {
 export interface AchievementWinner {
     userId: number;
     name: string;
+    profileFirstName: string | null;
+    profileLastName: string | null;
 }
 
 /**
