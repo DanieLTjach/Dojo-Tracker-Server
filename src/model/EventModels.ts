@@ -1,4 +1,5 @@
 import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
+import type { Tournament } from './TournamentModels.ts';
 
 export const UmaTieBreak = {
     WIND: 'WIND',
@@ -99,6 +100,7 @@ export interface Event {
     registrationDeadline: Date | null;
     info: EventInfo | null;
     blockGameCreation: boolean;
+    tournament: Tournament | null;
     gameCount: number;
     createdAt: Date;
     modifiedAt: Date;

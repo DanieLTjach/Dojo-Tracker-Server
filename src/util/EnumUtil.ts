@@ -4,6 +4,7 @@ import { EventRegistrationStatus } from "../model/EventRegistrationModels.ts";
 import { UmaTieBreak } from "../model/EventModels.ts";
 import { GameStatus, Wind } from "../model/GameModels.ts";
 import { ClubTelegramTopicType } from "../model/TelegramTopic.ts";
+import { TournamentStatus } from "../model/TournamentModels.ts";
 import { UserStatus } from "../model/UserModels.ts";
 
 class EnumParsingError extends InternalServerError {
@@ -48,6 +49,10 @@ export function parseWind(value: string): Wind {
 
 export function parseGameStatus(value: string): GameStatus {
     return parseEnumValue('GameStatus', GameStatus, value);
+}
+
+export function parseTournamentStatus(value: string): TournamentStatus {
+    return parseEnumValue('TournamentStatus', TournamentStatus, value);
 }
 
 export function parseUmaTieBreak(value: string): UmaTieBreak {
