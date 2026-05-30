@@ -17,6 +17,13 @@ const tournamentConfigSchema = z.strictObject({
     totalRounds: z.number().int("totalRounds must be an integer").positive("totalRounds must be positive")
 });
 
+const playerNameDisplayEnum = z.enum(['DEFAULT', 'NICKNAME', 'REAL_NAME']);
+
+const eventConfigSchema = z.strictObject({
+    playerNameDisplay: playerNameDisplayEnum.optional(),
+    minParticipants: z.number().int("minParticipants must be an integer").min(1, "minParticipants must be at least 1").optional()
+});
+
 const scheduleItemKindSchema = z.enum(['default', 'muted', 'milestone']);
 
 const scheduleItemSchema = z.strictObject({
@@ -91,6 +98,7 @@ const eventSchema = z.object({
     minimumGamesForRating: z.number().int("minimumGamesForRating must be an integer").min(0).default(0),
     blockGameCreation: z.boolean().default(false),
     info: eventInfoSchema.nullish(),
+    config: eventConfigSchema.nullish(),
     tournament: tournamentConfigSchema.nullish()
 }).refine(
     (data) => {
@@ -114,6 +122,24 @@ const eventSchema = z.object({
             message: 'Tournament config is only allowed for TOURNAMENT events',
             path: ['tournament']
         });
+    }
+
+    const minParticipants = data.config?.minParticipants;
+    if (minParticipants !== undefined) {
+        if (data.type !== 'TOURNAMENT') {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'minParticipants is only allowed for TOURNAMENT events',
+                path: ['config', 'minParticipants']
+            });
+        }
+        if (data.maxParticipants !== undefined && data.maxParticipants !== null && minParticipants > data.maxParticipants) {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'minParticipants must not exceed maxParticipants',
+                path: ['config', 'minParticipants']
+            });
+        }
     }
 });
 
