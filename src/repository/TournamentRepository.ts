@@ -1,5 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
+import type { TournamentStatus } from '../model/TournamentModels.ts';
 
 export class TournamentRepository {
     private createTournamentStatement(): Statement<{
@@ -45,6 +46,39 @@ export class TournamentRepository {
         this.updateTournamentTotalRoundsStatement().run({
             eventId,
             totalRounds,
+            modifiedAt: modifiedAt.toISOString(),
+            modifiedBy
+        });
+    }
+
+    private updateTournamentStateStatement(): Statement<{
+        eventId: number;
+        status: TournamentStatus;
+        currentRound: number | null;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE tournament
+            SET status = :status,
+                currentRound = :currentRound,
+                modifiedAt = :modifiedAt,
+                modifiedBy = :modifiedBy
+            WHERE eventId = :eventId
+        `);
+    }
+
+    updateTournamentState(
+        eventId: number,
+        status: TournamentStatus,
+        currentRound: number | null,
+        modifiedAt: Date,
+        modifiedBy: number
+    ): void {
+        this.updateTournamentStateStatement().run({
+            eventId,
+            status,
+            currentRound,
             modifiedAt: modifiedAt.toISOString(),
             modifiedBy
         });

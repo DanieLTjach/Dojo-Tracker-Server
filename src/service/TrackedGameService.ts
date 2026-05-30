@@ -168,6 +168,7 @@ export class TrackedGameService {
 
         this.gameService.authorizeGamePlayerAction(game, modifiedBy);
         this.validateGameIsCreated(game);
+        this.eventService.validateTournamentGameCanStart(event, game);
 
         const startedAt = new Date();
         this.gameService.validateGameWithinEventDates(event, startedAt, modifiedBy, GameStatus.IN_PROGRESS);

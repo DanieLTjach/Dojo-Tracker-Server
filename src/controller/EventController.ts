@@ -39,6 +39,20 @@ export class EventController {
         return res.status(StatusCodes.OK).json(event);
     }
 
+    startNextTournamentRound(req: Request, res: Response) {
+        const { params: { eventId } } = eventGetByIdSchema.parse(req);
+        const userId = req.user!.userId;
+        const event = this.eventService.startNextTournamentRound(eventId, userId);
+        return res.status(StatusCodes.OK).json(event);
+    }
+
+    finishTournament(req: Request, res: Response) {
+        const { params: { eventId } } = eventGetByIdSchema.parse(req);
+        const userId = req.user!.userId;
+        const event = this.eventService.finishTournament(eventId, userId);
+        return res.status(StatusCodes.OK).json(event);
+    }
+
     deleteEvent(req: Request, res: Response) {
         const { params: { eventId } } = eventDeleteSchema.parse(req);
         const userId = req.user!.userId;

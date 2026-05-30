@@ -92,3 +92,45 @@ export class TournamentTotalRoundsLessThanCurrentRoundError extends BadRequestEr
         );
     }
 }
+
+export class TournamentRoundGamesNotPreparedError extends BadRequestError {
+    constructor(eventName: string, round: number) {
+        super(`Ігри для раунду ${round} турніру "${eventName}" ще не створені`, 'tournamentRoundGamesNotPrepared');
+    }
+}
+
+export class TournamentRoundGamesNotFinishedError extends BadRequestError {
+    constructor(eventName: string, round: number, unfinishedCount: number) {
+        super(
+            `У раунді ${round} турніру "${eventName}" ще не завершено ${unfinishedCount} ігор`,
+            'tournamentRoundGamesNotFinished'
+        );
+    }
+}
+
+export class TournamentHasNoMoreRoundsError extends BadRequestError {
+    constructor(eventName: string) {
+        super(`У турнірі "${eventName}" більше немає раундів для запуску`, 'tournamentHasNoMoreRounds');
+    }
+}
+
+export class TournamentAlreadyFinishedError extends BadRequestError {
+    constructor(eventName: string) {
+        super(`Турнір "${eventName}" вже завершено`, 'tournamentAlreadyFinished');
+    }
+}
+
+export class TournamentNotInLastRoundError extends BadRequestError {
+    constructor(eventName: string) {
+        super(`Турнір "${eventName}" ще не знаходиться в останньому раунді`, 'tournamentNotInLastRound');
+    }
+}
+
+export class TournamentGameNotInCurrentRoundError extends BadRequestError {
+    constructor(currentRound: number | null, gameRound: number | null) {
+        super(
+            `Цю гру не можна розпочати зараз. Поточний раунд турніру: ${currentRound ?? '—'}, раунд гри: ${gameRound ?? '—'}`,
+            'tournamentGameNotInCurrentRound'
+        );
+    }
+}
