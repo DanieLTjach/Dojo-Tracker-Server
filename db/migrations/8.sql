@@ -28,3 +28,7 @@ FROM event e
 LEFT JOIN game g ON g.eventId = e.id AND g.tournamentRound IS NOT NULL
 WHERE e.type = 'TOURNAMENT'
 GROUP BY e.id;
+
+-- Generic per-event configuration (JSON). Holds event-type-specific tweaks such as
+-- playerNameDisplay and minParticipants so small settings don't need new columns.
+ALTER TABLE event ADD COLUMN config TEXT;

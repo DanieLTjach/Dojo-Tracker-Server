@@ -19,7 +19,7 @@ import {
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
-import type { Event, EventInfo } from '../model/EventModels.ts';
+import type { Event, EventInfo, EventConfig } from '../model/EventModels.ts';
 import type { Game } from '../model/GameModels.ts';
 import { ClubRole } from '../model/ClubModels.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
@@ -107,6 +107,7 @@ export class EventService {
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
+            config: data.config ?? null,
             blockGameCreation: data.blockGameCreation ?? false,
             createdAt: now,
             modifiedAt: now,
@@ -152,6 +153,7 @@ export class EventService {
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
+            config: data.config ?? null,
             blockGameCreation: data.blockGameCreation ?? false,
             modifiedAt: now,
             modifiedBy
@@ -458,6 +460,7 @@ export interface EventData {
     startingRating: number;
     minimumGamesForRating: number;
     info?: EventInfo | null | undefined;
+    config?: EventConfig | null | undefined;
     blockGameCreation?: boolean | undefined;
     tournament?: TournamentData | null | undefined;
 }
