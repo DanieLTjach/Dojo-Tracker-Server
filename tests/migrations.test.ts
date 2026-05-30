@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
+import { parseGameRulesDetailsAndApplyPresets } from '../src/util/GameRulesDetailsUtil.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -270,6 +271,37 @@ describe('Database Migrations', () => {
     ]));
     expect(gameColumns.find(column => column.name === 'tournamentHanchanNumber')).toBeUndefined();
     expect(gameColumns.find(column => column.name === 'tournamentTableNumber')).toBeUndefined();
+
+    const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+    expect(foreignKeyViolations).toEqual([]);
+
+    db.close();
+  });
+
+  test('migration 8 removes duplicate chomboPointsAfterUma from game rules', () => {
+    const db = createMigratedDb('8.sql');
+    db.pragma('foreign_keys = ON');
+
+    const gameRulesColumns = (db.prepare('PRAGMA table_info(gameRules)').all() as Array<{ name: string; type: string }>)
+      .map(({ name, type }) => ({ name, type }));
+    expect(gameRulesColumns.find(column => column.name === 'chomboPointsAfterUma')).toBeUndefined();
+    expect(gameRulesColumns).toEqual(expect.arrayContaining([
+      { name: 'id', type: 'INTEGER' },
+      { name: 'name', type: 'TEXT' },
+      { name: 'numberOfPlayers', type: 'INTEGER' },
+      { name: 'uma', type: 'TEXT' },
+      { name: 'startingPoints', type: 'INTEGER' },
+      { name: 'clubId', type: 'INTEGER' },
+      { name: 'umaTieBreak', type: 'TEXT' },
+      { name: 'details', type: 'TEXT' },
+    ]));
+
+    const rows = db.prepare('SELECT id, details FROM gameRules WHERE id IN (1, 2, 3, 4, 10, 11) ORDER BY id')
+      .all() as Array<{ id: number; details: string | null }>;
+    for (const row of rows) {
+      const details = parseGameRulesDetailsAndApplyPresets(row.details);
+      expect(details?.rules.chombo).toBeDefined();
+    }
 
     const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
     expect(foreignKeyViolations).toEqual([]);

@@ -139,7 +139,6 @@ export const gameRulesUpsertBodySchema = z.strictObject({
     numberOfPlayers: z.union([z.literal(3), z.literal(4)]),
     uma: umaSchema,
     startingPoints: z.number().int().min(0),
-    chomboPointsAfterUma: z.number().int().nullable(),
     umaTieBreak: z.enum(['WIND', 'DIVIDE']),
     clubId: z.number().int().nullable()
 });
