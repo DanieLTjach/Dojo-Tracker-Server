@@ -466,6 +466,7 @@ describe('Event registration permissions matrix', () => {
                     type: 'TOURNAMENT',
                     gameRulesId: GAME_RULES_ID,
                     clubId: null,
+                    tournament: { totalRounds: 4 },
                     startingRating: 0,
                     minimumGamesForRating: 0
                 });

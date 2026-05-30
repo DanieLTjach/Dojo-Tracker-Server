@@ -13,6 +13,10 @@ export const eventGetByIdSchema = z.object({
 
 const eventTypeEnum = z.enum(["SEASON", "TOURNAMENT"]);
 
+const tournamentConfigSchema = z.strictObject({
+    totalRounds: z.number().int("totalRounds must be an integer").positive("totalRounds must be positive")
+});
+
 const scheduleItemKindSchema = z.enum(['default', 'muted', 'milestone']);
 
 const scheduleItemSchema = z.strictObject({
@@ -86,7 +90,8 @@ const eventSchema = z.object({
     startingRating: z.number().int("startingRating must be an integer").default(0),
     minimumGamesForRating: z.number().int("minimumGamesForRating must be an integer").min(0).default(0),
     blockGameCreation: z.boolean().default(false),
-    info: eventInfoSchema.nullish()
+    info: eventInfoSchema.nullish(),
+    tournament: tournamentConfigSchema.nullish()
 }).refine(
     (data) => {
         if (data.dateFrom && data.dateTo) {
@@ -95,7 +100,22 @@ const eventSchema = z.object({
         return true;
     },
     { error: "dateFrom must be before dateTo", path: ["dateTo"] }
-);
+).superRefine((data, ctx) => {
+    if (data.type === 'TOURNAMENT' && data.tournament === undefined) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'Tournament config is required for TOURNAMENT events',
+            path: ['tournament']
+        });
+    }
+    if (data.type !== 'TOURNAMENT' && data.tournament !== undefined && data.tournament !== null) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'Tournament config is only allowed for TOURNAMENT events',
+            path: ['tournament']
+        });
+    }
+});
 
 export const eventCreateSchema = z.object({
     body: eventSchema
@@ -112,6 +132,13 @@ export const eventDeleteSchema = z.object({
     params: z.object({
         eventId: eventIdParamSchema
     })
+});
+
+export const eventTournamentUpdateSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema
+    }),
+    body: tournamentConfigSchema
 });
 
 export const eventGetListSchema = z.object({

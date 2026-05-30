@@ -4,7 +4,11 @@ import {
     CannotDeleteEventWithGamesError,
     CannotDeleteEventWithRegistrationsError,
     CurrentRatingEventMustBeClubScopedError,
-    TournamentMustHaveClubError
+    TournamentMustHaveClubError,
+    TournamentConfigRequiredError,
+    TournamentConfigOnlyForTournamentError,
+    EventIsNotTournamentError,
+    TournamentTotalRoundsLessThanCurrentRoundError
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
@@ -14,12 +18,14 @@ import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { UserService } from './UserService.ts';
+import { TournamentRepository } from '../repository/TournamentRepository.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
     private clubRepository: ClubRepository = new ClubRepository();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
     private eventRegistrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
+    private tournamentRepository: TournamentRepository = new TournamentRepository();
     private userService: UserService = new UserService();
 
     getAllEvents(clubId?: number): Event[] {
@@ -74,6 +80,7 @@ export class EventService {
 
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
+        this.validateTournamentConfig(data);
 
         const now = new Date();
         const eventId = this.eventRepository.createEvent({
@@ -95,6 +102,7 @@ export class EventService {
             modifiedBy
         });
 
+        this.syncTournamentConfig(undefined, eventId, data, modifiedBy, now);
         this.syncCurrentRatingEvent(undefined, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
 
         return this.getEventById(eventId);
@@ -114,6 +122,7 @@ export class EventService {
 
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
+        this.validateTournamentConfig(data, existingEvent);
 
         const now = new Date();
         this.syncCurrentRatingEvent(existingEvent, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
@@ -136,6 +145,22 @@ export class EventService {
             modifiedAt: now,
             modifiedBy
         });
+
+        this.syncTournamentConfig(existingEvent, eventId, data, modifiedBy, now);
+
+        return this.getEventById(eventId);
+    }
+
+    updateTournament(eventId: number, data: TournamentData, modifiedBy: number): Event {
+        const event = this.getEventById(eventId);
+        if (event.type !== 'TOURNAMENT' || event.tournament === null) {
+            throw new EventIsNotTournamentError(event.name);
+        }
+
+        this.authorizeEventUpdate(event, event.clubId, modifiedBy);
+        this.validateTotalRoundsNotLessThanCurrentRound(data.totalRounds, event.tournament.currentRound);
+
+        this.tournamentRepository.updateTournamentTotalRounds(eventId, data.totalRounds, new Date(), modifiedBy);
 
         return this.getEventById(eventId);
     }
@@ -194,6 +219,9 @@ export class EventService {
             this.clubRepository.updateCurrentRatingEvent(event.clubId, null, new Date(), modifiedBy);
         }
 
+        if (event.tournament !== null) {
+            this.tournamentRepository.deleteTournament(eventId);
+        }
         this.eventRepository.deleteEvent(eventId);
     }
 
@@ -216,6 +244,29 @@ export class EventService {
     private validateTournamentClub(data: EventData): void {
         if (data.type === 'TOURNAMENT' && (data.clubId === null || data.clubId === undefined)) {
             throw new TournamentMustHaveClubError();
+        }
+    }
+
+    private validateTournamentConfig(data: EventData, existingEvent?: Event): void {
+        if (data.type === 'TOURNAMENT') {
+            if (data.tournament === null || data.tournament === undefined) {
+                throw new TournamentConfigRequiredError();
+            }
+            this.validateTotalRoundsNotLessThanCurrentRound(
+                data.tournament.totalRounds,
+                existingEvent?.tournament?.currentRound ?? null
+            );
+            return;
+        }
+
+        if (data.tournament !== null && data.tournament !== undefined) {
+            throw new TournamentConfigOnlyForTournamentError();
+        }
+    }
+
+    private validateTotalRoundsNotLessThanCurrentRound(totalRounds: number, currentRound: number | null): void {
+        if (currentRound !== null && totalRounds < currentRound) {
+            throw new TournamentTotalRoundsLessThanCurrentRoundError(totalRounds, currentRound);
         }
     }
 
@@ -245,6 +296,37 @@ export class EventService {
             this.clubRepository.updateCurrentRatingEvent(newClubId, eventId, modifiedAt, modifiedBy);
         }
     }
+
+    private syncTournamentConfig(
+        existingEvent: Event | undefined,
+        eventId: number,
+        data: EventData,
+        modifiedBy: number,
+        modifiedAt: Date
+    ): void {
+        if (data.type === 'TOURNAMENT') {
+            if (existingEvent === undefined || existingEvent.tournament === null) {
+                this.tournamentRepository.createTournament(eventId, data.tournament!.totalRounds, modifiedAt, modifiedBy);
+                return;
+            }
+
+            this.tournamentRepository.updateTournamentTotalRounds(
+                eventId,
+                data.tournament!.totalRounds,
+                modifiedAt,
+                modifiedBy
+            );
+            return;
+        }
+
+        if (existingEvent?.tournament !== null && existingEvent?.tournament !== undefined) {
+            this.tournamentRepository.deleteTournament(eventId);
+        }
+    }
+}
+
+export interface TournamentData {
+    totalRounds: number;
 }
 
 export interface EventData {
@@ -262,4 +344,5 @@ export interface EventData {
     minimumGamesForRating: number;
     info?: EventInfo | null | undefined;
     blockGameCreation?: boolean | undefined;
+    tournament?: TournamentData | null | undefined;
 }

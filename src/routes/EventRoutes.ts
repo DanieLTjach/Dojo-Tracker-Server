@@ -45,6 +45,14 @@ router.post('/', requireAuth, withTransaction((req, res) => eventController.crea
 router.put('/:eventId', requireAuth, withTransaction((req, res) => eventController.updateEvent(req, res)));
 
 /**
+ * PATCH /api/events/:eventId/tournament
+ * Update tournament settings for an event
+ *
+ * Authentication: Required (Admin or Club Owner)
+ */
+router.patch('/:eventId/tournament', requireAuth, withTransaction((req, res) => eventController.updateTournament(req, res)));
+
+/**
  * DELETE /api/events/:eventId
  * Delete an event (only if it has no games)
  *

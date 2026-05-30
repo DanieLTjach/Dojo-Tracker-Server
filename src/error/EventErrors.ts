@@ -65,3 +65,30 @@ export class GameCreationBlockedError extends BadRequestError {
         super(`Створення ігор для події "${eventName}" заблоковано`, 'gameCreationBlocked');
     }
 }
+
+export class TournamentConfigRequiredError extends BadRequestError {
+    constructor() {
+        super('Для турніру потрібно вказати налаштування турніру', 'tournamentConfigRequired');
+    }
+}
+
+export class TournamentConfigOnlyForTournamentError extends BadRequestError {
+    constructor() {
+        super('Налаштування турніру можна вказувати лише для турнірів', 'tournamentConfigOnlyForTournament');
+    }
+}
+
+export class EventIsNotTournamentError extends BadRequestError {
+    constructor(eventName: string) {
+        super(`Подія "${eventName}" не є турніром`, 'eventIsNotTournament');
+    }
+}
+
+export class TournamentTotalRoundsLessThanCurrentRoundError extends BadRequestError {
+    constructor(totalRounds: number, currentRound: number) {
+        super(
+            `Кількість раундів (${totalRounds}) не може бути меншою за поточний раунд (${currentRound})`,
+            'tournamentTotalRoundsLessThanCurrentRound'
+        );
+    }
+}
