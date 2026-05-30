@@ -13,6 +13,7 @@ import {
     NagashiManganNotInRulesetError,
     NoDoubleRonFirstWinsOnlyError,
     NoTripleRonFirstWinsOnlyError,
+    PlayerNotInGameError,
     RulesetShouldContainDetailedRulesError,
     TripleRonShouldBeAbortiveDrawError,
     YakumanLiabilityRequiresYakumanError,
@@ -99,6 +100,8 @@ function calculateRoundPointChanges(
     rules: GameRulesValues,
     result: GameRoundResultInputDTO
 ): PlayerPointChange[] {
+    validateResultPlayersInGame(players, result);
+
     switch (result.type) {
         case "TSUMO":
             return calculateTsumoPointChanges(gameState, players, rules, result);
@@ -110,6 +113,49 @@ function calculateRoundPointChanges(
             return calculateAbortiveDrawPointChanges(rules, result);
         case "CHOMBO":
             return calculateChomboPointChanges(gameState, players, rules, result);
+    }
+}
+
+function validateResultPlayersInGame(
+    players: GamePlayer[],
+    result: GameRoundResultInputDTO
+): void {
+    const playerIds = new Set(players.map(player => player.userId));
+    const requireInGame = (playerId: number) => {
+        if (!playerIds.has(playerId)) {
+            throw new PlayerNotInGameError(playerId);
+        }
+    };
+
+    switch (result.type) {
+        case "TSUMO":
+            requireInGame(result.winningHandData.winnerPlayerId);
+            result.riichiPlayerIds.forEach(requireInGame);
+            if (result.winningHandData.yakumanLiabilityPlayerId !== undefined) {
+                requireInGame(result.winningHandData.yakumanLiabilityPlayerId);
+            }
+            break;
+        case "RON":
+            requireInGame(result.dealInPlayerId);
+            result.riichiPlayerIds.forEach(requireInGame);
+            result.winningHandData.forEach(hand => {
+                requireInGame(hand.winnerPlayerId);
+                if (hand.yakumanLiabilityPlayerId !== undefined) {
+                    requireInGame(hand.yakumanLiabilityPlayerId);
+                }
+            });
+            break;
+        case "EXHAUSTIVE_DRAW":
+            result.tenpaiPlayerIds.forEach(requireInGame);
+            result.nagashiManganPlayerIds.forEach(requireInGame);
+            result.riichiPlayerIds.forEach(requireInGame);
+            break;
+        case "ABORTIVE_DRAW":
+            result.riichiPlayerIds.forEach(requireInGame);
+            break;
+        case "CHOMBO":
+            requireInGame(result.offenderPlayerId);
+            break;
     }
 }
 
