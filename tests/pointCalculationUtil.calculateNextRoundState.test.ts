@@ -113,6 +113,56 @@ describe('calculateNextRoundState', () => {
         });
     });
 
+    describe('EXHAUSTIVE_DRAW with nagashi mangan', () => {
+        const countAsWinRules: GameRulesValues = { ...mahjongSoulRules, nagashi_mangan_count_as_a_win: true };
+
+        it('keeps the dealer and increments counters when the dealer achiever counts as a win', () => {
+            const current = gameState(Wind.EAST, 1, 1, 2);
+
+            expect(calculateNextRoundState(current, players, countAsWinRules, {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [],
+                tenpaiPlayerIds: [],
+                nagashiManganPlayerIds: [1],
+            })).toEqual(gameState(Wind.EAST, 1, 2, 0));
+        });
+
+        it('advances the dealer when a non-dealer achiever counts as a win', () => {
+            const current = gameState(Wind.EAST, 1, 1, 2);
+
+            expect(calculateNextRoundState(current, players, countAsWinRules, {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [],
+                tenpaiPlayerIds: [],
+                nagashiManganPlayerIds: [2],
+            })).toEqual(gameState(Wind.EAST, 2, 0, 0));
+        });
+
+        it('treats nagashi as a draw for continuation when count_as_a_win is off (dealer not tenpai advances)', () => {
+            const current = gameState(Wind.EAST, 1, 1, 0);
+
+            expect(calculateNextRoundState(current, players, mahjongSoulRules, {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [],
+                tenpaiPlayerIds: [],
+                nagashiManganPlayerIds: [1],
+            })).toEqual(gameState(Wind.EAST, 2, 2, 0));
+        });
+
+        it('keeps a tenpai dealer via the draw rule when count_as_a_win is off', () => {
+            // FIXME: when count_as_a_win is off and a riichi-stick bank exists, the point side pays
+            // the bank to the achiever while this draw path keeps the bank, a pre-existing double count.
+            const current = gameState(Wind.EAST, 1, 1, 0);
+
+            expect(calculateNextRoundState(current, players, mahjongSoulRules, {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [],
+                tenpaiPlayerIds: [1],
+                nagashiManganPlayerIds: [1],
+            })).toEqual(gameState(Wind.EAST, 1, 2, 0));
+        });
+    });
+
     describe('ABORTIVE_DRAW', () => {
         it('increments counters, adds riichi sticks, and keeps dealer when continuation on abortion is enabled', () => {
             const current = gameState(Wind.SOUTH, 3, 2, 1);
