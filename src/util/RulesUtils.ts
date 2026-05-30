@@ -29,6 +29,10 @@ export function isNagashiManganEnabled(rules: GameRulesValues): boolean {
     return rules.nagashi_mangan ?? false;
 }
 
+export function isNagashiManganCountedAsAWinEnabled(rules: GameRulesValues): boolean {
+    return rules.nagashi_mangan_count_as_a_win ?? false;
+}
+
 export function getNotenPenalty(rules: GameRulesValues): number {
     return rules.noten_penalty ?? 1000 * (getNumberOfPlayers(rules) - 1);
 }

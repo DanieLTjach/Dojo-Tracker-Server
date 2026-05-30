@@ -43,6 +43,7 @@ import {
     isContinuationWhenAbortionEnabled,
     isCountedYakumanEnabled,
     isManganRoundingUpEnabled,
+    isNagashiManganCountedAsAWinEnabled,
     isNagashiManganEnabled,
     isRiichiDepositReturnedIfOneOfMultipleRon,
     isTwoHanMinimumEnabled,
@@ -349,7 +350,9 @@ function calculateExhaustiveDrawPointChanges(
     rules: GameRulesValues,
     exhaustiveDraw: ExhaustiveDraw
 ): PlayerPointChange[] {
-    // nagashi mangan counted as a win is not implemented
+    // Nagashi mangan is always scored as a mangan tsumo for the achiever.
+    // Whether it also counts as a "win" for dealer continuation (renchan) is
+    // handled in nextRoundStateAfterExhaustiveDraw via nagashi_mangan_count_as_a_win.
     if (exhaustiveDraw.nagashiManganPlayerIds.length > 0) {
         return calculateNagashiManganPointChanges(gameState, players, rules, exhaustiveDraw);
     }
@@ -604,6 +607,14 @@ function nextRoundStateAfterExhaustiveDraw(
     rules: GameRulesValues,
     exhaustiveDraw: ExhaustiveDraw
 ): GameState {
+    if (exhaustiveDraw.nagashiManganPlayerIds.length > 0
+        && isNagashiManganCountedAsAWinEnabled(rules)) {
+        return nextRoundStateAfterWin(
+            gameState, players, rules,
+            exhaustiveDraw.nagashiManganPlayerIds
+        );
+    }
+
     return nextRoundStateAfterDraw(
         gameState, rules,
         exhaustiveDraw.riichiPlayerIds.length,
