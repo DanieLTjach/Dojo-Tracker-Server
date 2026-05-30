@@ -277,6 +277,81 @@ describe('Database Migrations', () => {
     db.close();
   });
 
+  test('migration 8 creates tournament state and backfills tournament events', () => {
+    const db = createMigratedDb('7.sql');
+
+    db.prepare(`
+      INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
+      VALUES
+        (9101, 'Tournament With Games', NULL, 'TOURNAMENT', 1, 1, NULL, NULL, 0, 0, '2026-04-01T00:00:00.000Z', '2026-04-02T00:00:00.000Z', 0),
+        (9102, 'Tournament Without Games', NULL, 'TOURNAMENT', 1, 1, NULL, NULL, 0, 0, '2026-04-03T00:00:00.000Z', '2026-04-04T00:00:00.000Z', 0),
+        (9103, 'Regular Season', NULL, 'SEASON', 1, 1, NULL, NULL, 0, 0, '2026-04-05T00:00:00.000Z', '2026-04-06T00:00:00.000Z', 0)
+    `).run();
+
+    db.prepare(`
+      INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, tournamentRound, tournamentTable, status, startedAt, endedAt, lastRoundWasDeleted)
+      VALUES
+        (9201, 9101, '2026-04-01T10:00:00.000Z', '2026-04-01T10:00:00.000Z', 0, 1, '1', 'FINISHED', '2026-04-01T10:00:00.000Z', '2026-04-01T11:00:00.000Z', 0),
+        (9202, 9101, '2026-04-01T12:00:00.000Z', '2026-04-01T12:00:00.000Z', 0, 3, '1', 'CREATED', NULL, NULL, 0),
+        (9203, 9101, '2026-04-01T14:00:00.000Z', '2026-04-01T14:00:00.000Z', 0, NULL, NULL, 'FINISHED', '2026-04-01T14:00:00.000Z', '2026-04-01T15:00:00.000Z', 0)
+    `).run();
+
+    runMigration(db, '8.sql');
+    db.pragma('foreign_keys = ON');
+
+    const statuses = db.prepare('SELECT status FROM tournamentStatus ORDER BY status').all() as Array<{ status: string }>;
+    expect(statuses.map(({ status }) => status)).toEqual(['CREATED', 'FINISHED', 'IN_PROGRESS', 'LAST_ROUND']);
+
+    const tournaments = db.prepare(`
+      SELECT eventId, status, currentRound, totalRounds, createdAt, modifiedAt, modifiedBy
+      FROM tournament
+      WHERE eventId IN (9101, 9102, 9103)
+      ORDER BY eventId
+    `).all() as Array<Record<string, unknown>>;
+
+    expect(tournaments).toEqual([
+      {
+        eventId: 9101,
+        status: 'IN_PROGRESS',
+        currentRound: 3,
+        totalRounds: 3,
+        createdAt: '2026-04-01T00:00:00.000Z',
+        modifiedAt: '2026-04-02T00:00:00.000Z',
+        modifiedBy: 0,
+      },
+      {
+        eventId: 9102,
+        status: 'CREATED',
+        currentRound: null,
+        totalRounds: 1,
+        createdAt: '2026-04-03T00:00:00.000Z',
+        modifiedAt: '2026-04-04T00:00:00.000Z',
+        modifiedBy: 0,
+      },
+    ]);
+
+    const tournamentColumns = (db.prepare('PRAGMA table_info(tournament)').all() as Array<{ name: string; type: string; notnull: number; dflt_value: string | null }>)
+      .map(({ name, type, notnull, dflt_value }) => ({ name, type, notnull, dflt_value }));
+    expect(tournamentColumns).toEqual([
+      { name: 'eventId', type: 'INTEGER', notnull: 1, dflt_value: null },
+      { name: 'status', type: 'TEXT', notnull: 1, dflt_value: "'CREATED'" },
+      { name: 'currentRound', type: 'INTEGER', notnull: 0, dflt_value: null },
+      { name: 'totalRounds', type: 'INTEGER', notnull: 1, dflt_value: null },
+      { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+      { name: 'modifiedAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+      { name: 'modifiedBy', type: 'INTEGER', notnull: 1, dflt_value: null },
+    ]);
+
+    const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; type: string }>;
+    const configColumn = eventColumns.find(column => column.name === 'config');
+    expect(configColumn).toMatchObject({ name: 'config', type: 'TEXT' });
+
+    const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+    expect(foreignKeyViolations).toEqual([]);
+
+    db.close();
+  });
+
   test('migration 5 seeds game rules details in current compact format', () => {
     const db = createMigratedDb('5.sql');
 

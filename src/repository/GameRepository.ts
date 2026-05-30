@@ -554,6 +554,38 @@ export class GameRepository {
         const gameDBEntity = this.findGameByEventRoundAndTableStatement().get({ eventId, tournamentRound, tournamentTable });
         return gameDBEntity !== undefined ? gameFromDBEntity(gameDBEntity) : undefined;
     }
+
+    private countGamesByEventAndTournamentRoundStatement(): Statement<{
+        eventId: number,
+        tournamentRound: number
+    }, { count: number }> {
+        return dbManager.db.prepare(`
+            SELECT COUNT(*) as count
+            FROM game
+            WHERE eventId = :eventId AND tournamentRound = :tournamentRound
+        `);
+    }
+
+    countGamesByEventAndTournamentRound(eventId: number, tournamentRound: number): number {
+        return this.countGamesByEventAndTournamentRoundStatement().get({ eventId, tournamentRound })!.count;
+    }
+
+    private countUnfinishedGamesByEventAndTournamentRoundStatement(): Statement<{
+        eventId: number,
+        tournamentRound: number
+    }, { count: number }> {
+        return dbManager.db.prepare(`
+            SELECT COUNT(*) as count
+            FROM game
+            WHERE eventId = :eventId
+              AND tournamentRound = :tournamentRound
+              AND status != 'FINISHED'
+        `);
+    }
+
+    countUnfinishedGamesByEventAndTournamentRound(eventId: number, tournamentRound: number): number {
+        return this.countUnfinishedGamesByEventAndTournamentRoundStatement().get({ eventId, tournamentRound })!.count;
+    }
 }
 
 interface GameDBEntity {

@@ -2,10 +2,12 @@ import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { Event } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
-import { parseUmaTieBreak } from '../util/EnumUtil.ts';
+import { parseTournamentStatus, parseUmaTieBreak } from '../util/EnumUtil.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
-import type { EventInfo } from '../model/EventModels.ts';
+import type { EventConfig, EventInfo } from '../model/EventModels.ts';
+import { resolvePlayerNameDisplay } from '../model/EventModels.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
+import type { TournamentStatus } from '../model/TournamentModels.ts';
 
 export class EventRepository {
     private findAllEventsStatement(): Statement<[], EventWithGameRulesDBEntity> {
@@ -23,10 +25,17 @@ export class EventRepository {
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
                 gr.details as gr_details,
+                t.status as tournament_status,
+                t.currentRound as tournament_currentRound,
+                t.totalRounds as tournament_totalRounds,
+                t.createdAt as tournament_createdAt,
+                t.modifiedAt as tournament_modifiedAt,
+                t.modifiedBy as tournament_modifiedBy,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
+            LEFT JOIN tournament t ON t.eventId = e.id
             ORDER BY e.createdAt DESC`
         );
     }
@@ -50,10 +59,17 @@ export class EventRepository {
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
                 gr.details as gr_details,
+                t.status as tournament_status,
+                t.currentRound as tournament_currentRound,
+                t.totalRounds as tournament_totalRounds,
+                t.createdAt as tournament_createdAt,
+                t.modifiedAt as tournament_modifiedAt,
+                t.modifiedBy as tournament_modifiedBy,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
+            LEFT JOIN tournament t ON t.eventId = e.id
             WHERE e.clubId = :clubId OR e.clubId IS NULL
             ORDER BY e.createdAt DESC`
         );
@@ -78,10 +94,17 @@ export class EventRepository {
                 gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
                 gr.details as gr_details,
+                t.status as tournament_status,
+                t.currentRound as tournament_currentRound,
+                t.totalRounds as tournament_totalRounds,
+                t.createdAt as tournament_createdAt,
+                t.modifiedAt as tournament_modifiedAt,
+                t.modifiedBy as tournament_modifiedBy,
                 (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
+            LEFT JOIN tournament t ON t.eventId = e.id
             WHERE e.id = :id`
         );
     }
@@ -104,14 +127,15 @@ export class EventRepository {
         startingRating: number;
         minimumGamesForRating: number;
         info: string | null;
+        config: string | null;
         blockGameCreation: number;
         createdAt: string;
         modifiedAt: string;
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, info, blockGameCreation, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :maxParticipants, :registrationDeadline, :startingRating, :minimumGamesForRating, :info, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :maxParticipants, :registrationDeadline, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -123,6 +147,7 @@ export class EventRepository {
             dateTo: params.dateTo?.toISOString() ?? null,
             registrationDeadline: params.registrationDeadline?.toISOString() ?? null,
             info: params.info !== null ? JSON.stringify(params.info) : null,
+            config: params.config !== null ? JSON.stringify(params.config) : null,
             blockGameCreation: booleanToInteger(params.blockGameCreation),
             createdAt: params.createdAt.toISOString(),
             modifiedAt: params.modifiedAt.toISOString()
@@ -144,6 +169,7 @@ export class EventRepository {
         startingRating: number;
         minimumGamesForRating: number;
         info: string | null;
+        config: string | null;
         blockGameCreation: number;
         modifiedAt: string;
         modifiedBy: number;
@@ -162,6 +188,7 @@ export class EventRepository {
                 startingRating = :startingRating,
                 minimumGamesForRating = :minimumGamesForRating,
                 info = :info,
+                config = :config,
                 blockGameCreation = :blockGameCreation,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
@@ -176,6 +203,7 @@ export class EventRepository {
             dateTo: params.dateTo?.toISOString() ?? null,
             registrationDeadline: params.registrationDeadline?.toISOString() ?? null,
             info: params.info !== null ? JSON.stringify(params.info) : null,
+            config: params.config !== null ? JSON.stringify(params.config) : null,
             blockGameCreation: booleanToInteger(params.blockGameCreation),
             modifiedAt: params.modifiedAt.toISOString()
         });
@@ -244,6 +272,7 @@ export interface EventCreateParams {
     startingRating: number;
     minimumGamesForRating: number;
     info: EventInfo | null;
+    config: EventConfig | null;
     blockGameCreation: boolean;
     createdAt: Date;
     modifiedAt: Date;
@@ -264,6 +293,7 @@ export interface EventUpdateParams {
     startingRating: number;
     minimumGamesForRating: number;
     info: EventInfo | null;
+    config: EventConfig | null;
     blockGameCreation: boolean;
     modifiedAt: Date;
     modifiedBy: number;
@@ -287,6 +317,7 @@ interface EventWithGameRulesDBEntity {
     modifiedAt: string;
     modifiedBy: number;
     info: string | null;
+    config: string | null;
     blockGameCreation: number;
     gr_id: number;
     gr_name: string;
@@ -297,10 +328,17 @@ interface EventWithGameRulesDBEntity {
     gr_chomboPointsAfterUma: number | null;
     gr_umaTieBreak: string;
     gr_details: string | null;
+    tournament_status: TournamentStatus | null;
+    tournament_currentRound: number | null;
+    tournament_totalRounds: number | null;
+    tournament_createdAt: string | null;
+    tournament_modifiedAt: string | null;
+    tournament_modifiedBy: number | null;
     gameCount: number;
 }
 
 function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): Event {
+    const config = dbEntity.config !== null ? JSON.parse(dbEntity.config) as EventConfig : null;
     return {
         id: dbEntity.id,
         name: dbEntity.name,
@@ -326,11 +364,23 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         maxParticipants: dbEntity.maxParticipants,
         registrationDeadline: dbEntity.registrationDeadline !== null ? new Date(dbEntity.registrationDeadline) : null,
         info: dbEntity.info !== null ? JSON.parse(dbEntity.info) as EventInfo : null,
+        config,
+        resolvedPlayerNameDisplay: resolvePlayerNameDisplay(config, dbEntity.type),
         blockGameCreation: Boolean(dbEntity.blockGameCreation),
+        tournament: dbEntity.tournament_status !== null
+            ? {
+                eventId: dbEntity.id,
+                status: parseTournamentStatus(dbEntity.tournament_status),
+                currentRound: dbEntity.tournament_currentRound,
+                totalRounds: dbEntity.tournament_totalRounds!,
+                createdAt: new Date(dbEntity.tournament_createdAt!),
+                modifiedAt: new Date(dbEntity.tournament_modifiedAt!),
+                modifiedBy: dbEntity.tournament_modifiedBy!
+            }
+            : null,
         gameCount: dbEntity.gameCount,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy
     };
 }
-

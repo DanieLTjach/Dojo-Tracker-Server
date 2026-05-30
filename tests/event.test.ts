@@ -64,6 +64,9 @@ describe('Event API Endpoints', () => {
             expect(event).toHaveProperty('gameCount');
             expect(event).toHaveProperty('blockGameCreation');
             expect(typeof event.blockGameCreation).toBe('boolean');
+            expect(event).toHaveProperty('tournament');
+            expect(event).toHaveProperty('config');
+            expect(event).toHaveProperty('resolvedPlayerNameDisplay');
             expect(event).toHaveProperty('createdAt');
             expect(event).toHaveProperty('modifiedAt');
             expect(event).toHaveProperty('modifiedBy');
@@ -293,6 +296,9 @@ describe('Event API Endpoints', () => {
             expect(response.body.clubId).toBeNull();
             expect(response.body.isCurrentRating).toBe(false);
             expect(response.body.blockGameCreation).toBe(false);
+            expect(response.body.tournament).toBeNull();
+            expect(response.body.config).toBeNull();
+            expect(response.body.resolvedPlayerNameDisplay).toBe('NICKNAME');
         });
 
         test('should create event with blockGameCreation when requested', async () => {
@@ -334,13 +340,92 @@ describe('Event API Endpoints', () => {
             const response = await request(app)
                 .post('/api/events')
                 .set('Authorization', adminAuthHeader)
-                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', isCurrentRating: true });
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', tournament: { totalRounds: 5 }, isCurrentRating: true });
 
             createdEventId = response.body.id;
 
             expect(response.status).toBe(201);
             expect(response.body.type).toBe('TOURNAMENT');
             expect(response.body.isCurrentRating).toBe(true);
+            expect(response.body.tournament).toMatchObject({
+                status: 'CREATED',
+                currentRound: null,
+                totalRounds: 5
+            });
+        });
+
+        test('should reject tournament without tournament config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT' });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject season with tournament config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, tournament: { totalRounds: 3 } });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should persist config and resolve playerNameDisplay override', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, config: { playerNameDisplay: 'REAL_NAME' } });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.config).toEqual({ playerNameDisplay: 'REAL_NAME' });
+            expect(response.body.resolvedPlayerNameDisplay).toBe('REAL_NAME');
+        });
+
+        test('should resolve playerNameDisplay default per type when config unset', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', tournament: { totalRounds: 3 } });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.config).toBeNull();
+            expect(response.body.resolvedPlayerNameDisplay).toBe('REAL_NAME');
+        });
+
+        test('should persist tournament minParticipants in config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', tournament: { totalRounds: 3 }, maxParticipants: 16, config: { minParticipants: 8 } });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.config).toMatchObject({ minParticipants: 8 });
+        });
+
+        test('should reject minParticipants for a season event', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, config: { minParticipants: 4 } });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject minParticipants greater than maxParticipants', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', tournament: { totalRounds: 3 }, maxParticipants: 4, config: { minParticipants: 8 } });
+
+            expect(response.status).toBe(400);
         });
 
         test('should replace previous current rating season in same club on create', async () => {
@@ -411,7 +496,8 @@ describe('Event API Endpoints', () => {
             clubId: 1,
             gameRulesId: 1,
             dateFrom: '2026-04-01T00:00:00.000Z',
-            dateTo: '2026-05-01T00:00:00.000Z'
+            dateTo: '2026-05-01T00:00:00.000Z',
+            tournament: { totalRounds: 4 }
         };
 
         beforeEach(() => {
@@ -436,6 +522,11 @@ describe('Event API Endpoints', () => {
             expect(response.body.clubId).toBe(updatePayload.clubId);
             expect(response.body.isCurrentRating).toBe(false);
             expect(response.body.blockGameCreation).toBe(false);
+            expect(response.body.tournament).toMatchObject({
+                status: 'CREATED',
+                currentRound: null,
+                totalRounds: 4
+            });
         });
 
         test('should update blockGameCreation flag', async () => {
@@ -452,7 +543,7 @@ describe('Event API Endpoints', () => {
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', adminAuthHeader)
-                .send({ ...updatePayload, type: 'SEASON', isCurrentRating: true });
+                .send({ ...updatePayload, type: 'SEASON', tournament: undefined, isCurrentRating: true });
 
             expect(response.status).toBe(200);
             expect(response.body.isCurrentRating).toBe(true);
@@ -465,7 +556,7 @@ describe('Event API Endpoints', () => {
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', adminAuthHeader)
-                .send({ ...updatePayload, type: 'SEASON', isCurrentRating: true });
+                .send({ ...updatePayload, type: 'SEASON', tournament: undefined, isCurrentRating: true });
 
             const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
 
@@ -482,7 +573,7 @@ describe('Event API Endpoints', () => {
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', adminAuthHeader)
-                .send({ ...updatePayload, type: 'SEASON', isCurrentRating: false });
+                .send({ ...updatePayload, type: 'SEASON', tournament: undefined, isCurrentRating: false });
 
             const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
 
@@ -505,7 +596,7 @@ describe('Event API Endpoints', () => {
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', adminAuthHeader)
-                .send({ ...updatePayload, clubId: 2, type: 'SEASON', isCurrentRating: true });
+                .send({ ...updatePayload, clubId: 2, type: 'SEASON', tournament: undefined, isCurrentRating: true });
 
             const club1 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
             const club2 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(2) as { currentRatingEventId: number | null };
@@ -568,7 +659,8 @@ describe('Event API Endpoints', () => {
             clubId: 1,
             gameRulesId: 1,
             dateFrom: '2026-05-23T00:00:00.000Z',
-            dateTo: '2026-05-24T00:00:00.000Z'
+            dateTo: '2026-05-24T00:00:00.000Z',
+            tournament: { totalRounds: 2 }
         };
 
         const fullInfo = {
@@ -716,6 +808,124 @@ describe('Event API Endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({ ...basePayload, info: { links: { site: 'not-a-url' } } });
             expect(response.status).toBe(400);
+        });
+    });
+
+    describe('PATCH /api/events/:eventId/tournament - Update Tournament Settings', () => {
+        const tournamentEventId = 2301;
+        const seasonEventId = 2302;
+        const ownerUserId = 88011;
+        const moderatorUserId = 88012;
+        let ownerAuthHeader: string;
+        let moderatorAuthHeader: string;
+
+        beforeAll(() => {
+            const timestamp = '2024-01-01T00:00:00.000Z';
+            dbManager.db.prepare(
+                `INSERT INTO user (id, telegramUsername, telegramId, name, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(ownerUserId, '@event_tournament_owner', 88888811, 'TournamentOwnerEventUser', timestamp, timestamp, 0, 1, 0, 'ACTIVE');
+            dbManager.db.prepare(
+                `INSERT INTO user (id, telegramUsername, telegramId, name, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(moderatorUserId, '@event_tournament_mod', 88888812, 'TournamentModeratorEventUser', timestamp, timestamp, 0, 1, 0, 'ACTIVE');
+            dbManager.db.prepare(
+                `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?)`
+            ).run(
+                1, ownerUserId, 'OWNER', 'ACTIVE', timestamp, timestamp, 0,
+                1, moderatorUserId, 'MODERATOR', 'ACTIVE', timestamp, timestamp, 0
+            );
+            ownerAuthHeader = createAuthHeader(ownerUserId);
+            moderatorAuthHeader = createAuthHeader(moderatorUserId);
+        });
+
+        afterAll(() => {
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE userId IN (?, ?)').run(ownerUserId, moderatorUserId);
+            dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?)').run(ownerUserId, moderatorUserId);
+        });
+
+        beforeEach(() => {
+            createCustomEvent(
+                tournamentEventId,
+                'Tournament Settings Event',
+                '2026-06-01T00:00:00.000Z',
+                '2026-06-02T00:00:00.000Z',
+                1,
+                1,
+                'TOURNAMENT',
+                4
+            );
+            createCustomEvent(seasonEventId, 'Season Settings Event');
+        });
+
+        afterEach(() => {
+            deleteEventById(tournamentEventId);
+            deleteEventById(seasonEventId);
+        });
+
+        test('should update totalRounds as admin', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${tournamentEventId}/tournament`)
+                .set('Authorization', adminAuthHeader)
+                .send({ totalRounds: 6 });
+
+            expect(response.status).toBe(200);
+            expect(response.body.tournament).toMatchObject({
+                eventId: tournamentEventId,
+                status: 'CREATED',
+                currentRound: null,
+                totalRounds: 6
+            });
+        });
+
+        test('should update totalRounds as club owner', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${tournamentEventId}/tournament`)
+                .set('Authorization', ownerAuthHeader)
+                .send({ totalRounds: 5 });
+
+            expect(response.status).toBe(200);
+            expect(response.body.tournament.totalRounds).toBe(5);
+        });
+
+        test('should reject club moderator updating totalRounds', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${tournamentEventId}/tournament`)
+                .set('Authorization', moderatorAuthHeader)
+                .send({ totalRounds: 5 });
+
+            expect(response.status).toBe(403);
+        });
+
+        test('should reject lowering totalRounds below currentRound', async () => {
+            dbManager.db.prepare('UPDATE tournament SET currentRound = 3, status = ? WHERE eventId = ?').run('IN_PROGRESS', tournamentEventId);
+
+            const response = await request(app)
+                .patch(`/api/events/${tournamentEventId}/tournament`)
+                .set('Authorization', adminAuthHeader)
+                .send({ totalRounds: 2 });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentTotalRoundsLessThanCurrentRound');
+        });
+
+        test('should reject updating tournament settings for a season', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${seasonEventId}/tournament`)
+                .set('Authorization', adminAuthHeader)
+                .send({ totalRounds: 4 });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('eventIsNotTournament');
+        });
+
+        test('should reject unauthenticated request', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${tournamentEventId}/tournament`)
+                .send({ totalRounds: 5 });
+
+            expect(response.status).toBe(401);
         });
     });
 
