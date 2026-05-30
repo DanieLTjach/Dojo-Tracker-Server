@@ -38,6 +38,7 @@ import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { GameCreationBlockedError } from '../error/EventErrors.ts';
+import { TournamentStatus } from '../model/TournamentModels.ts';
 
 export class GameService {
 
@@ -453,6 +454,10 @@ export class GameService {
         standingsAfter: Map<number, number>,
         createdBy: number
     ): void {
+        if (event.tournament?.status === TournamentStatus.LAST_ROUND) {
+            return;
+        }
+
         // Sort players by points descending (as they were ranked in the game)
         const sortedPlayers = [...game.players].sort((a, b) => b.points - a.points);
 
