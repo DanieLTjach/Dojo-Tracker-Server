@@ -65,6 +65,8 @@ describe('Event API Endpoints', () => {
             expect(event).toHaveProperty('blockGameCreation');
             expect(typeof event.blockGameCreation).toBe('boolean');
             expect(event).toHaveProperty('tournament');
+            expect(event).toHaveProperty('config');
+            expect(event).toHaveProperty('resolvedPlayerNameDisplay');
             expect(event).toHaveProperty('createdAt');
             expect(event).toHaveProperty('modifiedAt');
             expect(event).toHaveProperty('modifiedBy');
@@ -295,6 +297,8 @@ describe('Event API Endpoints', () => {
             expect(response.body.isCurrentRating).toBe(false);
             expect(response.body.blockGameCreation).toBe(false);
             expect(response.body.tournament).toBeNull();
+            expect(response.body.config).toBeNull();
+            expect(response.body.resolvedPlayerNameDisplay).toBe('NICKNAME');
         });
 
         test('should create event with blockGameCreation when requested', async () => {
@@ -364,6 +368,62 @@ describe('Event API Endpoints', () => {
                 .post('/api/events')
                 .set('Authorization', adminAuthHeader)
                 .send({ ...createPayload, tournament: { totalRounds: 3 } });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should persist config and resolve playerNameDisplay override', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, config: { playerNameDisplay: 'REAL_NAME' } });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.config).toEqual({ playerNameDisplay: 'REAL_NAME' });
+            expect(response.body.resolvedPlayerNameDisplay).toBe('REAL_NAME');
+        });
+
+        test('should resolve playerNameDisplay default per type when config unset', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', tournament: { totalRounds: 3 } });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.config).toBeNull();
+            expect(response.body.resolvedPlayerNameDisplay).toBe('REAL_NAME');
+        });
+
+        test('should persist tournament minParticipants in config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', tournament: { totalRounds: 3 }, maxParticipants: 16, config: { minParticipants: 8 } });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.config).toMatchObject({ minParticipants: 8 });
+        });
+
+        test('should reject minParticipants for a season event', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, config: { minParticipants: 4 } });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject minParticipants greater than maxParticipants', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', tournament: { totalRounds: 3 }, maxParticipants: 4, config: { minParticipants: 8 } });
 
             expect(response.status).toBe(400);
         });

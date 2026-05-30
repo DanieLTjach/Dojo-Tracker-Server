@@ -342,6 +342,10 @@ describe('Database Migrations', () => {
       { name: 'modifiedBy', type: 'INTEGER', notnull: 1, dflt_value: null },
     ]);
 
+    const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; type: string }>;
+    const configColumn = eventColumns.find(column => column.name === 'config');
+    expect(configColumn).toMatchObject({ name: 'config', type: 'TEXT' });
+
     const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
     expect(foreignKeyViolations).toEqual([]);
 
