@@ -425,6 +425,50 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
             ]);
         });
 
+        it('awards the carried riichi-stick bank once to a non-dealer achiever (count_as_a_win off)', () => {
+            // bank of 3 sticks -> +3000 to the achiever on top of the +8000 mangan
+            expectChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 3), {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [],
+                tenpaiPlayerIds: [],
+                nagashiManganPlayerIds: [2],
+            }, [
+                { playerId: 1, pointChange: -4000 },
+                { playerId: 3, pointChange: -2000 },
+                { playerId: 4, pointChange: -2000 },
+                { playerId: 2, pointChange: 11000 },
+            ]);
+        });
+
+        it('awards the carried riichi-stick bank once to a dealer achiever', () => {
+            expectChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 3), {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [],
+                tenpaiPlayerIds: [],
+                nagashiManganPlayerIds: [1],
+            }, [
+                { playerId: 2, pointChange: -4000 },
+                { playerId: 3, pointChange: -4000 },
+                { playerId: 4, pointChange: -4000 },
+                { playerId: 1, pointChange: 15000 },
+            ]);
+        });
+
+        it('awards the bank only once with multiple achievers (no per-achiever multiplication)', () => {
+            // bank of 3 goes to the first achiever only, not once per achiever
+            expectChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 3), {
+                type: 'EXHAUSTIVE_DRAW',
+                riichiPlayerIds: [],
+                tenpaiPlayerIds: [],
+                nagashiManganPlayerIds: [2, 3],
+            }, [
+                { playerId: 1, pointChange: -8000 },
+                { playerId: 2, pointChange: 9000 },
+                { playerId: 3, pointChange: 6000 },
+                { playerId: 4, pointChange: -4000 },
+            ]);
+        });
+
         it('rejects nagashi mangan when the ruleset disables it', () => {
             expect(() => pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
                 type: 'EXHAUSTIVE_DRAW',

@@ -418,9 +418,13 @@ function calculateNagashiManganPointChanges(
         throw new NagashiManganNotInRulesetError();
     }
 
+    // Score each achiever as a mangan tsumo, but with an empty bank so the riichi-stick
+    // deposit bank is not awarded once per achiever. The bank is a win prize that goes to a
+    // single winner, so it is added exactly once below.
+    const gameStateWithoutBank: GameState = { ...gameState, riichiSticks: 0 };
     const nagashiManganPointChanges = exhaustiveDraw.nagashiManganPlayerIds.map(playerId =>
         calculateTsumoPointChanges(
-            gameState, players, rules,
+            gameStateWithoutBank, players, rules,
             {
                 type: 'TSUMO',
                 winningHandData: {
@@ -435,6 +439,7 @@ function calculateNagashiManganPointChanges(
     );
     return mergePlayerPointChanges(
         ...nagashiManganPointChanges,
+        giveBankRiichiSticksToPlayer(gameState, exhaustiveDraw.nagashiManganPlayerIds[0]!),
         takeRiichiSticksFromPlayers(exhaustiveDraw.riichiPlayerIds)
     );
 }
@@ -653,11 +658,22 @@ function nextRoundStateAfterExhaustiveDraw(
     rules: GameRulesValues,
     exhaustiveDraw: ExhaustiveDraw
 ): GameState {
-    if (exhaustiveDraw.nagashiManganPlayerIds.length > 0
-        && isNagashiManganCountedAsAWinEnabled(rules)) {
-        return nextRoundStateAfterWin(
-            gameState, players, rules,
-            exhaustiveDraw.nagashiManganPlayerIds
+    if (exhaustiveDraw.nagashiManganPlayerIds.length > 0) {
+        // A nagashi mangan is a win: the achiever collects the riichi-stick bank, so it must be
+        // cleared from state. nagashi_mangan_count_as_a_win only controls dealer continuation.
+        if (isNagashiManganCountedAsAWinEnabled(rules)) {
+            return nextRoundStateAfterWin(
+                gameState, players, rules,
+                exhaustiveDraw.nagashiManganPlayerIds
+            );
+        }
+
+        const dealerContinues = getContinuation(rules) === "tenpai"
+            && exhaustiveDraw.tenpaiPlayerIds.includes(getCurrentDealerPlayerId(gameState, players));
+        return nextRoundStateAfterDraw(
+            { ...gameState, riichiSticks: 0 }, rules,
+            exhaustiveDraw.riichiPlayerIds.length,
+            dealerContinues
         );
     }
 
