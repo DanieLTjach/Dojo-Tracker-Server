@@ -96,6 +96,7 @@ function seedServiceTestUsers(): void {
 }
 
 function cleanupServiceData(): void {
+    dbManager.db.prepare('DELETE FROM clubFollow WHERE clubId IN (SELECT id FROM club WHERE name LIKE ?)').run('Service Test Club %');
     dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId IN (SELECT id FROM club WHERE name LIKE ?)').run('Service Test Club %');
     dbManager.db.prepare('DELETE FROM club WHERE name LIKE ?').run('Service Test Club %');
 }

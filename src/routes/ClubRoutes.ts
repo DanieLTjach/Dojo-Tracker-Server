@@ -2,12 +2,14 @@ import { Router } from 'express';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { ClubController } from '../controller/ClubController.ts';
 import { ClubMembershipController } from '../controller/ClubMembershipController.ts';
+import { ClubFollowController } from '../controller/ClubFollowController.ts';
 import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
 import { requireClubRole } from '../middleware/ClubRoleMiddleware.ts';
 
 const router = Router();
 const clubController = new ClubController();
 const membershipController = new ClubMembershipController();
+const followController = new ClubFollowController();
 
 router.get('/', withTransaction((req, res) => clubController.getAllClubs(req, res)));
 router.get('/:clubId', withTransaction((req, res) => clubController.getClubById(req, res)));
@@ -28,6 +30,8 @@ router.get(
     requireClubRole('OWNER', 'MODERATOR'),
     withTransaction((req, res) => membershipController.getPendingMembers(req, res))
 );
+router.post('/:clubId/follow', requireAuth, withTransaction((req, res) => followController.followClub(req, res)));
+router.delete('/:clubId/follow', requireAuth, withTransaction((req, res) => followController.unfollowClub(req, res)));
 router.post('/:clubId/join', requireAuth, withTransaction((req, res) => membershipController.requestJoin(req, res)));
 router.post('/:clubId/leave', requireAuth, withTransaction((req, res) => membershipController.leaveClub(req, res)));
 router.post(

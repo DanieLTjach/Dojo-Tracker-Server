@@ -116,6 +116,7 @@ describe('Permissions matrix integration specification', () => {
     }
 
     function cleanupClub(clubId: number): void {
+        dbManager.db.prepare('DELETE FROM clubFollow WHERE clubId = ?').run(clubId);
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(clubId);
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(clubId);
     }
@@ -418,6 +419,12 @@ describe('Permissions matrix integration specification', () => {
         dbManager.db.prepare(`DELETE FROM event WHERE name LIKE 'Permissions Matrix %'`).run();
         dbManager.db.prepare(`DELETE FROM gameRules WHERE name LIKE 'Permissions Matrix %'`).run();
 
+        dbManager.db.prepare(
+            `DELETE FROM clubFollow
+             WHERE clubId IN (
+                SELECT id FROM club WHERE name LIKE 'Permissions Matrix %'
+             )`
+        ).run();
         dbManager.db.prepare(
             `DELETE FROM clubMembership
              WHERE clubId IN (
@@ -1336,6 +1343,7 @@ describe('Permissions matrix integration specification', () => {
 
         afterAll(() => {
             cleanupEventCascade(clubBEventId);
+            dbManager.db.prepare('DELETE FROM clubFollow WHERE clubId = ?').run(CLUB_B_ID);
             dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(CLUB_B_ID);
             dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(CLUB_B_GAME_RULES_ID);
             dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(CLUB_B_ID);
