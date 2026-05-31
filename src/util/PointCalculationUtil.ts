@@ -68,6 +68,8 @@ export function calculateGameRoundResult(
     }
     const detailedRules = rules.details.rules;
 
+    validateResultPlayersInGame(game.players, result);
+
     const roundPointChanges = calculateRoundPointChanges(currentGameState, game.players, detailedRules, result);
 
     const updatedGamePlayers = game.players.map(player => updatePlayerPoints(player, roundPointChanges));
@@ -100,8 +102,6 @@ function calculateRoundPointChanges(
     rules: GameRulesValues,
     result: GameRoundResultInputDTO
 ): PlayerPointChange[] {
-    validateResultPlayersInGame(players, result);
-
     switch (result.type) {
         case "TSUMO":
             return calculateTsumoPointChanges(gameState, players, rules, result);
