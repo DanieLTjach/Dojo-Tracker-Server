@@ -50,6 +50,14 @@ export interface ClubMembership {
     modifiedBy: number;
 }
 
+export interface ClubFollow {
+    clubId: number;
+    userId: number;
+    createdAt: Date;
+    modifiedAt: Date;
+    modifiedBy: number;
+}
+
 export interface ClubPermissions {
     canEditClub: boolean;
     canManageMembers: boolean;
