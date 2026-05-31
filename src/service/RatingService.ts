@@ -74,7 +74,7 @@ export class RatingService {
             const gainedPoints = playerData.points - gameRules.startingPoints;
             const ratingChange = gainedPoints
                 + uma[index]! * RATING_TO_POINTS_COEFFICIENT
-                - (detailedRules !== undefined && getChomboHandling(detailedRules) === "mangan" ? 0 : 20000) * (playerData.chomboCount ?? 0);
+                - (getChomboHandling(detailedRules ?? {}) === "mangan" ? 0 : 20000) * (playerData.chomboCount ?? 0);
             const newRating = currentRating + ratingChange;
 
             this.ratingRepository.addUserRatingChange({
