@@ -586,6 +586,14 @@ export class GameRepository {
     countUnfinishedGamesByEventAndTournamentRound(eventId: number, tournamentRound: number): number {
         return this.countUnfinishedGamesByEventAndTournamentRoundStatement().get({ eventId, tournamentRound })!.count;
     }
+
+    private findGamesByEventIdStatement(): Statement<{ eventId: number }, GameDBEntity> {
+        return dbManager.db.prepare('SELECT * FROM game WHERE eventId = :eventId ORDER BY tournamentRound, tournamentTable, createdAt');
+    }
+
+    findGamesByEventId(eventId: number): Game[] {
+        return this.findGamesByEventIdStatement().all({ eventId }).map(gameFromDBEntity);
+    }
 }
 
 interface GameDBEntity {

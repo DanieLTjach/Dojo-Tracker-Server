@@ -69,6 +69,31 @@ router.post('/:eventId/tournament/start-next-round', requireAuth, withTransactio
 router.post('/:eventId/tournament/finish', requireAuth, withTransaction((req, res) => eventController.finishTournament(req, res)));
 
 /**
+ * POST /api/events/:eventId/tournament/seating/generate
+ * Generate candidate seatings from the tournament's approved participants and round count.
+ * Does not persist — returns options for a moderator to choose from.
+ *
+ * Authentication: Required (Admin, Club Owner, or Club Moderator)
+ */
+router.post('/:eventId/tournament/seating/generate', requireAuth, withTransaction((req, res) => eventController.generateTournamentSeating(req, res)));
+
+/**
+ * POST /api/events/:eventId/tournament/seating/apply
+ * Persist a chosen seating by creating CREATED tournament games (only before start, clean slate).
+ *
+ * Authentication: Required (Admin, Club Owner, or Club Moderator)
+ */
+router.post('/:eventId/tournament/seating/apply', requireAuth, withTransaction((req, res) => eventController.applyTournamentSeating(req, res)));
+
+/**
+ * DELETE /api/events/:eventId/tournament/seating
+ * Delete all generated tournament games so a new seating can be produced (only before start).
+ *
+ * Authentication: Required (Admin, Club Owner, or Club Moderator)
+ */
+router.delete('/:eventId/tournament/seating', requireAuth, withTransaction((req, res) => eventController.clearTournamentSeating(req, res)));
+
+/**
  * DELETE /api/events/:eventId
  * Delete an event (only if it has no games)
  *

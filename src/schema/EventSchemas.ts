@@ -167,6 +167,33 @@ export const eventTournamentUpdateSchema = z.object({
     body: tournamentConfigSchema
 });
 
+export const tournamentSeatingGenerateSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema
+    }),
+    body: z.strictObject({
+        timeLimitMs: z.number().int("timeLimitMs must be an integer").min(100).max(30000).optional(),
+        candidateCount: z.number().int("candidateCount must be an integer").min(1).max(5).optional(),
+        seed: z.number().int("seed must be an integer").optional()
+    }).optional()
+});
+
+const seatingApplyRoundsSchema = z.array(
+    z.array(
+        z.array(z.number().int("Seat user id must be an integer").positive())
+            .length(4, "Each table must have exactly 4 players")
+    ).min(1, "Each round must have at least one table")
+).min(1, "At least one round is required");
+
+export const tournamentSeatingApplySchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema
+    }),
+    body: z.strictObject({
+        rounds: seatingApplyRoundsSchema
+    })
+});
+
 export const eventGetListSchema = z.object({
     query: z.object({
         clubId: clubIdParamSchema.optional()

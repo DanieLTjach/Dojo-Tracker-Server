@@ -134,3 +134,57 @@ export class TournamentGameNotInCurrentRoundError extends BadRequestError {
         );
     }
 }
+
+export class SeatingNotEnoughParticipantsError extends BadRequestError {
+    constructor(eventName: string, required: number, actual: number) {
+        super(
+            `Для розсадки турніру "${eventName}" потрібно щонайменше ${required} учасників (зараз ${actual})`,
+            'seatingNotEnoughParticipants'
+        );
+    }
+}
+
+export class SeatingParticipantsNotMultipleOfTableSizeError extends BadRequestError {
+    constructor(eventName: string, count: number) {
+        super(
+            `Кількість учасників турніру "${eventName}" (${count}) має ділитися на 4 для розсадки`,
+            'seatingParticipantsNotMultipleOfTableSize'
+        );
+    }
+}
+
+export class SeatingRoundsExceedFeasibleError extends BadRequestError {
+    constructor(eventName: string, rounds: number, maxRounds: number) {
+        super(
+            `Для турніру "${eventName}" неможливо згенерувати ${rounds} раундів без повторів пар (максимум ${maxRounds})`,
+            'seatingRoundsExceedFeasible'
+        );
+    }
+}
+
+export class SeatingGenerationFailedError extends BadRequestError {
+    constructor(eventName: string) {
+        super(
+            `Не вдалося згенерувати розсадку для турніру "${eventName}" за відведений час. Спробуйте ще раз`,
+            'seatingGenerationFailed'
+        );
+    }
+}
+
+export class SeatingCannotModifyAfterTournamentStartedError extends BadRequestError {
+    constructor(eventName: string) {
+        super(
+            `Розсадку турніру "${eventName}" не можна змінювати після початку турніру`,
+            'seatingCannotModifyAfterTournamentStarted'
+        );
+    }
+}
+
+export class SeatingAlreadyAppliedError extends BadRequestError {
+    constructor(eventName: string) {
+        super(
+            `Для турніру "${eventName}" вже створено ігри. Очистіть розсадку перед повторною генерацією`,
+            'seatingAlreadyApplied'
+        );
+    }
+}
