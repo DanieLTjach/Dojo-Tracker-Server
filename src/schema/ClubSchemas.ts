@@ -43,6 +43,10 @@ export const clubDeleteSchema = z.object({
     params: clubParamsSchema
 });
 
+export const clubFollowSchema = z.object({
+    params: clubParamsSchema
+});
+
 export const clubMembershipGetListSchema = z.object({
     params: clubParamsSchema
 });

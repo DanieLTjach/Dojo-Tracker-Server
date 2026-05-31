@@ -150,6 +150,7 @@ describe('Event registration permissions matrix', () => {
         dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId = ?').run(TOURNAMENT_EVENT_ID);
         dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(TOURNAMENT_EVENT_ID);
         dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(GAME_RULES_ID);
+        dbManager.db.prepare('DELETE FROM clubFollow WHERE clubId IN (?, ?)').run(TEST_CLUB_ID, OTHER_CLUB_ID);
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId IN (?, ?)').run(TEST_CLUB_ID, OTHER_CLUB_ID);
         dbManager.db.prepare('DELETE FROM club WHERE id IN (?, ?)').run(TEST_CLUB_ID, OTHER_CLUB_ID);
         dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?, ?, ?, ?, ?, ?)').run(

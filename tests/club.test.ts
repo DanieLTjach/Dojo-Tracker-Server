@@ -31,6 +31,7 @@ describe('Club API Endpoints', () => {
     const membershipService = new ClubMembershipService();
 
     function cleanupClub(clubId: number): void {
+        dbManager.db.prepare('DELETE FROM clubFollow WHERE clubId = ?').run(clubId);
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(clubId);
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(clubId);
     }
