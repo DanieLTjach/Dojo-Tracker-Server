@@ -114,32 +114,9 @@ describe('calculateNextRoundState', () => {
     });
 
     describe('EXHAUSTIVE_DRAW with nagashi mangan', () => {
-        const countAsWinRules: GameRulesValues = { ...mahjongSoulRules, nagashi_mangan_count_as_a_win: true };
-
-        it('keeps the dealer and increments counters when the dealer achiever counts as a win', () => {
-            const current = gameState(Wind.EAST, 1, 1, 2);
-
-            expect(calculateNextRoundState(current, players, countAsWinRules, {
-                type: 'EXHAUSTIVE_DRAW',
-                riichiPlayerIds: [],
-                tenpaiPlayerIds: [],
-                nagashiManganPlayerIds: [1],
-            })).toEqual(gameState(Wind.EAST, 1, 2, 0));
-        });
-
-        it('advances the dealer when a non-dealer achiever counts as a win', () => {
-            const current = gameState(Wind.EAST, 1, 1, 2);
-
-            expect(calculateNextRoundState(current, players, countAsWinRules, {
-                type: 'EXHAUSTIVE_DRAW',
-                riichiPlayerIds: [],
-                tenpaiPlayerIds: [],
-                nagashiManganPlayerIds: [2],
-            })).toEqual(gameState(Wind.EAST, 2, 0, 0));
-        });
-
-        it('treats nagashi as a draw for continuation when count_as_a_win is off (dealer not tenpai advances)', () => {
-            // bank of 2 is collected by the achiever on the point side, so it is cleared here
+        it('treats nagashi as a draw: advances a non-tenpai dealer and carries the bank', () => {
+            // Nagashi mangan is scored on the point side only; the riichi-stick bank (2) stays
+            // on the table, and continuation follows the normal tenpai draw rule.
             const current = gameState(Wind.EAST, 1, 1, 2);
 
             expect(calculateNextRoundState(current, players, mahjongSoulRules, {
@@ -147,12 +124,11 @@ describe('calculateNextRoundState', () => {
                 riichiPlayerIds: [],
                 tenpaiPlayerIds: [],
                 nagashiManganPlayerIds: [1],
-            })).toEqual(gameState(Wind.EAST, 2, 2, 0));
+            })).toEqual(gameState(Wind.EAST, 2, 2, 2));
         });
 
-        it('keeps a tenpai dealer via the draw rule when count_as_a_win is off and clears the bank', () => {
-            // The achiever collects the carried bank on the point side, so the carried bank (2) is
-            // cleared; sticks declared this round (1) roll forward to next round's bank.
+        it('treats nagashi as a draw: keeps a tenpai dealer and carries the bank plus this round\'s sticks', () => {
+            // Carried bank (2) plus the stick declared this round (1) roll forward to next round.
             const current = gameState(Wind.EAST, 1, 1, 2);
 
             expect(calculateNextRoundState(current, players, mahjongSoulRules, {
@@ -160,7 +136,7 @@ describe('calculateNextRoundState', () => {
                 riichiPlayerIds: [2],
                 tenpaiPlayerIds: [1],
                 nagashiManganPlayerIds: [1],
-            })).toEqual(gameState(Wind.EAST, 1, 2, 1));
+            })).toEqual(gameState(Wind.EAST, 1, 2, 3));
         });
     });
 

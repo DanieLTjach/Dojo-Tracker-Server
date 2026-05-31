@@ -78,7 +78,6 @@ export const gameRulesCatalog = {
         { key: 'mangan_rounding_up', type: 'boolean' },
         { key: 'max_points', type: 'integer', min: 0 },
         { key: 'nagashi_mangan', type: 'boolean' },
-        { key: 'nagashi_mangan_count_as_a_win', type: 'boolean' },
         { key: 'nb_quads_max', type: 'enumInteger', enum: [4] },
         { key: 'north_as_yaku', type: 'boolean' },
         { key: 'noten_penalty', type: 'enumInteger', enum: [0,2000,3000] },

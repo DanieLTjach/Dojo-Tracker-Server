@@ -425,8 +425,8 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
             ]);
         });
 
-        it('awards the carried riichi-stick bank once to a non-dealer achiever (count_as_a_win off)', () => {
-            // bank of 3 sticks -> +3000 to the achiever on top of the +8000 mangan
+        it('leaves a carried riichi-stick bank on the table (the achiever does not collect it)', () => {
+            // The bank of 3 sticks stays on the table; only the mangan payments apply.
             expectChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 3), {
                 type: 'EXHAUSTIVE_DRAW',
                 riichiPlayerIds: [],
@@ -436,36 +436,22 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
                 { playerId: 1, pointChange: -4000 },
                 { playerId: 3, pointChange: -2000 },
                 { playerId: 4, pointChange: -2000 },
-                { playerId: 2, pointChange: 11000 },
+                { playerId: 2, pointChange: 8000 },
             ]);
         });
 
-        it('awards the carried riichi-stick bank once to a dealer achiever', () => {
-            expectChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 3), {
+        it('takes this round\'s riichi deposits to the table without awarding them to the achiever', () => {
+            // Player 3's declared riichi stick (-1000) joins the bank rather than going to the achiever.
+            expectChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 0), {
                 type: 'EXHAUSTIVE_DRAW',
-                riichiPlayerIds: [],
+                riichiPlayerIds: [3],
                 tenpaiPlayerIds: [],
-                nagashiManganPlayerIds: [1],
+                nagashiManganPlayerIds: [2],
             }, [
-                { playerId: 2, pointChange: -4000 },
-                { playerId: 3, pointChange: -4000 },
-                { playerId: 4, pointChange: -4000 },
-                { playerId: 1, pointChange: 15000 },
-            ]);
-        });
-
-        it('awards the bank only once with multiple achievers (no per-achiever multiplication)', () => {
-            // bank of 3 goes to the first achiever only, not once per achiever
-            expectChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 3), {
-                type: 'EXHAUSTIVE_DRAW',
-                riichiPlayerIds: [],
-                tenpaiPlayerIds: [],
-                nagashiManganPlayerIds: [2, 3],
-            }, [
-                { playerId: 1, pointChange: -8000 },
-                { playerId: 2, pointChange: 9000 },
-                { playerId: 3, pointChange: 6000 },
-                { playerId: 4, pointChange: -4000 },
+                { playerId: 1, pointChange: -4000 },
+                { playerId: 3, pointChange: -3000 },
+                { playerId: 4, pointChange: -2000 },
+                { playerId: 2, pointChange: 8000 },
             ]);
         });
 

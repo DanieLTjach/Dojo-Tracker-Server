@@ -104,7 +104,6 @@ const mahjongSoulDef: GameRulesPresetDef = {
         kan_dora_called_promoted_quad: 'after_discard',
         mangan_rounding_up: false,
         nagashi_mangan: true,
-        nagashi_mangan_count_as_a_win: false,
         noten_penalty: 3000,
         number_of_players: 4,
         red_fives: 'three_one_per_suit',

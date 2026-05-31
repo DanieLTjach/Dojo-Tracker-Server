@@ -44,7 +44,6 @@ import {
     isContinuationWhenAbortionEnabled,
     isCountedYakumanEnabled,
     isManganRoundingUpEnabled,
-    isNagashiManganCountedAsAWinEnabled,
     isNagashiManganEnabled,
     isRiichiDepositReturnedIfOneOfMultipleRon,
     isTwoHanMinimumEnabled,
@@ -396,9 +395,6 @@ function calculateExhaustiveDrawPointChanges(
     rules: GameRulesValues,
     exhaustiveDraw: ExhaustiveDraw
 ): PlayerPointChange[] {
-    // Nagashi mangan is always scored as a mangan tsumo for the achiever.
-    // Whether it also counts as a "win" for dealer continuation (renchan) is
-    // handled in nextRoundStateAfterExhaustiveDraw via nagashi_mangan_count_as_a_win.
     if (exhaustiveDraw.nagashiManganPlayerIds.length > 0) {
         return calculateNagashiManganPointChanges(gameState, players, rules, exhaustiveDraw);
     }
@@ -418,9 +414,9 @@ function calculateNagashiManganPointChanges(
         throw new NagashiManganNotInRulesetError();
     }
 
-    // Score each achiever as a mangan tsumo, but with an empty bank so the riichi-stick
-    // deposit bank is not awarded once per achiever. The bank is a win prize that goes to a
-    // single winner, so it is added exactly once below.
+    // Nagashi mangan is scored as a mangan tsumo for each achiever but is otherwise treated as
+    // an exhaustive draw: no honba is paid, and the riichi-stick bank stays on the table. The
+    // empty bank passed here keeps the tsumo helper from awarding the bank to the achiever.
     const gameStateWithoutBank: GameState = { ...gameState, riichiSticks: 0 };
     const nagashiManganPointChanges = exhaustiveDraw.nagashiManganPlayerIds.map(playerId =>
         calculateTsumoPointChanges(
@@ -439,7 +435,6 @@ function calculateNagashiManganPointChanges(
     );
     return mergePlayerPointChanges(
         ...nagashiManganPointChanges,
-        giveBankRiichiSticksToPlayer(gameState, exhaustiveDraw.nagashiManganPlayerIds[0]!),
         takeRiichiSticksFromPlayers(exhaustiveDraw.riichiPlayerIds)
     );
 }
@@ -658,25 +653,6 @@ function nextRoundStateAfterExhaustiveDraw(
     rules: GameRulesValues,
     exhaustiveDraw: ExhaustiveDraw
 ): GameState {
-    if (exhaustiveDraw.nagashiManganPlayerIds.length > 0) {
-        // A nagashi mangan is a win: the achiever collects the riichi-stick bank, so it must be
-        // cleared from state. nagashi_mangan_count_as_a_win only controls dealer continuation.
-        if (isNagashiManganCountedAsAWinEnabled(rules)) {
-            return nextRoundStateAfterWin(
-                gameState, players, rules,
-                exhaustiveDraw.nagashiManganPlayerIds
-            );
-        }
-
-        const dealerContinues = getContinuation(rules) === "tenpai"
-            && exhaustiveDraw.tenpaiPlayerIds.includes(getCurrentDealerPlayerId(gameState, players));
-        return nextRoundStateAfterDraw(
-            { ...gameState, riichiSticks: 0 }, rules,
-            exhaustiveDraw.riichiPlayerIds.length,
-            dealerContinues
-        );
-    }
-
     return nextRoundStateAfterDraw(
         gameState, rules,
         exhaustiveDraw.riichiPlayerIds.length,
