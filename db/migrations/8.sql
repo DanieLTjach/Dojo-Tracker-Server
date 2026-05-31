@@ -33,3 +33,5 @@ CREATE TABLE clubInviteRedemption (
 
 CREATE INDEX idx_clubInvite_clubId ON clubInvite(clubId);
 CREATE INDEX idx_clubInviteRedemption_userId ON clubInviteRedemption(userId);
+
+ALTER TABLE gameRules DROP COLUMN chomboPointsAfterUma;

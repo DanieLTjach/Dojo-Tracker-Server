@@ -87,7 +87,7 @@ describe('Rating API Endpoints', () => {
         ).run(eventId, userId, isFillerPlayer ? 1 : 0, ts, ts);
     }
 
-    async function createGameSetupWithPoints(points: number[]) {
+    async function createGameSetupWithPoints(points: number[], chomboCounts: number[] = [0, 0, 0, 0]) {
         const user1Id = await createTestUser('Player1', 1);
         const user2Id = await createTestUser('Player2', 2);
         const user3Id = await createTestUser('Player3', 3);
@@ -101,10 +101,10 @@ describe('Rating API Endpoints', () => {
         const user1AuthHeader = createAuthHeader(user1Id);
 
         const gameId = await createTestGame(user1AuthHeader, [
-            { userId: user1Id, points: points[0], startPlace: 'EAST' },
-            { userId: user2Id, points: points[1], startPlace: 'SOUTH' },
-            { userId: user3Id, points: points[2], startPlace: 'WEST' },
-            { userId: user4Id, points: points[3], startPlace: 'NORTH' }
+            { userId: user1Id, points: points[0], startPlace: 'EAST', chomboCount: chomboCounts[0] },
+            { userId: user2Id, points: points[1], startPlace: 'SOUTH', chomboCount: chomboCounts[1] },
+            { userId: user3Id, points: points[2], startPlace: 'WEST', chomboCount: chomboCounts[2] },
+            { userId: user4Id, points: points[3], startPlace: 'NORTH', chomboCount: chomboCounts[3] }
         ]);
 
         return { user1Id, user2Id, user3Id, user4Id, user1AuthHeader, gameId };
@@ -393,6 +393,55 @@ describe('Rating API Endpoints', () => {
             }
         });
 
+        test('Chombo after uma penalty comes from detailed rules', async () => {
+            dbManager.db.prepare(`
+                UPDATE gameRules
+                SET details = ?
+                WHERE id = 2
+            `).run(JSON.stringify({
+                rules: {
+                    number_of_players: 4,
+                    starting_points: 30000,
+                    chombo: 'twenty_thousand_after_uma'
+                }
+            }));
+
+            const { gameId, user1AuthHeader } = await createGameSetupWithPoints(
+                [30000, 30000, 30000, 30000],
+                [1, 0, 0, 0]
+            );
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            const ratingChanges = Object.fromEntries(
+                response.body.players.map((player: { userId: number; ratingChange: number }) => [player.userId, player.ratingChange])
+            );
+
+            expect(ratingChanges[1]).toBe(-20);
+            expect(ratingChanges[2]).toBe(0);
+            expect(ratingChanges[3]).toBe(0);
+            expect(ratingChanges[4]).toBe(0);
+        });
+
+        test('Mangan chombo in detailed rules has no after-uma rating penalty', async () => {
+            const { gameId, user1AuthHeader } = await createGameSetupWithPoints(
+                [30000, 30000, 30000, 30000],
+                [1, 0, 0, 0]
+            );
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            for (const player of response.body.players) {
+                expect(player.ratingChange).toBe(0);
+            }
+        });
+
         test('One player has positive score', async () => {
             const { gameId, user1AuthHeader } = await createGameSetupWithPoints([36000, 29000, 28000, 27000]);
 
@@ -518,9 +567,9 @@ describe('Rating API Endpoints', () => {
         function seedWindTieBreakGameRules() {
             const ts = new Date().toISOString();
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId, umaTieBreak)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(WIND_GAME_RULES_ID, 'Wind Tiebreak Rules', 4, '[15,5,-5,-15]', 30000, null, 1, 'WIND');
+                `INSERT OR IGNORE INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, clubId, umaTieBreak)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(WIND_GAME_RULES_ID, 'Wind Tiebreak Rules', 4, '[15,5,-5,-15]', 30000, 1, 'WIND');
             dbManager.db.prepare(
                 `INSERT OR IGNORE INTO event (id, name, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
