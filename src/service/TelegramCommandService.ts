@@ -1,8 +1,13 @@
 import { Context } from "telegraf";
 import { message } from "telegraf/filters";
+import dedent from "dedent";
 import config from "../../config/config.ts";
-import { TelegramReplyError, UserNotAdminTelegramError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from "../error/TelegramErrors.ts";
+import { NoActiveInvitesTelegramError, TelegramReplyError, UserNotAdminTelegramError, UserNotClubOwnerTelegramError, UserNotRegisteredTelegramError } from "../error/TelegramErrors.ts";
 import { ClubMembershipService } from "./ClubMembershipService.ts";
+import { ClubInviteService } from "./ClubInviteService.ts";
+import { ClubInviteSource, ClubInviteType } from "../model/ClubModels.ts";
+import type { ClubInvite } from "../model/ClubModels.ts";
+import { generateQrPng } from "../util/QrCodeUtil.ts";
 import LogService from "./LogService.ts";
 import { telegramBot } from "./TelegramBot.ts";
 import { UserService } from "./UserService.ts";
@@ -46,6 +51,7 @@ class TelegramCommandService {
     private userService: UserService = new UserService();
     private clubService: ClubService = new ClubService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
+    private clubInviteService: ClubInviteService = new ClubInviteService();
     private pollRepository: PollRepository = new PollRepository();
     private eventService: EventService = new EventService();
     private tournamentRoundImportService: TournamentRoundImportService = new TournamentRoundImportService();
@@ -141,6 +147,39 @@ class TelegramCommandService {
         telegramBot.action(/import_round_event_(\d+)/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleImportRoundEventCallback.bind(this));
         });
+
+        telegramBot.command('create_invite', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handleCreateInviteCommand.bind(this));
+        });
+        telegramBot.action(/inv_c_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleCreateInviteClubCallback.bind(this));
+        });
+        telegramBot.action(/inv_t_(\d+)_([AS])/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleCreateInviteTypeCallback.bind(this));
+        });
+        telegramBot.action(/inv_s_(\d+)_([AS])_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleCreateInviteSourceCallback.bind(this));
+        });
+
+        telegramBot.command('list_invites', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handleListInvitesCommand.bind(this));
+        });
+        telegramBot.action(/invl_c_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleListInvitesClubCallback.bind(this));
+        });
+
+        telegramBot.command('revoke_invite', (ctx) => {
+            this.executeWithErrorHandling(ctx, this.handleRevokeInviteCommand.bind(this));
+        });
+        telegramBot.action(/invr_c_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleRevokeInviteClubCallback.bind(this));
+        });
+        telegramBot.action(/invr_p_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleRevokeInvitePickCallback.bind(this));
+        });
+        telegramBot.action(/invr_x_(\d+)/, async (ctx) => {
+            await this.executeCallbackQueryWithErrorHandling(ctx, this.handleRevokeInviteConfirmCallback.bind(this));
+        });
         telegramBot.on(message('text'), (ctx) => {
             this.executeWithErrorHandling(ctx, this.handleTextMessage.bind(this));
         });
@@ -154,6 +193,9 @@ class TelegramCommandService {
             { command: 'setup_poll', description: 'Налаштувати опитування для клубу' },
             { command: 'preview_poll', description: 'Попередній перегляд опитування' },
             { command: 'send_poll', description: 'Відправити опитування зараз' },
+            { command: 'create_invite', description: 'Створити запрошення до клубу (посилання + QR)' },
+            { command: 'list_invites', description: 'Список запрошень клубу' },
+            { command: 'revoke_invite', description: 'Відкликати запрошення' },
         ]);
 
         telegramBot.launch(() => {
@@ -180,6 +222,11 @@ class TelegramCommandService {
                 + `<code>/setup_poll</code> — Налаштувати опитування для клубу\n`
                 + `<code>/preview_poll</code> — Попередній перегляд опитування\n`
                 + `<code>/send_poll</code> — Відправити опитування зараз\n`
+                + `\n`
+                + `<b>Запрошення:</b>\n`
+                + `<code>/create_invite</code> — Створити запрошення (посилання + QR)\n`
+                + `<code>/list_invites</code> — Список запрошень клубу\n`
+                + `<code>/revoke_invite</code> — Відкликати запрошення\n`
                 + `\n`
                 + `<b>Сповіщення:</b>\n`
                 + `<code>/set_topic</code> — Налаштувати сповіщення в поточному топіку\n`
@@ -729,6 +776,188 @@ class TelegramCommandService {
         );
     }
 
+    // ── Club invite handlers ──
+
+    private handleCreateInviteCommand(ctx: TelegramCommandContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubData = this.getUserOwnedClubData(user);
+
+        ctx.reply('Виберіть клуб, для якого хочете створити запрошення:', {
+            reply_markup: {
+                inline_keyboard: clubData.map(club => ([{
+                    text: club.clubName,
+                    callback_data: `inv_c_${club.clubId}`
+                }]))
+            }
+        });
+    }
+
+    private handleCreateInviteClubCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        ctx.reply('Виберіть тип запрошення:', {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: inviteTypeLabel(ClubInviteType.AUTO_APPROVE), callback_data: `inv_t_${clubId}_A` }],
+                    [{ text: inviteTypeLabel(ClubInviteType.SYSTEM_ONLY), callback_data: `inv_t_${clubId}_S` }]
+                ]
+            }
+        });
+    }
+
+    private handleCreateInviteTypeCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const typeCode = ctx.match[2]!;
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        ctx.reply('Звідки прийде користувач (джерело)?', {
+            reply_markup: {
+                inline_keyboard: INVITE_SOURCES.map((source, index) => ([{
+                    text: inviteSourceLabel(source),
+                    callback_data: `inv_s_${clubId}_${typeCode}_${index}`
+                }]))
+            }
+        });
+    }
+
+    private async handleCreateInviteSourceCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const type = inviteTypeFromCode(ctx.match[2]!);
+        const source = INVITE_SOURCES[parseInt(ctx.match[3]!)];
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        if (source === undefined) {
+            ctx.reply('Невідоме джерело запрошення.');
+            return;
+        }
+
+        const invite = dbManager.db.transaction(() => this.clubInviteService.createInvite({
+            clubId,
+            type,
+            source,
+            createdBy: user.id
+        }))();
+
+        const link = inviteDeepLink(invite.code);
+        const caption = dedent`
+            <b>🎟 Запрошення створено</b>
+
+            <b>Клуб:</b> ${invite.clubName}
+            <b>Тип:</b> ${inviteTypeLabel(invite.type)}
+            <b>Джерело:</b> ${inviteSourceLabel(invite.source)}
+            <b>Код:</b> <code>${invite.code}</code>
+
+            <a href="${link}">${link}</a>
+        `;
+
+        const qr = await generateQrPng(link);
+        await ctx.replyWithPhoto({ source: qr }, { caption, parse_mode: 'HTML' });
+    }
+
+    private handleListInvitesCommand(ctx: TelegramCommandContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubData = this.getUserOwnedClubData(user);
+
+        ctx.reply('Виберіть клуб для перегляду запрошень:', {
+            reply_markup: {
+                inline_keyboard: clubData.map(club => ([{
+                    text: club.clubName,
+                    callback_data: `invl_c_${club.clubId}`
+                }]))
+            }
+        });
+    }
+
+    private handleListInvitesClubCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const invites = this.clubInviteService.listInvites(clubId);
+        if (invites.length === 0) {
+            ctx.reply('У цьому клубі ще немає запрошень.');
+            return;
+        }
+
+        const text = invites.map(formatInviteLine).join('\n\n');
+        ctx.replyWithHTML(`<b>Запрошення клубу</b>\n\n${text}`);
+    }
+
+    private handleRevokeInviteCommand(ctx: TelegramCommandContext) {
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const clubData = this.getUserOwnedClubData(user);
+
+        ctx.reply('Виберіть клуб, у якому хочете відкликати запрошення:', {
+            reply_markup: {
+                inline_keyboard: clubData.map(club => ([{
+                    text: club.clubName,
+                    callback_data: `invr_c_${club.clubId}`
+                }]))
+            }
+        });
+    }
+
+    private handleRevokeInviteClubCallback(ctx: TelegramCallbackQueryContext) {
+        const clubId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.validateUserCanEditClub(user, clubId);
+
+        const activeInvites = this.clubInviteService.listInvites(clubId).filter(invite => invite.isActive);
+        if (activeInvites.length === 0) {
+            throw new NoActiveInvitesTelegramError();
+        }
+
+        ctx.reply('Виберіть запрошення для відкликання:', {
+            reply_markup: {
+                inline_keyboard: activeInvites.map(invite => ([{
+                    text: `${invite.code} · ${inviteTypeLabel(invite.type)}`,
+                    callback_data: `invr_p_${invite.id}`
+                }]))
+            }
+        });
+    }
+
+    private handleRevokeInvitePickCallback(ctx: TelegramCallbackQueryContext) {
+        const inviteId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        const invite = this.clubInviteService.listInvites(this.requireInviteClubId(inviteId, user))
+            .find(candidate => candidate.id === inviteId);
+
+        if (invite === undefined) {
+            ctx.reply('Запрошення не знайдено.');
+            return;
+        }
+
+        ctx.reply(`Відкликати запрошення ${invite.code}?`, {
+            reply_markup: {
+                inline_keyboard: [[{ text: '🚫 Відкликати', callback_data: `invr_x_${invite.id}` }]]
+            }
+        });
+    }
+
+    private handleRevokeInviteConfirmCallback(ctx: TelegramCallbackQueryContext) {
+        const inviteId = parseInt(ctx.match[1]!);
+        const user = this.getUserByTelegramId(ctx.from.id);
+        this.requireInviteClubId(inviteId, user);
+
+        const invite = dbManager.db.transaction(() => this.clubInviteService.revokeInvite(inviteId, user.id))();
+        ctx.reply(`✅ Запрошення ${invite.code} відкликано.`);
+    }
+
+    /**
+     * Resolves the club of an invite and verifies the user can manage it.
+     * Returns the clubId for further lookups.
+     */
+    private requireInviteClubId(inviteId: number, user: User): number {
+        const invite = this.clubInviteService.getInviteById(inviteId);
+        this.validateUserCanEditClub(user, invite.clubId);
+        return invite.clubId;
+    }
+
     private handleImportTournamentRoundCommand(ctx: TelegramCommandContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserIsGlobalAdmin(user);
@@ -947,6 +1176,49 @@ class TelegramCommandService {
 
 function parseNumberList(str: string): number[] {
     return str === '' ? [] : str.split(',').map(Number);
+}
+
+const INVITE_SOURCES: ClubInviteSource[] = Object.values(ClubInviteSource);
+
+function inviteTypeLabel(type: ClubInviteType): string {
+    switch (type) {
+        case ClubInviteType.AUTO_APPROVE: return '✅ Авто-приєднання до клубу';
+        case ClubInviteType.SYSTEM_ONLY:  return '📚 Лише реєстрація (туторіал)';
+    }
+}
+
+function inviteSourceLabel(source: ClubInviteSource): string {
+    switch (source) {
+        case ClubInviteSource.PERSON:         return '🧑 Особа';
+        case ClubInviteSource.TUTORIAL:       return '📚 Туторіал';
+        case ClubInviteSource.FESTIVAL:       return '🎪 Фестиваль';
+        case ClubInviteSource.SOCIAL_NETWORK: return '🌐 Соцмережа';
+        case ClubInviteSource.OTHER:          return '❓ Інше';
+    }
+}
+
+function inviteTypeFromCode(code: string): ClubInviteType {
+    return code === 'A' ? ClubInviteType.AUTO_APPROVE : ClubInviteType.SYSTEM_ONLY;
+}
+
+function inviteDeepLink(code: string): string {
+    return `${config.botUrl}?startapp=invite_${code}`;
+}
+
+function formatInviteLine(invite: ClubInvite): string {
+    const status = invite.isActive ? '🟢' : '🔴';
+    const uses = invite.maxUses !== null ? `${invite.usesCount}/${invite.maxUses}` : `${invite.usesCount}`;
+    const parts = [
+        `${status} <code>${invite.code}</code> — ${inviteTypeLabel(invite.type)}`,
+        `Джерело: ${inviteSourceLabel(invite.source)} · Використань: ${uses}`
+    ];
+    if (invite.label !== null) {
+        parts.push(`Мітка: ${invite.label}`);
+    }
+    if (invite.expiresAt !== null) {
+        parts.push(`Діє до: ${invite.expiresAt.toISOString()}`);
+    }
+    return parts.join('\n');
 }
 
 function clubTelegramTopicDescription(topicType: ClubTelegramTopicType): string {

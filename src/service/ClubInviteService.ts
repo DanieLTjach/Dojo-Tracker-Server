@@ -174,7 +174,7 @@ export class ClubInviteService {
         throw new Error('Failed to generate a unique invite code');
     }
 
-    private getInviteById(id: number): ClubInvite {
+    getInviteById(id: number): ClubInvite {
         const invite = this.inviteRepository.findById(id);
         if (invite === undefined) {
             throw new InviteNotFoundError(String(id));
