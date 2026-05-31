@@ -9,6 +9,7 @@ import {
 import type { Club, ClubMembership, ClubRole, UserClubMembership } from '../model/ClubModels.ts';
 import type { User } from '../model/UserModels.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
+import { ClubFollowRepository } from '../repository/ClubFollowRepository.ts';
 import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
 import TelegramMessageService from './TelegramMessageService.ts'; import LogService from './LogService.ts';
@@ -16,6 +17,7 @@ import { globalClubLogsTopic } from '../model/TelegramTopic.ts';
 export class ClubMembershipService {
     private clubService: ClubService = new ClubService();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
+    private followRepository: ClubFollowRepository = new ClubFollowRepository();
     private userService: UserService = new UserService();
 
     getMembers(clubId: number): ClubMembership[] {
@@ -127,6 +129,7 @@ export class ClubMembershipService {
         }
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifiedBy);
+        this.followRepository.createFollow({ clubId, userId, modifiedBy });
         this.notifyUserAddedToClub(user, club);
         const newMembership = this.getMembership(clubId, userId);
         this.logMemberActivated(newMembership, modifiedBy);
