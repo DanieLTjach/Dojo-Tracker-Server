@@ -405,15 +405,29 @@ function calculateNotenPaymentPointChanges(
     const notenPlayerIds = players
         .map(player => player.userId)
         .filter(playerId => !exhaustiveDraw.tenpaiPlayerIds.includes(playerId));
+    const tenpaiPlayerIds = exhaustiveDraw.tenpaiPlayerIds;
+
+    // The noten penalty is a total pot split evenly among the noten players and
+    // collected by the tenpai players. Since the penalty can now be any integer,
+    // round each noten payment down to whole hundreds (the mahjong unit) to avoid
+    // fractional points, then hand the actually-collected total to the tenpai
+    // side so the round always nets to zero. Standard values (2000/3000) still
+    // produce the classic clean splits.
+    const paymentPerNoten = roundDownToHundreds(notenPenalty / notenPlayerIds.length);
+    const totalCollected = paymentPerNoten * notenPlayerIds.length;
+    const baseReceiptPerTenpai = Math.floor(totalCollected / tenpaiPlayerIds.length);
+    const receiptRemainder = totalCollected - baseReceiptPerTenpai * tenpaiPlayerIds.length;
 
     return mergePlayerPointChanges(
         notenPlayerIds.map(playerId => ({
             playerId,
-            pointChange: -notenPenalty / notenPlayerIds.length
+            pointChange: -paymentPerNoten
         })),
-        exhaustiveDraw.tenpaiPlayerIds.map(playerId => ({
+        // Any remainder from the floored receipt goes to the first tenpai player
+        // so the collected pot is distributed in full (keeps the round zero-sum).
+        tenpaiPlayerIds.map((playerId, index) => ({
             playerId,
-            pointChange: notenPenalty / exhaustiveDraw.tenpaiPlayerIds.length
+            pointChange: baseReceiptPerTenpai + (index === 0 ? receiptRemainder : 0)
         }))
     );
 }
@@ -480,6 +494,10 @@ export function mergePlayerPointChanges(...arrays: PlayerPointChange[][]): Playe
 
 function roundUpToHundreds(value: number): number {
     return Math.ceil(value / 100) * 100;
+}
+
+function roundDownToHundreds(value: number): number {
+    return Math.floor(value / 100) * 100;
 }
 
 function getCurrentDealerPlayerId(gameState: GameState, players: GamePlayer[]): number {

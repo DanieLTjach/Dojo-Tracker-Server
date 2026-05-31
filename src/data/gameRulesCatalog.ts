@@ -67,7 +67,7 @@ export const gameRulesCatalog = {
         { key: 'furiten_from_kita', type: 'boolean' },
         { key: 'furiten_riichi', type: 'boolean' },
         { key: 'goal', type: 'integer', min: 0, multipleOf: 100 },
-        { key: 'honba', type: 'enumString', enum: ['1x100','2x100','2x200','2x300','2x500','3x100','3x200','3x300','3x500'] },
+        { key: 'honba', type: 'enumString', enum: ['2x100','2x200','2x300','2x500','3x100','3x200','3x300','3x500'] },
         { key: 'kan_dora', type: 'boolean' },
         { key: 'kan_dora_called_promoted_quad', type: 'enumString', enum: ['before_discard','after_discard'] },
         { key: 'kan_dora_concealed_quad', type: 'enumString', enum: ['before_discard','after_discard'] },
