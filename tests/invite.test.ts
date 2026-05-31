@@ -61,13 +61,13 @@ describe('Invite API Endpoints', () => {
     });
 
     it('previews an invite', async () => {
-        const invite = createInvite('AUTO_APPROVE');
+        const invite = createInvite('JOIN_CLUB');
         const response = await request(app).get(`/api/invites/${invite.code}`);
 
         expect(response.status).toBe(200);
         expect(response.body).toMatchObject({
             code: invite.code,
-            type: 'AUTO_APPROVE',
+            type: 'JOIN_CLUB',
             clubId,
             clubName: 'Invite API Club',
             isRedeemable: true
@@ -79,8 +79,8 @@ describe('Invite API Endpoints', () => {
         expect(response.status).toBe(404);
     });
 
-    it('redeems an AUTO_APPROVE invite and creates an ACTIVE membership', async () => {
-        const invite = createInvite('AUTO_APPROVE');
+    it('redeems a JOIN_CLUB invite and creates an ACTIVE membership', async () => {
+        const invite = createInvite('JOIN_CLUB');
         const response = await request(app)
             .post(`/api/invites/${invite.code}/redeem?${initDataQuery(TELEGRAM_BASE + 1, 'festival_guest')}`)
             .send({ name: 'Festival Guest' });
@@ -92,8 +92,8 @@ describe('Invite API Endpoints', () => {
         expect(membership?.status).toBe('ACTIVE');
     });
 
-    it('redeems a SYSTEM_ONLY invite without creating a membership', async () => {
-        const invite = createInvite('SYSTEM_ONLY');
+    it('redeems a REGISTRATION_ONLY invite without creating a membership', async () => {
+        const invite = createInvite('REGISTRATION_ONLY');
         const response = await request(app)
             .post(`/api/invites/${invite.code}/redeem?${initDataQuery(TELEGRAM_BASE + 2, 'newcomer')}`)
             .send({ name: 'Newcomer' });
@@ -104,7 +104,7 @@ describe('Invite API Endpoints', () => {
     });
 
     it('rejects redeeming a revoked invite', async () => {
-        const invite = createInvite('AUTO_APPROVE');
+        const invite = createInvite('JOIN_CLUB');
         inviteService.revokeInvite(invite.id, SYSTEM_USER_ID);
 
         const response = await request(app)

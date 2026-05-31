@@ -283,7 +283,7 @@ describe('Database Migrations', () => {
     db.pragma('foreign_keys = ON');
 
     const types = db.prepare('SELECT type FROM clubInviteType ORDER BY type').all() as Array<{ type: string }>;
-    expect(types.map(({ type }) => type)).toEqual(['AUTO_APPROVE', 'SYSTEM_ONLY']);
+    expect(types.map(({ type }) => type)).toEqual(['JOIN_CLUB', 'REGISTRATION_ONLY']);
 
     const sources = db.prepare('SELECT source FROM clubInviteSource ORDER BY source').all() as Array<{ source: string }>;
     expect(sources.map(({ source }) => source)).toEqual(['FESTIVAL', 'OTHER', 'PERSON', 'SOCIAL_NETWORK', 'TUTORIAL']);

@@ -37,8 +37,7 @@ export interface CreateInviteParams {
     createdBy: number;
 }
 
-export interface InvitePreview {
-    invite: ClubInvite;
+export interface InvitePreview extends ClubInvite {
     isRedeemable: boolean;
 }
 
@@ -78,7 +77,7 @@ export class ClubInviteService {
     }
 
     revokeInvite(inviteId: number, modifiedBy: number): ClubInvite {
-        this.getInviteById(inviteId);
+        this.validateInviteExistsById(inviteId);
         this.inviteRepository.setActive(inviteId, false, modifiedBy);
         const updated = this.getInviteById(inviteId);
         this.logInviteRevoked(updated, modifiedBy);
@@ -90,7 +89,7 @@ export class ClubInviteService {
         if (invite === undefined) {
             throw new InviteNotFoundError(code);
         }
-        return { invite, isRedeemable: this.computeRedeemable(invite) };
+        return { ...invite, isRedeemable: this.computeRedeemable(invite) };
     }
 
     redeemInvite(code: string, telegramUser: TelegramUser, name?: string): InviteRedemptionResult {
@@ -110,7 +109,7 @@ export class ClubInviteService {
 
         const user = this.resolveOrRegisterUser(telegramUser, name);
 
-        if (invite.type === 'AUTO_APPROVE') {
+        if (invite.type === 'JOIN_CLUB') {
             this.membershipService.createActiveMembership(invite.clubId, user.id, SYSTEM_USER_ID);
         }
 
@@ -121,7 +120,7 @@ export class ClubInviteService {
             clubId: invite.clubId,
             clubName: invite.clubName,
             user,
-            nextAction: invite.type === 'SYSTEM_ONLY' ? 'TUTORIAL' : 'CLUB_HOME'
+            nextAction: invite.type === 'REGISTRATION_ONLY' ? 'TUTORIAL' : 'CLUB_HOME'
         };
     }
 
@@ -180,6 +179,12 @@ export class ClubInviteService {
             throw new InviteNotFoundError(String(id));
         }
         return invite;
+    }
+
+    private validateInviteExistsById(id: number): void {
+        if (this.inviteRepository.findById(id) === undefined) {
+            throw new InviteNotFoundError(String(id));
+        }
     }
 
     private computeRedeemable(invite: ClubInvite): boolean {

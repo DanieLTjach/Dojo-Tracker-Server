@@ -1,7 +1,7 @@
 CREATE TABLE clubInviteType (
     type TEXT NOT NULL PRIMARY KEY
 );
-INSERT INTO clubInviteType (type) VALUES ('AUTO_APPROVE'), ('SYSTEM_ONLY');
+INSERT INTO clubInviteType (type) VALUES ('JOIN_CLUB'), ('REGISTRATION_ONLY');
 
 CREATE TABLE clubInviteSource (
     source TEXT NOT NULL PRIMARY KEY

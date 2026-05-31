@@ -10,15 +10,15 @@ export class ClubInviteController {
 
     previewInvite(req: Request, res: Response) {
         const { params: { code } } = clubInvitePreviewSchema.parse(req);
-        const { invite, isRedeemable } = this.inviteService.getInvitePreview(code);
+        const preview = this.inviteService.getInvitePreview(code);
 
         return res.status(StatusCodes.OK).json({
-            code: invite.code,
-            type: invite.type,
-            clubId: invite.clubId,
-            clubName: invite.clubName,
-            label: invite.label,
-            isRedeemable
+            code: preview.code,
+            type: preview.type,
+            clubId: preview.clubId,
+            clubName: preview.clubName,
+            label: preview.label,
+            isRedeemable: preview.isRedeemable
         });
     }
 

@@ -154,10 +154,10 @@ class TelegramCommandService {
         telegramBot.action(/inv_c_(\d+)/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleCreateInviteClubCallback.bind(this));
         });
-        telegramBot.action(/inv_t_(\d+)_([AS])/, async (ctx) => {
+        telegramBot.action(/inv_t_(\d+)_([JR])/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleCreateInviteTypeCallback.bind(this));
         });
-        telegramBot.action(/inv_s_(\d+)_([AS])_(\d+)/, async (ctx) => {
+        telegramBot.action(/inv_s_(\d+)_([JR])_(\d+)/, async (ctx) => {
             await this.executeCallbackQueryWithErrorHandling(ctx, this.handleCreateInviteSourceCallback.bind(this));
         });
 
@@ -800,8 +800,8 @@ class TelegramCommandService {
         ctx.reply('Виберіть тип запрошення:', {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: inviteTypeLabel(ClubInviteType.AUTO_APPROVE), callback_data: `inv_t_${clubId}_A` }],
-                    [{ text: inviteTypeLabel(ClubInviteType.SYSTEM_ONLY), callback_data: `inv_t_${clubId}_S` }]
+                    [{ text: inviteTypeLabel(ClubInviteType.JOIN_CLUB), callback_data: `inv_t_${clubId}_J` }],
+                    [{ text: inviteTypeLabel(ClubInviteType.REGISTRATION_ONLY), callback_data: `inv_t_${clubId}_R` }]
                 ]
             }
         });
@@ -924,13 +924,8 @@ class TelegramCommandService {
     private handleRevokeInvitePickCallback(ctx: TelegramCallbackQueryContext) {
         const inviteId = parseInt(ctx.match[1]!);
         const user = this.getUserByTelegramId(ctx.from.id);
-        const invite = this.clubInviteService.listInvites(this.requireInviteClubId(inviteId, user))
-            .find(candidate => candidate.id === inviteId);
-
-        if (invite === undefined) {
-            ctx.reply('Запрошення не знайдено.');
-            return;
-        }
+        const invite = this.clubInviteService.getInviteById(inviteId);
+        this.validateUserCanEditClub(user, invite.clubId);
 
         ctx.reply(`Відкликати запрошення ${invite.code}?`, {
             reply_markup: {
@@ -942,20 +937,11 @@ class TelegramCommandService {
     private handleRevokeInviteConfirmCallback(ctx: TelegramCallbackQueryContext) {
         const inviteId = parseInt(ctx.match[1]!);
         const user = this.getUserByTelegramId(ctx.from.id);
-        this.requireInviteClubId(inviteId, user);
-
-        const invite = dbManager.db.transaction(() => this.clubInviteService.revokeInvite(inviteId, user.id))();
-        ctx.reply(`✅ Запрошення ${invite.code} відкликано.`);
-    }
-
-    /**
-     * Resolves the club of an invite and verifies the user can manage it.
-     * Returns the clubId for further lookups.
-     */
-    private requireInviteClubId(inviteId: number, user: User): number {
         const invite = this.clubInviteService.getInviteById(inviteId);
         this.validateUserCanEditClub(user, invite.clubId);
-        return invite.clubId;
+
+        const revoked = dbManager.db.transaction(() => this.clubInviteService.revokeInvite(inviteId, user.id))();
+        ctx.reply(`✅ Запрошення ${revoked.code} відкликано.`);
     }
 
     private handleImportTournamentRoundCommand(ctx: TelegramCommandContext) {
@@ -1182,8 +1168,8 @@ const INVITE_SOURCES: ClubInviteSource[] = Object.values(ClubInviteSource);
 
 function inviteTypeLabel(type: ClubInviteType): string {
     switch (type) {
-        case ClubInviteType.AUTO_APPROVE: return '✅ Авто-приєднання до клубу';
-        case ClubInviteType.SYSTEM_ONLY:  return '📚 Лише реєстрація (туторіал)';
+        case ClubInviteType.JOIN_CLUB:         return '✅ Авто-приєднання до клубу';
+        case ClubInviteType.REGISTRATION_ONLY: return '📚 Лише реєстрація (туторіал)';
     }
 }
 
@@ -1198,7 +1184,7 @@ function inviteSourceLabel(source: ClubInviteSource): string {
 }
 
 function inviteTypeFromCode(code: string): ClubInviteType {
-    return code === 'A' ? ClubInviteType.AUTO_APPROVE : ClubInviteType.SYSTEM_ONLY;
+    return code === 'J' ? ClubInviteType.JOIN_CLUB : ClubInviteType.REGISTRATION_ONLY;
 }
 
 function inviteDeepLink(code: string): string {

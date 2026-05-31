@@ -65,8 +65,8 @@ export interface UserClubMembership {
 }
 
 export const ClubInviteType = {
-    AUTO_APPROVE: 'AUTO_APPROVE',
-    SYSTEM_ONLY: 'SYSTEM_ONLY'
+    JOIN_CLUB: 'JOIN_CLUB',
+    REGISTRATION_ONLY: 'REGISTRATION_ONLY'
 } as const;
 
 export type ClubInviteType = typeof ClubInviteType[keyof typeof ClubInviteType];

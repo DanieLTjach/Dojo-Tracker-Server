@@ -60,7 +60,7 @@ describe('ClubInviteService', () => {
     function createInvite(overrides: Partial<Parameters<ClubInviteService['createInvite']>[0]> = {}) {
         return inviteService.createInvite({
             clubId,
-            type: 'AUTO_APPROVE',
+            type: 'JOIN_CLUB',
             source: 'FESTIVAL',
             createdBy: SYSTEM_USER_ID,
             ...overrides
@@ -81,11 +81,11 @@ describe('ClubInviteService', () => {
         expect(revoked.isActive).toBe(false);
     });
 
-    it('AUTO_APPROVE redeem registers a new user as an ACTIVE member and counts the use', () => {
-        const invite = createInvite({ type: 'AUTO_APPROVE' });
+    it('JOIN_CLUB redeem registers a new user as an ACTIVE member and counts the use', () => {
+        const invite = createInvite({ type: 'JOIN_CLUB' });
         const result = inviteService.redeemInvite(invite.code, telegramUser(1, { first_name: 'Akagi' }));
 
-        expect(result.type).toBe('AUTO_APPROVE');
+        expect(result.type).toBe('JOIN_CLUB');
         expect(result.nextAction).toBe('CLUB_HOME');
         expect(result.user.name).toBe('Akagi');
 
@@ -95,8 +95,8 @@ describe('ClubInviteService', () => {
         expect(inviteRepository.findById(invite.id)!.usesCount).toBe(1);
     });
 
-    it('AUTO_APPROVE redeem by the same user is idempotent and does not double-count', () => {
-        const invite = createInvite({ type: 'AUTO_APPROVE' });
+    it('JOIN_CLUB redeem by the same user is idempotent and does not double-count', () => {
+        const invite = createInvite({ type: 'JOIN_CLUB' });
         const tg = telegramUser(2, { first_name: 'Washizu' });
 
         inviteService.redeemInvite(invite.code, tg);
@@ -106,8 +106,8 @@ describe('ClubInviteService', () => {
         expect(inviteRepository.findById(invite.id)!.usesCount).toBe(1);
     });
 
-    it('SYSTEM_ONLY redeem registers the user without a membership and routes to the tutorial', () => {
-        const invite = createInvite({ type: 'SYSTEM_ONLY' });
+    it('REGISTRATION_ONLY redeem registers the user without a membership and routes to the tutorial', () => {
+        const invite = createInvite({ type: 'REGISTRATION_ONLY' });
         const result = inviteService.redeemInvite(invite.code, telegramUser(3, { first_name: 'Hatsumi' }));
 
         expect(result.nextAction).toBe('TUTORIAL');
@@ -115,7 +115,7 @@ describe('ClubInviteService', () => {
     });
 
     it('derives the name from Telegram first and last name', () => {
-        const invite = createInvite({ type: 'SYSTEM_ONLY' });
+        const invite = createInvite({ type: 'REGISTRATION_ONLY' });
         const result = inviteService.redeemInvite(invite.code, telegramUser(4, { first_name: 'Ichiro', last_name: 'Suzuki' }));
         expect(result.user.name).toBe('Ichiro Suzuki');
     });
@@ -123,7 +123,7 @@ describe('ClubInviteService', () => {
     it('appends a suffix when the derived name collides with an existing user', () => {
         userService.registerUser('Collide', 'collide_existing', TELEGRAM_BASE + 50, SYSTEM_USER_ID);
 
-        const invite = createInvite({ type: 'SYSTEM_ONLY' });
+        const invite = createInvite({ type: 'REGISTRATION_ONLY' });
         const result = inviteService.redeemInvite(invite.code, telegramUser(5, { first_name: 'Collide' }));
 
         expect(result.user.name).not.toBe('Collide');
@@ -131,7 +131,7 @@ describe('ClubInviteService', () => {
     });
 
     it('throws when a new user has no name to derive', () => {
-        const invite = createInvite({ type: 'SYSTEM_ONLY' });
+        const invite = createInvite({ type: 'REGISTRATION_ONLY' });
         expect(() => inviteService.redeemInvite(invite.code, telegramUser(6)))
             .toThrow(NameRequiredForNewUserError);
     });
@@ -155,7 +155,7 @@ describe('ClubInviteService', () => {
     });
 
     it('throws when the invite has reached its max uses', () => {
-        const invite = createInvite({ type: 'SYSTEM_ONLY', maxUses: 1 });
+        const invite = createInvite({ type: 'REGISTRATION_ONLY', maxUses: 1 });
         inviteService.redeemInvite(invite.code, telegramUser(10, { first_name: 'First' }));
         expect(() => inviteService.redeemInvite(invite.code, telegramUser(11, { first_name: 'Second' })))
             .toThrow(InviteExhaustedError);

@@ -61,7 +61,7 @@ describe('ClubInviteRepository', () => {
         return inviteRepository.createInvite({
             clubId,
             code: 'CODE12345A',
-            type: 'AUTO_APPROVE',
+            type: 'JOIN_CLUB',
             source: 'FESTIVAL',
             label: 'Spring booth',
             maxUses: 5,
@@ -84,7 +84,7 @@ describe('ClubInviteRepository', () => {
             clubId,
             clubName: 'Invite Repo Club',
             code: 'CODE12345A',
-            type: 'AUTO_APPROVE',
+            type: 'JOIN_CLUB',
             source: 'FESTIVAL',
             label: 'Spring booth',
             maxUses: 5,
