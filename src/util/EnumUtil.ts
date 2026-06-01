@@ -1,5 +1,5 @@
 import { InternalServerError } from "../error/BaseErrors.ts";
-import { ClubMembershipStatus, ClubRole } from "../model/ClubModels.ts";
+import { ClubInviteSource, ClubInviteType, ClubMembershipStatus, ClubRole } from "../model/ClubModels.ts";
 import { EventRegistrationStatus } from "../model/EventRegistrationModels.ts";
 import { UmaTieBreak } from "../model/EventModels.ts";
 import { GameStatus, Wind } from "../model/GameModels.ts";
@@ -36,6 +36,14 @@ export function parseClubRole(value: string): ClubRole {
 
 export function parseClubMembershipStatus(value: string): ClubMembershipStatus {
     return parseEnumValue('ClubMembershipStatus', ClubMembershipStatus, value);
+}
+
+export function parseClubInviteType(value: string): ClubInviteType {
+    return parseEnumValue('ClubInviteType', ClubInviteType, value);
+}
+
+export function parseClubInviteSource(value: string): ClubInviteSource {
+    return parseEnumValue('ClubInviteSource', ClubInviteSource, value);
 }
 
 export function parseEventRegistrationStatus(value: string): EventRegistrationStatus {

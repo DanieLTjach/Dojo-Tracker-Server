@@ -77,3 +77,18 @@ export const clubMembershipUpdateSchema = z.object({
         role: clubRoleSchema
     })
 });
+
+const inviteCodeParamSchema = z.object({
+    code: z.string().trim().min(1, 'Invite code is required')
+});
+
+export const clubInvitePreviewSchema = z.object({
+    params: inviteCodeParamSchema
+});
+
+export const clubInviteRedeemSchema = z.object({
+    params: inviteCodeParamSchema,
+    body: z.object({
+        name: z.string().trim().min(1).max(100).optional()
+    })
+});

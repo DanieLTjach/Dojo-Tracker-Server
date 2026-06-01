@@ -22,3 +22,9 @@ export class UserNotAdminTelegramError extends TelegramReplyError {
         super('Ця команда доступна лише адміністраторам');
     }
 }
+
+export class NoActiveInvitesTelegramError extends TelegramReplyError {
+    constructor() {
+        super('У цьому клубі немає активних запрошень');
+    }
+}
