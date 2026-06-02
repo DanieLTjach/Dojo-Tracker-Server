@@ -13,6 +13,7 @@ import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
 import TelegramMessageService from './TelegramMessageService.ts'; import LogService from './LogService.ts';
 import { globalClubLogsTopic } from '../model/TelegramTopic.ts';
+import { t } from '../i18n/index.ts';
 export class ClubMembershipService {
     private clubService: ClubService = new ClubService();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
@@ -123,7 +124,7 @@ export class ClubMembershipService {
 
         const membership = this.getMembership(clubId, userId);
         if (membership.status !== 'PENDING') {
-            throw new InvalidClubMembershipStateError('активувати', membership.status, ['PENDING']);
+            throw new InvalidClubMembershipStateError(t('telegram.actions.activate'), membership.status, ['PENDING']);
         }
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifiedBy);
@@ -183,7 +184,7 @@ export class ClubMembershipService {
 
         const oldMembership = this.getMembership(clubId, userId);
         if (oldMembership.status !== 'ACTIVE') {
-            throw new InvalidClubMembershipStateError('змінити роль', oldMembership.status, ['ACTIVE']);
+            throw new InvalidClubMembershipStateError(t('telegram.actions.changeRole'), oldMembership.status, ['ACTIVE']);
         }
 
         this.membershipRepository.updateMembershipRole(clubId, userId, role, modifiedBy);
@@ -211,10 +212,10 @@ export class ClubMembershipService {
         }
 
         const message = dedent`
-            <b>Ваc додано до клубу ${club.name}!</b>
+            <b>${t('telegram.notify.addedToClubTitle', { clubName: club.name })}</b>
 
-            Тепер ви є повноцінним членом клубу та можете додавати нові ігри.
-            <a href="${config.botUrl}">Відкрити додаток</a>
+            ${t('telegram.notify.addedToClubBody')}
+            <a href="${config.botUrl}">${t('telegram.notify.openApp')}</a>
         `;
         void TelegramMessageService.sendDirectMessage(user.telegramId!, message);
     }

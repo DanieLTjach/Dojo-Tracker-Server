@@ -5,6 +5,7 @@ import { ClubService } from './ClubService.ts';
 import type { ClubPollConfig } from '../model/PollModels.ts';
 import type { TelegramTopic } from '../model/TelegramTopic.ts';
 import LogService from './LogService.ts';
+import { t } from '../i18n/index.ts';
 
 const KYIV_TIMEZONE = 'Europe/Kyiv';
 const LOCALE = 'uk-UA';
@@ -83,7 +84,7 @@ class PollSchedulerService {
             ? `${dates.map(d => d.getDate()).join(', ')} ${formatMonthName(dates[0]!)}`
             : dates.map(d => `${d.getDate()} ${formatMonthName(d)}`).join(', ');
 
-        return `🀄 Маджонг ${datesText}`;
+        return t('telegram.poll.title', { dates: datesText });
     }
 
     buildPollOptions(config: ClubPollConfig, now: Date = nowInKyiv()): string[] {

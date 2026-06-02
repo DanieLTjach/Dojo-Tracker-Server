@@ -1,5 +1,6 @@
 import { BadRequestError, ForbiddenError, NotFoundError } from './BaseErrors.ts';
 import type { ClubMembershipStatus, ClubRole } from '../model/ClubModels.ts';
+import { t } from '../i18n/index.ts';
 
 export class ClubNotFoundError extends NotFoundError {
     constructor(clubId: number) {
@@ -28,7 +29,7 @@ export class ClubMembershipAlreadyExistsError extends BadRequestError {
 export class InsufficientClubPermissionsError extends ForbiddenError {
     constructor(requiredRoles: ClubRole | ClubRole[]) {
         const normalizedRoles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
-        const rolesText = normalizedRoles.join(' або ');
+        const rolesText = normalizedRoles.join(t('common.orSeparator'));
 
         super('insufficientClubPermissions', { rolesText });
     }

@@ -38,6 +38,7 @@ import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { GameCreationBlockedError } from '../error/EventErrors.ts';
+import { t } from '../i18n/index.ts';
 
 export class GameService {
 
@@ -485,9 +486,10 @@ export class GameService {
         }).join('\n\n');
 
         const createdByUser = this.userService.getUserById(createdBy);
+        const gameLink = `<a href="${config.botUrl}?startapp=game_${game.id}"><b>${t('telegram.gameLog.addedNewGame')}</b></a>`;
+        const userLink = this.generateUserProfileLink(createdByUser);
         const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
-            + `\nДодано <a href="${config.botUrl}?startapp=game_${game.id}"><b>нову гру</b></a>`
-            + ` користувачем ${this.generateUserProfileLink(createdByUser)}\n\n`
+            + `\n${t('telegram.gameLog.addedBy', { gameLink, userLink })}\n\n`
             + `${playerLines}`;
 
         if (event.clubId !== null) {
