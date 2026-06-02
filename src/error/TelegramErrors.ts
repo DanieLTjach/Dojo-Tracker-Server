@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.ts";
+
 export class TelegramReplyError extends Error {
     constructor(message: string) {
         super(message);
@@ -7,24 +9,24 @@ export class TelegramReplyError extends Error {
 
 export class UserNotRegisteredTelegramError extends TelegramReplyError {
     constructor() {
-        super('Ви повинні бути зареєстровані в додатку, щоб виконати цю дію');
+        super(t('telegram.errors.userNotRegistered'));
     }
 }
 
 export class UserNotClubOwnerTelegramError extends TelegramReplyError {
     constructor() {
-        super('Ви повинні бути власником клубу, щоб виконати цю дію');
+        super(t('telegram.errors.userNotClubOwner'));
     }
 }
 
 export class UserNotAdminTelegramError extends TelegramReplyError {
     constructor() {
-        super('Ця команда доступна лише адміністраторам');
+        super(t('telegram.errors.userNotAdmin'));
     }
 }
 
 export class NoActiveInvitesTelegramError extends TelegramReplyError {
     constructor() {
-        super('У цьому клубі немає активних запрошень');
+        super(t('telegram.errors.noActiveInvites'));
     }
 }

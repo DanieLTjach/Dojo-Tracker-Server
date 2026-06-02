@@ -8,6 +8,7 @@ import { HashUtil } from '../src/util/HashUtil.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
 import config from '../config/config.ts';
+import { t } from '../src/i18n/index.ts';
 
 const app = express();
 app.use(express.json());
@@ -150,7 +151,7 @@ describe('Authentication API Endpoints', () => {
                 .expect(401);
 
             expect(response.body).toHaveProperty('errorCode', 'invalidInitData');
-            expect(response.body.message).toBe('Невалідні дані автентифікації Telegram: Hash mismatch');
+            expect(response.body.message).toBe(t('errors.invalidInitData', { reason: 'Hash mismatch' }));
         });
 
         it('should reject authentication with expired auth_date', async () => {
@@ -162,7 +163,7 @@ describe('Authentication API Endpoints', () => {
                 .expect(401);
 
             expect(response.body).toHaveProperty('errorCode', 'expiredAuthData');
-            expect(response.body.message).toBe('Термін дії даних автентифікації минув. Будь ласка, закрийте та відкрийте додаток заново.');
+            expect(response.body.message).toBe(t('errors.expiredAuthData'));
         });
 
         it('should reject authentication with missing hash', async () => {

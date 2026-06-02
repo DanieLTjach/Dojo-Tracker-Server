@@ -1,86 +1,88 @@
 import { BadRequestError, ForbiddenError, NotFoundError } from './BaseErrors.ts';
 import type { ClubMembershipStatus, ClubRole } from '../model/ClubModels.ts';
+import { t } from '../i18n/index.ts';
 
 export class ClubNotFoundError extends NotFoundError {
     constructor(clubId: number) {
-        super(`Клуб з id ${clubId} не знайдено`, 'clubNotFound');
+        super('clubNotFound', { clubId });
     }
 }
 
 export class ClubMembershipNotFoundError extends NotFoundError {
     constructor(clubName: string, userId: number) {
-        super(`Учасника з userId ${userId} не знайдено в клубі '${clubName}'`, 'clubMembershipNotFound');
+        super('clubMembershipNotFound', { clubName, userId });
     }
 }
 
 export class ClubNameAlreadyExistsError extends BadRequestError {
     constructor(name: string) {
-        super(`Клуб з назвою '${name}' вже існує`, 'clubNameAlreadyExists');
+        super('clubNameAlreadyExists', { name });
     }
 }
 
 export class ClubMembershipAlreadyExistsError extends BadRequestError {
     constructor(clubName: string, userId: number) {
-        super(`Користувач з id ${userId} вже є учасником клубу '${clubName}'`, 'clubMembershipAlreadyExists');
+        super('clubMembershipAlreadyExists', { clubName, userId });
     }
 }
 
 export class InsufficientClubPermissionsError extends ForbiddenError {
     constructor(requiredRoles: ClubRole | ClubRole[]) {
         const normalizedRoles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
-        const rolesText = normalizedRoles.join(' або ');
+        const rolesText = normalizedRoles.join(t('common.orSeparator'));
 
-        super(`Недостатньо прав для виконання цієї дії. Потрібна роль: ${rolesText}`, 'insufficientClubPermissions');
+        super('insufficientClubPermissions', { rolesText });
     }
 }
 
 export class YouHaveToBeClubMemberError extends ForbiddenError {
     constructor() {
-        super('Ви повинні бути учасником клубу для виконання цієї дії', 'youHaveToBeClubMember');
+        super('youHaveToBeClubMember');
     }
 }
 
 export class YouNeedToBeModeratorToCreateGamesWithNonClubMembersError extends ForbiddenError {
     constructor() {
-        super('Для створення гри з гравцями, які не є учасниками клубу, потрібна роль OWNER або MODERATOR', 'needModeratorForNonClubMembers');
+        super('needModeratorForNonClubMembers');
     }
 }
 
 export class InvalidClubMembershipStateError extends BadRequestError {
     constructor(action: string, currentStatus: ClubMembershipStatus, allowedStatuses: ClubMembershipStatus[]) {
-        super(
-            `Неможливо ${action} учасника клубу зі статусом ${currentStatus}. Дозволені статуси: ${allowedStatuses.join(', ')}`,
-            'invalidClubMembershipState'
-        );
+        super('invalidClubMembershipState', {
+            action,
+            currentStatus,
+            allowedStatuses: allowedStatuses.join(', '),
+        });
     }
 }
 
 export class InviteNotFoundError extends NotFoundError {
     constructor(code: string) {
-        super(`Запрошення з кодом '${code}' не знайдено`, 'inviteNotFound');
+        super('inviteNotFound', { code });
     }
 }
 
 export class InviteRevokedError extends BadRequestError {
     constructor() {
-        super('Це запрошення більше не активне', 'inviteRevoked');
+        super('inviteRevoked');
     }
 }
 
 export class InviteExpiredError extends BadRequestError {
     constructor() {
-        super('Термін дії цього запрошення сплив', 'inviteExpired');
+        super('inviteExpired');
     }
 }
 
 export class InviteExhaustedError extends BadRequestError {
     constructor() {
-        super('Це запрошення вичерпало ліміт використань', 'inviteExhausted');
+        super('inviteExhausted');
     }
 }
 
 export class NameRequiredForNewUserError extends BadRequestError {
     constructor() {
-        super('Для реєстрації потрібно вказати імʼя', 'nameRequiredForNewUser');
+        super('nameRequiredForNewUser');
     }
 }

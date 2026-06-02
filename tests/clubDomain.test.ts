@@ -12,6 +12,7 @@ import {
     InsufficientClubPermissionsError,
     InvalidClubMembershipStateError
 } from '../src/error/ClubErrors.ts';
+import { t } from '../src/i18n/index.ts';
 
 describe('ClubSchemas', () => {
     it('coerces club route params and trims club body fields', () => {
@@ -81,21 +82,25 @@ describe('ClubErrors', () => {
         expect(new ClubNotFoundError(42)).toMatchObject({
             statusCode: 404,
             errorCode: 'clubNotFound',
-            message: "Клуб з id 42 не знайдено"
+            message: t('errors.clubNotFound', { clubId: 42 })
         });
 
         expect(new ClubMembershipAlreadyExistsError('Test Club', 8)).toMatchObject({
             statusCode: 400,
             errorCode: 'clubMembershipAlreadyExists',
-            message: "Користувач з id 8 вже є учасником клубу 'Test Club'"
+            message: t('errors.clubMembershipAlreadyExists', { clubName: 'Test Club', userId: 8 })
         });
     });
 
     it('formats permission and invalid state messages for later club flows', () => {
         expect(new InsufficientClubPermissionsError(['OWNER', 'MODERATOR']).message)
-            .toBe('Недостатньо прав для виконання цієї дії. Потрібна роль: OWNER або MODERATOR');
+            .toBe(t('errors.insufficientClubPermissions', { rolesText: ['OWNER', 'MODERATOR'].join(t('common.orSeparator')) }));
 
-        expect(new InvalidClubMembershipStateError('активувати', 'INACTIVE', ['PENDING']).message)
-            .toBe('Неможливо активувати учасника клубу зі статусом INACTIVE. Дозволені статуси: PENDING');
+        expect(new InvalidClubMembershipStateError(t('telegram.actions.activate'), 'INACTIVE', ['PENDING']).message)
+            .toBe(t('errors.invalidClubMembershipState', {
+                action: t('telegram.actions.activate'),
+                currentStatus: 'INACTIVE',
+                allowedStatuses: 'PENDING',
+            }));
     });
 });

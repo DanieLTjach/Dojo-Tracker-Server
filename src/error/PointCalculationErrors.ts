@@ -3,168 +3,114 @@ import type { Wind } from "../model/GameModels.ts";
 
 export class RulesetShouldContainDetailedRulesError extends InternalServerError {
     constructor() {
-        super(
-            'Для відстежуваної гри правила повинні містити детальні налаштування',
-            'rulesetShouldContainDetailedRules'
-        );
+        super('rulesetShouldContainDetailedRules');
     }
 }
 
 export class YakumanLiabilityRequiresYakumanError extends BadRequestError {
     constructor() {
-        super(
-            'Відповідальність за якуман можна вказати лише для якуману',
-            'yakumanLiabilityRequiresYakuman'
-        );
+        super('yakumanLiabilityRequiresYakuman');
     }
 }
 
 export class NoDoubleRonFirstWinsOnlyError extends BadRequestError {
     constructor() {
-        super(
-            'Подвійний рон заборонено: перемагає лише перший, хто оголосив рон',
-            'noDoubleRonFirstWinsOnly'
-        );
+        super('noDoubleRonFirstWinsOnly');
     }
 }
 
 export class NoTripleRonFirstWinsOnlyError extends BadRequestError {
     constructor() {
-        super(
-            'Потрійний рон заборонено: перемагає лише перший, хто оголосив рон',
-            'noTripleRonFirstWinsOnly'
-        );
+        super('noTripleRonFirstWinsOnly');
     }
 }
 
 export class TripleRonShouldBeAbortiveDrawError extends BadRequestError {
     constructor() {
-        super(
-            'Потрійний рон за цими правилами слід записати як нічию',
-            'tripleRonShouldBeAbortiveDraw'
-        );
+        super('tripleRonShouldBeAbortiveDraw');
     }
 }
 
 export class DealInPlayerCannotBeWinnerError extends BadRequestError {
     constructor() {
-        super(
-            'Гравець, який накинув, не може бути переможцем',
-            'dealInPlayerCannotBeWinner'
-        );
+        super('dealInPlayerCannotBeWinner');
     }
 }
 
 export class AbortiveDrawNotInRulesetError extends BadRequestError {
     constructor() {
-        super(
-            'Перездачі не передбачено в цьому наборі правил',
-            'abortiveDrawNotInRuleset'
-        );
+        super('abortiveDrawNotInRuleset');
     }
 }
 
 export class NagashiManganNotInRulesetError extends BadRequestError {
     constructor() {
-        super(
-            'Нагаші манган не передбачено в цьому наборі правил',
-            'nagashiManganNotInRuleset'
-        );
+        super('nagashiManganNotInRuleset');
     }
 }
 
 export class HanRequiredForNonYakumanHandError extends BadRequestError {
     constructor() {
-        super(
-            'Для руки, що не є якуманом, потрібно вказати кількість хан',
-            'hanRequiredForNonYakumanHand'
-        );
+        super('hanRequiredForNonYakumanHand');
     }
 }
 
 export class HandShouldBeRecordedAsCountedYakumanError extends BadRequestError {
     constructor() {
-        super(
-            'Цю руку слід записати як підрахований якуман',
-            'handShouldBeRecordedAsCountedYakuman'
-        );
+        super('handShouldBeRecordedAsCountedYakuman');
     }
 }
 
 export class FuRequiredForLowHanHandError extends BadRequestError {
     constructor() {
-        super(
-            'Для рук з менш ніж п’ятьма хан потрібно вказати фу',
-            'fuRequiredForLowHanHand'
-        );
+        super('fuRequiredForLowHanHand');
     }
 }
 
 export class TwoHanMinimumIsRequiredError extends BadRequestError {
     constructor() {
-        super(
-            'За цими правилами рука повинна мати хоча б два хани',
-            'twoHanMinimumIsRequired'
-        );
+        super('twoHanMinimumIsRequired');
     }
 }
 
 export class DealInPlayerNotInGameError extends InternalServerError {
     constructor() {
-        super(
-            'Гравець, який накинув, відсутній у грі',
-            'dealInPlayerNotInGame'
-        );
+        super('dealInPlayerNotInGame');
     }
 }
 
 export class MissingPlayerForWindError extends InternalServerError {
     constructor(wind: Wind) {
-        super(
-            `Відсутній гравець для вітру ${wind}`,
-            'missingPlayerForWind'
-        );
+        super('missingPlayerForWind', { wind });
     }
 }
 
 export class CannotFindHeadBumpPlayerError extends InternalServerError {
     constructor() {
-        super(
-            'Не вдалося визначити head bump гравця',
-            'cannotFindHeadBumpPlayer'
-        );
+        super('cannotFindHeadBumpPlayer');
     }
 }
 
 export class CannotDetermineDealerError extends InternalServerError {
     constructor() {
-        super(
-            'Не вдалося визначити дилера: некоректний стан гри',
-            'cannotDetermineDealer'
-        );
+        super('cannotDetermineDealer');
     }
 }
 
 export class CannotDeterminePlayerPlacementError extends InternalServerError {
     constructor() {
-        super(
-            'Не вдалося визначити місце гравця в грі: некоректний стан гри',
-            'cannotDeterminePlayerPlacement'
-        );
+        super('cannotDeterminePlayerPlacement');
     }
 }
 
 export class InvalidHonbaFormatError extends InternalServerError {
     constructor() {
-        super(
-            'Некоректний формат значення хонби в правилах',
-            'invalidHonbaFormat'
-        );
+        super('invalidHonbaFormat');
     }
 }
 
 export class NoPlayersInTheGameError extends InternalServerError {
     constructor() {
-        super('Гра не має гравців', 'noPlayersInTheGame');
+        super('noPlayersInTheGame');
     }
 }
