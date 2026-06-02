@@ -54,7 +54,6 @@ export function makeGameRules(rules: GameRulesValues): GameRules {
         numberOfPlayers: 4,
         uma: [15, 5, -5, -15],
         startingPoints: 25000,
-        chomboPointsAfterUma: null,
         umaTieBreak: UmaTieBreak.WIND,
         details: { rules },
     };

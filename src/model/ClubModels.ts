@@ -1,4 +1,5 @@
 import type { TelegramTopic } from "./TelegramTopic.ts";
+import type { User } from "./UserModels.ts";
 
 export const ClubRole = {
     OWNER: 'OWNER',
@@ -61,4 +62,54 @@ export interface UserClubMembership {
     role: ClubRole;
     status: ClubMembershipStatus;
     permissions: ClubPermissions;
+}
+
+export const ClubInviteType = {
+    JOIN_CLUB: 'JOIN_CLUB',
+    REGISTRATION_ONLY: 'REGISTRATION_ONLY'
+} as const;
+
+export type ClubInviteType = typeof ClubInviteType[keyof typeof ClubInviteType];
+
+export const ClubInviteSource = {
+    PERSON: 'PERSON',
+    TUTORIAL: 'TUTORIAL',
+    FESTIVAL: 'FESTIVAL',
+    SOCIAL_NETWORK: 'SOCIAL_NETWORK',
+    OTHER: 'OTHER'
+} as const;
+
+export type ClubInviteSource = typeof ClubInviteSource[keyof typeof ClubInviteSource];
+
+export interface ClubInvite {
+    id: number;
+    clubId: number;
+    clubName: string;
+    code: string;
+    type: ClubInviteType;
+    source: ClubInviteSource;
+    label: string | null;
+    maxUses: number | null;
+    usesCount: number;
+    expiresAt: Date | null;
+    isActive: boolean;
+    createdAt: Date;
+    modifiedAt: Date;
+    modifiedBy: number;
+}
+
+export interface ClubInviteRedemption {
+    inviteId: number;
+    userId: number;
+    redeemedAt: Date;
+}
+
+export type InviteNextAction = 'TUTORIAL' | 'CLUB_HOME';
+
+export interface InviteRedemptionResult {
+    type: ClubInviteType;
+    clubId: number;
+    clubName: string;
+    user: User;
+    nextAction: InviteNextAction;
 }

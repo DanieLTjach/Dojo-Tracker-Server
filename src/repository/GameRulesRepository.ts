@@ -15,7 +15,6 @@ export class GameRulesRepository {
                 numberOfPlayers,
                 uma,
                 startingPoints,
-                chomboPointsAfterUma,
                 umaTieBreak,
                 details
             FROM gameRules
@@ -36,7 +35,6 @@ export class GameRulesRepository {
                 numberOfPlayers,
                 uma,
                 startingPoints,
-                chomboPointsAfterUma,
                 umaTieBreak,
                 details
             FROM gameRules
@@ -58,7 +56,6 @@ export class GameRulesRepository {
                 numberOfPlayers,
                 uma,
                 startingPoints,
-                chomboPointsAfterUma,
                 umaTieBreak,
                 details
             FROM gameRules
@@ -88,8 +85,8 @@ export class GameRulesRepository {
 
     private insertGameRulesStatement(): Statement<Omit<InsertGameRulesParams, 'uma'> & { uma: string }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO gameRules (name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak, clubId)
-            VALUES (:name, :numberOfPlayers, :uma, :startingPoints, :chomboPointsAfterUma, :umaTieBreak, :clubId)
+            INSERT INTO gameRules (name, numberOfPlayers, uma, startingPoints, umaTieBreak, clubId)
+            VALUES (:name, :numberOfPlayers, :uma, :startingPoints, :umaTieBreak, :clubId)
         `);
     }
 
@@ -102,7 +99,7 @@ export class GameRulesRepository {
         return dbManager.db.prepare(`
             UPDATE gameRules
             SET name = :name, numberOfPlayers = :numberOfPlayers, uma = :uma,
-                startingPoints = :startingPoints, chomboPointsAfterUma = :chomboPointsAfterUma,
+                startingPoints = :startingPoints,
                 umaTieBreak = :umaTieBreak
             WHERE id = :id
         `);
@@ -130,7 +127,6 @@ export interface InsertGameRulesParams {
     numberOfPlayers: number;
     uma: number[] | number[][];
     startingPoints: number;
-    chomboPointsAfterUma: number | null;
     umaTieBreak: string;
     clubId: number | null;
 }
@@ -142,7 +138,6 @@ interface GameRulesDBEntity {
     numberOfPlayers: number;
     uma: string;
     startingPoints: number;
-    chomboPointsAfterUma: number | null;
     umaTieBreak: string;
     details: string | null;
 }
@@ -155,7 +150,6 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         numberOfPlayers: dbEntity.numberOfPlayers,
         uma: parseUma(dbEntity.uma),
         startingPoints: dbEntity.startingPoints,
-        chomboPointsAfterUma: dbEntity.chomboPointsAfterUma,
         umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak),
         details: parseGameRulesDetailsAndApplyPresets(dbEntity.details)
     };
