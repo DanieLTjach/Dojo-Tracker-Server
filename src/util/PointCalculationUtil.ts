@@ -406,10 +406,7 @@ function calculateNotenPaymentPointChanges(
         .map(player => player.userId)
         .filter(playerId => !exhaustiveDraw.tenpaiPlayerIds.includes(playerId));
 
-    // The noten penalty is a total pot split evenly among the noten players and
-    // collected by the tenpai players. The penalty is validated on rule creation
-    // to divide cleanly for every possible split (multiple of 6 for yonma, 2 for
-    // sanma — see GameRulesSchemas), so the division below is always whole.
+    // GameRulesSchemas guarantees whole-point division for all noten splits.
     return mergePlayerPointChanges(
         notenPlayerIds.map(playerId => ({
             playerId,

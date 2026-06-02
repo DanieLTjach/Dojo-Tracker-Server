@@ -70,17 +70,14 @@ function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
     return schema;
 }
 
-// The noten penalty is split evenly among the noten players on an exhaustive
-// draw, so it must divide cleanly for every possible split or points become
-// fractional. For yonma the noten side can be 1/2/3 players (lcm 6); for sanma
-// it can be 1/2 players (lcm 2). Returns the required divisor for a player count.
+// Noten payments must stay whole: yonma can split 1/2/3 ways (LCM 6),
+// sanma can split 1/2 ways (LCM 2).
 export function notenPenaltyDivisorFor(numberOfPlayers: number): number {
     return numberOfPlayers === 3 ? 2 : 6;
 }
 
-// Validate noten_penalty divisibility against the effective player count
-// (resolved from the rules override, falling back to the preset). Skips when
-// either value is absent — required-field presence is enforced elsewhere.
+// Resolve number_of_players from explicit rules first, then preset defaults.
+// Missing values are handled by the regular required-field validation.
 function notenPenaltyDividesCleanly(rules: Record<string, unknown>, presetKey?: string): boolean {
     const notenPenalty = rules['noten_penalty'];
     if (typeof notenPenalty !== 'number') {

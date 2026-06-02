@@ -8,12 +8,9 @@ import { Wind } from '../src/model/GameModels.ts';
 import type { PlayerPointChange } from '../src/model/GameRoundResultModels.ts';
 import { detailedGame, fourPlayers, gameState, makeGameRules } from './pointCalculationUtil.helpers.ts';
 
-// Sort by playerId so deltas can be asserted order-independently.
 const sortByPlayer = (changes: PlayerPointChange[]) =>
     [...changes].sort((a, b) => a.playerId - b.playerId);
 
-// Run an exhaustive draw with the given noten penalty and tenpai set, returning
-// the resulting per-player point changes (sorted).
 const notenDraw = (notenPenalty: number, tenpaiPlayerIds: number[]) => {
     const game = detailedGame(fourPlayers(), gameState(Wind.EAST, 1, 0, 0));
     const rules = makeGameRules({ number_of_players: 4, starting_points: 25000, noten_penalty: notenPenalty });
@@ -40,7 +37,6 @@ describe('custom noten_penalty (integer)', () => {
         }
     });
 
-    // Yonma divisor is 6 (noten side can be 1/2/3 players); these all divide cleanly.
     test.each([0, 600, 1200, 1500, 3000, 4200])(
         'schema accepts yonma noten_penalty %d (divisible by 6)',
         (value) => {
@@ -52,7 +48,6 @@ describe('custom noten_penalty (integer)', () => {
         }
     );
 
-    // Sanma divisor is 2 (noten side can be 1/2 players).
     test.each([0, 1000, 2000, 2500, 3500])(
         'schema accepts sanma noten_penalty %d (divisible by 2)',
         (value) => {
@@ -64,10 +59,6 @@ describe('custom noten_penalty (integer)', () => {
         }
     );
 
-    // Yonma needs the penalty divisible by 6; since multiple-of-100 already gives
-    // divisibility by 2, the binding extra constraint is divisibility by 3. These
-    // multiples of 100 are not divisible by 3, so a yonma 1-tenpai/3-noten split
-    // would be fractional — they must be rejected.
     test.each([1000, 2000, 4000, 100, 500])(
         'schema rejects yonma noten_penalty %d that is not divisible by 6',
         (value) => {
@@ -79,8 +70,6 @@ describe('custom noten_penalty (integer)', () => {
         }
     );
 
-    // Sanma only ever splits among 1 or 2 noten players, and every multiple of 100
-    // is already divisible by 2, so any valid (×100) sanma penalty divides cleanly.
     test.each([100, 500, 2500, 4500])(
         'schema accepts any multiple-of-100 sanma noten_penalty %d',
         (value) => {
@@ -92,9 +81,7 @@ describe('custom noten_penalty (integer)', () => {
         }
     );
 
-    test('divisibility is checked against the player count inherited from a preset', () => {
-        // ema_2025 is yonma (number_of_players: 4); a noten_penalty override that
-        // is not a multiple of 6 must be rejected even though it is not restated here.
+    test('divisibility uses the player count inherited from a preset', () => {
         const result = gameRulesDetailsSchema.safeParse({
             preset: 'ema_2025',
             rules: { noten_penalty: 1000 },
@@ -178,32 +165,29 @@ describe('expanded honba enum', () => {
 });
 
 describe('noten payment splits cleanly for validated penalties', () => {
-    test('standard 3000 penalty keeps the classic clean splits', () => {
-        // 1 tenpai / 3 noten
-        expect(notenDraw(3000, [1])).toEqual([
+    test.each<[string, number[], PlayerPointChange[]]>([
+        ['1 tenpai / 3 noten', [1], [
             { playerId: 1, pointChange: 3000 },
             { playerId: 2, pointChange: -1000 },
             { playerId: 3, pointChange: -1000 },
             { playerId: 4, pointChange: -1000 },
-        ]);
-        // 2 tenpai / 2 noten
-        expect(notenDraw(3000, [1, 2])).toEqual([
+        ]],
+        ['2 tenpai / 2 noten', [1, 2], [
             { playerId: 1, pointChange: 1500 },
             { playerId: 2, pointChange: 1500 },
             { playerId: 3, pointChange: -1500 },
             { playerId: 4, pointChange: -1500 },
-        ]);
-        // 3 tenpai / 1 noten
-        expect(notenDraw(3000, [1, 2, 3])).toEqual([
+        ]],
+        ['3 tenpai / 1 noten', [1, 2, 3], [
             { playerId: 1, pointChange: 1000 },
             { playerId: 2, pointChange: 1000 },
             { playerId: 3, pointChange: 1000 },
             { playerId: 4, pointChange: -3000 },
-        ]);
+        ]],
+    ])('standard 3000 penalty keeps the classic split: %s', (_caseName, tenpai, expected) => {
+        expect(notenDraw(3000, tenpai)).toEqual(expected);
     });
 
-    // Only divisible (validated) yonma penalties reach the engine. Each split is
-    // integer and zero-sum with no leftover points.
     test.each([
         [600, [1]],
         [1200, [1, 2]],
@@ -211,7 +195,7 @@ describe('noten payment splits cleanly for validated penalties', () => {
         [4200, [1]],
     ])('yonma penalty %d with tenpai %j divides cleanly and is zero-sum', (penalty, tenpai) => {
         const changes = notenDraw(penalty, tenpai);
-        expect(sumOf(changes) === 0).toBe(true);
+        expect(sumOf(changes)).toBe(0);
         for (const change of changes) {
             expect(Number.isInteger(change.pointChange)).toBe(true);
         }
