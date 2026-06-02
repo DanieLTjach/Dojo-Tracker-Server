@@ -241,7 +241,7 @@ export class ClubInviteService {
 
             <b>Club:</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
             <b>Code:</b> <code>${invite.code}</code> (${invite.type}, ${invite.source})${invite.label !== null ? ` — ${invite.label}` : ''}
-            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>${user.telegramUsername !== null ? `\n<b>Telegram:</b> ${user.telegramUsername}` : ''}
         `;
         this.logClubEvent(invite.clubId, message);
     }
