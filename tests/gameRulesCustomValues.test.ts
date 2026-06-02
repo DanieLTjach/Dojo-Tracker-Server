@@ -40,8 +40,9 @@ describe('custom noten_penalty (integer)', () => {
         }
     });
 
-    test.each([0, 1000, 1500, 2000, 3000, 4000])(
-        'schema accepts custom noten_penalty %d',
+    // Yonma divisor is 6 (noten side can be 1/2/3 players); these all divide cleanly.
+    test.each([0, 600, 1200, 1500, 3000, 4200])(
+        'schema accepts yonma noten_penalty %d (divisible by 6)',
         (value) => {
             const result = gameRulesDetailsSchema.safeParse({
                 rules: { number_of_players: 4, starting_points: 30000, noten_penalty: value },
@@ -50,6 +51,57 @@ describe('custom noten_penalty (integer)', () => {
             expect(result.success).toBe(true);
         }
     );
+
+    // Sanma divisor is 2 (noten side can be 1/2 players).
+    test.each([0, 1000, 2000, 2500, 3500])(
+        'schema accepts sanma noten_penalty %d (divisible by 2)',
+        (value) => {
+            const result = gameRulesDetailsSchema.safeParse({
+                rules: { number_of_players: 3, starting_points: 35000, noten_penalty: value },
+            });
+
+            expect(result.success).toBe(true);
+        }
+    );
+
+    // Yonma needs the penalty divisible by 6; since multiple-of-100 already gives
+    // divisibility by 2, the binding extra constraint is divisibility by 3. These
+    // multiples of 100 are not divisible by 3, so a yonma 1-tenpai/3-noten split
+    // would be fractional — they must be rejected.
+    test.each([1000, 2000, 4000, 100, 500])(
+        'schema rejects yonma noten_penalty %d that is not divisible by 6',
+        (value) => {
+            const result = gameRulesDetailsSchema.safeParse({
+                rules: { number_of_players: 4, starting_points: 30000, noten_penalty: value },
+            });
+
+            expect(result.success).toBe(false);
+        }
+    );
+
+    // Sanma only ever splits among 1 or 2 noten players, and every multiple of 100
+    // is already divisible by 2, so any valid (×100) sanma penalty divides cleanly.
+    test.each([100, 500, 2500, 4500])(
+        'schema accepts any multiple-of-100 sanma noten_penalty %d',
+        (value) => {
+            const result = gameRulesDetailsSchema.safeParse({
+                rules: { number_of_players: 3, starting_points: 35000, noten_penalty: value },
+            });
+
+            expect(result.success).toBe(true);
+        }
+    );
+
+    test('divisibility is checked against the player count inherited from a preset', () => {
+        // ema_2025 is yonma (number_of_players: 4); a noten_penalty override that
+        // is not a multiple of 6 must be rejected even though it is not restated here.
+        const result = gameRulesDetailsSchema.safeParse({
+            preset: 'ema_2025',
+            rules: { noten_penalty: 1000 },
+        });
+
+        expect(result.success).toBe(false);
+    });
 
     test('schema rejects a noten_penalty that is not a multiple of 100', () => {
         const result = gameRulesDetailsSchema.safeParse({
@@ -125,7 +177,7 @@ describe('expanded honba enum', () => {
     });
 });
 
-describe('noten payment is integer and zero-sum for any penalty', () => {
+describe('noten payment splits cleanly for validated penalties', () => {
     test('standard 3000 penalty keeps the classic clean splits', () => {
         // 1 tenpai / 3 noten
         expect(notenDraw(3000, [1])).toEqual([
@@ -150,40 +202,18 @@ describe('noten payment is integer and zero-sum for any penalty', () => {
         ]);
     });
 
-    test('a custom penalty that would not divide evenly rounds down to whole hundreds', () => {
-        // 1000 / 3 noten = 333.33 -> rounded down to 300 each; collected 900 to the lone tenpai.
-        const changes = notenDraw(1000, [1]);
-        expect(changes).toEqual([
-            { playerId: 1, pointChange: 900 },
-            { playerId: 2, pointChange: -300 },
-            { playerId: 3, pointChange: -300 },
-            { playerId: 4, pointChange: -300 },
-        ]);
-        // No fractional points.
-        for (const change of changes) {
-            expect(Number.isInteger(change.pointChange)).toBe(true);
-        }
-    });
-
+    // Only divisible (validated) yonma penalties reach the engine. Each split is
+    // integer and zero-sum with no leftover points.
     test.each([
-        [500, [1]],
-        [1000, [1]],
-        [1500, [1, 2]],
-        [2500, [1]],
-        [2500, [1, 2]],
-        [4000, [1, 2, 3]],
-    ])('penalty %d with tenpai %j stays integer and zero-sum', (penalty, tenpai) => {
+        [600, [1]],
+        [1200, [1, 2]],
+        [3000, [1, 2, 3]],
+        [4200, [1]],
+    ])('yonma penalty %d with tenpai %j divides cleanly and is zero-sum', (penalty, tenpai) => {
         const changes = notenDraw(penalty, tenpai);
-        // Zero-sum. Use `=== 0` (not toBe(0)) so JS's -0 still counts as zero.
         expect(sumOf(changes) === 0).toBe(true);
         for (const change of changes) {
             expect(Number.isInteger(change.pointChange)).toBe(true);
-            // Every noten player pays a clean multiple of 100 (the mahjong unit);
-            // the tenpai side may carry an integer remainder so the pot is fully
-            // redistributed and the round stays exactly zero-sum.
-            if (change.pointChange < 0) {
-                expect(Math.abs(change.pointChange) % 100).toBe(0);
-            }
         }
     });
 });

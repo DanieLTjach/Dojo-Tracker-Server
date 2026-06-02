@@ -70,6 +70,37 @@ function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
     return schema;
 }
 
+// The noten penalty is split evenly among the noten players on an exhaustive
+// draw, so it must divide cleanly for every possible split or points become
+// fractional. For yonma the noten side can be 1/2/3 players (lcm 6); for sanma
+// it can be 1/2 players (lcm 2). Returns the required divisor for a player count.
+export function notenPenaltyDivisorFor(numberOfPlayers: number): number {
+    return numberOfPlayers === 3 ? 2 : 6;
+}
+
+// Validate noten_penalty divisibility against the effective player count
+// (resolved from the rules override, falling back to the preset). Skips when
+// either value is absent — required-field presence is enforced elsewhere.
+function notenPenaltyDividesCleanly(rules: Record<string, unknown>, presetKey?: string): boolean {
+    const notenPenalty = rules['noten_penalty'];
+    if (typeof notenPenalty !== 'number') {
+        return true;
+    }
+    const presetPlayers = presetKey
+        ? gameRulesPresetsByKey.get(presetKey)?.rules?.['number_of_players']
+        : undefined;
+    const numberOfPlayers = typeof rules['number_of_players'] === 'number'
+        ? rules['number_of_players'] as number
+        : (typeof presetPlayers === 'number' ? presetPlayers : undefined);
+    if (numberOfPlayers === undefined) {
+        return true;
+    }
+    return notenPenalty % notenPenaltyDivisorFor(numberOfPlayers) === 0;
+}
+
+const NOTEN_PENALTY_DIVISIBILITY_MESSAGE =
+    'noten_penalty must divide evenly among the noten players (a multiple of 6 for yonma, 2 for sanma)';
+
 export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRulesDetails> {
     const allOptionalShape = Object.fromEntries(
         catalog.rules.map(spec => [spec.key, ruleSpecToSchema(spec).optional()])
@@ -96,12 +127,18 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
             rules: allOptionalRulesSchema,
             links: z.array(gameRulesLinkSchema).optional(),
             customRules: customRulesSchema.optional()
-        }),
+        }).refine(
+            (details) => notenPenaltyDividesCleanly(details.rules, details.preset),
+            { error: NOTEN_PENALTY_DIVISIBILITY_MESSAGE, path: ['rules', 'noten_penalty'] }
+        ),
         z.strictObject({
             rules: withRequiredRulesSchema,
             links: z.array(gameRulesLinkSchema).optional(),
             customRules: customRulesSchema.optional()
-        })
+        }).refine(
+            (details) => notenPenaltyDividesCleanly(details.rules),
+            { error: NOTEN_PENALTY_DIVISIBILITY_MESSAGE, path: ['rules', 'noten_penalty'] }
+        )
     ]) as z.ZodType<GameRulesDetails>;
 }
 
