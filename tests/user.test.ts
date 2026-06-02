@@ -5,6 +5,7 @@ import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createTelegramInitData } from './testHelpers.ts';
+import { t } from '../src/i18n/index.ts';
 
 const app = express();
 app.use(express.json());
@@ -131,7 +132,7 @@ describe('User API Endpoints', () => {
                 .send({ name: 'Unique Name' });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe("Telegram юзернейм '@testuser' вже зайнятий іншим користувачем");
+            expect(response.body.message).toBe(t('errors.telegramUsernameAlreadyTakenByAnotherUser', { telegramUsername: '@testuser' }));
         });
 
         it('should fail when name already taken', async () => {
@@ -143,7 +144,7 @@ describe('User API Endpoints', () => {
                 .send({ name: 'Test User' });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe("Ім'я 'Test User' вже зайняте іншим користувачем");
+            expect(response.body.message).toBe(t('errors.nameAlreadyTakenByAnotherUser', { name: 'Test User' }));
         });
 
         it('should fail when telegram ID already exists', async () => {
@@ -155,7 +156,7 @@ describe('User API Endpoints', () => {
                 .send({ name: 'Different Name' });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe('Користувач з Telegram id 456456456 вже існує');
+            expect(response.body.message).toBe(t('errors.userWithThisTelegramIdAlreadyExists', { telegramId: 456456456 }));
         });
     });
 
@@ -258,7 +259,7 @@ describe('User API Endpoints', () => {
                 .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
+            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }));
         });
 
         it('should fail when user id is not a number', async () => {
@@ -295,7 +296,7 @@ describe('User API Endpoints', () => {
                 .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe('Користувача з Telegram id 888888888 не знайдено');
+            expect(response.body.message).toBe(t('errors.userNotFoundByTelegramId', { telegramId: 888888888 }));
         });
 
         it('should fail when telegram id is not a number', async () => {
@@ -396,7 +397,7 @@ describe('User API Endpoints', () => {
                 .send(updateData);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
+            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }));
         });
 
         it('should fail when name is already taken by another user', async () => {
@@ -410,7 +411,7 @@ describe('User API Endpoints', () => {
                 .send(updateData);
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe("Ім'я 'Test User 2' вже зайняте іншим користувачем");
+            expect(response.body.message).toBe(t('errors.nameAlreadyTakenByAnotherUser', { name: 'Test User 2' }));
         });
 
         it('should fail when telegram username is already taken by another user', async () => {
@@ -424,7 +425,7 @@ describe('User API Endpoints', () => {
                 .send(updateData);
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe("Telegram юзернейм '@testuser2' вже зайнятий іншим користувачем");
+            expect(response.body.message).toBe(t('errors.telegramUsernameAlreadyTakenByAnotherUser', { telegramUsername: '@testuser2' }));
         });
     });
 
@@ -456,7 +457,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toBe('Недостатньо прав для виконання цієї дії');
+            expect(response.body.message).toBe(t('errors.insufficientPermissions'));
         });
 
         it('should fail when user id does not exist', async () => {
@@ -466,7 +467,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
+            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }));
         });
     });
 
@@ -498,7 +499,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toBe('Недостатньо прав для виконання цієї дії');
+            expect(response.body.message).toBe(t('errors.insufficientPermissions'));
         });
 
         it('should fail when user id does not exist', async () => {
@@ -508,7 +509,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
+            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }));
         });
     });
 });
