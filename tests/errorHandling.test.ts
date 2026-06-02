@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { StatusCodes } from 'http-status-codes';
-import { BadRequestError, NotFoundError } from '../src/error/BaseErrors.ts';
+import { ResponseStatusError } from '../src/error/BaseErrors.ts';
 import { ZodError } from 'zod';
 import { SqliteError } from 'better-sqlite3';
 import { jest } from '@jest/globals';
@@ -65,7 +65,7 @@ describe('ErrorHandling Middleware', () => {
     });
 
     it('should handle ResponseStatusError with correct status code and error code', () => {
-        const customError = new BadRequestError('Invalid input', 'invalidInput');
+        const customError = new ResponseStatusError(StatusCodes.BAD_REQUEST, 'Invalid input', 'invalidInput');
 
         handleErrors(customError, mockReq as Request, mockRes as Response, mockNext);
 
@@ -77,7 +77,7 @@ describe('ErrorHandling Middleware', () => {
     });
 
     it('should handle NotFoundError with 404 status', () => {
-        const notFoundError = new NotFoundError('Resource not found', 'notFound');
+        const notFoundError = new ResponseStatusError(StatusCodes.NOT_FOUND, 'Resource not found', 'notFound');
 
         handleErrors(notFoundError, mockReq as Request, mockRes as Response, mockNext);
 

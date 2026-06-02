@@ -3,54 +3,46 @@ import type { EventRegistrationStatus } from '../model/EventRegistrationModels.t
 
 export class EventRegistrationNotFoundError extends NotFoundError {
     constructor(eventName: string, userId: number) {
-        super(`Реєстрацію користувача з id ${userId} на подію '${eventName}' не знайдено`, 'eventRegistrationNotFound');
+        super('eventRegistrationNotFound', { eventName, userId });
     }
 }
 
 export class UserNotRegisteredForTournamentError extends BadRequestError {
     constructor(eventName: string, userId: number) {
-        super(`Користувач ${userId} не зареєстрований на турнір "${eventName}"`, 'userNotRegisteredForTournament');
+        super('userNotRegisteredForTournament', { eventName, userId });
     }
 }
 
 export class UserNotApprovedForTournamentError extends BadRequestError {
     constructor(eventName: string, userId: number, status: EventRegistrationStatus) {
-        super(
-            `Користувач ${userId} не схвалений для турніру "${eventName}" (статус реєстрації: ${status})`,
-            'userNotApprovedForTournament'
-        );
+        super('userNotApprovedForTournament', { eventName, userId, status });
     }
 }
 
 export class InvalidEventRegistrationStateError extends BadRequestError {
     constructor(action: string, currentStatus: EventRegistrationStatus, allowedStatuses: EventRegistrationStatus[]) {
-        super(
-            `Неможливо ${action} реєстрацію зі статусом ${currentStatus}. Дозволені статуси: ${allowedStatuses.join(', ')}`,
-            'invalidEventRegistrationState'
-        );
+        super('invalidEventRegistrationState', {
+            action,
+            currentStatus,
+            allowedStatuses: allowedStatuses.join(', '),
+        });
     }
 }
 
 export class MissingProfileNamesForTournamentRegistrationError extends BadRequestError {
     constructor() {
-        super('Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі', 'missingProfileNamesForTournamentRegistration');
+        super('missingProfileNamesForTournamentRegistration');
     }
 }
 
 export class EventCapacityReachedError extends ConflictError {
     constructor(eventName: string, maxParticipants: number) {
-        super(
-            `Турнір "${eventName}" вже досяг максимальної кількості учасників (${maxParticipants})`,
-            'eventCapacityReached'
-        );
+        super('eventCapacityReached', { eventName, maxParticipants });
     }
 }
 
 export class InsufficientEventRegistrationManagementPermissionsError extends ForbiddenError {
     constructor() {
-        super(
-            'Недостатньо прав для управління реєстраціями на цю подію. Потрібна роль адміна або OWNER/MODERATOR клубу події.',
-            'insufficientEventRegistrationManagementPermissions'
-        );
+        super('insufficientEventRegistrationManagementPermissions');
     }
 }

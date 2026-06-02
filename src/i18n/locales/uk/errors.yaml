@@ -1,0 +1,117 @@
+errors:
+  # ── Auth (src/error/AuthErrors.ts) ──
+  invalidInitData: "Невалідні дані автентифікації Telegram: {{reason}}"
+  expiredAuthData: Термін дії даних автентифікації минув. Будь ласка, закрийте та відкрийте додаток заново.
+  missingAuthToken: Необхідний токен автентифікації
+  invalidAuthToken: "Невалідний токен автентифікації: {{reason}}"
+  insufficientPermissions: Недостатньо прав для виконання цієї дії
+  tokenExpired: Термін дії токена автентифікації минув. Перезайдіть в додаток
+  invalidToken: Невалідний токен автентифікації. Перезайдіть в додаток
+
+  # ── Club (src/error/ClubErrors.ts) ──
+  clubNotFound: Клуб з id {{clubId}} не знайдено
+  clubMembershipNotFound: "Учасника з userId {{userId}} не знайдено в клубі '{{clubName}}'"
+  clubNameAlreadyExists: "Клуб з назвою '{{name}}' вже існує"
+  clubMembershipAlreadyExists: "Користувач з id {{userId}} вже є учасником клубу '{{clubName}}'"
+  insufficientClubPermissions: "Недостатньо прав для виконання цієї дії. Потрібна роль: {{rolesText}}"
+  youHaveToBeClubMember: Ви повинні бути учасником клубу для виконання цієї дії
+  needModeratorForNonClubMembers: Для створення гри з гравцями, які не є учасниками клубу, потрібна роль OWNER або MODERATOR
+  invalidClubMembershipState: "Неможливо {{action}} учасника клубу зі статусом {{currentStatus}}. Дозволені статуси: {{allowedStatuses}}"
+  inviteNotFound: "Запрошення з кодом '{{code}}' не знайдено"
+  inviteRevoked: Це запрошення більше не активне
+  inviteExpired: Термін дії цього запрошення сплив
+  inviteExhausted: Це запрошення вичерпало ліміт використань
+  nameRequiredForNewUser: Для реєстрації потрібно вказати імʼя
+
+  # ── Event (src/error/EventErrors.ts) ──
+  eventNotFound: Подію з id {{eventId}} не знайдено
+  gameRulesNotFound: Правила гри з id {{gameRulesId}} не знайдено
+  cannotDeleteGameRulesInUse: 'Неможливо видалити правила "{{gameRulesName}}" — вони використовуються в {{eventCount}} подіях'
+  cannotUpdateGameRulesInUse: 'Неможливо оновити правила "{{gameRulesName}}" — за ними вже зіграно {{gameCount}} ігор'
+  cannotDeleteEventWithGames: 'Неможливо видалити подію з існуючими іграми. Подія "{{eventName}}" має {{gameCount}} ігор'
+  cannotDeleteEventWithRegistrations: 'Неможливо видалити подію "{{eventName}}" — існує {{registrationCount}} реєстрацій. Видаліть реєстрації перед видаленням події.'
+  currentRatingEventMustBeClubScoped: Поточний рейтинговий сезон можна встановити лише для клубної події
+  tournamentMustHaveClub: Турнір повинен належати клубу
+  gameCreationBlocked: 'Створення ігор для події "{{eventName}}" заблоковано'
+
+  # ── Event registration (src/error/EventRegistrationErrors.ts) ──
+  eventRegistrationNotFound: "Реєстрацію користувача з id {{userId}} на подію '{{eventName}}' не знайдено"
+  userNotRegisteredForTournament: 'Користувач {{userId}} не зареєстрований на турнір "{{eventName}}"'
+  userNotApprovedForTournament: 'Користувач {{userId}} не схвалений для турніру "{{eventName}}" (статус реєстрації: {{status}})'
+  invalidEventRegistrationState: "Неможливо {{action}} реєстрацію зі статусом {{currentStatus}}. Дозволені статуси: {{allowedStatuses}}"
+  missingProfileNamesForTournamentRegistration: Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі
+  eventNotTournament: "Реєстрація доступна лише для подій типу TOURNAMENT (поточний тип: {{type}})"
+  eventCapacityReached: 'Турнір "{{eventName}}" вже досяг максимальної кількості учасників ({{maxParticipants}})'
+  insufficientEventRegistrationManagementPermissions: Недостатньо прав для управління реєстраціями на цю подію. Потрібна роль адміна або OWNER/MODERATOR клубу події.
+
+  # ── Game (src/error/GameErrors.ts) ──
+  gameNotFoundById: Гру з id {{id}} не знайдено
+  tooManyGamesFound: Знайдено забагато ігор. Будь ласка, звузьте критерії пошуку.
+  incorrectPlayerCount: Для гри потрібно {{requiredPlayers}} гравців
+  duplicatePlayer: Гравець {{playerName}} присутній більше одного разу в цій грі
+  duplicateGameTimestampInEvent: Хтось намагається додати гру одночасно з вами. Будь ласка, спробуйте ще раз
+  duplicateTournamentRoundTable: Гра для раунду {{tournamentRound}} та столу {{tournamentTable}} вже існує в цьому турнірі
+  incorrectTotalPoints: Сума очок повинна дорівнювати {{expectedTotal}}, у вас {{actualTotal}}
+  invalidPoints: Очки гравця ({{points}}) повинні бути в діапазоні від {{minPoints}} до {{maxPoints}}
+  eventHasntStarted: "{{eventName}} ще не розпочався"
+  eventHasEnded: "{{eventName}} вже закінчився"
+  youHaveToBeAdminToCreateGameWithCustomTime: Щоб створити гру з заданим часом, ви повинні бути адміністратором
+  youHaveToBeAdminToHideNewGameMessage: Щоб сховати повідомлення про нову гру, ви повинні бути адміністратором
+  gameNotInProgress: Результат раунду можна додати лише до гри, що триває
+  gameNotInProgressWhenDeletingRound: Результат раунду можна видалити лише з гри, що триває
+  gameNotInProgressWhenFinishing: Можна завершити лише гру, що триває
+  invalidRoundId: Очікується раунд {{expectedRoundId}}, отримано {{actualRoundId}}
+  roundAlreadyExists: Цей раунд вже завершено
+  notAuthorizedToModifyGame: Лише гравці, модератори клубу та адміністратори можуть змінювати гру
+  invalidRoundResultPlayer: Гравець з id {{playerId}} не бере участі в цій грі
+  gamePlayerNotFound: Гравець з id {{userId}} не знайдений у грі {{gameId}}
+  noRoundsToRollback: У цій грі немає раундів для відкату
+  lastRoundRollbackAlreadyUsed: Ви вже відкатували останній раунд у цій грі
+  noRoundsCompleted: Гру можна завершити лише після щонайменше одного раунду
+  gameNotFinishedWhenUpdating: Гру можна редагувати лише після завершення
+  gameNotFinishedWhenUndoingFinish: Скасувати завершення можна лише для завершеної гри
+  cannotUndoFinishOnNonTrackedGame: Скасувати завершення можна лише для відстежуваної гри з раундами
+  gameNotCreatedWhenStarting: Можна розпочати лише гру в статусі CREATED
+  notGamePlayer: Лише гравці цієї гри можуть виконати цю дію
+
+  # ── Import (src/error/ImportErrors.ts) ──
+  userNotFoundByUsername: Користувача з Telegram username {{username}} не знайдено
+  noValidGamesInCsv: У CSV файлі не знайдено жодної валідної гри
+
+  # ── Point calculation (src/error/PointCalculationErrors.ts) ──
+  rulesetShouldContainDetailedRules: Для відстежуваної гри правила повинні містити детальні налаштування
+  yakumanLiabilityRequiresYakuman: Відповідальність за якуман можна вказати лише для якуману
+  noDoubleRonFirstWinsOnly: "Подвійний рон заборонено: перемагає лише перший, хто оголосив рон"
+  noTripleRonFirstWinsOnly: "Потрійний рон заборонено: перемагає лише перший, хто оголосив рон"
+  tripleRonShouldBeAbortiveDraw: Потрійний рон за цими правилами слід записати як нічию
+  dealInPlayerCannotBeWinner: Гравець, який накинув, не може бути переможцем
+  abortiveDrawNotInRuleset: Перездачі не передбачено в цьому наборі правил
+  nagashiManganNotInRuleset: Нагаші манган не передбачено в цьому наборі правил
+  hanRequiredForNonYakumanHand: Для руки, що не є якуманом, потрібно вказати кількість хан
+  handShouldBeRecordedAsCountedYakuman: Цю руку слід записати як підрахований якуман
+  fuRequiredForLowHanHand: Для рук з менш ніж п’ятьма хан потрібно вказати фу
+  twoHanMinimumIsRequired: За цими правилами рука повинна мати хоча б два хани
+  dealInPlayerNotInGame: Гравець, який накинув, відсутній у грі
+  missingPlayerForWind: Відсутній гравець для вітру {{wind}}
+  cannotFindHeadBumpPlayer: Не вдалося визначити head bump гравця
+  cannotDetermineDealer: "Не вдалося визначити дилера: некоректний стан гри"
+  cannotDeterminePlayerPlacement: "Не вдалося визначити місце гравця в грі: некоректний стан гри"
+  invalidHonbaFormat: Некоректний формат значення хонби в правилах
+  noPlayersInTheGame: Гра не має гравців
+
+  # ── Rating (src/error/RatingErrors.ts) ──
+  userRatingChangeInGameNotFound: Зміну рейтингу користувача {{userId}} в грі {{gameId}} не знайдено
+  userHasNoRatingDespiteHavingPlayedGames: Користувач {{userId}} не має рейтингу в події {{eventId}} попри те, що має зіграні ігри
+  pleaseProvideStartPlaceForAllPlayersToResolveTie: Будь ласка, вкажіть стартове місце (вітер) для всіх гравців, щоб розв'язати нічию
+
+  # ── User (src/error/UserErrors.ts) ──
+  nameAlreadyTakenByAnotherUser: "Ім'я '{{name}}' вже зайняте іншим користувачем"
+  telegramUsernameAlreadyTakenByAnotherUser: "Telegram юзернейм '{{telegramUsername}}' вже зайнятий іншим користувачем"
+  userWithThisTelegramIdAlreadyExists: Користувач з Telegram id {{telegramId}} вже існує
+  userNotFoundById: Користувача з id {{id}} не знайдено
+  userNotFoundByTelegramId: Користувача з Telegram id {{telegramId}} не знайдено
+  youHaveToBeAdminToEditAnotherUser: Щоб редагувати іншого користувача, ви повинні бути адміністратором
+  userIsNotActive: Користувач з id {{id}} не активний
+
+  # ── Enum parsing (src/util/EnumUtil.ts) ──
+  enumParsingError: "Неприпустиме значення '{{value}}' для enum {{enumName}}. Дозволені значення: {{allowedValues}}"

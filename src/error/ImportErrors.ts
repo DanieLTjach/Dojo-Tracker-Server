@@ -1,19 +1,24 @@
-import { BadRequestError } from "./BaseErrors.ts";
+import { StatusCodes } from "http-status-codes";
+import { BadRequestError, ResponseStatusError } from "./BaseErrors.ts";
+import { t, type TranslationParams } from "../i18n/index.ts";
 
-export class CsvParsingError extends BadRequestError {
-    constructor(message: string) {
-        super(message, 'csvParsingError');
+// CsvParsingError messages live under the `import.*` i18n section (not `errors.*`), so it
+// resolves the full key itself rather than going through the errorCode-prefixed base path.
+export class CsvParsingError extends ResponseStatusError {
+    constructor(messageKey: string, params?: TranslationParams) {
+        super(StatusCodes.BAD_REQUEST, t(messageKey, params), 'csvParsingError');
+        this.name = 'CsvParsingError';
     }
 }
 
 export class UserNotFoundByUsernameError extends BadRequestError {
     constructor(username: string) {
-        super(`Користувача з Telegram username ${username} не знайдено`, 'userNotFoundByUsername');
+        super('userNotFoundByUsername', { username });
     }
 }
 
 export class NoValidGamesInCsvError extends BadRequestError {
     constructor() {
-        super('У CSV файлі не знайдено жодної валідної гри', 'noValidGamesInCsv');
+        super('noValidGamesInCsv');
     }
 }

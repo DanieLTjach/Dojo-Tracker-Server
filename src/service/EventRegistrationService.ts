@@ -280,10 +280,7 @@ export class EventRegistrationService {
 
     private validateEventIsTournament(event: Event): void {
         if (event.type !== 'TOURNAMENT') {
-            throw new BadRequestError(
-                `Реєстрація доступна лише для подій типу TOURNAMENT (поточний тип: ${event.type})`,
-                'eventNotTournament'
-            );
+            throw new BadRequestError('eventNotTournament', { type: event.type });
         }
     }
 
