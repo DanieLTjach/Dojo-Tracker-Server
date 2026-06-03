@@ -117,12 +117,6 @@ export class NotAuthorizedToModifyGameError extends ForbiddenError {
     }
 }
 
-export class InvalidRoundResultPlayerError extends BadRequestError {
-    constructor(playerId: number) {
-        super(`Гравець з id ${playerId} не бере участі в цій грі`, 'invalidRoundResultPlayer');
-    }
-}
-
 export class GamePlayerNotFoundError extends NotFoundError {
     constructor(gameId: number, userId: number) {
         super(`Гравець з id ${userId} не знайдений у грі ${gameId}`, 'gamePlayerNotFound');

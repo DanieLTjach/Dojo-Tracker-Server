@@ -356,8 +356,8 @@ describe('Database Migrations', () => {
     db.close();
   });
 
-  test('migration 5 seeds game rules details in current compact format', () => {
-    const db = createMigratedDb('5.sql');
+  test('seeded game rules details parse against the current schema after all migrations', () => {
+    const db = createMigratedDb(getMigrationFiles().at(-1)!);
 
     const rows = db.prepare('SELECT id, details FROM gameRules WHERE details IS NOT NULL ORDER BY id').all() as Array<{ id: number; details: string }>;
     expect(rows.map(row => row.id)).toEqual([1, 2, 3, 4, 5, 6, 10, 11]);

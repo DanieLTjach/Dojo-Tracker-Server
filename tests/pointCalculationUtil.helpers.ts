@@ -26,6 +26,26 @@ export function gameState(
     return { wind, dealerNumber, counters, riichiSticks };
 }
 
+export function detailedGame(players: GamePlayer[], currentState: GameState): DetailedGame {
+    const timestamp = new Date('2026-01-01T00:00:00.000Z');
+    return {
+        id: 1,
+        eventId: 1,
+        createdAt: timestamp,
+        modifiedAt: timestamp,
+        modifiedBy: 1,
+        tournamentRound: null,
+        tournamentTable: null,
+        status: GameStatus.IN_PROGRESS,
+        startedAt: timestamp,
+        endedAt: null,
+        lastRoundWasDeleted: false,
+        players,
+        rounds: [],
+        currentState,
+    };
+}
+
 export function makeGameRules(rules: GameRulesValues): GameRules {
     return {
         id: 1,
@@ -36,28 +56,5 @@ export function makeGameRules(rules: GameRulesValues): GameRules {
         startingPoints: 25000,
         umaTieBreak: UmaTieBreak.WIND,
         details: { rules },
-    };
-}
-
-export function detailedGame(
-    players: GamePlayer[],
-    currentState: GameState,
-): DetailedGame {
-    const now = new Date('2026-01-01T00:00:00.000Z');
-    return {
-        id: 1,
-        eventId: 1,
-        createdAt: now,
-        modifiedAt: now,
-        modifiedBy: 0,
-        tournamentRound: null,
-        tournamentTable: null,
-        status: GameStatus.IN_PROGRESS,
-        startedAt: now,
-        endedAt: null,
-        lastRoundWasDeleted: false,
-        players,
-        rounds: [],
-        currentState,
     };
 }

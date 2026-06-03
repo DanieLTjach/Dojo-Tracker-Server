@@ -13,6 +13,7 @@ import {
     NagashiManganNotInRulesetError,
     NoDoubleRonFirstWinsOnlyError,
     NoTripleRonFirstWinsOnlyError,
+    PlayerNotInGameError,
     RulesetShouldContainDetailedRulesError,
     TripleRonShouldBeAbortiveDrawError,
     YakumanLiabilityRequiresYakumanError,
@@ -66,6 +67,8 @@ export function calculateGameRoundResult(
     }
     const detailedRules = rules.details.rules;
 
+    validateResultPlayersInGame(game.players, result);
+
     const roundPointChanges = calculateRoundPointChanges(currentGameState, game.players, detailedRules, result);
 
     const updatedGamePlayers = game.players.map(player => updatePlayerPoints(player, roundPointChanges));
@@ -109,6 +112,49 @@ function calculateRoundPointChanges(
             return calculateAbortiveDrawPointChanges(rules, result);
         case "CHOMBO":
             return calculateChomboPointChanges(gameState, players, rules, result);
+    }
+}
+
+function validateResultPlayersInGame(
+    players: GamePlayer[],
+    result: GameRoundResultInputDTO
+): void {
+    const playerIds = new Set(players.map(player => player.userId));
+    const requireInGame = (playerId: number) => {
+        if (!playerIds.has(playerId)) {
+            throw new PlayerNotInGameError(playerId);
+        }
+    };
+
+    switch (result.type) {
+        case "TSUMO":
+            requireInGame(result.winningHandData.winnerPlayerId);
+            result.riichiPlayerIds.forEach(requireInGame);
+            if (result.winningHandData.yakumanLiabilityPlayerId !== undefined) {
+                requireInGame(result.winningHandData.yakumanLiabilityPlayerId);
+            }
+            break;
+        case "RON":
+            requireInGame(result.dealInPlayerId);
+            result.riichiPlayerIds.forEach(requireInGame);
+            result.winningHandData.forEach(hand => {
+                requireInGame(hand.winnerPlayerId);
+                if (hand.yakumanLiabilityPlayerId !== undefined) {
+                    requireInGame(hand.yakumanLiabilityPlayerId);
+                }
+            });
+            break;
+        case "EXHAUSTIVE_DRAW":
+            result.tenpaiPlayerIds.forEach(requireInGame);
+            result.nagashiManganPlayerIds.forEach(requireInGame);
+            result.riichiPlayerIds.forEach(requireInGame);
+            break;
+        case "ABORTIVE_DRAW":
+            result.riichiPlayerIds.forEach(requireInGame);
+            break;
+        case "CHOMBO":
+            requireInGame(result.offenderPlayerId);
+            break;
     }
 }
 
@@ -349,7 +395,6 @@ function calculateExhaustiveDrawPointChanges(
     rules: GameRulesValues,
     exhaustiveDraw: ExhaustiveDraw
 ): PlayerPointChange[] {
-    // nagashi mangan counted as a win is not implemented
     if (exhaustiveDraw.nagashiManganPlayerIds.length > 0) {
         return calculateNagashiManganPointChanges(gameState, players, rules, exhaustiveDraw);
     }
@@ -369,9 +414,13 @@ function calculateNagashiManganPointChanges(
         throw new NagashiManganNotInRulesetError();
     }
 
+    // Nagashi mangan is scored as a mangan tsumo for each achiever but is otherwise treated as
+    // an exhaustive draw: no honba is paid, and the riichi-stick bank stays on the table. The
+    // empty bank passed here keeps the tsumo helper from awarding the bank to the achiever.
+    const gameStateWithoutBank: GameState = { ...gameState, riichiSticks: 0 };
     const nagashiManganPointChanges = exhaustiveDraw.nagashiManganPlayerIds.map(playerId =>
         calculateTsumoPointChanges(
-            gameState, players, rules,
+            gameStateWithoutBank, players, rules,
             {
                 type: 'TSUMO',
                 winningHandData: {

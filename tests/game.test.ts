@@ -986,7 +986,7 @@ describe('Game API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('invalidRoundResultPlayer');
+            expect(response.body.errorCode).toBe('playerNotInGame');
         });
 
         test('should reject user who is not a player or club moderator', async () => {
