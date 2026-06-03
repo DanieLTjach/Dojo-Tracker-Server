@@ -455,6 +455,7 @@ function calculateNotenPaymentPointChanges(
         .map(player => player.userId)
         .filter(playerId => !exhaustiveDraw.tenpaiPlayerIds.includes(playerId));
 
+    // GameRulesSchemas guarantees whole-point division for all noten splits.
     return mergePlayerPointChanges(
         notenPlayerIds.map(playerId => ({
             playerId,
