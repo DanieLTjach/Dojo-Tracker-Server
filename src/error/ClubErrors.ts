@@ -54,3 +54,33 @@ export class InvalidClubMembershipStateError extends BadRequestError {
         );
     }
 }
+
+export class InviteNotFoundError extends NotFoundError {
+    constructor(code: string) {
+        super(`Запрошення з кодом '${code}' не знайдено`, 'inviteNotFound');
+    }
+}
+
+export class InviteRevokedError extends BadRequestError {
+    constructor() {
+        super('Це запрошення більше не активне', 'inviteRevoked');
+    }
+}
+
+export class InviteExpiredError extends BadRequestError {
+    constructor() {
+        super('Термін дії цього запрошення сплив', 'inviteExpired');
+    }
+}
+
+export class InviteExhaustedError extends BadRequestError {
+    constructor() {
+        super('Це запрошення вичерпало ліміт використань', 'inviteExhausted');
+    }
+}
+
+export class NameRequiredForNewUserError extends BadRequestError {
+    constructor() {
+        super('Для реєстрації потрібно вказати імʼя', 'nameRequiredForNewUser');
+    }
+}

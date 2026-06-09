@@ -1,6 +1,6 @@
 import dedent from "dedent";
 import { BadRequestError } from "../error/BaseErrors.ts";
-import { CannotUndoFinishOnNonTrackedGameError, GameNotCreatedWhenStartingError, GameNotFinishedWhenUndoingFinishError, GameNotInProgressWhenAddingNewRoundError, GameNotInProgressWhenDeletingRoundError, GameNotInProgressWhenFinishingError, IncorrectPlayerCountError, InvalidRoundIdError, InvalidRoundResultPlayerError, LastRoundRollbackAlreadyUsedError, NoRoundsCompletedError, NoRoundsToRollbackError, RoundAlreadyExistsError } from "../error/GameErrors.ts";
+import { CannotUndoFinishOnNonTrackedGameError, GameNotCreatedWhenStartingError, GameNotFinishedWhenUndoingFinishError, GameNotInProgressWhenAddingNewRoundError, GameNotInProgressWhenDeletingRoundError, GameNotInProgressWhenFinishingError, IncorrectPlayerCountError, InvalidRoundIdError, LastRoundRollbackAlreadyUsedError, NoRoundsCompletedError, NoRoundsToRollbackError, RoundAlreadyExistsError } from "../error/GameErrors.ts";
 import type { Event, GameRules } from "../model/EventModels.ts";
 import type { DetailedGame, GamePlayer, GameRound, GameWithPlayers, TrackedGamePlayerData } from "../model/GameModels.ts";
 import { GameStatus } from "../model/GameModels.ts";
@@ -73,7 +73,7 @@ export class TrackedGameService {
         const game = this.gameService.getDetailedGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
 
-        this.validateRoundResultInput(game, event, roundId, resultInputDTO, modifiedBy);
+        this.validateRoundResultInput(game, event, roundId, modifiedBy);
 
         const result: GameRoundResult = calculateGameRoundResult(game, event.gameRules, resultInputDTO);
 
@@ -97,7 +97,7 @@ export class TrackedGameService {
         const game = this.gameService.getDetailedGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
         
-        this.validateRoundResultInput(game, event, roundId, resultInputDTO, modifiedBy);
+        this.validateRoundResultInput(game, event, roundId, modifiedBy);
 
         return calculateGameRoundResult(game, event.gameRules, resultInputDTO);
     }
@@ -255,13 +255,11 @@ export class TrackedGameService {
         game: DetailedGame,
         event: Event,
         roundId: number,
-        resultInputDTO: GameRoundResultInputDTO,
         modifiedBy: number
     ): void {
         this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
         this.validateGameIsInProgress(game, () => new GameNotInProgressWhenAddingNewRoundError());
         this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
-        this.validateRoundResultPlayers(resultInputDTO, game.players);
     }
 
     private validateCurrentRoundIdBeforeAdding(rounds: GameRound[], roundId: number): void {
@@ -310,53 +308,6 @@ export class TrackedGameService {
         }
 
         return false;
-    }
-
-    private validateRoundResultPlayers(result: GameRoundResultInputDTO, players: GamePlayer[]): void {
-        const playerIds = new Set(players.map((player) => player.userId));
-
-        const validatePlayerId = (playerId: number) => {
-            if (!playerIds.has(playerId)) {
-                throw new InvalidRoundResultPlayerError(playerId);
-            }
-        };
-
-        const validatePlayerIds = (ids: number[]) => {
-            for (const id of ids) {
-                validatePlayerId(id);
-            }
-        };
-
-        switch (result.type) {
-            case 'TSUMO':
-                validatePlayerId(result.winningHandData.winnerPlayerId);
-                if (result.winningHandData.yakumanLiabilityPlayerId !== undefined) {
-                    validatePlayerId(result.winningHandData.yakumanLiabilityPlayerId);
-                }
-                validatePlayerIds(result.riichiPlayerIds);
-                break;
-            case 'RON':
-                validatePlayerId(result.dealInPlayerId);
-                for (const hand of result.winningHandData) {
-                    validatePlayerId(hand.winnerPlayerId);
-                    if (hand.yakumanLiabilityPlayerId !== undefined) {
-                        validatePlayerId(hand.yakumanLiabilityPlayerId);
-                    }
-                }
-                validatePlayerIds(result.riichiPlayerIds);
-                break;
-            case 'EXHAUSTIVE_DRAW':
-                validatePlayerIds(result.riichiPlayerIds);
-                validatePlayerIds(result.tenpaiPlayerIds);
-                validatePlayerIds(result.nagashiManganPlayerIds);
-                break;
-            case 'CHOMBO':
-                validatePlayerId(result.offenderPlayerId);
-                break;
-            case 'ABORTIVE_DRAW':
-                validatePlayerIds(result.riichiPlayerIds);
-                break;
-        }
     }
 
     private addChomboFromRoundResult(gameId: number, result: GameRoundResult, modifiedBy: number) {

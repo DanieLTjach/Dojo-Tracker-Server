@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
+import { parseGameRulesDetailsAndApplyPresets } from '../src/util/GameRulesDetailsUtil.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -277,8 +278,86 @@ describe('Database Migrations', () => {
     db.close();
   });
 
-  test('migration 5 seeds game rules details in current compact format', () => {
-    const db = createMigratedDb('5.sql');
+  test('migration 8 creates club invite tables, enums and indexes', () => {
+    const db = createMigratedDb('8.sql');
+    db.pragma('foreign_keys = ON');
+
+    const types = db.prepare('SELECT type FROM clubInviteType ORDER BY type').all() as Array<{ type: string }>;
+    expect(types.map(({ type }) => type)).toEqual(['JOIN_CLUB', 'REGISTRATION_ONLY']);
+
+    const sources = db.prepare('SELECT source FROM clubInviteSource ORDER BY source').all() as Array<{ source: string }>;
+    expect(sources.map(({ source }) => source)).toEqual(['FESTIVAL', 'OTHER', 'PERSON', 'SOCIAL_NETWORK', 'TUTORIAL']);
+
+    const inviteColumns = (db.prepare('PRAGMA table_info(clubInvite)').all() as Array<{ name: string; type: string; notnull: number; dflt_value: string | null }>)
+      .map(({ name, type, notnull, dflt_value }) => ({ name, type, notnull, dflt_value }));
+    expect(inviteColumns).toEqual([
+      { name: 'id', type: 'INTEGER', notnull: 0, dflt_value: null },
+      { name: 'clubId', type: 'INTEGER', notnull: 1, dflt_value: null },
+      { name: 'code', type: 'TEXT', notnull: 1, dflt_value: null },
+      { name: 'type', type: 'TEXT', notnull: 1, dflt_value: null },
+      { name: 'source', type: 'TEXT', notnull: 1, dflt_value: null },
+      { name: 'label', type: 'TEXT', notnull: 0, dflt_value: null },
+      { name: 'maxUses', type: 'INTEGER', notnull: 0, dflt_value: null },
+      { name: 'usesCount', type: 'INTEGER', notnull: 1, dflt_value: '0' },
+      { name: 'expiresAt', type: 'TIMESTAMP', notnull: 0, dflt_value: null },
+      { name: 'isActive', type: 'BOOL', notnull: 1, dflt_value: 'true' },
+      { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+      { name: 'modifiedAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+      { name: 'modifiedBy', type: 'INTEGER', notnull: 1, dflt_value: null },
+    ]);
+
+    const redemptionColumns = (db.prepare('PRAGMA table_info(clubInviteRedemption)').all() as Array<{ name: string; notnull: number; pk: number }>)
+      .map(({ name, notnull, pk }) => ({ name, notnull, pk }));
+    expect(redemptionColumns).toEqual([
+      { name: 'inviteId', notnull: 1, pk: 1 },
+      { name: 'userId', notnull: 1, pk: 2 },
+      { name: 'redeemedAt', notnull: 1, pk: 0 },
+    ]);
+
+    const indexes = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_clubInvite%'").all() as Array<{ name: string }>)
+      .map(({ name }) => name)
+      .sort();
+    expect(indexes).toEqual(['idx_clubInviteRedemption_userId', 'idx_clubInvite_clubId']);
+    
+    const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+    expect(foreignKeyViolations).toEqual([]);
+
+    db.close();
+  });
+  
+  test('migration 8 removes duplicate chomboPointsAfterUma from game rules', () => {
+    const db = createMigratedDb('8.sql');
+    db.pragma('foreign_keys = ON');
+
+    const gameRulesColumns = (db.prepare('PRAGMA table_info(gameRules)').all() as Array<{ name: string; type: string }>)
+      .map(({ name, type }) => ({ name, type }));
+    expect(gameRulesColumns.find(column => column.name === 'chomboPointsAfterUma')).toBeUndefined();
+    expect(gameRulesColumns).toEqual(expect.arrayContaining([
+      { name: 'id', type: 'INTEGER' },
+      { name: 'name', type: 'TEXT' },
+      { name: 'numberOfPlayers', type: 'INTEGER' },
+      { name: 'uma', type: 'TEXT' },
+      { name: 'startingPoints', type: 'INTEGER' },
+      { name: 'clubId', type: 'INTEGER' },
+      { name: 'umaTieBreak', type: 'TEXT' },
+      { name: 'details', type: 'TEXT' },
+    ]));
+
+    const rows = db.prepare('SELECT id, details FROM gameRules WHERE id IN (1, 2, 3, 4, 10, 11) ORDER BY id')
+      .all() as Array<{ id: number; details: string | null }>;
+    for (const row of rows) {
+      const details = parseGameRulesDetailsAndApplyPresets(row.details);
+      expect(details?.rules.chombo).toBeDefined();
+    }
+
+    const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+    expect(foreignKeyViolations).toEqual([]);
+
+    db.close();
+  });
+
+  test('seeded game rules details parse against the current schema after all migrations', () => {
+    const db = createMigratedDb(getMigrationFiles().at(-1)!);
 
     const rows = db.prepare('SELECT id, details FROM gameRules WHERE details IS NOT NULL ORDER BY id').all() as Array<{ id: number; details: string }>;
     expect(rows.map(row => row.id)).toEqual([1, 2, 3, 4, 5, 6, 10, 11]);

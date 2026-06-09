@@ -38,8 +38,8 @@ describe('Public tournament endpoint', () => {
         ).run(TEST_CLUB_ID, ts, ts, SYSTEM_USER_ID);
 
         dbManager.db.prepare(
-            `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId)
-             VALUES (?, 'Public Test Rules', 4, '[15,5,-5,-15]', 30000, NULL, ?)`
+            `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, clubId)
+             VALUES (?, 'Public Test Rules', 4, '[15,5,-5,-15]', 30000, ?)`
         ).run(GAME_RULES_ID, TEST_CLUB_ID);
 
         dbManager.db.prepare(

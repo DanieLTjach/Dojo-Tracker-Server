@@ -16,7 +16,6 @@ const baseParams: InsertGameRulesParams = {
     numberOfPlayers: 4,
     uma: [15, 5, -5, -15],
     startingPoints: 25000,
-    chomboPointsAfterUma: null,
     umaTieBreak: 'DIVIDE',
     clubId: TEST_CLUB_ID
 };
@@ -57,7 +56,6 @@ describe('Game Rules CRUD', () => {
             expect(fetched!.startingPoints).toBe(25000);
             expect(fetched!.umaTieBreak).toBe('DIVIDE');
             expect(fetched!.clubId).toBe(TEST_CLUB_ID);
-            expect(fetched!.chomboPointsAfterUma).toBeNull();
         });
 
         test('updateGameRules changes all fields', () => {
@@ -66,7 +64,6 @@ describe('Game Rules CRUD', () => {
                 numberOfPlayers: 3,
                 uma: [15, 0, -15],
                 startingPoints: 30000,
-                chomboPointsAfterUma: 20000,
                 umaTieBreak: 'WIND',
                 clubId: TEST_CLUB_ID
             };
@@ -77,7 +74,6 @@ describe('Game Rules CRUD', () => {
             expect(fetched!.name).toBe('Updated Rules');
             expect(fetched!.numberOfPlayers).toBe(3);
             expect(fetched!.startingPoints).toBe(30000);
-            expect(fetched!.chomboPointsAfterUma).toBe(20000);
             expect(fetched!.umaTieBreak).toBe('WIND');
         });
 

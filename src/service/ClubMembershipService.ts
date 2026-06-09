@@ -133,6 +133,41 @@ export class ClubMembershipService {
         return newMembership;
     }
 
+    /**
+     * Creates (or re-activates) an ACTIVE MEMBER membership directly, bypassing the
+     * PENDING→approve flow. Used by auto-approve invite codes. Idempotent: if the user
+     * is already an ACTIVE member, returns the existing membership without re-notifying.
+     */
+    createActiveMembership(clubId: number, userId: number, modifiedBy: number): ClubMembership {
+        const user = this.userService.getUserById(userId);
+        const club = this.clubService.getClubById(clubId);
+
+        const existing = this.membershipRepository.findMembership(clubId, userId);
+        if (existing?.status === 'ACTIVE') {
+            return existing;
+        }
+
+        if (existing) {
+            this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifiedBy);
+        } else {
+            const now = new Date();
+            this.membershipRepository.createMembership({
+                clubId,
+                userId,
+                role: 'MEMBER',
+                status: 'ACTIVE',
+                createdAt: now,
+                modifiedAt: now,
+                modifiedBy
+            });
+        }
+
+        this.notifyUserAddedToClub(user, club);
+        const newMembership = this.getMembership(clubId, userId);
+        this.logMemberActivated(newMembership, modifiedBy);
+        return newMembership;
+    }
+
     deactivateMember(clubId: number, userId: number, modifiedBy: number): ClubMembership {
         this.clubService.validateClubExists(clubId);
         const membership = this.getMembership(clubId, userId);
