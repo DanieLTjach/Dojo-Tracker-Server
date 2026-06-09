@@ -61,3 +61,9 @@ export const userActivationSchema = z.object({
 });
 
 export const userDeactivationSchema = userActivationSchema;
+
+export const getUserAchievementsSchema = z.object({
+    params: z.object({
+        id: userIdParamSchema
+    })
+});

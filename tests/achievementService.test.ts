@@ -3,6 +3,7 @@ import { cleanupTestDatabase } from './setup.ts';
 import { createCustomEvent } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { AchievementService } from '../src/service/AchievementService.ts';
+import { AchievementCriterion } from '../src/model/AchievementModels.ts';
 import type { GameRoundResult } from '../src/model/GameRoundResultModels.ts';
 
 const EVENT_ID = 9100;
@@ -37,11 +38,11 @@ function addRound(gameId: number, roundNumber: number, dealerNumber: number, res
     ).run(gameId, roundNumber, dealerNumber, JSON.stringify(result));
 }
 
-function addZeroRatingChange(userId: number, eventId: number, gameId: number): void {
+function addRatingChange(userId: number, eventId: number, gameId: number, ratingChange: number): void {
     dbManager.db.prepare(
         `INSERT INTO userRatingChange (userId, eventId, gameId, ratingChange, rating, timestamp)
-         VALUES (?, ?, ?, 0, 1500, '2025-01-01T00:00:00.000Z')`
-    ).run(userId, eventId, gameId);
+         VALUES (?, ?, ?, ?, 1500, '2025-01-01T00:00:00.000Z')`
+    ).run(userId, eventId, gameId, ratingChange);
 }
 
 describe('AchievementService (persisted tournament achievements)', () => {
@@ -81,7 +82,10 @@ describe('AchievementService (persisted tournament achievements)', () => {
             gameFinishReason: undefined
         };
         addRound(gameId, 1, 1, tsumo);
-        addZeroRatingChange(u3, EVENT_ID, gameId);
+        addRatingChange(u1, EVENT_ID, gameId, 10);
+        addRatingChange(u2, EVENT_ID, gameId, 10);
+        addRatingChange(u3, EVENT_ID, gameId, 0);
+        addRatingChange(u4, EVENT_ID, gameId, 10);
     });
 
     afterAll(() => {
@@ -96,14 +100,14 @@ describe('AchievementService (persisted tournament achievements)', () => {
         const dealerWins = results.find((r) => r.metric === 'dealer_wins')!;
         expect(dealerWins.value).toBe(1);
         expect(dealerWins.winners.map((w) => w.userId)).toEqual([u1]);
-        expect(dealerWins.criterion).toBe('highest');
+        expect(dealerWins.criterion).toBe(AchievementCriterion.Highest);
         expect(dealerWins.valueFormatted).toBe('1 wins');
 
         const chombo = results.find((r) => r.metric === 'chombo_count')!;
         expect(chombo.winners.map((w) => w.userId)).toEqual([u4]);
 
         const saki = results.find((r) => r.metric === 'saki_zero_after_uma_games')!;
-        expect(saki.criterion).toBe('all-qualifiers');
+        expect(saki.criterion).toBe(AchievementCriterion.AllQualifiers);
         expect(saki.winners.map((w) => w.userId)).toEqual([u3]);
 
         const yakuman = results.find((r) => r.metric === 'yakuman_wins')!;
@@ -122,7 +126,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
         const achievements = achievementService.getUserAchievements(u1);
         const metrics = achievements.map((a) => a.metric);
         expect(metrics).toContain('dealer_wins');
-        expect(metrics).toContain('best_hanchan_points');
+        expect(metrics).toContain('best_game_points');
 
         const dealerWins = achievements.find((a) => a.metric === 'dealer_wins')!;
         expect(dealerWins.eventId).toBe(EVENT_ID);

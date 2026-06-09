@@ -1,10 +1,11 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { EventAchievementRow } from '../model/AchievementModels.ts';
+import { AchievementMetric } from '../data/achievementsCatalog.ts';
 
 /** A winning row joined with the winner's display fields, for the tournament page. */
 export interface EventAchievementWinnerRow {
-    metric: string;
+    metric: AchievementMetric;
     value: number;
     userId: number;
     name: string;
@@ -16,7 +17,7 @@ export interface EventAchievementWinnerRow {
 export interface UserAchievementRow {
     eventId: number;
     eventName: string;
-    metric: string;
+    metric: AchievementMetric;
     value: number;
 }
 
@@ -51,12 +52,12 @@ export class AchievementRepository {
         this.markComputedStatement().run({ eventId, computedAt: computedAt.toISOString() });
     }
 
-    private isEventComputedStatement(): Statement<{ eventId: number }, { eventId: number }> {
+    private areEventAchievementsComputedStatement(): Statement<{ eventId: number }, { eventId: number }> {
         return dbManager.db.prepare('SELECT eventId FROM eventAchievementComputed WHERE eventId = :eventId');
     }
 
-    isEventComputed(eventId: number): boolean {
-        return this.isEventComputedStatement().get({ eventId }) !== undefined;
+    areEventAchievementsComputed(eventId: number): boolean {
+        return this.areEventAchievementsComputedStatement().get({ eventId }) !== undefined;
     }
 
     private findWinnersByEventIdStatement(): Statement<{ eventId: number }, EventAchievementWinnerRow> {

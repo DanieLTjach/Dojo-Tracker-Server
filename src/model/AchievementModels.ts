@@ -1,5 +1,13 @@
 import type { AchievementValueUnit } from '../data/achievementsCatalog.ts';
 
+export const AchievementCriterion = {
+    Highest: 'highest',
+    Lowest: 'lowest',
+    AllQualifiers: 'all-qualifiers'
+} as const;
+
+export type AchievementCriterion = typeof AchievementCriterion[keyof typeof AchievementCriterion];
+
 /** Output of the pure calculator: winners (by user id) and the headline value for a metric. */
 export interface ComputedAchievement {
     metric: string;
@@ -30,7 +38,7 @@ export interface EventAchievementResult {
     metric: string;
     name: string;
     description: string;
-    criterion: 'highest' | 'lowest' | 'all-qualifiers';
+    criterion: AchievementCriterion;
     valueUnit: AchievementValueUnit;
     value: number;
     valueFormatted: string;

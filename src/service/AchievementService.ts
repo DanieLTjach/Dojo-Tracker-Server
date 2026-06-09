@@ -1,23 +1,20 @@
-import { ACHIEVEMENTS, type AchievementDefinition, type AchievementValueUnit } from '../data/achievementsCatalog.ts';
+import { AchievementMetric, ACHIEVEMENTS, type AchievementDefinition, type AchievementValueUnit } from '../data/achievementsCatalog.ts';
 import type { Event } from '../model/EventModels.ts';
-import type { EventAchievementResult, UserAchievement } from '../model/AchievementModels.ts';
-import { GameStatus } from '../model/GameModels.ts';
+import { AchievementCriterion, type EventAchievementResult, type UserAchievement } from '../model/AchievementModels.ts';
+import { DetailedGame, GameStatus } from '../model/GameModels.ts';
 import { AchievementRepository, type EventAchievementWinnerRow } from '../repository/AchievementRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
-import { RatingRepository } from '../repository/RatingRepository.ts';
-import { computeAchievements, type AchievementGameInput } from '../util/AchievementCalculator.ts';
-import { getSubstitutePlayerPenaltyBeforeUma, isManganRoundingUpEnabled } from '../util/RulesUtils.ts';
+import { computeAchievements } from '../util/AchievementCalculator.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
 
-const DEFINITION_BY_METRIC = new Map<string, AchievementDefinition>(
+const DEFINITION_BY_METRIC = new Map<AchievementMetric, AchievementDefinition>(
     ACHIEVEMENTS.map((definition) => [definition.metric, definition])
 );
 
 export class AchievementService {
     private achievementRepository: AchievementRepository = new AchievementRepository();
     private gameRepository: GameRepository = new GameRepository();
-    private ratingRepository: RatingRepository = new RatingRepository();
     private eventService: EventService = new EventService();
 
     /**
@@ -35,31 +32,17 @@ export class AchievementService {
                 .findGames({ eventId: event.id })
                 .filter((game) => game.status === GameStatus.FINISHED);
 
-            const zeroRatingChangesByGame = this.ratingRepository.findZeroRatingChangesByEvent(event.id);
-
-            const inputs: AchievementGameInput[] = finishedGames.map((game) => ({
-                players: this.gameRepository.findGamePlayersByGameId(game.id).map((player) => ({
-                    userId: player.userId,
-                    points: player.points,
-                    startPlace: player.startPlace,
-                    isSubstitutePlayer: player.isSubstitutePlayer,
-                    chomboCount: player.chomboCount
-                })),
-                rounds: this.gameRepository.findGameRoundsByGameId(game.id).map((round) => ({
-                    dealerNumber: round.dealerNumber,
-                    result: round.result
-                })),
-                zeroRatingChangeUserIds: zeroRatingChangesByGame.get(game.id) ?? []
+            const games: DetailedGame[] = finishedGames.map((game) => ({
+                ...game,
+                players: this.gameRepository.findGamePlayersByGameId(game.id),
+                rounds: this.gameRepository.findGameRoundsByGameId(game.id),
+                currentState: null
             }));
 
             const rules = event.gameRules.details?.rules ?? {};
-            const computed = computeAchievements(
-                inputs,
-                isManganRoundingUpEnabled(rules),
-                getSubstitutePlayerPenaltyBeforeUma(rules)
-            );
+            const achievements = computeAchievements(games, rules);
 
-            const rows = computed.flatMap((achievement) =>
+            const rows = achievements.flatMap((achievement) =>
                 achievement.winnerUserIds.map((userId) => ({
                     eventId: event.id,
                     metric: achievement.metric,
@@ -78,7 +61,7 @@ export class AchievementService {
     getEventAchievements(eventId: number): EventAchievementResult[] {
         const event = this.eventService.getEventById(eventId);
 
-        if (!this.achievementRepository.isEventComputed(eventId)) {
+        if (!this.achievementRepository.areEventAchievementsComputed(eventId)) {
             this.recomputeEventAchievements(event);
         }
 
@@ -117,11 +100,11 @@ export class AchievementService {
                 metric: definition.metric,
                 name: definition.name,
                 description: definition.description,
-                criterion: criterionOf(definition),
+                criterion: definition.criterion,
                 valueUnit: definition.valueUnit,
                 value,
                 valueFormatted: formatValue(value, definition.valueUnit),
-                tied: !definition.listAllQualifiers && winners.length > 1,
+                tied: definition.criterion !== AchievementCriterion.AllQualifiers && winners.length > 1,
                 winners: winners.map((row) => ({
                     userId: row.userId,
                     name: row.name,
@@ -131,13 +114,6 @@ export class AchievementService {
             };
         });
     }
-}
-
-function criterionOf(definition: AchievementDefinition): EventAchievementResult['criterion'] {
-    if (definition.listAllQualifiers) {
-        return 'all-qualifiers';
-    }
-    return definition.higherIsBetter ? 'highest' : 'lowest';
 }
 
 function formatValue(value: number, unit: AchievementValueUnit): string {

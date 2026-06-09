@@ -1,7 +1,8 @@
-import { computeAchievements, type AchievementGameInput } from '../src/util/AchievementCalculator.ts';
+import { computeAchievements } from '../src/util/AchievementCalculator.ts';
 import type { ComputedAchievement } from '../src/model/AchievementModels.ts';
 import type { GameRoundResult } from '../src/model/GameRoundResultModels.ts';
 import type { PlayerPointChange } from '../src/model/GameRoundResultModels.ts';
+import { GameStatus, Wind, type DetailedGame, type GamePlayer, type GameRound } from '../src/model/GameModels.ts';
 
 function tsumo(
     winner: number,
@@ -46,6 +47,60 @@ function toChanges(pointChanges: Record<number, number>): PlayerPointChange[] {
     }));
 }
 
+function player(
+    userId: number,
+    points: number,
+    startPlace: Wind,
+    opts: { isSubstitutePlayer?: boolean; chomboCount?: number; ratingChange?: number } = {}
+): GamePlayer {
+    return {
+        gameId: 1,
+        userId,
+        name: `player-${userId}`,
+        telegramUsername: null,
+        profileFirstName: null,
+        profileLastName: null,
+        profileHidden: false,
+        points,
+        ratingChange: opts.ratingChange ?? 10,
+        startPlace,
+        chomboCount: opts.chomboCount ?? 0,
+        isSubstitutePlayer: opts.isSubstitutePlayer ?? false
+    };
+}
+
+function gameRound(roundNumber: number, dealerNumber: number, result: GameRoundResult): GameRound {
+    return {
+        gameId: 1,
+        roundNumber,
+        wind: Wind.EAST,
+        dealerNumber,
+        counters: 0,
+        riichiSticks: 0,
+        result
+    };
+}
+
+function detailedGame(players: GamePlayer[], rounds: GameRound[]): DetailedGame {
+    const ts = new Date('2025-01-01T00:00:00.000Z');
+    return {
+        id: 1,
+        eventId: 1,
+        createdAt: ts,
+        modifiedAt: ts,
+        modifiedBy: 0,
+        tournamentRound: null,
+        tournamentTable: null,
+        status: GameStatus.FINISHED,
+        startedAt: ts,
+        endedAt: ts,
+        lastRoundWasDeleted: false,
+        players,
+        rounds,
+        currentState: null
+    };
+}
+
 function find(results: ComputedAchievement[], metric: string): ComputedAchievement {
     const result = results.find((r) => r.metric === metric);
     if (result === undefined) {
@@ -56,21 +111,20 @@ function find(results: ComputedAchievement[], metric: string): ComputedAchieveme
 
 describe('computeAchievements', () => {
     // Two-round game: an EAST dealer tsumo, then a SOUTH-round ron by player 3 off player 4.
-    const game: AchievementGameInput = {
-        players: [
-            { userId: 1, points: 40000, startPlace: 'EAST', isSubstitutePlayer: false, chomboCount: 0 },
-            { userId: 2, points: 30000, startPlace: 'SOUTH', isSubstitutePlayer: false, chomboCount: 0 },
-            { userId: 3, points: 20000, startPlace: 'WEST', isSubstitutePlayer: false, chomboCount: 0 },
-            { userId: 4, points: 10000, startPlace: 'NORTH', isSubstitutePlayer: false, chomboCount: 1 }
+    const game = detailedGame(
+        [
+            player(1, 40000, Wind.EAST),
+            player(2, 30000, Wind.SOUTH),
+            player(3, 20000, Wind.WEST, { ratingChange: 0 }),
+            player(4, 10000, Wind.NORTH, { chomboCount: 1 })
         ],
-        zeroRatingChangeUserIds: [3],
-        rounds: [
-            { dealerNumber: 1, result: tsumo(1, 2, 30, [1], { 1: 6000, 2: -2000, 3: -2000, 4: -2000 }) },
-            { dealerNumber: 2, result: ron(3, 4, 1, 40, [3, 4], { 3: 1300, 4: -1300 }) }
+        [
+            gameRound(1, 1, tsumo(1, 2, 30, [1], { 1: 6000, 2: -2000, 3: -2000, 4: -2000 })),
+            gameRound(2, 2, ron(3, 4, 1, 40, [3, 4], { 3: 1300, 4: -1300 }))
         ]
-    };
+    );
 
-    const results = computeAchievements([game], true, 15000);
+    const results = computeAchievements([game], {});
 
     it('awards dealer and tsumo wins to the dealer who tsumo-ed', () => {
         expect(find(results, 'dealer_wins')).toMatchObject({ value: 1, winnerUserIds: [1] });
@@ -97,15 +151,15 @@ describe('computeAchievements', () => {
 
     it('counts lost riichi sticks and worst single-hand loss for the deal-in player', () => {
         expect(find(results, 'lost_riichi_sticks')).toMatchObject({ value: 1, winnerUserIds: [4] });
-        expect(find(results, 'worst_single_hand_loss')).toMatchObject({ value: 1300, winnerUserIds: [4] });
+        expect(find(results, 'biggest_deal_in')).toMatchObject({ value: 1300, winnerUserIds: [4] });
     });
 
     it('lists every saki-award qualifier with the qualifier count as value', () => {
         expect(find(results, 'saki_zero_after_uma_games')).toMatchObject({ value: 1, winnerUserIds: [3] });
     });
 
-    it('awards best hanchan points by raw points', () => {
-        expect(find(results, 'best_hanchan_points')).toMatchObject({ value: 40000, winnerUserIds: [1] });
+    it('awards best game points by raw points', () => {
+        expect(find(results, 'best_game_points')).toMatchObject({ value: 40000, winnerUserIds: [1] });
     });
 
     it('counts chombo from player totals', () => {
@@ -117,18 +171,17 @@ describe('computeAchievements', () => {
         expect(find(results, 'baiman_wins')).toMatchObject({ value: 0, winnerUserIds: [] });
     });
 
-    it('subtracts the substitute penalty from a substitute player best hanchan', () => {
-        const subGame: AchievementGameInput = {
-            players: [
-                { userId: 1, points: 40000, startPlace: 'EAST', isSubstitutePlayer: true, chomboCount: 0 },
-                { userId: 2, points: 30000, startPlace: 'SOUTH', isSubstitutePlayer: false, chomboCount: 0 }
+    it('subtracts the substitute penalty from a substitute player best game', () => {
+        const subGame = detailedGame(
+            [
+                player(1, 40000, Wind.EAST, { isSubstitutePlayer: true }),
+                player(2, 30000, Wind.SOUTH)
             ],
-            zeroRatingChangeUserIds: [],
-            rounds: []
-        };
-        const subResults = computeAchievements([subGame], true, 15000);
+            []
+        );
+        const subResults = computeAchievements([subGame], { substitute_player_penalty_before_uma: 15000 });
         // player 1: 40000 - 15000 = 25000; player 2: 30000 -> player 2 wins.
-        expect(find(subResults, 'best_hanchan_points')).toMatchObject({ value: 30000, winnerUserIds: [2] });
+        expect(find(subResults, 'best_game_points')).toMatchObject({ value: 30000, winnerUserIds: [2] });
     });
 
     it('produces one result per catalog achievement', () => {

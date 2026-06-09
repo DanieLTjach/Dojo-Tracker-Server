@@ -79,10 +79,9 @@ export class GameService {
         const newGameId = this.gameRepository.createGame(eventId, createdBy, gameTimestamp, tournamentRound, tournamentTable);
         this.addPlayersToGame(newGameId, playersData, createdBy);
         this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules, event.startingRating);
+        this.achievementService.recomputeEventAchievements(event);
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
-
-        this.achievementService.recomputeEventAchievements(event);
 
         const newGame = this.getGameById(newGameId);
         this.logNewGame(newGame, event);
