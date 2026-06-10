@@ -4,6 +4,7 @@ import { createCustomEvent } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { AchievementService } from '../src/service/AchievementService.ts';
 import { AchievementCriterion } from '../src/model/AchievementModels.ts';
+import { AchievementsOnlyForTournamentsError } from '../src/error/EventErrors.ts';
 import type { GameRoundResult } from '../src/model/GameRoundResultModels.ts';
 
 const EVENT_ID = 9100;
@@ -109,17 +110,33 @@ describe('AchievementService (persisted tournament achievements)', () => {
         const saki = results.find((r) => r.metric === 'saki_zero_after_uma_games')!;
         expect(saki.criterion).toBe(AchievementCriterion.AllQualifiers);
         expect(saki.winners.map((w) => w.userId)).toEqual([u3]);
+        expect(saki.value).toBeUndefined();
+        expect(saki.valueFormatted).toBeUndefined();
 
         const yakuman = results.find((r) => r.metric === 'yakuman_wins')!;
         expect(yakuman.winners).toEqual([]);
+        expect(yakuman.value).toBeUndefined();
     });
 
     it('marks the event computed so a second read does not recompute from scratch', () => {
         achievementService.getEventAchievements(EVENT_ID);
         const computed = dbManager.db
-            .prepare('SELECT eventId FROM eventAchievementComputed WHERE eventId = ?')
-            .get(EVENT_ID);
-        expect(computed).toBeDefined();
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(EVENT_ID) as { achievementsComputedAt: string | null };
+        expect(computed.achievementsComputedAt).not.toBeNull();
+    });
+
+    it('force recompute returns results and refreshes the computed marker', () => {
+        const results = achievementService.forceRecomputeEventAchievements(EVENT_ID);
+        const dealerWins = results.find((r) => r.metric === 'dealer_wins')!;
+        expect(dealerWins.winners.map((w) => w.userId)).toEqual([u1]);
+    });
+
+    it('force recompute rejects non-tournament events', () => {
+        const seasonEventId = 9101;
+        createCustomEvent(seasonEventId, 'Achievements Season', '2024-01-01T00:00:00.000Z', '2026-12-31T23:59:59.999Z', 2, 1, 'SEASON');
+        expect(() => achievementService.forceRecomputeEventAchievements(seasonEventId))
+            .toThrow(AchievementsOnlyForTournamentsError);
     });
 
     it('returns a user\'s achievements across tournaments for the profile page', () => {

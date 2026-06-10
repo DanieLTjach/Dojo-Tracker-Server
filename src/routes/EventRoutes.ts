@@ -3,7 +3,7 @@ import { withTransaction } from '../db/TransactionManagement.ts';
 import { EventController } from '../controller/EventController.ts';
 import { EventRegistrationController } from '../controller/EventRegistrationController.ts';
 import { AchievementController } from '../controller/AchievementController.ts';
-import { requireAuth } from '../middleware/AuthMiddleware.ts';
+import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
 import {
     requireEventManagementRole,
     requireEventManagementRoleOrApprovedFilter
@@ -37,6 +37,14 @@ router.get('/:eventId', requireAuth, withTransaction((req, res) => eventControll
  * Authentication: Required
  */
 router.get('/:eventId/achievements', requireAuth, withTransaction((req, res) => achievementController.getEventAchievements(req, res)));
+
+/**
+ * POST /api/events/:eventId/achievements/recompute
+ * Force recompute of a tournament's achievements (e.g. after fixing bad data)
+ *
+ * Authentication: Required (Admin only)
+ */
+router.post('/:eventId/achievements/recompute', requireAuth, requireAdmin, withTransaction((req, res) => achievementController.recomputeEventAchievements(req, res)));
 
 /**
  * POST /api/events

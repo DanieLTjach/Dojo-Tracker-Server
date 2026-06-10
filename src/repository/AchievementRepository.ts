@@ -6,7 +6,7 @@ import { AchievementMetric } from '../data/achievementsCatalog.ts';
 /** A winning row joined with the winner's display fields, for the tournament page. */
 export interface EventAchievementWinnerRow {
     metric: AchievementMetric;
-    value: number;
+    value: number | null;
     userId: number;
     name: string;
     profileFirstName: string | null;
@@ -18,7 +18,7 @@ export interface UserAchievementRow {
     eventId: number;
     eventName: string;
     metric: AchievementMetric;
-    value: number;
+    value: number | null;
 }
 
 export class AchievementRepository {
@@ -35,11 +35,7 @@ export class AchievementRepository {
     }
 
     private markComputedStatement(): Statement<{ eventId: number, computedAt: string }, void> {
-        return dbManager.db.prepare(`
-            INSERT INTO eventAchievementComputed (eventId, computedAt)
-            VALUES (:eventId, :computedAt)
-            ON CONFLICT(eventId) DO UPDATE SET computedAt = excluded.computedAt`
-        );
+        return dbManager.db.prepare('UPDATE event SET achievementsComputedAt = :computedAt WHERE id = :eventId');
     }
 
     /** Atomically replace all stored achievements for an event and record the computation time. */
@@ -53,7 +49,7 @@ export class AchievementRepository {
     }
 
     private areEventAchievementsComputedStatement(): Statement<{ eventId: number }, { eventId: number }> {
-        return dbManager.db.prepare('SELECT eventId FROM eventAchievementComputed WHERE eventId = :eventId');
+        return dbManager.db.prepare('SELECT id AS eventId FROM event WHERE id = :eventId AND achievementsComputedAt IS NOT NULL');
     }
 
     areEventAchievementsComputed(eventId: number): boolean {
@@ -96,11 +92,10 @@ export class AchievementRepository {
             FROM userToGame utg
             JOIN game g ON g.id = utg.gameId
             JOIN event e ON e.id = g.eventId
-            LEFT JOIN eventAchievementComputed c ON c.eventId = e.id
             WHERE utg.userId = :userId
               AND e.type = 'TOURNAMENT'
               AND g.status = 'FINISHED'
-              AND c.eventId IS NULL`
+              AND e.achievementsComputedAt IS NULL`
         );
     }
 

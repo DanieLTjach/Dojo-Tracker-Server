@@ -231,18 +231,20 @@ function resolveWinners(stats: Map<number, PlayerStats>, definition: Achievement
     }));
 
     if (values.length === 0) {
-        return { metric, value: 0, winnerUserIds: [] };
+        return { metric, value: undefined, winnerUserIds: [] };
     }
 
     switch (definition.criterion) {
         case AchievementCriterion.AllQualifiers: {
             const winners = values.filter((v) => v.value > 0);
-            return { metric, value: winners.length, winnerUserIds: winners.map((w) => w.userId) };
+            return { metric, value: undefined, winnerUserIds: winners.map((w) => w.userId) };
         }
         case AchievementCriterion.Highest: {
             const best = Math.max(...values.map((v) => v.value));
-            const winnerUserIds = best === 0 ? [] : values.filter((v) => v.value === best).map((v) => v.userId);
-            return { metric, value: best, winnerUserIds };
+            if (best === 0) {
+                return { metric, value: undefined, winnerUserIds: [] };
+            }
+            return { metric, value: best, winnerUserIds: values.filter((v) => v.value === best).map((v) => v.userId) };
         }
         case AchievementCriterion.Lowest: {
             const best = Math.min(...values.map((v) => v.value));

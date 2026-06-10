@@ -5,6 +5,7 @@ import { DetailedGame, GameStatus } from '../model/GameModels.ts';
 import { AchievementRepository, type EventAchievementWinnerRow } from '../repository/AchievementRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { computeAchievements } from '../util/AchievementCalculator.ts';
+import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
 
@@ -28,33 +29,51 @@ export class AchievementService {
         }
 
         try {
-            const finishedGames = this.gameRepository
-                .findGames({ eventId: event.id })
-                .filter((game) => game.status === GameStatus.FINISHED);
-
-            const games: DetailedGame[] = finishedGames.map((game) => ({
-                ...game,
-                players: this.gameRepository.findGamePlayersByGameId(game.id),
-                rounds: this.gameRepository.findGameRoundsByGameId(game.id),
-                currentState: null
-            }));
-
-            const rules = event.gameRules.details?.rules ?? {};
-            const achievements = computeAchievements(games, rules);
-
-            const rows = achievements.flatMap((achievement) =>
-                achievement.winnerUserIds.map((userId) => ({
-                    eventId: event.id,
-                    metric: achievement.metric,
-                    userId,
-                    value: achievement.value
-                }))
-            );
-
-            this.achievementRepository.replaceEventAchievements(event.id, rows, new Date());
+            this.computeAndPersist(event);
         } catch (error) {
             LogService.logError(`Failed to compute achievements for event ${event.id}`, error);
         }
+    }
+
+    /**
+     * Admin-triggered recompute. Unlike the defensive recompute that runs on game
+     * changes, this throws on bad data so the admin sees what went wrong.
+     */
+    forceRecomputeEventAchievements(eventId: number): EventAchievementResult[] {
+        const event = this.eventService.getEventById(eventId);
+        if (event.type !== 'TOURNAMENT') {
+            throw new AchievementsOnlyForTournamentsError();
+        }
+
+        this.computeAndPersist(event);
+        return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId));
+    }
+
+    private computeAndPersist(event: Event): void {
+        const finishedGames = this.gameRepository
+            .findGames({ eventId: event.id })
+            .filter((game) => game.status === GameStatus.FINISHED);
+
+        const games: DetailedGame[] = finishedGames.map((game) => ({
+            ...game,
+            players: this.gameRepository.findGamePlayersByGameId(game.id),
+            rounds: this.gameRepository.findGameRoundsByGameId(game.id),
+            currentState: null
+        }));
+
+        const rules = event.gameRules.details?.rules ?? {};
+        const achievements = computeAchievements(games, rules);
+
+        const rows = achievements.flatMap((achievement) =>
+            achievement.winnerUserIds.map((userId) => ({
+                eventId: event.id,
+                metric: achievement.metric,
+                userId,
+                value: achievement.value ?? null
+            }))
+        );
+
+        this.achievementRepository.replaceEventAchievements(event.id, rows, new Date());
     }
 
     /** Achievements for the tournament page. Computes lazily on first read for historical tournaments. */
@@ -79,6 +98,7 @@ export class AchievementService {
             if (definition === undefined) {
                 return [];
             }
+            const value = row.value ?? undefined;
             return [{
                 eventId: row.eventId,
                 eventName: row.eventName,
@@ -86,8 +106,8 @@ export class AchievementService {
                 name: definition.name,
                 description: definition.description,
                 valueUnit: definition.valueUnit,
-                value: row.value,
-                valueFormatted: formatValue(row.value, definition.valueUnit)
+                value,
+                valueFormatted: formatValue(value, definition.valueUnit)
             }];
         });
     }
@@ -95,7 +115,7 @@ export class AchievementService {
     private buildEventResults(winnerRows: EventAchievementWinnerRow[]): EventAchievementResult[] {
         return ACHIEVEMENTS.map((definition) => {
             const winners = winnerRows.filter((row) => row.metric === definition.metric);
-            const value = winners[0]?.value ?? 0;
+            const value = winners[0]?.value ?? undefined;
             return {
                 metric: definition.metric,
                 name: definition.name,
@@ -116,6 +136,6 @@ export class AchievementService {
     }
 }
 
-function formatValue(value: number, unit: AchievementValueUnit): string {
-    return `${value.toLocaleString('en-US')} ${unit}`;
+function formatValue(value: number | undefined, unit: AchievementValueUnit): string | undefined {
+    return value === undefined ? undefined : `${value.toLocaleString('en-US')} ${unit}`;
 }

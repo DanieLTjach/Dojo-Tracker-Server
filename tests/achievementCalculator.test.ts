@@ -154,8 +154,10 @@ describe('computeAchievements', () => {
         expect(find(results, 'biggest_deal_in')).toMatchObject({ value: 1300, winnerUserIds: [4] });
     });
 
-    it('lists every saki-award qualifier with the qualifier count as value', () => {
-        expect(find(results, 'saki_zero_after_uma_games')).toMatchObject({ value: 1, winnerUserIds: [3] });
+    it('lists every saki-award qualifier without a headline value', () => {
+        const saki = find(results, 'saki_zero_after_uma_games');
+        expect(saki.value).toBeUndefined();
+        expect(saki.winnerUserIds).toEqual([3]);
     });
 
     it('awards best game points by raw points', () => {
@@ -166,9 +168,13 @@ describe('computeAchievements', () => {
         expect(find(results, 'chombo_count')).toMatchObject({ value: 1, winnerUserIds: [4] });
     });
 
-    it('produces no winners for achievements nobody reached', () => {
-        expect(find(results, 'yakuman_wins')).toMatchObject({ value: 0, winnerUserIds: [] });
-        expect(find(results, 'baiman_wins')).toMatchObject({ value: 0, winnerUserIds: [] });
+    it('produces no winners and no value for achievements nobody reached', () => {
+        const yakuman = find(results, 'yakuman_wins');
+        expect(yakuman.value).toBeUndefined();
+        expect(yakuman.winnerUserIds).toEqual([]);
+        const baiman = find(results, 'baiman_wins');
+        expect(baiman.value).toBeUndefined();
+        expect(baiman.winnerUserIds).toEqual([]);
     });
 
     it('subtracts the substitute penalty from a substitute player best game', () => {

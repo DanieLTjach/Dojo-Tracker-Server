@@ -8,19 +8,23 @@ export const AchievementCriterion = {
 
 export type AchievementCriterion = typeof AchievementCriterion[keyof typeof AchievementCriterion];
 
-/** Output of the pure calculator: winners (by user id) and the headline value for a metric. */
+/**
+ * Output of the pure calculator: winners (by user id) and the headline value for
+ * a metric. `value` is undefined for "all-qualifiers" achievements (and when no
+ * player qualified), where a single headline value makes no sense.
+ */
 export interface ComputedAchievement {
     metric: string;
-    value: number;
+    value: number | undefined;
     winnerUserIds: number[];
 }
 
-/** A single persisted eventAchievement row. */
+/** A single persisted eventAchievement row. `value` is null for "all-qualifiers" achievements. */
 export interface EventAchievementRow {
     eventId: number;
     metric: string;
     userId: number;
-    value: number;
+    value: number | null;
 }
 
 export interface AchievementWinner {
@@ -40,8 +44,8 @@ export interface EventAchievementResult {
     description: string;
     criterion: AchievementCriterion;
     valueUnit: AchievementValueUnit;
-    value: number;
-    valueFormatted: string;
+    value: number | undefined;
+    valueFormatted: string | undefined;
     tied: boolean;
     winners: AchievementWinner[];
 }
@@ -57,6 +61,6 @@ export interface UserAchievement {
     name: string;
     description: string;
     valueUnit: AchievementValueUnit;
-    value: number;
-    valueFormatted: string;
+    value: number | undefined;
+    valueFormatted: string | undefined;
 }

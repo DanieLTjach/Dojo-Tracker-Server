@@ -65,3 +65,9 @@ export class GameCreationBlockedError extends BadRequestError {
         super(`Створення ігор для події "${eventName}" заблоковано`, 'gameCreationBlocked');
     }
 }
+
+export class AchievementsOnlyForTournamentsError extends BadRequestError {
+    constructor() {
+        super('Досягнення доступні лише для турнірів', 'achievementsOnlyForTournaments');
+    }
+}

@@ -125,3 +125,9 @@ export const getEventAchievementsSchema = z.object({
         eventId: eventIdParamSchema
     })
 });
+
+export const recomputeEventAchievementsSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema
+    })
+});
