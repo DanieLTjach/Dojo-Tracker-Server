@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { EventController } from '../controller/EventController.ts';
 import { EventRegistrationController } from '../controller/EventRegistrationController.ts';
-import { requireAuth } from '../middleware/AuthMiddleware.ts';
+import { AchievementController } from '../controller/AchievementController.ts';
+import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
 import {
     requireEventManagementRole,
     requireEventManagementRoleOrApprovedFilter
@@ -11,6 +12,7 @@ import {
 const router = Router();
 const eventController = new EventController();
 const registrationController = new EventRegistrationController();
+const achievementController = new AchievementController();
 
 /**
  * GET /api/events
@@ -27,6 +29,22 @@ router.get('/', requireAuth, withTransaction((req, res) => eventController.getAl
  * Authentication: Required
  */
 router.get('/:eventId', requireAuth, withTransaction((req, res) => eventController.getEventById(req, res)));
+
+/**
+ * GET /api/events/:eventId/achievements
+ * Per-tournament achievements (winners + values) for the tournament page
+ *
+ * Authentication: Required
+ */
+router.get('/:eventId/achievements', requireAuth, withTransaction((req, res) => achievementController.getEventAchievements(req, res)));
+
+/**
+ * POST /api/events/:eventId/achievements/recompute
+ * Force recompute of a tournament's achievements (e.g. after fixing bad data)
+ *
+ * Authentication: Required (Admin only)
+ */
+router.post('/:eventId/achievements/recompute', requireAuth, requireAdmin, withTransaction((req, res) => achievementController.recomputeEventAchievements(req, res)));
 
 /**
  * POST /api/events

@@ -541,7 +541,7 @@ function getCurrentDealerPlayerId(gameState: GameState, players: GamePlayer[]): 
     return dealer.userId;
 }
 
-function calculateHandBaseValue(hand: WinningHandData, rules: GameRulesValues): number {
+export function calculateHandBaseValue(hand: WinningHandData, rules: GameRulesValues): number {
     if (hand.yakumanCount > 0) {
         let yakumanCount = isYakumanStackingEnabled(rules) ? hand.yakumanCount : 1;
         return 8000 * yakumanCount;

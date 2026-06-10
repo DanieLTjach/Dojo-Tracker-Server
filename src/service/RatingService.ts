@@ -117,10 +117,6 @@ export class RatingService {
         }
     
         const penalty = getSubstitutePlayerPenaltyBeforeUma(detailedRules);
-        if (penalty === 0) {
-            return playersData.map((player) => ({ ...player }));
-        }
-    
         return playersData.map((player) => ({
             ...player,
             points: player.points - (player.isSubstitutePlayer ? penalty : 0)
