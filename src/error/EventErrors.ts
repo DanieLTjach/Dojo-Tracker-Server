@@ -1,4 +1,4 @@
-import { NotFoundError, BadRequestError } from "./BaseErrors.ts";
+import { NotFoundError, BadRequestError, InternalServerError } from "./BaseErrors.ts";
 
 export class EventNotFoundError extends NotFoundError {
     constructor(eventId: number) {
@@ -81,6 +81,12 @@ export class TournamentConfigOnlyForTournamentError extends BadRequestError {
 export class EventIsNotTournamentError extends BadRequestError {
     constructor(eventName: string) {
         super(`Подія "${eventName}" не є турніром`, 'eventIsNotTournament');
+    }
+}
+
+export class TournamentMisconfigured extends InternalServerError {
+    constructor() {
+        super("Цей турнір був неправильно сконфігурований. Будь ласка, звʼяжіться з підтримкою", 'tournamentMisconfigured');
     }
 }
 
@@ -171,11 +177,11 @@ export class SeatingGenerationFailedError extends BadRequestError {
     }
 }
 
-export class SeatingCannotModifyAfterTournamentStartedError extends BadRequestError {
+export class SeatingCannotBeModifiedAfterTournamentStartedError extends BadRequestError {
     constructor(eventName: string) {
         super(
             `Розсадку турніру "${eventName}" не можна змінювати після початку турніру`,
-            'seatingCannotModifyAfterTournamentStarted'
+            'seatingCannotBeModifiedAfterTournamentStarted'
         );
     }
 }
@@ -185,6 +191,51 @@ export class SeatingAlreadyAppliedError extends BadRequestError {
         super(
             `Для турніру "${eventName}" вже створено ігри. Очистіть розсадку перед повторною генерацією`,
             'seatingAlreadyApplied'
+        );
+    }
+}
+
+export class SeatingRoundCountMismatchError extends BadRequestError {
+    constructor(eventName: string, expected: number, actual: number) {
+        super(
+            `Розсадка для турніру "${eventName}" має містити ${expected} раундів (надіслано ${actual})`,
+            'seatingRoundCountMismatch'
+        );
+    }
+}
+
+export class SeatingTableSizeMismatchError extends BadRequestError {
+    constructor(eventName: string, round: number, table: number, expected: number, actual: number) {
+        super(
+            `Стіл ${table} у раунді ${round} турніру "${eventName}" має містити ${expected} гравців (надіслано ${actual})`,
+            'seatingTableSizeMismatch'
+        );
+    }
+}
+
+export class SeatingInvalidParticipantError extends BadRequestError {
+    constructor(eventName: string, userId: number, round: number) {
+        super(
+            `Учасник ${userId} не є схваленим учасником турніру "${eventName}" (раунд ${round})`,
+            'seatingInvalidParticipant'
+        );
+    }
+}
+
+export class SeatingDuplicateParticipantInRoundError extends BadRequestError {
+    constructor(eventName: string, userId: number, round: number) {
+        super(
+            `Учасник ${userId} зустрічається в розсадці більше одного разу в раунді ${round} турніру "${eventName}"`,
+            'seatingDuplicateParticipantInRound'
+        );
+    }
+}
+
+export class SeatingMissingParticipantsInRoundError extends BadRequestError {
+    constructor(eventName: string, round: number, expected: number, actual: number) {
+        super(
+            `У раунді ${round} турніру "${eventName}" мають бути всі ${expected} учасників (надіслано ${actual})`,
+            'seatingMissingParticipantsInRound'
         );
     }
 }

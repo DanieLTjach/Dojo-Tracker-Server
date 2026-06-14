@@ -435,7 +435,7 @@ export class TrackedGameService {
         this.gameRepository.touchGame(game.id, modifiedBy);
     }
 
-    validateTrackedGamePlayers(players: TrackedGamePlayerData[], gameRules: GameRules): void {
+    private validateTrackedGamePlayers(players: TrackedGamePlayerData[], gameRules: GameRules): void {
         if (players.length !== gameRules.numberOfPlayers) {
             throw new IncorrectPlayerCountError(gameRules.numberOfPlayers);
         }

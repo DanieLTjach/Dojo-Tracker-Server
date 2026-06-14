@@ -14,12 +14,13 @@ import {
     TournamentHasNoMoreRoundsError,
     TournamentAlreadyFinishedError,
     TournamentNotInLastRoundError,
-    TournamentGameNotInCurrentRoundError
+    TournamentGameNotInCurrentRoundError,
+    TournamentMisconfigured
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
-import type { Event, EventInfo, EventConfig } from '../model/EventModels.ts';
+import type { Event, EventConfig, EventInfo, EventType } from '../model/EventModels.ts';
 import type { Game } from '../model/GameModels.ts';
 import { ClubRole } from '../model/ClubModels.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
@@ -181,25 +182,24 @@ export class EventService {
     startNextTournamentRound(eventId: number, modifiedBy: number): Event {
         const event = this.getTournamentEvent(eventId);
         this.authorizeTournamentManagement(event, modifiedBy);
+        const tournament = event.tournament!;
 
-        if (event.tournament!.status === TournamentStatus.FINISHED) {
+        if (tournament.status === TournamentStatus.FINISHED) {
             throw new TournamentAlreadyFinishedError(event.name);
         }
 
-        if (event.tournament!.currentRound !== null) {
-            this.validateTournamentRoundFinished(event, event.tournament!.currentRound);
+        if (tournament.currentRound !== null) {
+            this.validateTournamentRoundFinished(event, tournament.currentRound);
         }
 
-        const nextRound = event.tournament!.currentRound === null
-            ? 1
-            : event.tournament!.currentRound + 1;
-        if (nextRound > event.tournament!.totalRounds) {
+        const nextRound = (tournament.currentRound ?? 0) + 1;
+        if (nextRound > tournament.totalRounds) {
             throw new TournamentHasNoMoreRoundsError(event.name);
         }
 
         this.validateTournamentRoundPrepared(event, nextRound);
 
-        const status = nextRound === event.tournament!.totalRounds
+        const status = nextRound === tournament.totalRounds
             ? TournamentStatus.LAST_ROUND
             : TournamentStatus.IN_PROGRESS;
 
@@ -211,22 +211,23 @@ export class EventService {
     finishTournament(eventId: number, modifiedBy: number): Event {
         const event = this.getTournamentEvent(eventId);
         this.authorizeTournamentManagement(event, modifiedBy);
+        const tournament = event.tournament!;
 
-        if (event.tournament!.status === TournamentStatus.FINISHED) {
+        if (tournament.status === TournamentStatus.FINISHED) {
             throw new TournamentAlreadyFinishedError(event.name);
         }
 
-        if (event.tournament!.currentRound !== event.tournament!.totalRounds) {
+        if (tournament.currentRound !== tournament.totalRounds) {
             throw new TournamentNotInLastRoundError(event.name);
         }
 
-        this.validateTournamentRoundPrepared(event, event.tournament!.currentRound!);
-        this.validateTournamentRoundFinished(event, event.tournament!.currentRound!);
+        this.validateTournamentRoundPrepared(event, tournament.currentRound);
+        this.validateTournamentRoundFinished(event, tournament.currentRound);
 
         this.tournamentRepository.updateTournamentState(
             eventId,
             TournamentStatus.FINISHED,
-            event.tournament!.currentRound,
+            tournament.currentRound,
             new Date(),
             modifiedBy
         );
@@ -326,10 +327,13 @@ export class EventService {
         }
     }
 
-    private getTournamentEvent(eventId: number): Event {
+    getTournamentEvent(eventId: number): Event {
         const event = this.getEventById(eventId);
-        if (event.type !== 'TOURNAMENT' || event.tournament === null) {
+        if (event.type !== 'TOURNAMENT') {
             throw new EventIsNotTournamentError(event.name);
+        }
+        if (event.tournament === null) {
+            throw new TournamentMisconfigured();
         }
         return event;
     }
@@ -449,7 +453,7 @@ export interface TournamentData {
 export interface EventData {
     name: string;
     description?: string | null | undefined;
-    type: string;
+    type: EventType;
     clubId?: number | null | undefined;
     isCurrentRating?: boolean | null | undefined;
     dateFrom?: Date | null | undefined;

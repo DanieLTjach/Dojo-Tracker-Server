@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { EventService } from '../service/EventService.ts';
 import { TournamentSeatingService } from '../service/TournamentSeatingService.ts';
-import { eventGetByIdSchema, eventCreateSchema, eventUpdateSchema, eventDeleteSchema, eventGetListSchema, eventTournamentUpdateSchema, tournamentSeatingGenerateSchema, tournamentSeatingApplySchema } from '../schema/EventSchemas.ts';
+import { eventGetByIdSchema, eventCreateSchema, eventUpdateSchema, eventDeleteSchema, eventGetListSchema, eventTournamentUpdateSchema, tournamentSeatingGenerateSchema, tournamentSeatingApplySchema, tournamentSeatingClearSchema } from '../schema/EventSchemas.ts';
 
 export class EventController {
     private eventService: EventService = new EventService();
@@ -70,7 +70,7 @@ export class EventController {
     }
 
     clearTournamentSeating(req: Request, res: Response) {
-        const { params: { eventId } } = eventGetByIdSchema.parse(req);
+        const { params: { eventId } } = tournamentSeatingClearSchema.parse(req);
         const userId = req.user!.userId;
         const result = this.tournamentSeatingService.clearSeating(eventId, userId);
         return res.status(StatusCodes.OK).json(result);

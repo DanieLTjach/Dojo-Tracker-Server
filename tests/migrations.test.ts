@@ -312,7 +312,7 @@ describe('Database Migrations', () => {
     expect(tournaments).toEqual([
       {
         eventId: 9101,
-        status: 'IN_PROGRESS',
+        status: 'FINISHED',
         currentRound: 3,
         totalRounds: 3,
         createdAt: '2026-04-01T00:00:00.000Z',
@@ -321,9 +321,9 @@ describe('Database Migrations', () => {
       },
       {
         eventId: 9102,
-        status: 'CREATED',
+        status: 'FINISHED',
         currentRound: null,
-        totalRounds: 1,
+        totalRounds: 0,
         createdAt: '2026-04-03T00:00:00.000Z',
         modifiedAt: '2026-04-04T00:00:00.000Z',
         modifiedBy: 0,
@@ -334,7 +334,7 @@ describe('Database Migrations', () => {
       .map(({ name, type, notnull, dflt_value }) => ({ name, type, notnull, dflt_value }));
     expect(tournamentColumns).toEqual([
       { name: 'eventId', type: 'INTEGER', notnull: 1, dflt_value: null },
-      { name: 'status', type: 'TEXT', notnull: 1, dflt_value: "'CREATED'" },
+      { name: 'status', type: 'TEXT', notnull: 1, dflt_value: null },
       { name: 'currentRound', type: 'INTEGER', notnull: 0, dflt_value: null },
       { name: 'totalRounds', type: 'INTEGER', notnull: 1, dflt_value: null },
       { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },

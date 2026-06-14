@@ -1,4 +1,5 @@
 import z from "zod";
+import { EventType, PlayerNameDisplay } from '../model/EventModels.ts';
 import { dateSchema } from './CommonSchemas.ts';
 import { clubIdParamSchema, clubIdSchema } from './ClubSchemas.ts';
 
@@ -11,13 +12,13 @@ export const eventGetByIdSchema = z.object({
     })
 });
 
-const eventTypeEnum = z.enum(["SEASON", "TOURNAMENT"]);
+const eventTypeEnum = z.enum(Object.values(EventType));
 
 const tournamentConfigSchema = z.strictObject({
     totalRounds: z.number().int("totalRounds must be an integer").positive("totalRounds must be positive")
 });
 
-const playerNameDisplayEnum = z.enum(['DEFAULT', 'NICKNAME', 'REAL_NAME']);
+const playerNameDisplayEnum = z.enum(Object.values(PlayerNameDisplay));
 
 const eventConfigSchema = z.strictObject({
     playerNameDisplay: playerNameDisplayEnum.optional(),
@@ -109,14 +110,14 @@ const eventSchema = z.object({
     },
     { error: "dateFrom must be before dateTo", path: ["dateTo"] }
 ).superRefine((data, ctx) => {
-    if (data.type === 'TOURNAMENT' && data.tournament === undefined) {
+    if (data.type === EventType.TOURNAMENT && data.tournament === undefined) {
         ctx.addIssue({
             code: 'custom',
             message: 'Tournament config is required for TOURNAMENT events',
             path: ['tournament']
         });
     }
-    if (data.type !== 'TOURNAMENT' && data.tournament !== undefined && data.tournament !== null) {
+    if (data.type !== EventType.TOURNAMENT && data.tournament !== undefined && data.tournament !== null) {
         ctx.addIssue({
             code: 'custom',
             message: 'Tournament config is only allowed for TOURNAMENT events',
@@ -126,7 +127,7 @@ const eventSchema = z.object({
 
     const minParticipants = data.config?.minParticipants;
     if (minParticipants !== undefined) {
-        if (data.type !== 'TOURNAMENT') {
+        if (data.type !== EventType.TOURNAMENT) {
             ctx.addIssue({
                 code: 'custom',
                 message: 'minParticipants is only allowed for TOURNAMENT events',
@@ -191,6 +192,12 @@ export const tournamentSeatingApplySchema = z.object({
     }),
     body: z.strictObject({
         rounds: seatingApplyRoundsSchema
+    })
+});
+
+export const tournamentSeatingClearSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema
     })
 });
 

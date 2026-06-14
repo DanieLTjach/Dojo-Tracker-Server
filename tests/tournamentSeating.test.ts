@@ -218,7 +218,7 @@ describe('Tournament seating generation', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({});
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('seatingCannotModifyAfterTournamentStarted');
+            expect(response.body.errorCode).toBe('seatingCannotBeModifiedAfterTournamentStarted');
         });
     });
 
@@ -296,6 +296,7 @@ describe('Tournament seating generation', () => {
                 .send({ rounds });
 
             expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('seatingInvalidParticipant');
             expect(gameCount(TOURNAMENT_EVENT_ID)).toBe(0);
         });
 
@@ -309,7 +310,7 @@ describe('Tournament seating generation', () => {
                 .send({ rounds });
 
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('seatingCannotModifyAfterTournamentStarted');
+            expect(response.body.errorCode).toBe('seatingCannotBeModifiedAfterTournamentStarted');
         });
     });
 });

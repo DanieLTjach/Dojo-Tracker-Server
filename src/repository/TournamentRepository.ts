@@ -1,18 +1,19 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
-import type { TournamentStatus } from '../model/TournamentModels.ts';
+import { TournamentStatus } from '../model/TournamentModels.ts';
 
 export class TournamentRepository {
     private createTournamentStatement(): Statement<{
         eventId: number;
+        status: TournamentStatus;
         totalRounds: number;
         createdAt: string;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO tournament (eventId, totalRounds, createdAt, modifiedAt, modifiedBy)
-            VALUES (:eventId, :totalRounds, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO tournament (eventId, status, totalRounds, createdAt, modifiedAt, modifiedBy)
+            VALUES (:eventId, :status, :totalRounds, :createdAt, :modifiedAt, :modifiedBy)
         `);
     }
 
@@ -20,6 +21,7 @@ export class TournamentRepository {
         const timestamp = createdAt.toISOString();
         this.createTournamentStatement().run({
             eventId,
+            status: TournamentStatus.CREATED,
             totalRounds,
             createdAt: timestamp,
             modifiedAt: timestamp,

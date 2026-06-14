@@ -56,9 +56,9 @@ export function createCustomEvent(
 
     if (type === 'TOURNAMENT') {
         dbManager.db.prepare(
-            `INSERT INTO tournament (eventId, totalRounds, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, ?, ?, ?, ?)`
-        ).run(id, totalRounds, timestamp, timestamp, 0);
+            `INSERT INTO tournament (eventId, status, totalRounds, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, ?, ?, ?, ?)`
+        ).run(id, 'CREATED', totalRounds, timestamp, timestamp, 0);
     }
 }
 

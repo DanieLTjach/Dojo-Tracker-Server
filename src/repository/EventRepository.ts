@@ -1,8 +1,8 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
-import type { Event } from '../model/EventModels.ts';
+import type { Event, EventType } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
-import { parseTournamentStatus, parseUmaTieBreak } from '../util/EnumUtil.ts';
+import { parseEventType, parseTournamentStatus, parseUmaTieBreak } from '../util/EnumUtil.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
 import type { EventConfig, EventInfo } from '../model/EventModels.ts';
 import { resolvePlayerNameDisplay } from '../model/EventModels.ts';
@@ -262,7 +262,7 @@ export class EventRepository {
 export interface EventCreateParams {
     name: string;
     description: string | null;
-    type: string;
+    type: EventType;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -283,7 +283,7 @@ export interface EventUpdateParams {
     id: number;
     name: string;
     description: string | null;
-    type: string;
+    type: EventType;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -339,11 +339,12 @@ interface EventWithGameRulesDBEntity {
 
 function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): Event {
     const config = dbEntity.config !== null ? JSON.parse(dbEntity.config) as EventConfig : null;
+    const eventType = parseEventType(dbEntity.type);
     return {
         id: dbEntity.id,
         name: dbEntity.name,
         description: dbEntity.description,
-        type: dbEntity.type,
+        type: eventType,
         clubId: dbEntity.clubId,
         isCurrentRating: Boolean(dbEntity.isCurrentRating),
         startingRating: dbEntity.startingRating,
@@ -365,7 +366,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         registrationDeadline: dbEntity.registrationDeadline !== null ? new Date(dbEntity.registrationDeadline) : null,
         info: dbEntity.info !== null ? JSON.parse(dbEntity.info) as EventInfo : null,
         config,
-        resolvedPlayerNameDisplay: resolvePlayerNameDisplay(config, dbEntity.type),
+        resolvedPlayerNameDisplay: resolvePlayerNameDisplay(config, eventType),
         blockGameCreation: Boolean(dbEntity.blockGameCreation),
         tournament: dbEntity.tournament_status !== null
             ? {

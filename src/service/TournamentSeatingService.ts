@@ -1,11 +1,15 @@
 import {
-    EventIsNotTournamentError,
     SeatingAlreadyAppliedError,
-    SeatingCannotModifyAfterTournamentStartedError,
+    SeatingCannotBeModifiedAfterTournamentStartedError,
+    SeatingDuplicateParticipantInRoundError,
     SeatingGenerationFailedError,
+    SeatingInvalidParticipantError,
+    SeatingMissingParticipantsInRoundError,
     SeatingNotEnoughParticipantsError,
     SeatingParticipantsNotMultipleOfTableSizeError,
-    SeatingRoundsExceedFeasibleError
+    SeatingRoundCountMismatchError,
+    SeatingRoundsExceedFeasibleError,
+    SeatingTableSizeMismatchError
 } from '../error/EventErrors.ts';
 import type { Event } from '../model/EventModels.ts';
 import { GameStatus, Wind } from '../model/GameModels.ts';
@@ -27,9 +31,6 @@ const DEFAULT_TIME_LIMIT_MS = 5000;
 const MAX_TIME_LIMIT_MS = 30000;
 const DEFAULT_CANDIDATE_COUNT = 3;
 const MAX_CANDIDATE_COUNT = 5;
-
-/** Seat order assigned to the four players at each table (index 0..3). */
-const SEAT_ORDER: Wind[] = [Wind.EAST, Wind.SOUTH, Wind.WEST, Wind.NORTH];
 
 export interface SeatingGenerateOptions {
     /** Wall-clock budget for generation across all candidates (ms). */
@@ -77,7 +78,7 @@ export class TournamentSeatingService {
      */
     generateSeating(eventId: number, options: SeatingGenerateOptions, userId: number): SeatingGenerationResultDTO {
         const event = this.getTournamentEventForManagement(eventId, userId);
-        this.assertTournamentNotStarted(event);
+        this.assertTournamentHasNotStarted(event);
 
         const participantIds = this.getApprovedParticipantIds(eventId);
         const tables = this.resolveTableCount(event, participantIds.length);
@@ -112,7 +113,7 @@ export class TournamentSeatingService {
                     round.map(table =>
                         table.map((playerIndex, seatIndex) => ({
                             userId: participantIds[playerIndex]!,
-                            seat: SEAT_ORDER[seatIndex]!
+                            seat: Object.values(Wind)[seatIndex]!
                         }))
                     )
                 )
@@ -128,7 +129,7 @@ export class TournamentSeatingService {
      */
     applySeating(eventId: number, seatingRounds: SeatingApplyRounds, userId: number): DetailedGame[] {
         const event = this.getTournamentEventForManagement(eventId, userId);
-        this.assertTournamentNotStarted(event);
+        this.assertTournamentHasNotStarted(event);
         this.assertNoExistingGames(event);
         this.validateSeatingShape(event, seatingRounds);
 
@@ -143,9 +144,9 @@ export class TournamentSeatingService {
                 const table = round[tableIndex]!;
                 const players: TrackedGamePlayerData[] = table.map((userIdAtSeat, seatIndex) => ({
                     userId: userIdAtSeat,
-                    startPlace: SEAT_ORDER[seatIndex]!
+                    startPlace: Object.values(Wind)[seatIndex]!
                 }));
-                const createdAt = new Date(baseTimestamp.getTime() + sequence * 1000);
+                const createdAt = new Date(baseTimestamp.getTime() + sequence * 10);
                 sequence++;
                 const game = this.trackedGameService.createTrackedGame(
                     eventId,
@@ -169,7 +170,7 @@ export class TournamentSeatingService {
      */
     clearSeating(eventId: number, userId: number): { deleted: number } {
         const event = this.getTournamentEventForManagement(eventId, userId);
-        this.assertTournamentNotStarted(event);
+        this.assertTournamentHasNotStarted(event);
 
         // Atomicity is provided by the route's withTransaction wrapper.
         const games = this.gameRepository.findGamesByEventId(eventId);
@@ -181,18 +182,15 @@ export class TournamentSeatingService {
     }
 
     private getTournamentEventForManagement(eventId: number, userId: number): Event {
-        const event = this.eventService.getEventById(eventId);
-        if (event.type !== 'TOURNAMENT' || event.tournament === null) {
-            throw new EventIsNotTournamentError(event.name);
-        }
+        const event = this.eventService.getTournamentEvent(eventId);
         // Reuse the game-creation authorisation (admin / club OWNER or MODERATOR).
         this.gameService.authorizeClubScopedAction(event.clubId, userId, ['OWNER', 'MODERATOR']);
         return event;
     }
 
-    private assertTournamentNotStarted(event: Event): void {
+    private assertTournamentHasNotStarted(event: Event): void {
         if (event.tournament!.status !== TournamentStatus.CREATED) {
-            throw new SeatingCannotModifyAfterTournamentStartedError(event.name);
+            throw new SeatingCannotBeModifiedAfterTournamentStartedError(event.name);
         }
     }
 
@@ -234,24 +232,41 @@ export class TournamentSeatingService {
         const expectedRounds = event.tournament!.totalRounds;
 
         if (seatingRounds.length !== expectedRounds) {
-            throw new SeatingGenerationFailedError(event.name);
+            throw new SeatingRoundCountMismatchError(event.name, expectedRounds, seatingRounds.length);
         }
 
-        for (const round of seatingRounds) {
+        for (let roundIndex = 0; roundIndex < seatingRounds.length; roundIndex++) {
+            const round = seatingRounds[roundIndex]!;
+            const roundNumber = roundIndex + 1;
             const seenInRound = new Set<number>();
-            for (const table of round) {
+            for (let tableIndex = 0; tableIndex < round.length; tableIndex++) {
+                const table = round[tableIndex]!;
                 if (table.length !== PLAYERS_PER_TABLE) {
-                    throw new SeatingGenerationFailedError(event.name);
+                    throw new SeatingTableSizeMismatchError(
+                        event.name,
+                        roundNumber,
+                        tableIndex + 1,
+                        PLAYERS_PER_TABLE,
+                        table.length
+                    );
                 }
                 for (const userId of table) {
-                    if (!participantIds.has(userId) || seenInRound.has(userId)) {
-                        throw new SeatingGenerationFailedError(event.name);
+                    if (!participantIds.has(userId)) {
+                        throw new SeatingInvalidParticipantError(event.name, userId, roundNumber);
+                    }
+                    if (seenInRound.has(userId)) {
+                        throw new SeatingDuplicateParticipantInRoundError(event.name, userId, roundNumber);
                     }
                     seenInRound.add(userId);
                 }
             }
             if (seenInRound.size !== participantIds.size) {
-                throw new SeatingGenerationFailedError(event.name);
+                throw new SeatingMissingParticipantsInRoundError(
+                    event.name,
+                    roundNumber,
+                    participantIds.size,
+                    seenInRound.size
+                );
             }
         }
     }

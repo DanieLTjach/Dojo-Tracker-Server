@@ -7,7 +7,7 @@ INSERT INTO tournamentStatus (status) VALUES
 
 CREATE TABLE tournament (
     eventId INTEGER NOT NULL PRIMARY KEY REFERENCES event(id),
-    status TEXT NOT NULL REFERENCES tournamentStatus(status) DEFAULT 'CREATED',
+    status TEXT NOT NULL REFERENCES tournamentStatus(status),
     currentRound INTEGER,
     totalRounds INTEGER NOT NULL,
     createdAt TIMESTAMP NOT NULL,
@@ -18,9 +18,9 @@ CREATE TABLE tournament (
 INSERT INTO tournament (eventId, status, currentRound, totalRounds, createdAt, modifiedAt, modifiedBy)
 SELECT
     e.id,
-    CASE WHEN MAX(g.tournamentRound) IS NULL THEN 'CREATED' ELSE 'IN_PROGRESS' END,
+    'FINISHED',
     MAX(g.tournamentRound),
-    COALESCE(MAX(g.tournamentRound), 1),
+    COALESCE(MAX(g.tournamentRound), 0),
     e.createdAt,
     e.modifiedAt,
     e.modifiedBy
