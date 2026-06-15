@@ -43,7 +43,6 @@ export interface GameRules {
     numberOfPlayers: number;
     uma: number[] | number[][];
     startingPoints: number;
-    chomboPointsAfterUma: number | null;
     umaTieBreak: UmaTieBreak;
     details: GameRulesDetails | null;
 }

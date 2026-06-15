@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { UserController } from '../controller/UserController.ts';
 import { ClubMembershipController } from '../controller/ClubMembershipController.ts';
 import { EventRegistrationController } from '../controller/EventRegistrationController.ts';
+import { AchievementController } from '../controller/AchievementController.ts';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { requireAuth } from '../middleware/AuthMiddleware.ts';
 import profileRoutes from './ProfileRoutes.ts';
@@ -10,6 +11,7 @@ const router = Router();
 const userController = new UserController();
 const membershipController = new ClubMembershipController();
 const registrationController = new EventRegistrationController();
+const achievementController = new AchievementController();
 
 // Public - user registration
 router.post('/', withTransaction((req, res) => userController.registerUser(req, res)));
@@ -23,6 +25,8 @@ router.get('/current/registrations', requireAuth, withTransaction((req, res) => 
 // Authenticated users - read operations
 router.get('/', requireAuth, withTransaction((req, res) => userController.getAllUsers(req, res)));
 router.get('/:id', requireAuth, withTransaction((req, res) => userController.getUserById(req, res)));
+// Authenticated - tournament achievements the user has won (profile page)
+router.get('/:id/achievements', requireAuth, withTransaction((req, res) => achievementController.getUserAchievements(req, res)));
 router.get(
     '/by-telegram-id/:telegramId',
     requireAuth,

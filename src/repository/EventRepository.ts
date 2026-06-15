@@ -22,7 +22,6 @@ export class EventRepository {
                 gr.numberOfPlayers as gr_numberOfPlayers,
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
-                gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
                 gr.details as gr_details,
                 t.status as tournament_status,
@@ -56,7 +55,6 @@ export class EventRepository {
                 gr.numberOfPlayers as gr_numberOfPlayers,
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
-                gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
                 gr.details as gr_details,
                 t.status as tournament_status,
@@ -91,7 +89,6 @@ export class EventRepository {
                 gr.numberOfPlayers as gr_numberOfPlayers,
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
-                gr.chomboPointsAfterUma as gr_chomboPointsAfterUma,
                 gr.umaTieBreak as gr_umaTieBreak,
                 gr.details as gr_details,
                 t.status as tournament_status,
@@ -325,7 +322,6 @@ interface EventWithGameRulesDBEntity {
     gr_numberOfPlayers: number;
     gr_uma: string;
     gr_startingPoints: number;
-    gr_chomboPointsAfterUma: number | null;
     gr_umaTieBreak: string;
     gr_details: string | null;
     tournament_status: TournamentStatus | null;
@@ -356,7 +352,6 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             numberOfPlayers: dbEntity.gr_numberOfPlayers,
             uma: parseUma(dbEntity.gr_uma),
             startingPoints: dbEntity.gr_startingPoints,
-            chomboPointsAfterUma: dbEntity.gr_chomboPointsAfterUma,
             umaTieBreak: parseUmaTieBreak(dbEntity.gr_umaTieBreak),
             details: parseGameRulesDetailsAndApplyPresets(dbEntity.gr_details)
         },

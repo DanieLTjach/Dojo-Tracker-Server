@@ -128,8 +128,8 @@ describe('Event registration permissions matrix', () => {
         upsertMembership(OTHER_CLUB_ID, OTHER_CLUB_OWNER_USER_ID, 'OWNER', 'ACTIVE');
 
         dbManager.db.prepare(
-            `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, clubId)
-             VALUES (?, 'EReg Rules', 4, '[15,5,-5,-15]', 30000, NULL, ?)`
+            `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, clubId)
+             VALUES (?, 'EReg Rules', 4, '[15,5,-5,-15]', 30000, ?)`
         ).run(GAME_RULES_ID, TEST_CLUB_ID);
 
         dbManager.db.prepare(

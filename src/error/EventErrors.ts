@@ -66,6 +66,12 @@ export class GameCreationBlockedError extends BadRequestError {
     }
 }
 
+export class AchievementsOnlyForTournamentsError extends BadRequestError {
+    constructor() {
+        super('Досягнення доступні лише для турнірів', 'achievementsOnlyForTournaments');
+    }
+}
+
 export class TournamentConfigRequiredError extends BadRequestError {
     constructor() {
         super('Для турніру потрібно вказати налаштування турніру', 'tournamentConfigRequired');

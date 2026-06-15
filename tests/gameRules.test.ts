@@ -138,7 +138,7 @@ describe('Game Rules API Endpoints', () => {
             expect(gr).toHaveProperty('numberOfPlayers');
             expect(gr).toHaveProperty('uma');
             expect(gr).toHaveProperty('startingPoints');
-            expect(gr).toHaveProperty('chomboPointsAfterUma');
+            expect(gr).not.toHaveProperty('chomboPointsAfterUma');
         });
 
         test('should parse UMA arrays (1D and 2D)', async () => {
@@ -184,19 +184,19 @@ describe('Game Rules API Endpoints', () => {
             ).run(otherClubId, 'Game Rules Test Club 2', null, null, null, null, 1, timestamp, timestamp, 0);
 
             dbManager.db.prepare(
-                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`
-            ).run(clubRuleId, 'Club Rule', clubId, 4, '[15,5,-5,-15]', 30000, null);
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints)
+                 VALUES (?, ?, ?, ?, ?, ?)`
+            ).run(clubRuleId, 'Club Rule', clubId, 4, '[15,5,-5,-15]', 30000);
 
             dbManager.db.prepare(
-                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`
-            ).run(globalRuleId, 'Global Rule', null, 4, '[15,5,-5,-15]', 30000, null);
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints)
+                 VALUES (?, ?, ?, ?, ?, ?)`
+            ).run(globalRuleId, 'Global Rule', null, 4, '[15,5,-5,-15]', 30000);
 
             dbManager.db.prepare(
-                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`
-            ).run(otherClubRuleId, 'Other Club Rule', otherClubId, 4, '[15,5,-5,-15]', 30000, null);
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints)
+                 VALUES (?, ?, ?, ?, ?, ?)`
+            ).run(otherClubRuleId, 'Other Club Rule', otherClubId, 4, '[15,5,-5,-15]', 30000);
 
             const response = await request(app)
                 .get(`/api/game-rules?clubId=${clubId}`)
@@ -261,9 +261,9 @@ describe('Game Rules API Endpoints', () => {
             ).run(clubId, 'Details Update Club', null, null, null, null, 1, timestamp, timestamp, 0);
 
             dbManager.db.prepare(
-                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(ruleId, 'Details Update Rule', clubId, 4, '[15,5,-5,-15]', 30000, null, 'DIVIDE');
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, umaTieBreak)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(ruleId, 'Details Update Rule', clubId, 4, '[15,5,-5,-15]', 30000, 'DIVIDE');
 
             try {
                 const response = await request(app)
@@ -399,9 +399,9 @@ describe('Game Rules API Endpoints', () => {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(clubId, 'PUT Forbidden Club', null, null, null, null, 1, timestamp, timestamp, 0);
             dbManager.db.prepare(
-                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(ruleId, 'PUT Forbidden Rule', clubId, 4, '[15,5,-5,-15]', 30000, null, 'DIVIDE');
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, umaTieBreak)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(ruleId, 'PUT Forbidden Rule', clubId, 4, '[15,5,-5,-15]', 30000, 'DIVIDE');
             dbManager.db.prepare(
                 `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -433,9 +433,9 @@ describe('Game Rules API Endpoints', () => {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(clubId, 'PUT Owner Club', null, null, null, null, 1, timestamp, timestamp, 0);
             dbManager.db.prepare(
-                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, chomboPointsAfterUma, umaTieBreak)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(ruleId, 'PUT Owner Rule', clubId, 4, '[15,5,-5,-15]', 30000, null, 'DIVIDE');
+                `INSERT INTO gameRules (id, name, clubId, numberOfPlayers, uma, startingPoints, umaTieBreak)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).run(ruleId, 'PUT Owner Rule', clubId, 4, '[15,5,-5,-15]', 30000, 'DIVIDE');
             dbManager.db.prepare(
                 `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -474,7 +474,6 @@ describe('Game Rules API Endpoints', () => {
             numberOfPlayers: 4,
             uma: [15, 5, -5, -15],
             startingPoints: 30000,
-            chomboPointsAfterUma: null,
             umaTieBreak: 'DIVIDE',
             clubId
         };
@@ -549,6 +548,15 @@ describe('Game Rules API Endpoints', () => {
                 .post('/api/game-rules')
                 .set('Authorization', adminAuthHeader)
                 .send({ ...validBody, numberOfPlayers: 5 });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('POST rejects removed chomboPointsAfterUma field', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, chomboPointsAfterUma: 20000 });
 
             expect(response.status).toBe(400);
         });

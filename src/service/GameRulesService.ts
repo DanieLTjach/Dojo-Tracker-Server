@@ -110,7 +110,6 @@ const GAME_RULES_CORE_FIELDS = [
     'clubId',
     'numberOfPlayers',
     'startingPoints',
-    'chomboPointsAfterUma',
     'umaTieBreak',
     'uma'
 ] as const satisfies readonly (keyof InsertGameRulesParams)[];

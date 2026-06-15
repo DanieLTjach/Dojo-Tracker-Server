@@ -206,3 +206,15 @@ export const eventGetListSchema = z.object({
         clubId: clubIdParamSchema.optional()
     }).optional()
 });
+
+export const getEventAchievementsSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema
+    })
+});
+
+export const recomputeEventAchievementsSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema
+    })
+});

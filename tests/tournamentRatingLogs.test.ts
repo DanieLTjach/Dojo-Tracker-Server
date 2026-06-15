@@ -26,6 +26,7 @@ function cleanupEvent(eventId: number): void {
     dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
     dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM tournament WHERE eventId = ?').run(eventId);
+    dbManager.db.prepare('DELETE FROM eventAchievement WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
 }
 
