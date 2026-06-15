@@ -8,7 +8,6 @@ import {
     SeatingNotEnoughParticipantsError,
     SeatingParticipantsNotMultipleOfTableSizeError,
     SeatingRoundCountMismatchError,
-    SeatingRoundsExceedFeasibleError,
     SeatingTableSizeMismatchError
 } from '../error/EventErrors.ts';
 import type { Event } from '../model/EventModels.ts';
@@ -19,7 +18,6 @@ import { EventRegistrationRepository } from '../repository/EventRegistrationRepo
 import { GameRepository } from '../repository/GameRepository.ts';
 import {
     generateSeatingCandidates,
-    maxFeasibleRounds,
     SeatingGenerationError
 } from '../util/SeatingGeneratorUtil.ts';
 import { EventService } from './EventService.ts';
@@ -83,10 +81,6 @@ export class TournamentSeatingService {
         const participantIds = this.getApprovedParticipantIds(eventId);
         const tables = this.resolveTableCount(event, participantIds.length);
         const rounds = event.tournament!.totalRounds;
-
-        if (rounds > maxFeasibleRounds(tables)) {
-            throw new SeatingRoundsExceedFeasibleError(event.name, rounds, maxFeasibleRounds(tables));
-        }
 
         const timeLimitMs = this.resolveTimeLimit(options.timeLimitMs);
         const candidateCount = this.resolveCandidateCount(options.candidateCount);

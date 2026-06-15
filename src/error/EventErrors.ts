@@ -165,15 +165,6 @@ export class SeatingParticipantsNotMultipleOfTableSizeError extends BadRequestEr
     }
 }
 
-export class SeatingRoundsExceedFeasibleError extends BadRequestError {
-    constructor(eventName: string, rounds: number, maxRounds: number) {
-        super(
-            `Для турніру "${eventName}" неможливо згенерувати ${rounds} раундів без повторів пар (максимум ${maxRounds})`,
-            'seatingRoundsExceedFeasible'
-        );
-    }
-}
-
 export class SeatingGenerationFailedError extends BadRequestError {
     constructor(eventName: string) {
         super(

@@ -90,8 +90,8 @@ class Deadline {
 }
 
 /**
- * Phase 1 — build `rounds` rounds of disjoint tables so that no pair of players ever
- * repeats. Mirrors the original `schedule`/`random_tables` backtracking search: greedily
+ * Phase 1 — build `rounds` rounds of disjoint tables.
+ * Mirrors the original `schedule`/`random_tables` backtracking search: greedily
  * lay down non-overlapping tables for a round and recurse.
  */
 function buildSchedule(playerCount: number, tables: number, rounds: number, rng: Rng, deadline: Deadline): SeatingRound[] | null {
@@ -117,7 +117,12 @@ function attemptSchedule(playerCount: number, tables: number, rounds: number, rn
         if (deadline.expired()) return false;
 
         // Rebuild the still-valid table pool
-        const pool = possibleTables.filter((table) => areAllPairingsAllowedForTable(table, existingPairings));
+        let pool = possibleTables.filter((table) => areAllPairingsAllowedForTable(table, existingPairings));
+        // If the pool is exhausted, reset it to all possible tables
+        // This means there aren't enough players to avoid repeats and some pairings will be repeated
+        if (pool.length === 0) {
+            pool = allPossibleTables;
+        }
 
         const attempts = schedule.length < tables - 1 ? 10 : 1;
         for (let attempt = 0; attempt < attempts; attempt++) {
@@ -445,33 +450,11 @@ function optimiseTableNumbers(schedule: SeatingRound[], playerCount: number, tab
 }
 
 /**
- * Maximum number of no-repeat rounds achievable for a given table count. Each round a player
- * meets 3 new opponents, and a group of 4 can include at most one player from each previous
- * group, so the pool of `4*tables - 1` possible opponents caps the rounds at
- * floor((4*tables - 1) / 3). For 3 tables this is 3, but the stricter "one-per-previous-group"
- * constraint means 3 tables in fact only supports 1 round; 4+ tables follow the formula in
- * practice. We use the pairing bound as a cheap necessary (not sufficient) feasibility check.
- */
-export function maxFeasibleRounds(tables: number): number {
-    if (tables < 1) return 0;
-    if (tables < 4) return 1;
-    return Math.floor((PLAYERS_PER_TABLE * tables - 1) / (PLAYERS_PER_TABLE - 1));
-}
-
-/**
  * Generate a single seating candidate for the given options. Throws SeatingGenerationError
- * if the configuration is infeasible, or if a no-repeat schedule cannot be found within the
- * time budget.
+ * if schedule cannot be found within the time budget.
  */
 export function generateSeatingCandidate(options: SeatingOptions): SeatingCandidate {
     const { tables, rounds, timeLimitMs, seed } = options;
-
-    if (rounds > maxFeasibleRounds(tables)) {
-        throw new SeatingGenerationError(
-            `${rounds} rounds is not achievable without pair repeats for ${tables} tables ` +
-            `(maximum is ${maxFeasibleRounds(tables)})`
-        );
-    }
 
     const playerCount = tables * PLAYERS_PER_TABLE;
     const rng = new Rng(seed);
@@ -480,7 +463,7 @@ export function generateSeatingCandidate(options: SeatingOptions): SeatingCandid
     const schedule = buildSchedule(playerCount, tables, rounds, rng, deadline);
     if (!schedule) {
         throw new SeatingGenerationError(
-            `Could not build a no-repeat schedule for ${tables} tables over ${rounds} rounds within the time limit`
+            `Could not build a schedule for ${tables} tables over ${rounds} rounds within the time limit`
         );
     }
 
