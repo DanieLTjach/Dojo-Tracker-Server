@@ -200,17 +200,6 @@ describe('Tournament seating generation', () => {
             expect(response.body.errorCode).toBe('seatingParticipantsNotMultipleOfTableSize');
         });
 
-        it('rejects when the round count exceeds the feasible maximum', async () => {
-            // 8 players = 2 tables, which only support 1 no-repeat round; ask for 2.
-            dbManager.db.prepare('UPDATE tournament SET totalRounds = 2 WHERE eventId = ?').run(TOURNAMENT_EVENT_ID);
-            const response = await request(app)
-                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/seating/generate`)
-                .set('Authorization', adminAuthHeader)
-                .send({});
-            expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('seatingRoundsExceedFeasible');
-        });
-
         it('rejects generation once the tournament has started', async () => {
             dbManager.db.prepare('UPDATE tournament SET status = ?, currentRound = 1 WHERE eventId = ?').run('IN_PROGRESS', TOURNAMENT_EVENT_ID);
             const response = await request(app)

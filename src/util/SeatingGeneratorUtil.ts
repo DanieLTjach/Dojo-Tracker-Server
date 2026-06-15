@@ -78,7 +78,7 @@ class Rng {
 }
 
 class Deadline {
-    private readonly end: number;
+    readonly end: number;
 
     constructor(timeLimitMs: number) {
         this.end = Date.now() + timeLimitMs;
@@ -300,7 +300,7 @@ function balanceSeats(schedule: SeatingRound[], playerCount: number, rounds: num
                 tableScores.push({ r, t, score });
             }
         }
-        tableScores.sort((a, b) => a.score - b.score);
+        tableScores.sort((a, b) => b.score - a.score);
 
         let applied = false;
         for (const { r, t, score } of tableScores) {
@@ -467,7 +467,9 @@ export function generateSeatingCandidate(options: SeatingOptions): SeatingCandid
         );
     }
 
-    balanceSeats(schedule, playerCount, rounds, rng, deadline);
+    const remainingTime = deadline.end - Date.now()
+    const seatBalanceDeadline = new Deadline(remainingTime / 2);
+    balanceSeats(schedule, playerCount, rounds, rng, seatBalanceDeadline);
     const tableSpreadScore = optimiseTableNumbers(schedule, playerCount, tables, rounds, rng, deadline);
     const seatBalanceScore = totalSeatScore(schedule, playerCount, rounds);
 
