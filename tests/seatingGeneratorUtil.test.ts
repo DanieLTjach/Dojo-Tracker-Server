@@ -107,10 +107,9 @@ describe('SeatingGeneratorUtil', () => {
     // fail outright on these. Generation must still return a complete, valid schedule — with
     // every player seated once per round — rather than throwing or producing a short result.
     describe('generateSeatingCandidate - small clubs (repeats unavoidable)', () => {
-        // These configs can never reach a perfect table-spread score, so the optimiser always
-        // runs to the deadline. Use a short budget here: a complete, valid schedule is produced
-        // long before optimisation finishes, so this still proves correctness without the suite
-        // paying the full budget for every seed.
+        // These configs can never reach a perfect table-spread score. The optimiser bails out
+        // early once it stalls (see MAX_STALL_ITERATIONS) instead of spinning to the deadline,
+        // so a short budget is plenty and generation returns near-instantly.
         const SMALL_CLUB_TIME_LIMIT_MS = 200;
         const SMALL_CONFIGS = [
             { tables: 1, rounds: 2 }, // 4 players
@@ -143,6 +142,19 @@ describe('SeatingGeneratorUtil', () => {
                 }
             }
         );
+
+        it('returns early instead of spinning to the deadline when the score cannot reach zero', () => {
+            // A large budget that the generator must NOT consume: for this stuck config the
+            // optimiser settles into a local minimum and should bail out long before the limit.
+            const generousBudgetMs = 10000;
+            const started = Date.now();
+            const candidate = generateSeatingCandidate({ tables: 2, rounds: 2, timeLimitMs: generousBudgetMs, seed: 1 });
+            const elapsed = Date.now() - started;
+
+            expect(candidate.rounds).toHaveLength(2);
+            // Should finish in a small fraction of the budget thanks to the stall-based exit.
+            expect(elapsed).toBeLessThan(generousBudgetMs / 2);
+        });
     });
 
     describe('generateSeatingCandidates - multiple options', () => {

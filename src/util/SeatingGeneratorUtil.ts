@@ -19,6 +19,14 @@
 
 const PLAYERS_PER_TABLE = 4;
 
+/**
+ * For small fields a perfect (zero) seat-balance / table-spread score is often unreachable, so
+ * the hill-climbers would otherwise spin until the deadline. Stop a climber early once its best
+ * score has not improved for this many consecutive perturbation iterations — by then it has
+ * settled into a local minimum it cannot escape, and the time budget is better left unused.
+ */
+const MAX_STALL_ITERATIONS = 200;
+
 /** A single table: exactly four player indices in seat order [E, S, W, N]. */
 export type SeatingTable = [number, number, number, number];
 /** A round is an ordered list of tables (index in the list = physical table number). */
@@ -283,8 +291,10 @@ const SEAT_PERMUTATIONS_4: number[][] = (() => {
  */
 function balanceSeats(schedule: SeatingRound[], playerCount: number, rounds: number, rng: Rng, deadline: Deadline): void {
     let sumOfScores = totalSeatScore(schedule, playerCount, rounds);
+    let bestScore = sumOfScores;
+    let stalledIterations = 0;
 
-    while (sumOfScores > 0 && !deadline.expired()) {
+    while (sumOfScores > 0 && !deadline.expired() && stalledIterations < MAX_STALL_ITERATIONS) {
         // Score every table by the summed penalty of its players, worst first.
         const playerScores: Map<number, number> = new Map();
         const tableScores: { r: number; t: number; score: number }[] = [];
@@ -341,6 +351,12 @@ function balanceSeats(schedule: SeatingRound[], playerCount: number, rounds: num
         }
 
         sumOfScores = totalSeatScore(schedule, playerCount, rounds);
+        if (sumOfScores < bestScore) {
+            bestScore = sumOfScores;
+            stalledIterations = 0;
+        } else {
+            stalledIterations++;
+        }
     }
 }
 
@@ -389,8 +405,9 @@ function optimiseTableNumbers(schedule: SeatingRound[], playerCount: number, tab
     let currentScore = totalTableScore(schedule, playerCount, tables, rounds);
     let bestScore = currentScore;
     let bestSnapshot = schedule.map(round => round.map(table => [...table] as SeatingTable));
+    let stalledIterations = 0;
 
-    while (currentScore > 0 && !deadline.expired()) {
+    while (currentScore > 0 && !deadline.expired() && stalledIterations < MAX_STALL_ITERATIONS) {
         // Find the single best within-round table swap.
         let bestChange = 0;
         let bestMove: { r: number; a: number; b: number } | null = null;
@@ -437,6 +454,9 @@ function optimiseTableNumbers(schedule: SeatingRound[], playerCount: number, tab
         if (currentScore < bestScore) {
             bestScore = currentScore;
             bestSnapshot = schedule.map(round => round.map(table => [...table] as SeatingTable));
+            stalledIterations = 0;
+        } else {
+            stalledIterations++;
         }
     }
 
