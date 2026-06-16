@@ -103,6 +103,48 @@ describe('SeatingGeneratorUtil', () => {
         });
     });
 
+    // Small clubs (few tables) cannot avoid pairing repeats, and the no-repeat search used to
+    // fail outright on these. Generation must still return a complete, valid schedule — with
+    // every player seated once per round — rather than throwing or producing a short result.
+    describe('generateSeatingCandidate - small clubs (repeats unavoidable)', () => {
+        // These configs can never reach a perfect table-spread score, so the optimiser always
+        // runs to the deadline. Use a short budget here: a complete, valid schedule is produced
+        // long before optimisation finishes, so this still proves correctness without the suite
+        // paying the full budget for every seed.
+        const SMALL_CLUB_TIME_LIMIT_MS = 200;
+        const SMALL_CONFIGS = [
+            { tables: 1, rounds: 2 }, // 4 players
+            { tables: 1, rounds: 3 },
+            { tables: 2, rounds: 2 }, // 8 players
+            { tables: 2, rounds: 3 },
+            { tables: 3, rounds: 2 }, // 12 players — previously failed
+            { tables: 3, rounds: 3 },
+            { tables: 3, rounds: 4 },
+            { tables: 4, rounds: 6 }  // 16 players — previously failed at 6 rounds
+        ];
+
+        it.each(SMALL_CONFIGS)(
+            'produces a complete valid schedule for %j across several seeds',
+            ({ tables, rounds }) => {
+                const expectedPlayers = Array.from({ length: tables * 4 }, (_, i) => i);
+
+                for (let seed = 1; seed <= 5; seed++) {
+                    const candidate = generateSeatingCandidate({ tables, rounds, timeLimitMs: SMALL_CLUB_TIME_LIMIT_MS, seed });
+
+                    expect(candidate.rounds).toHaveLength(rounds);
+                    for (const round of candidate.rounds) {
+                        expect(round).toHaveLength(tables);
+                        // Every player appears exactly once in each round.
+                        expect(round.flat().sort((a, b) => a - b)).toEqual(expectedPlayers);
+                        for (const table of round) {
+                            expect(table).toHaveLength(4);
+                        }
+                    }
+                }
+            }
+        );
+    });
+
     describe('generateSeatingCandidates - multiple options', () => {
         it('returns the requested number of candidates', () => {
             const candidates = generateSeatingCandidates({
