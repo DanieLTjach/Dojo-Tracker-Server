@@ -86,7 +86,8 @@ router.post('/:eventId/tournament/finish', requireAuth, withTransaction((req, re
  *
  * Authentication: Required (Admin, Club Owner, or Club Moderator)
  */
-router.post('/:eventId/tournament/seating/generate', requireAuth, withTransaction((req, res) => eventController.generateTournamentSeating(req, res)));
+// Read-only and CPU-bound (runs in a worker thread): no DB transaction, handled asynchronously.
+router.post('/:eventId/tournament/seating/generate', requireAuth, (req, res, next) => eventController.generateTournamentSeating(req, res).catch(next));
 
 /**
  * POST /api/events/:eventId/tournament/seating/apply

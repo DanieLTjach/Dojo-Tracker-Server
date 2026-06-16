@@ -48,10 +48,10 @@ export class EventController {
         return res.status(StatusCodes.OK).json(event);
     }
 
-    generateTournamentSeating(req: Request, res: Response) {
+    async generateTournamentSeating(req: Request, res: Response) {
         const { params: { eventId }, body } = tournamentSeatingGenerateSchema.parse(req);
         const userId = req.user!.userId;
-        const result = this.tournamentSeatingService.generateSeating(eventId, body ?? {}, userId);
+        const result = await this.tournamentSeatingService.generateSeating(eventId, body ?? {}, userId);
         return res.status(StatusCodes.OK).json(result);
     }
 
