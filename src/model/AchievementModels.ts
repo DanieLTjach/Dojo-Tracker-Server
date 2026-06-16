@@ -3,7 +3,7 @@ import type { AchievementValueUnit } from '../data/achievementsCatalog.ts';
 export const AchievementCriterion = {
     Highest: 'highest',
     Lowest: 'lowest',
-    AllQualifiers: 'all-qualifiers'
+    AllQualifiers: 'all-qualifiers',
 } as const;
 
 export type AchievementCriterion = typeof AchievementCriterion[keyof typeof AchievementCriterion];

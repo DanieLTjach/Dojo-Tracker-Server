@@ -1,6 +1,10 @@
 import { isDeepStrictEqual } from 'node:util';
 import { GameRulesRepository, type InsertGameRulesParams } from '../repository/GameRulesRepository.ts';
-import { CannotDeleteGameRulesInUseError, CannotUpdateGameRulesInUseError, GameRulesNotFoundError } from '../error/EventErrors.ts';
+import {
+    CannotDeleteGameRulesInUseError,
+    CannotUpdateGameRulesInUseError,
+    GameRulesNotFoundError,
+} from '../error/EventErrors.ts';
 import type { GameRules, GameRulesDetails, RuleValue } from '../model/EventModels.ts';
 import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
 import { gameRulesPresetsByKey } from '../data/gameRulesPresets.ts';
@@ -111,7 +115,7 @@ const GAME_RULES_CORE_FIELDS = [
     'numberOfPlayers',
     'startingPoints',
     'umaTieBreak',
-    'uma'
+    'uma',
 ] as const satisfies readonly (keyof InsertGameRulesParams)[];
 
 function gameRulesCoreFieldsEqual(gameRules: GameRules, params: InsertGameRulesParams): boolean {

@@ -8,8 +8,7 @@ import { Wind } from '../src/model/GameModels.ts';
 import type { PlayerPointChange } from '../src/model/GameRoundResultModels.ts';
 import { detailedGame, fourPlayers, gameState, makeGameRules } from './pointCalculationUtil.helpers.ts';
 
-const sortByPlayer = (changes: PlayerPointChange[]) =>
-    [...changes].sort((a, b) => a.playerId - b.playerId);
+const sortByPlayer = (changes: PlayerPointChange[]) => [...changes].sort((a, b) => a.playerId - b.playerId);
 
 const notenDraw = (notenPenalty: number, tenpaiPlayerIds: number[]) => {
     const game = detailedGame(fourPlayers(), gameState(Wind.EAST, 1, 0, 0));
@@ -23,8 +22,7 @@ const notenDraw = (notenPenalty: number, tenpaiPlayerIds: number[]) => {
     return sortByPlayer(result.playerPointChanges);
 };
 
-const sumOf = (changes: PlayerPointChange[]) =>
-    changes.reduce((acc, change) => acc + change.pointChange, 0);
+const sumOf = (changes: PlayerPointChange[]) => changes.reduce((acc, change) => acc + change.pointChange, 0);
 
 describe('custom noten_penalty (integer)', () => {
     test('catalog spec is an integer with a multipleOf-100 constraint', () => {
@@ -39,7 +37,7 @@ describe('custom noten_penalty (integer)', () => {
 
     test.each([0, 600, 1200, 1500, 3000, 4200])(
         'schema accepts yonma noten_penalty %d (divisible by 6)',
-        (value) => {
+        value => {
             const result = gameRulesDetailsSchema.safeParse({
                 rules: { number_of_players: 4, starting_points: 30000, noten_penalty: value },
             });
@@ -50,7 +48,7 @@ describe('custom noten_penalty (integer)', () => {
 
     test.each([0, 1000, 2000, 2500, 3500])(
         'schema accepts sanma noten_penalty %d (divisible by 2)',
-        (value) => {
+        value => {
             const result = gameRulesDetailsSchema.safeParse({
                 rules: { number_of_players: 3, starting_points: 35000, noten_penalty: value },
             });
@@ -61,7 +59,7 @@ describe('custom noten_penalty (integer)', () => {
 
     test.each([1000, 2000, 4000, 100, 500])(
         'schema rejects yonma noten_penalty %d that is not divisible by 6',
-        (value) => {
+        value => {
             const result = gameRulesDetailsSchema.safeParse({
                 rules: { number_of_players: 4, starting_points: 30000, noten_penalty: value },
             });
@@ -72,7 +70,7 @@ describe('custom noten_penalty (integer)', () => {
 
     test.each([100, 500, 2500, 4500])(
         'schema accepts any multiple-of-100 sanma noten_penalty %d',
-        (value) => {
+        value => {
             const result = gameRulesDetailsSchema.safeParse({
                 rules: { number_of_players: 3, starting_points: 35000, noten_penalty: value },
             });

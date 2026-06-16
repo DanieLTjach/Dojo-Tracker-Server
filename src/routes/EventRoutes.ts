@@ -6,7 +6,7 @@ import { AchievementController } from '../controller/AchievementController.ts';
 import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
 import {
     requireEventManagementRole,
-    requireEventManagementRoleOrApprovedFilter
+    requireEventManagementRoleOrApprovedFilter,
 } from '../middleware/EventManagementMiddleware.ts';
 
 const router = Router();
@@ -36,7 +36,11 @@ router.get('/:eventId', requireAuth, withTransaction((req, res) => eventControll
  *
  * Authentication: Required
  */
-router.get('/:eventId/achievements', requireAuth, withTransaction((req, res) => achievementController.getEventAchievements(req, res)));
+router.get(
+    '/:eventId/achievements',
+    requireAuth,
+    withTransaction((req, res) => achievementController.getEventAchievements(req, res))
+);
 
 /**
  * POST /api/events/:eventId/achievements/recompute
@@ -44,7 +48,12 @@ router.get('/:eventId/achievements', requireAuth, withTransaction((req, res) => 
  *
  * Authentication: Required (Admin only)
  */
-router.post('/:eventId/achievements/recompute', requireAuth, requireAdmin, withTransaction((req, res) => achievementController.recomputeEventAchievements(req, res)));
+router.post(
+    '/:eventId/achievements/recompute',
+    requireAuth,
+    requireAdmin,
+    withTransaction((req, res) => achievementController.recomputeEventAchievements(req, res))
+);
 
 /**
  * POST /api/events

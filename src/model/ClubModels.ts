@@ -1,10 +1,10 @@
-import type { TelegramTopic } from "./TelegramTopic.ts";
-import type { User } from "./UserModels.ts";
+import type { TelegramTopic } from './TelegramTopic.ts';
+import type { User } from './UserModels.ts';
 
 export const ClubRole = {
     OWNER: 'OWNER',
     MODERATOR: 'MODERATOR',
-    MEMBER: 'MEMBER'
+    MEMBER: 'MEMBER',
 } as const;
 
 export type ClubRole = typeof ClubRole[keyof typeof ClubRole];
@@ -12,7 +12,7 @@ export type ClubRole = typeof ClubRole[keyof typeof ClubRole];
 export const ClubMembershipStatus = {
     PENDING: 'PENDING',
     ACTIVE: 'ACTIVE',
-    INACTIVE: 'INACTIVE'
+    INACTIVE: 'INACTIVE',
 } as const;
 
 export type ClubMembershipStatus = typeof ClubMembershipStatus[keyof typeof ClubMembershipStatus];
@@ -66,7 +66,7 @@ export interface UserClubMembership {
 
 export const ClubInviteType = {
     JOIN_CLUB: 'JOIN_CLUB',
-    REGISTRATION_ONLY: 'REGISTRATION_ONLY'
+    REGISTRATION_ONLY: 'REGISTRATION_ONLY',
 } as const;
 
 export type ClubInviteType = typeof ClubInviteType[keyof typeof ClubInviteType];
@@ -76,7 +76,7 @@ export const ClubInviteSource = {
     TUTORIAL: 'TUTORIAL',
     FESTIVAL: 'FESTIVAL',
     SOCIAL_NETWORK: 'SOCIAL_NETWORK',
-    OTHER: 'OTHER'
+    OTHER: 'OTHER',
 } as const;
 
 export type ClubInviteSource = typeof ClubInviteSource[keyof typeof ClubInviteSource];

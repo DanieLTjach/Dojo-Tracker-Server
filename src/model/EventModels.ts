@@ -2,7 +2,7 @@ import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
 
 export const UmaTieBreak = {
     WIND: 'WIND',
-    DIVIDE: 'DIVIDE'
+    DIVIDE: 'DIVIDE',
 } as const;
 
 export type UmaTieBreak = typeof UmaTieBreak[keyof typeof UmaTieBreak];

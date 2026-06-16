@@ -31,7 +31,6 @@ const VALID_WINDS = ['EAST', 'SOUTH', 'WEST', 'NORTH'] as const satisfies readon
 class ImportRollbackError extends Error {}
 
 export class ImportService {
-
     private gameService: GameService = new GameService();
     private eventService: EventService = new EventService();
     private userRepository: UserRepository = new UserRepository();
@@ -102,11 +101,14 @@ export class ImportService {
         return {
             imported: games.length,
             errors,
-            games
+            games,
         };
     }
 
-    private parseAndValidate(eventId: number, csvContent: string): { event: Event; parsedRows: ParsedGameRow[]; errors: RowError[] } {
+    private parseAndValidate(
+        eventId: number,
+        csvContent: string
+    ): { event: Event, parsedRows: ParsedGameRow[], errors: RowError[] } {
         const event = this.eventService.getEventById(eventId);
         const numberOfPlayers = event.gameRules.numberOfPlayers;
 
@@ -135,7 +137,7 @@ export class ImportService {
         return { event, parsedRows, errors };
     }
 
-    private parseCsv(csvContent: string): { headers: string[]; dataRows: string[][] } {
+    private parseCsv(csvContent: string): { headers: string[], dataRows: string[][] } {
         const lines = csvContent.trim().split('\n');
         if (lines.length < 2) {
             throw new CsvParsingError('CSV file must have a header row and at least one data row');
@@ -160,7 +162,12 @@ export class ImportService {
         }
     }
 
-    private parseGameRow(cells: string[], headers: string[], numberOfPlayers: number, rowNumber: number): ParsedGameRow {
+    private parseGameRow(
+        cells: string[],
+        headers: string[],
+        numberOfPlayers: number,
+        rowNumber: number
+    ): ParsedGameRow {
         const getValue = (colName: string): string => {
             const index = headers.indexOf(colName);
             return index >= 0 && index < cells.length ? cells[index]! : '';
@@ -191,7 +198,9 @@ export class ImportService {
             let startPlace: Wind | undefined = undefined;
             if (startPlaceStr) {
                 if (!VALID_WINDS.includes(startPlaceStr as Wind)) {
-                    throw new Error(`Row ${rowNumber}: player${p}_startPlace must be one of: ${VALID_WINDS.join(', ')}`);
+                    throw new Error(
+                        `Row ${rowNumber}: player${p}_startPlace must be one of: ${VALID_WINDS.join(', ')}`
+                    );
                 }
                 startPlace = startPlaceStr as Wind;
             }
@@ -205,7 +214,7 @@ export class ImportService {
                 userId: user.id,
                 points,
                 startPlace: startPlace ?? null,
-                chomboCount
+                chomboCount,
             });
         }
 

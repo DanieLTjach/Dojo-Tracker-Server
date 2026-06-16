@@ -1,7 +1,7 @@
 export const EventRegistrationStatus = {
     PENDING: 'PENDING',
     APPROVED: 'APPROVED',
-    REJECTED: 'REJECTED'
+    REJECTED: 'REJECTED',
 } as const;
 
 export type EventRegistrationStatus = typeof EventRegistrationStatus[keyof typeof EventRegistrationStatus];

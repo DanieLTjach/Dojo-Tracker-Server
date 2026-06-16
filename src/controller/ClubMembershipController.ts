@@ -8,7 +8,7 @@ import {
     clubMembershipLeaveSchema,
     clubMembershipActivateSchema,
     clubMembershipDeactivateSchema,
-    clubMembershipUpdateSchema
+    clubMembershipUpdateSchema,
 } from '../schema/ClubSchemas.ts';
 import { ClubMembershipService } from '../service/ClubMembershipService.ts';
 

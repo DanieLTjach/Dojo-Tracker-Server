@@ -1,33 +1,33 @@
 {
-  "compilerOptions": {
-    "module": "nodenext",
-    "target": "esnext",
-    // For nodejs:
-    "lib": ["esnext"],
-    "types": ["jest", "node"],
+    "compilerOptions": {
+        "module": "nodenext",
+        "target": "esnext",
+        // For nodejs:
+        "lib": ["esnext"],
+        "types": ["jest", "node"],
 
-    "sourceMap": true,
+        "sourceMap": true,
 
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
 
-    // Style Options
-    "noImplicitReturns": true,
-    "noImplicitOverride": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noPropertyAccessFromIndexSignature": true,
+        // Style Options
+        "noImplicitReturns": true,
+        "noImplicitOverride": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "noPropertyAccessFromIndexSignature": true,
 
-    "strict": true,
-    "verbatimModuleSyntax": false,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true,
-    "allowJs": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "erasableSyntaxOnly": true,
-  }
+        "strict": true,
+        "verbatimModuleSyntax": false,
+        "isolatedModules": true,
+        "noUncheckedSideEffectImports": true,
+        "moduleDetection": "force",
+        "skipLibCheck": true,
+        "allowJs": true,
+        "allowImportingTsExtensions": true,
+        "noEmit": true,
+        "erasableSyntaxOnly": true
+    }
 }

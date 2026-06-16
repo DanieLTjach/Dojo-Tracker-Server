@@ -14,7 +14,7 @@ function cleanupTestDatabase() {
     const filesToClean = [
         TEST_DB_PATH,
         `${TEST_DB_PATH}-wal`,
-        `${TEST_DB_PATH}-shm`
+        `${TEST_DB_PATH}-shm`,
     ];
 
     filesToClean.forEach(file => {

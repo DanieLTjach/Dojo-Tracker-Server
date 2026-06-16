@@ -24,7 +24,6 @@ const ROUND_HEADER_PATTERN = /^Round\s+(\d+)$/i;
 class ImportRollbackError extends Error {}
 
 export class TournamentRoundImportService {
-
     private gameService: GameService = new GameService();
     private trackedGameService: TrackedGameService = new TrackedGameService();
     private eventService: EventService = new EventService();

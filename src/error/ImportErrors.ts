@@ -1,4 +1,4 @@
-import { BadRequestError } from "./BaseErrors.ts";
+import { BadRequestError } from './BaseErrors.ts';
 
 export class CsvParsingError extends BadRequestError {
     constructor(message: string) {

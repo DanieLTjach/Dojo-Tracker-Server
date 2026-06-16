@@ -16,7 +16,6 @@ app.use('/api/users', userRoutes);
 app.use(handleErrors);
 
 describe('Rating API Endpoints', () => {
-
     beforeEach(async () => {
         dbManager.closeDB();
         cleanupTestDatabase();
@@ -61,7 +60,7 @@ describe('Rating API Endpoints', () => {
             .set('Authorization', authHeader)
             .send({
                 eventId: TEST_EVENT_ID,
-                playersData
+                playersData,
             });
         expect(response.status).toBe(201);
         return response.body.id;
@@ -104,7 +103,7 @@ describe('Rating API Endpoints', () => {
             { userId: user1Id, points: points[0], startPlace: 'EAST', chomboCount: chomboCounts[0] },
             { userId: user2Id, points: points[1], startPlace: 'SOUTH', chomboCount: chomboCounts[1] },
             { userId: user3Id, points: points[2], startPlace: 'WEST', chomboCount: chomboCounts[2] },
-            { userId: user4Id, points: points[3], startPlace: 'NORTH', chomboCount: chomboCounts[3] }
+            { userId: user4Id, points: points[3], startPlace: 'NORTH', chomboCount: chomboCounts[3] },
         ]);
 
         return { user1Id, user2Id, user3Id, user4Id, user1AuthHeader, gameId };
@@ -169,7 +168,7 @@ describe('Rating API Endpoints', () => {
                 { userId: user1Id, points: 35000, startPlace: 'EAST' },
                 { userId: user2Id, points: 30000, startPlace: 'SOUTH' },
                 { userId: user3Id, points: 30000, startPlace: 'WEST' },
-                { userId: user4Id, points: 25000, startPlace: 'NORTH' }
+                { userId: user4Id, points: 25000, startPlace: 'NORTH' },
             ]);
 
             const response = await request(app)
@@ -216,7 +215,6 @@ describe('Rating API Endpoints', () => {
             const userIds = response.body.map((r: { user: { id: number } }) => r.user.id);
             expect(userIds).toEqual(expect.arrayContaining([user1Id, user2Id, user3Id, user4Id]));
         });
-
     });
 
     describe('GET /api/events/:eventId/rating/change - Get Rating Changes During Period', () => {
@@ -284,7 +282,6 @@ describe('Rating API Endpoints', () => {
 
             expect(response.status).toBe(400);
         });
-
     });
 
     describe('GET /api/events/:eventId/users/:userId/rating/history - Get User Rating History', () => {
@@ -309,14 +306,14 @@ describe('Rating API Endpoints', () => {
 
         test('should return history in chronological order', async () => {
             // Create a game setup with one game
-            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetup(); 
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetup();
 
             // Create another game to have multiple history entries
             await createTestGame(user1AuthHeader, [
                 { userId: user1Id, points: 50000, startPlace: 'EAST' },
                 { userId: user2Id, points: 35000, startPlace: 'SOUTH' },
                 { userId: user3Id, points: 20000, startPlace: 'WEST' },
-                { userId: user4Id, points: 15000, startPlace: 'NORTH' }
+                { userId: user4Id, points: 15000, startPlace: 'NORTH' },
             ]);
 
             const response = await request(app)
@@ -366,7 +363,6 @@ describe('Rating API Endpoints', () => {
 
             expect(response.status).toBe(404);
         });
-
     });
 
     describe('Rating Calculation Accuracy', () => {
@@ -384,7 +380,7 @@ describe('Rating API Endpoints', () => {
                 1: 0,
                 2: 0,
                 3: 0,
-                4: 0
+                4: 0,
             };
 
             const players = response.body.players;
@@ -402,8 +398,8 @@ describe('Rating API Endpoints', () => {
                 rules: {
                     number_of_players: 4,
                     starting_points: 30000,
-                    chombo: 'twenty_thousand_after_uma'
-                }
+                    chombo: 'twenty_thousand_after_uma',
+                },
             }));
 
             const { gameId, user1AuthHeader } = await createGameSetupWithPoints(
@@ -417,7 +413,9 @@ describe('Rating API Endpoints', () => {
 
             expect(response.status).toBe(200);
             const ratingChanges = Object.fromEntries(
-                response.body.players.map((player: { userId: number; ratingChange: number }) => [player.userId, player.ratingChange])
+                response.body.players.map((
+                    player: { userId: number, ratingChange: number }
+                ) => [player.userId, player.ratingChange])
             );
 
             expect(ratingChanges[1]).toBe(-20);
@@ -456,7 +454,7 @@ describe('Rating API Endpoints', () => {
                 1: 30, // 6 + 24
                 2: -3, // -1 - 2
                 3: -8, // -2 - 6
-                4: -19 // -3 - 16
+                4: -19, // -3 - 16
             };
 
             const players = response.body.players;
@@ -479,7 +477,7 @@ describe('Rating API Endpoints', () => {
                 1: 26, // 10 + 16
                 2: 13, // 5 + 8
                 3: -13, // -5 - 8
-                4: -26 // -10 - 16
+                4: -26, // -10 - 16
             };
 
             const players = response.body.players;
@@ -502,7 +500,7 @@ describe('Rating API Endpoints', () => {
                 1: 19, // 3 + 16
                 2: 8, // 2 + 6
                 3: 3, // 1 + 2
-                4: -30 // -6 - 24
+                4: -30, // -6 - 24
             };
 
             const players = response.body.players;
@@ -526,7 +524,7 @@ describe('Rating API Endpoints', () => {
                 1: 16, // 4 + 12
                 2: 16, // 4 + 12
                 3: -10, // -2 - 8
-                4: -22 // -6 - 16
+                4: -22, // -6 - 16
             };
 
             const players = response.body.players;
@@ -550,7 +548,7 @@ describe('Rating API Endpoints', () => {
                 1: 10, // 2 + 8
                 2: 10, // 2 + 8
                 3: 10, // 2 + 8
-                4: -30 // -6 - 24
+                4: -30, // -6 - 24
             };
 
             const players = response.body.players;
@@ -573,8 +571,20 @@ describe('Rating API Endpoints', () => {
             dbManager.db.prepare(
                 `INSERT OR IGNORE INTO event (id, name, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(WIND_EVENT_ID, 'Wind Tiebreak Season', 'SEASON', WIND_GAME_RULES_ID, 1,
-                '2024-01-01T00:00:00.000Z', '2026-12-31T23:59:59.999Z', 1000, 0, 0, ts, ts);
+            ).run(
+                WIND_EVENT_ID,
+                'Wind Tiebreak Season',
+                'SEASON',
+                WIND_GAME_RULES_ID,
+                1,
+                '2024-01-01T00:00:00.000Z',
+                '2026-12-31T23:59:59.999Z',
+                1000,
+                0,
+                0,
+                ts,
+                ts
+            );
         }
 
         async function createWindGame(authHeader: string, playersData: any[]): Promise<number> {
@@ -601,7 +611,7 @@ describe('Rating API Endpoints', () => {
                 { userId: user1Id, points: points[0], startPlace: 'EAST' },
                 { userId: user2Id, points: points[1], startPlace: 'SOUTH' },
                 { userId: user3Id, points: points[2], startPlace: 'WEST' },
-                { userId: user4Id, points: points[3], startPlace: 'NORTH' }
+                { userId: user4Id, points: points[3], startPlace: 'NORTH' },
             ]);
             return { user1Id, user2Id, user3Id, user4Id, user1AuthHeader, gameId };
         }
@@ -619,7 +629,7 @@ describe('Rating API Endpoints', () => {
                 1: 25, // 10 + 15
                 2: 10, // 5 + 5
                 3: -10, // -5 - 5
-                4: -25  // -10 - 15
+                4: -25, // -10 - 15
             };
             for (const player of response.body.players) {
                 expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
@@ -629,8 +639,12 @@ describe('Rating API Endpoints', () => {
         test('Two players tied - East beats South', async () => {
             // User1 (EAST) and User2 (SOUTH) are tied at 34000
             // uma positions 0 and 1 = [15, 5]; East gets 15, South gets 5 (no averaging)
-            const { gameId, user1AuthHeader, user1Id, user2Id, user3Id, user4Id } =
-                await createWindGameSetup([34000, 34000, 28000, 24000]);
+            const { gameId, user1AuthHeader, user1Id, user2Id, user3Id, user4Id } = await createWindGameSetup([
+                34000,
+                34000,
+                28000,
+                24000,
+            ]);
 
             const response = await request(app)
                 .get(`/api/games/${gameId}`)
@@ -640,9 +654,9 @@ describe('Rating API Endpoints', () => {
             // uma [15, 5, -5, -15]; tied at positions 0&1 → East=15, South=5
             const expectedRatingChange: Record<number, number> = {
                 [user1Id]: 19, // 4 + 15  (EAST)
-                [user2Id]: 9,  // 4 + 5   (SOUTH)
+                [user2Id]: 9, // 4 + 5   (SOUTH)
                 [user3Id]: -7, // -2 - 5
-                [user4Id]: -21 // -6 - 15
+                [user4Id]: -21, // -6 - 15
             };
             for (const player of response.body.players) {
                 expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
@@ -652,8 +666,12 @@ describe('Rating API Endpoints', () => {
         test('Three players tied - distributed by wind priority', async () => {
             // User1 (EAST), User2 (SOUTH), User3 (WEST) all tied at 32000
             // uma positions 0,1,2 = [15, 5, -5]; East=15, South=5, West=-5
-            const { gameId, user1AuthHeader, user1Id, user2Id, user3Id, user4Id } =
-                await createWindGameSetup([32000, 32000, 32000, 24000]);
+            const { gameId, user1AuthHeader, user1Id, user2Id, user3Id, user4Id } = await createWindGameSetup([
+                32000,
+                32000,
+                32000,
+                24000,
+            ]);
 
             const response = await request(app)
                 .get(`/api/games/${gameId}`)
@@ -662,10 +680,10 @@ describe('Rating API Endpoints', () => {
             expect(response.status).toBe(200);
             // uma [15, 5, -5, -15]; tied at positions 0,1,2 → East=15, South=5, West=-5
             const expectedRatingChange: Record<number, number> = {
-                [user1Id]: 17,  // 2 + 15  (EAST)
-                [user2Id]: 7,   // 2 + 5   (SOUTH)
-                [user3Id]: -3,  // 2 - 5   (WEST)
-                [user4Id]: -21  // -6 - 15
+                [user1Id]: 17, // 2 + 15  (EAST)
+                [user2Id]: 7, // 2 + 5   (SOUTH)
+                [user3Id]: -3, // 2 - 5   (WEST)
+                [user4Id]: -21, // -6 - 15
             };
             for (const player of response.body.players) {
                 expect(player.ratingChange).toBe(expectedRatingChange[player.userId]);
@@ -677,20 +695,29 @@ describe('Rating API Endpoints', () => {
         const SUBSTITUTE_RULES_ID = 2;
 
         function seedSubstitutePlayerRules(overrides: Record<string, number>) {
-            const row = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(SUBSTITUTE_RULES_ID) as { details: string | null };
+            const row = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(SUBSTITUTE_RULES_ID) as {
+                details: string | null;
+            };
             const details = row.details !== null ? JSON.parse(row.details) : { preset: 'ema_2025', rules: {} };
             details.rules = { ...details.rules, ...overrides };
-            dbManager.db.prepare('UPDATE gameRules SET details = ? WHERE id = ?').run(JSON.stringify(details), SUBSTITUTE_RULES_ID);
+            dbManager.db.prepare('UPDATE gameRules SET details = ? WHERE id = ?').run(
+                JSON.stringify(details),
+                SUBSTITUTE_RULES_ID
+            );
         }
 
         test('applies penalty before uma and replaces uma after tie averaging', async () => {
             seedSubstitutePlayerRules({
                 substitute_player_penalty_before_uma: 5000,
-                substitute_player_uma: 0
+                substitute_player_uma: 0,
             });
 
-            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } =
-                await createGameSetupWithPoints([34000, 34000, 28000, 24000]);
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetupWithPoints([
+                34000,
+                34000,
+                28000,
+                24000,
+            ]);
 
             const createResponse = await request(app)
                 .post('/api/games')
@@ -701,8 +728,8 @@ describe('Rating API Endpoints', () => {
                         { userId: user1Id, points: 34000, startPlace: 'EAST' },
                         { userId: user2Id, points: 34000, startPlace: 'SOUTH', isSubstitutePlayer: true },
                         { userId: user3Id, points: 28000, startPlace: 'WEST' },
-                        { userId: user4Id, points: 24000, startPlace: 'NORTH' }
-                    ]
+                        { userId: user4Id, points: 24000, startPlace: 'NORTH' },
+                    ],
                 });
             expect(createResponse.status).toBe(201);
 
@@ -711,7 +738,9 @@ describe('Rating API Endpoints', () => {
                 .set('Authorization', user1AuthHeader);
 
             const ratingByUserId = Object.fromEntries(
-                gameResponse.body.players.map((p: { userId: number; ratingChange: number }) => [p.userId, p.ratingChange])
+                gameResponse.body.players.map((
+                    p: { userId: number, ratingChange: number }
+                ) => [p.userId, p.ratingChange])
             );
 
             // penalty lowers user2 to 29000 before uma (only user1 stays at/above starting points)
@@ -724,11 +753,15 @@ describe('Rating API Endpoints', () => {
         test('averages uma for tie created by penalty, then applies substitute uma override', async () => {
             seedSubstitutePlayerRules({
                 substitute_player_penalty_before_uma: 5000,
-                substitute_player_uma: 0
+                substitute_player_uma: 0,
             });
 
-            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } =
-                await createGameSetupWithPoints([40000, 35000, 25000, 20000]);
+            const { user1Id, user2Id, user3Id, user4Id, user1AuthHeader } = await createGameSetupWithPoints([
+                40000,
+                35000,
+                25000,
+                20000,
+            ]);
 
             const createResponse = await request(app)
                 .post('/api/games')
@@ -739,8 +772,8 @@ describe('Rating API Endpoints', () => {
                         { userId: user1Id, points: 34000, startPlace: 'EAST' },
                         { userId: user2Id, points: 39000, startPlace: 'SOUTH', isSubstitutePlayer: true },
                         { userId: user3Id, points: 28000, startPlace: 'WEST' },
-                        { userId: user4Id, points: 19000, startPlace: 'NORTH' }
-                    ]
+                        { userId: user4Id, points: 19000, startPlace: 'NORTH' },
+                    ],
                 });
             expect(createResponse.status).toBe(201);
 
@@ -749,7 +782,9 @@ describe('Rating API Endpoints', () => {
                 .set('Authorization', user1AuthHeader);
 
             const ratingByUserId = Object.fromEntries(
-                gameResponse.body.players.map((p: { userId: number; ratingChange: number }) => [p.userId, p.ratingChange])
+                gameResponse.body.players.map((
+                    p: { userId: number, ratingChange: number }
+                ) => [p.userId, p.ratingChange])
             );
 
             // 39000 - 5000 = 34000, tying user1; uma [16,8,-8,-16] -> averaged to 12 for both leaders
@@ -762,16 +797,16 @@ describe('Rating API Endpoints', () => {
         test('recalculates rating when substitute flag changes on a finished game', async () => {
             seedSubstitutePlayerRules({
                 substitute_player_penalty_before_uma: 5000,
-                substitute_player_uma: 0
+                substitute_player_uma: 0,
             });
 
-            const { user4Id, user1AuthHeader, gameId } =
-                await createGameSetupWithPoints([40000, 35000, 25000, 20000]);
+            const { user4Id, user1AuthHeader, gameId } = await createGameSetupWithPoints([40000, 35000, 25000, 20000]);
 
             const beforeResponse = await request(app)
                 .get(`/api/games/${gameId}`)
                 .set('Authorization', user1AuthHeader);
-            const beforeRating = beforeResponse.body.players.find((p: { userId: number }) => p.userId === user4Id).ratingChange;
+            const beforeRating =
+                beforeResponse.body.players.find((p: { userId: number }) => p.userId === user4Id).ratingChange;
             expect(beforeRating).toBe(-26);
 
             const patchResponse = await request(app)
@@ -783,7 +818,8 @@ describe('Rating API Endpoints', () => {
             const afterResponse = await request(app)
                 .get(`/api/games/${gameId}`)
                 .set('Authorization', user1AuthHeader);
-            const afterRating = afterResponse.body.players.find((p: { userId: number }) => p.userId === user4Id).ratingChange;
+            const afterRating =
+                afterResponse.body.players.find((p: { userId: number }) => p.userId === user4Id).ratingChange;
             expect(afterRating).toBe(-15); // (15000 - 30000) + 0 uma after penalty applied before uma
         });
     });

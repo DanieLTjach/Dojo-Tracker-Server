@@ -4,7 +4,7 @@ import { TokenService } from './TokenService.ts';
 import type { TokenPair, TelegramUser } from '../model/AuthModels.ts';
 import {
     InvalidInitDataError,
-    ExpiredAuthDataError
+    ExpiredAuthDataError,
 } from '../error/AuthErrors.ts';
 import { UserIsNotActive } from '../error/UserErrors.ts';
 import config from '../../config/config.ts';

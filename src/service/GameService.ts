@@ -17,7 +17,17 @@ import {
     DuplicateTournamentRoundTableError,
     GamePlayerNotFoundError,
 } from '../error/GameErrors.ts';
-import type { DetailedGame, GameWithPlayers, PlayerData, GameFilters, GamePlayer, TrackedGamePlayerData, GameRound, GameState, Game } from '../model/GameModels.ts';
+import type {
+    DetailedGame,
+    GameWithPlayers,
+    PlayerData,
+    GameFilters,
+    GamePlayer,
+    TrackedGamePlayerData,
+    GameRound,
+    GameState,
+    Game,
+} from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
@@ -29,7 +39,7 @@ import { globalGameLogsTopic } from '../model/TelegramTopic.ts';
 import {
     InsufficientClubPermissionsError,
     YouHaveToBeClubMemberError,
-    YouNeedToBeModeratorToCreateGamesWithNonClubMembersError
+    YouNeedToBeModeratorToCreateGamesWithNonClubMembersError,
 } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import { ClubRole } from '../model/ClubModels.ts';
@@ -41,7 +51,6 @@ import { GameCreationBlockedError } from '../error/EventErrors.ts';
 import { AchievementService } from './AchievementService.ts';
 
 export class GameService {
-
     private gameRepository: GameRepository = new GameRepository();
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
@@ -76,9 +85,22 @@ export class GameService {
 
         const standingsBefore = this.ratingService.calculateStandings(eventId);
 
-        const newGameId = this.gameRepository.createGame(eventId, createdBy, gameTimestamp, tournamentRound, tournamentTable);
+        const newGameId = this.gameRepository.createGame(
+            eventId,
+            createdBy,
+            gameTimestamp,
+            tournamentRound,
+            tournamentTable
+        );
         this.addPlayersToGame(newGameId, playersData, createdBy);
-        this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules, event.startingRating);
+        this.ratingService.addRatingChangesFromGame(
+            newGameId,
+            gameTimestamp,
+            playersData,
+            eventId,
+            event.gameRules,
+            event.startingRating
+        );
         this.achievementService.recomputeEventAchievements(event);
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
@@ -99,7 +121,7 @@ export class GameService {
 
         return {
             ...game,
-            players: this.gameRepository.findGamePlayersByGameId(gameId)
+            players: this.gameRepository.findGamePlayersByGameId(gameId),
         };
     }
 
@@ -110,7 +132,7 @@ export class GameService {
         return {
             ...game,
             rounds,
-            currentState: this.calculateCurrentGameState(game, rounds)
+            currentState: this.calculateCurrentGameState(game, rounds),
         };
     }
 
@@ -135,7 +157,7 @@ export class GameService {
 
         return games.map(game => ({
             ...game,
-            players: gamePlayers.filter(gp => gp.gameId === game.id)
+            players: gamePlayers.filter(gp => gp.gameId === game.id),
         }));
     }
 
@@ -169,7 +191,14 @@ export class GameService {
         this.addPlayersToGame(gameId, playersData, modifiedBy);
 
         this.ratingService.deleteRatingChangesFromGame(oldGame);
-        this.ratingService.addRatingChangesFromGame(gameId, newGameTimestamp, playersData, eventId, event.gameRules, event.startingRating);
+        this.ratingService.addRatingChangesFromGame(
+            gameId,
+            newGameTimestamp,
+            playersData,
+            eventId,
+            event.gameRules,
+            event.startingRating
+        );
 
         this.achievementService.recomputeEventAchievements(event);
         if (oldEvent.id !== event.id) {
@@ -191,7 +220,7 @@ export class GameService {
         const event = this.eventService.getEventById(game.eventId);
         this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
 
-        const player = game.players.find((p) => p.userId === targetUserId);
+        const player = game.players.find(p => p.userId === targetUserId);
         if (player === undefined) {
             throw new GamePlayerNotFoundError(gameId, targetUserId);
         }
@@ -205,7 +234,7 @@ export class GameService {
         }
 
         return this.gameRepository.findGamePlayersByGameId(gameId)
-            .find((p) => p.userId === targetUserId)!;
+            .find(p => p.userId === targetUserId)!;
     }
 
     private recalculateRatingForFinishedGame(gameId: number, gameTimestamp: Date, event: Event): void {
@@ -271,7 +300,12 @@ export class GameService {
     }
 
     authorizeGameCreation(event: Event, playersData: Array<{ userId: number }>, createdBy: number): void {
-        if (this.clubMembershipService.userIsAdminOrHasClubRole(event.clubId, createdBy, [ClubRole.OWNER, ClubRole.MODERATOR])) {
+        if (
+            this.clubMembershipService.userIsAdminOrHasClubRole(event.clubId, createdBy, [
+                ClubRole.OWNER,
+                ClubRole.MODERATOR,
+            ])
+        ) {
             return;
         }
 
@@ -287,7 +321,9 @@ export class GameService {
             throw new YouHaveToBeClubMemberError();
         }
 
-        const allPlayersInClub = playersData.every((player) => this.clubMembershipService.getUserClubRole(event.clubId!, player.userId) !== undefined);
+        const allPlayersInClub = playersData.every(player =>
+            this.clubMembershipService.getUserClubRole(event.clubId!, player.userId) !== undefined
+        );
         if (!allPlayersInClub) {
             throw new YouNeedToBeModeratorToCreateGamesWithNonClubMembersError();
         }
@@ -299,7 +335,7 @@ export class GameService {
             return;
         }
 
-        if (game.players.some((player) => player.userId === userId)) {
+        if (game.players.some(player => player.userId === userId)) {
             return;
         }
 
@@ -314,7 +350,7 @@ export class GameService {
     }
 
     authorizeGamePlayerAction(game: GameWithPlayers, userId: number): void {
-        if (!game.players.some((player) => player.userId === userId)) {
+        if (!game.players.some(player => player.userId === userId)) {
             throw new NotGamePlayerError();
         }
     }
@@ -357,10 +393,14 @@ export class GameService {
         const oldEvent = this.eventService.getEventById(oldGame.eventId);
         const changes: string[] = [];
         if (oldEvent.id !== event.id) {
-            changes.push(`<b>Event:</b> ${oldEvent.name} <code>(ID: ${oldEvent.id})</code> → ${event.name} <code>(ID: ${event.id})</code>`);
+            changes.push(
+                `<b>Event:</b> ${oldEvent.name} <code>(ID: ${oldEvent.id})</code> → ${event.name} <code>(ID: ${event.id})</code>`
+            );
         }
         if (oldGame.createdAt.toISOString() !== newGame.createdAt.toISOString()) {
-            changes.push(`<b>Timestamp:</b> <code>${oldGame.createdAt.toISOString()}</code> → <code>${newGame.createdAt.toISOString()}</code>`);
+            changes.push(
+                `<b>Timestamp:</b> <code>${oldGame.createdAt.toISOString()}</code> → <code>${newGame.createdAt.toISOString()}</code>`
+            );
         }
 
         const playersChanged = this.havePlayersChanged(oldGame.players, newGame.players);
@@ -392,7 +432,8 @@ export class GameService {
         const newSorted = [...newPlayers].sort((a, b) => a.userId - b.userId);
         return oldSorted.some((old, i) => {
             const n = newSorted[i]!;
-            return old.userId !== n.userId || old.points !== n.points || old.startPlace !== n.startPlace || old.chomboCount !== n.chomboCount;
+            return old.userId !== n.userId || old.points !== n.points || old.startPlace !== n.startPlace ||
+                old.chomboCount !== n.chomboCount;
         });
     }
 
@@ -405,7 +446,8 @@ export class GameService {
         if (event.type === 'TOURNAMENT') {
             const round = game.tournamentRound ?? '—';
             const table = game.tournamentTable ?? '—';
-            section += `\n<b>Tournament round:</b> <code>${round}</code>\n<b>Tournament table:</b> <code>${table}</code>`;
+            section +=
+                `\n<b>Tournament round:</b> <code>${round}</code>\n<b>Tournament table:</b> <code>${table}</code>`;
         }
         return section;
     }
@@ -491,17 +533,17 @@ export class GameService {
                 standingString = `🆕 (${standingAfter})`;
             }
 
-            return `<code>${index + 1}.${player.points.toString().padStart(padding, ' ')}</code>`
-                + ` | ${this.generateUserProfileLink(user)}\n`
-                + `<code>${this.signedNumberToString(player.ratingChange).padStart(padding + 2, ' ')}</code>`
-                + (standingString ? ` | ${standingString}` : '');
+            return `<code>${index + 1}.${player.points.toString().padStart(padding, ' ')}</code>` +
+                ` | ${this.generateUserProfileLink(user)}\n` +
+                `<code>${this.signedNumberToString(player.ratingChange).padStart(padding + 2, ' ')}</code>` +
+                (standingString ? ` | ${standingString}` : '');
         }).join('\n\n');
 
         const createdByUser = this.userService.getUserById(createdBy);
-        const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>`
-            + `\nДодано <a href="${config.botUrl}?startapp=game_${game.id}"><b>нову гру</b></a>`
-            + ` користувачем ${this.generateUserProfileLink(createdByUser)}\n\n`
-            + `${playerLines}`;
+        const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>` +
+            `\nДодано <a href="${config.botUrl}?startapp=game_${game.id}"><b>нову гру</b></a>` +
+            ` користувачем ${this.generateUserProfileLink(createdByUser)}\n\n` +
+            `${playerLines}`;
 
         if (event.clubId !== null) {
             LogService.logInfo(message, this.clubService.getClubTelegramTopics(event.clubId).rating);

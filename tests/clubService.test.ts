@@ -11,7 +11,7 @@ import {
     ClubMembershipAlreadyExistsError,
     ClubMembershipNotFoundError,
     InsufficientClubPermissionsError,
-    InvalidClubMembershipStateError
+    InvalidClubMembershipStateError,
 } from '../src/error/ClubErrors.ts';
 import { cleanupTestDatabase } from './setup.ts';
 
@@ -43,7 +43,7 @@ function seedServiceTestUsers(): void {
         modifiedBy: SYSTEM_USER_ID,
         isActive: 1,
         isAdmin: 0,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
     });
 
     dbManager.db.prepare(`
@@ -59,7 +59,7 @@ function seedServiceTestUsers(): void {
         modifiedBy: SYSTEM_USER_ID,
         isActive: 1,
         isAdmin: 0,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
     });
 
     dbManager.db.prepare(`
@@ -75,7 +75,7 @@ function seedServiceTestUsers(): void {
         modifiedBy: SYSTEM_USER_ID,
         isActive: 1,
         isAdmin: 0,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
     });
 
     dbManager.db.prepare(`
@@ -91,12 +91,14 @@ function seedServiceTestUsers(): void {
         modifiedBy: SYSTEM_USER_ID,
         isActive: 1,
         isAdmin: 1,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
     });
 }
 
 function cleanupServiceData(): void {
-    dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId IN (SELECT id FROM club WHERE name LIKE ?)').run('Service Test Club %');
+    dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId IN (SELECT id FROM club WHERE name LIKE ?)').run(
+        'Service Test Club %'
+    );
     dbManager.db.prepare('DELETE FROM club WHERE name LIKE ?').run('Service Test Club %');
 }
 
@@ -118,7 +120,7 @@ function createServiceTestClub(): number {
         city: null,
         description: null,
         contactInfo: null,
-        isActive: true
+        isActive: true,
     }, SYSTEM_USER_ID);
     return created.id;
 }
@@ -146,7 +148,7 @@ describe('ClubService and MembershipService', () => {
                 city: 'Kyiv',
                 description: 'A club for service tests',
                 contactInfo: '@club_service',
-                isActive: true
+                isActive: true,
             }, SYSTEM_USER_ID);
 
             expect(club.id).toBeGreaterThan(0);
@@ -161,7 +163,7 @@ describe('ClubService and MembershipService', () => {
                 city: null,
                 description: null,
                 contactInfo: null,
-                isActive: true
+                isActive: true,
             }, SYSTEM_USER_ID);
 
             expect(() => {
@@ -171,7 +173,7 @@ describe('ClubService and MembershipService', () => {
                     city: null,
                     description: null,
                     contactInfo: null,
-                    isActive: true
+                    isActive: true,
                 }, SYSTEM_USER_ID);
             }).toThrow(ClubNameAlreadyExistsError);
         });
@@ -184,7 +186,7 @@ describe('ClubService and MembershipService', () => {
                     city: null,
                     description: null,
                     contactInfo: null,
-                    isActive: true
+                    isActive: true,
                 }, SYSTEM_USER_ID);
             }).toThrow(ClubNotFoundError);
         });
@@ -282,7 +284,7 @@ describe('ClubRoleMiddleware', () => {
 
     beforeEach(() => {
         mockReq = {
-            params: {}
+            params: {},
         };
         mockRes = {};
         mockNext = jest.fn();
@@ -294,7 +296,7 @@ describe('ClubRoleMiddleware', () => {
         mockReq.user = {
             userId: ADMIN_TEST_USER_ID,
             iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 3600
+            exp: Math.floor(Date.now() / 1000) + 3600,
         };
         mockReq.params = { clubId: String(clubId) };
 
@@ -314,13 +316,13 @@ describe('ClubRoleMiddleware', () => {
             status: 'ACTIVE',
             createdAt: now,
             modifiedAt: now,
-            modifiedBy: SYSTEM_USER_ID
+            modifiedBy: SYSTEM_USER_ID,
         });
 
         mockReq.user = {
             userId: OWNER_TEST_USER_ID,
             iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 3600
+            exp: Math.floor(Date.now() / 1000) + 3600,
         };
         mockReq.params = { clubId: String(clubId) };
 
@@ -340,13 +342,13 @@ describe('ClubRoleMiddleware', () => {
             status: 'ACTIVE',
             createdAt: now,
             modifiedAt: now,
-            modifiedBy: SYSTEM_USER_ID
+            modifiedBy: SYSTEM_USER_ID,
         });
 
         mockReq.user = {
             userId: MEMBER_TEST_USER_ID,
             iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 3600
+            exp: Math.floor(Date.now() / 1000) + 3600,
         };
         mockReq.params = { clubId: String(clubId) };
 
@@ -361,7 +363,7 @@ describe('ClubRoleMiddleware', () => {
         mockReq.user = {
             userId: SERVICE_TEST_USER_ID,
             iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 3600
+            exp: Math.floor(Date.now() / 1000) + 3600,
         };
         mockReq.params = { clubId: String(clubId) };
 

@@ -1,4 +1,4 @@
-import { BadRequestError, ForbiddenError, NotFoundError } from "./BaseErrors.ts";
+import { BadRequestError, ForbiddenError, NotFoundError } from './BaseErrors.ts';
 
 export class GameNotFoundById extends NotFoundError {
     constructor(id: number) {
@@ -26,7 +26,10 @@ export class DuplicatePlayerError extends BadRequestError {
 
 export class DuplicateGameTimestampInEventError extends BadRequestError {
     constructor() {
-        super('Хтось намагається додати гру одночасно з вами. Будь ласка, спробуйте ще раз', 'duplicateGameTimestampInEvent');
+        super(
+            'Хтось намагається додати гру одночасно з вами. Будь ласка, спробуйте ще раз',
+            'duplicateGameTimestampInEvent'
+        );
     }
 }
 
@@ -65,13 +68,19 @@ export class EventHasEndedError extends BadRequestError {
 
 export class YouHaveToBeAdminToCreateGameWithCustomTime extends ForbiddenError {
     constructor() {
-        super('Щоб створити гру з заданим часом, ви повинні бути адміністратором', 'youHaveToBeAdminToCreateGameWithCustomTime');
+        super(
+            'Щоб створити гру з заданим часом, ви повинні бути адміністратором',
+            'youHaveToBeAdminToCreateGameWithCustomTime'
+        );
     }
 }
 
 export class YouHaveToBeAdminToHideNewGameMessage extends ForbiddenError {
     constructor() {
-        super('Щоб сховати повідомлення про нову гру, ви повинні бути адміністратором', 'youHaveToBeAdminToHideNewGameMessage');
+        super(
+            'Щоб сховати повідомлення про нову гру, ви повинні бути адміністратором',
+            'youHaveToBeAdminToHideNewGameMessage'
+        );
     }
 }
 

@@ -25,7 +25,9 @@ export class UserNotApprovedForTournamentError extends BadRequestError {
 export class InvalidEventRegistrationStateError extends BadRequestError {
     constructor(action: string, currentStatus: EventRegistrationStatus, allowedStatuses: EventRegistrationStatus[]) {
         super(
-            `Неможливо ${action} реєстрацію зі статусом ${currentStatus}. Дозволені статуси: ${allowedStatuses.join(', ')}`,
+            `Неможливо ${action} реєстрацію зі статусом ${currentStatus}. Дозволені статуси: ${
+                allowedStatuses.join(', ')
+            }`,
             'invalidEventRegistrationState'
         );
     }
@@ -33,7 +35,10 @@ export class InvalidEventRegistrationStateError extends BadRequestError {
 
 export class MissingProfileNamesForTournamentRegistrationError extends BadRequestError {
     constructor() {
-        super('Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі', 'missingProfileNamesForTournamentRegistration');
+        super(
+            'Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі',
+            'missingProfileNamesForTournamentRegistration'
+        );
     }
 }
 

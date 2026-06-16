@@ -6,7 +6,7 @@ import {
     InvalidEventRegistrationStateError,
     MissingProfileNamesForTournamentRegistrationError,
     UserNotApprovedForTournamentError,
-    UserNotRegisteredForTournamentError
+    UserNotRegisteredForTournamentError,
 } from '../error/EventRegistrationErrors.ts';
 import { BadRequestError } from '../error/BaseErrors.ts';
 import type { Event } from '../model/EventModels.ts';
@@ -58,7 +58,7 @@ export class EventRegistrationService {
                 status: 'PENDING',
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy: applicantId
+                modifiedBy: applicantId,
             });
         }
 
@@ -138,7 +138,7 @@ export class EventRegistrationService {
         eventId: number,
         targetUserId: number,
         modifierId: number,
-        profileNames?: { firstName: string; lastName: string },
+        profileNames?: { firstName: string, lastName: string },
         isFillerPlayer?: boolean
     ): EventRegistration {
         const event = this.eventService.getEventById(eventId);
@@ -171,14 +171,19 @@ export class EventRegistrationService {
                 isFillerPlayer: isFillerPlayer ?? false,
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy: modifierId
+                modifiedBy: modifierId,
             });
         } else {
             if (existing.status !== 'APPROVED') {
                 this.registrationRepository.updateRegistrationStatus(eventId, targetUserId, 'APPROVED', modifierId);
             }
             if (isFillerPlayer !== undefined) {
-                this.registrationRepository.updateRegistrationIsFillerPlayer(eventId, targetUserId, isFillerPlayer, modifierId);
+                this.registrationRepository.updateRegistrationIsFillerPlayer(
+                    eventId,
+                    targetUserId,
+                    isFillerPlayer,
+                    modifierId
+                );
             }
         }
 
@@ -315,7 +320,7 @@ export class EventRegistrationService {
                 status: 'PENDING',
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy: userId
+                modifiedBy: userId,
             });
             return;
         }
@@ -336,7 +341,7 @@ export class EventRegistrationService {
                 status: 'ACTIVE',
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy: modifierId
+                modifiedBy: modifierId,
             });
             return;
         }
@@ -360,7 +365,7 @@ export class EventRegistrationService {
                 status: 'ACTIVE',
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy: modifierId
+                modifiedBy: modifierId,
             });
             return;
         }
@@ -456,8 +461,8 @@ export class EventRegistrationService {
         event: Event,
         target: User,
         modifier: User,
-        before: { firstName: string | null; lastName: string | null },
-        after: { firstName: string | null; lastName: string | null }
+        before: { firstName: string | null, lastName: string | null },
+        after: { firstName: string | null, lastName: string | null }
     ): void {
         const fmt = (n: string | null): string => n ?? '—';
         const message = dedent`

@@ -22,7 +22,6 @@ export interface UserAchievementRow {
 }
 
 export class AchievementRepository {
-
     private deleteByEventStatement(): Statement<{ eventId: number }, void> {
         return dbManager.db.prepare('DELETE FROM eventAchievement WHERE eventId = :eventId');
     }
@@ -30,8 +29,7 @@ export class AchievementRepository {
     private insertStatement(): Statement<EventAchievementRow, void> {
         return dbManager.db.prepare(`
             INSERT INTO eventAchievement (eventId, metric, userId, value)
-            VALUES (:eventId, :metric, :userId, :value)`
-        );
+            VALUES (:eventId, :metric, :userId, :value)`);
     }
 
     private markComputedStatement(): Statement<{ eventId: number, computedAt: string }, void> {
@@ -49,7 +47,9 @@ export class AchievementRepository {
     }
 
     private areEventAchievementsComputedStatement(): Statement<{ eventId: number }, { eventId: number }> {
-        return dbManager.db.prepare('SELECT id AS eventId FROM event WHERE id = :eventId AND achievementsComputedAt IS NOT NULL');
+        return dbManager.db.prepare(
+            'SELECT id AS eventId FROM event WHERE id = :eventId AND achievementsComputedAt IS NOT NULL'
+        );
     }
 
     areEventAchievementsComputed(eventId: number): boolean {
@@ -64,8 +64,7 @@ export class AchievementRepository {
             JOIN user u ON u.id = ea.userId
             LEFT JOIN profile p ON p.userId = ea.userId
             WHERE ea.eventId = :eventId
-            ORDER BY ea.metric, u.name`
-        );
+            ORDER BY ea.metric, u.name`);
     }
 
     findWinnersByEventId(eventId: number): EventAchievementWinnerRow[] {
@@ -78,8 +77,7 @@ export class AchievementRepository {
             FROM eventAchievement ea
             JOIN event e ON e.id = ea.eventId
             WHERE ea.userId = :userId
-            ORDER BY e.id, ea.metric`
-        );
+            ORDER BY e.id, ea.metric`);
     }
 
     findByUserId(userId: number): UserAchievementRow[] {
@@ -95,12 +93,11 @@ export class AchievementRepository {
             WHERE utg.userId = :userId
               AND e.type = 'TOURNAMENT'
               AND g.status = 'FINISHED'
-              AND e.achievementsComputedAt IS NULL`
-        );
+              AND e.achievementsComputedAt IS NULL`);
     }
 
     /** Tournament events the user played a finished game in that have never been computed. */
     findUncomputedTournamentEventIdsForUser(userId: number): number[] {
-        return this.findUncomputedTournamentEventIdsForUserStatement().all({ userId }).map((row) => row.eventId);
+        return this.findUncomputedTournamentEventIdsForUserStatement().all({ userId }).map(row => row.eventId);
     }
 }

@@ -2,7 +2,7 @@ import { describe, expect, test } from '@jest/globals';
 import {
     buildGameRulesPresets,
     gameRulesPresets,
-    gameRulesPresetsByKey
+    gameRulesPresetsByKey,
 } from '../src/data/gameRulesPresets.ts';
 import type { RuleValue } from '../src/model/EventModels.ts';
 
@@ -21,7 +21,7 @@ describe('game rules presets', () => {
                 name,
                 extends: parentPreset,
                 rules: sortRules(rules),
-                ownRules: sortRules(ownRules)
+                ownRules: sortRules(ownRules),
             }));
 
         expect(publicPresets).toMatchSnapshot();
@@ -41,20 +41,24 @@ describe('game rules presets', () => {
         expect(gameRulesPresets.filter(preset => !preset.internal).map(preset => preset.key)).toEqual([
             'ema_2025',
             'mahjong_soul',
-            'mahjong_soul_sanma'
+            'mahjong_soul_sanma',
         ]);
     });
 
     test('throws when preset inheritance contains a cycle', () => {
-        expect(() => buildGameRulesPresets([
-            { key: 'a', name: 'A', extends: 'b', ownRules: {} },
-            { key: 'b', name: 'B', extends: 'a', ownRules: {} }
-        ])).toThrow('Cycle in game-rules preset chain at "a"');
+        expect(() =>
+            buildGameRulesPresets([
+                { key: 'a', name: 'A', extends: 'b', ownRules: {} },
+                { key: 'b', name: 'B', extends: 'a', ownRules: {} },
+            ])
+        ).toThrow('Cycle in game-rules preset chain at "a"');
     });
 
     test('throws when preset inheritance references a missing parent', () => {
-        expect(() => buildGameRulesPresets([
-            { key: 'a', name: 'A', extends: 'missing', ownRules: {} }
-        ])).toThrow('Preset "a" extends unknown "missing"');
+        expect(() =>
+            buildGameRulesPresets([
+                { key: 'a', name: 'A', extends: 'missing', ownRules: {} },
+            ])
+        ).toThrow('Preset "a" extends unknown "missing"');
     });
 });

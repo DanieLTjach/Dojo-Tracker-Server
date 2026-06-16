@@ -51,7 +51,7 @@ describe('Permissions matrix integration specification', () => {
         moderator: '',
         member: '',
         nonMember: '',
-        pending: ''
+        pending: '',
     };
 
     const roleLabels: Record<MatrixRole, string> = {
@@ -59,7 +59,7 @@ describe('Permissions matrix integration specification', () => {
         owner: 'Club OWNER',
         moderator: 'MODERATOR',
         member: 'MEMBER',
-        nonMember: 'Non-member'
+        nonMember: 'Non-member',
     };
 
     function nextId(): number {
@@ -190,15 +190,18 @@ describe('Permissions matrix integration specification', () => {
     }
 
     function cleanupEventCascade(eventId: number): void {
-        dbManager.db.prepare('DELETE FROM userRatingChange WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
-        dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
+        dbManager.db.prepare('DELETE FROM userRatingChange WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)')
+            .run(eventId);
+        dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(
+            eventId
+        );
         dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(eventId);
         dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
     }
 
     function buildClubCreatePayload(): { name: string } {
         return {
-            name: `Permissions Matrix Club ${nextId()}`
+            name: `Permissions Matrix Club ${nextId()}`,
         };
     }
 
@@ -236,7 +239,7 @@ describe('Permissions matrix integration specification', () => {
             gameRulesId,
             clubId,
             dateFrom: '2024-01-01T00:00:00.000Z',
-            dateTo: '2030-01-01T00:00:00.000Z'
+            dateTo: '2030-01-01T00:00:00.000Z',
         };
     }
 
@@ -252,7 +255,7 @@ describe('Permissions matrix integration specification', () => {
             numberOfPlayers: 4,
             uma: [15, 5, -5, -15],
             startingPoints: 30000,
-            clubId
+            clubId,
         };
     }
 
@@ -270,19 +273,19 @@ describe('Permissions matrix integration specification', () => {
                 {
                     userId: OWNER_USER_ID,
                     points: 50000,
-                    startPlace: 'EAST'
+                    startPlace: 'EAST',
                 },
                 {
                     userId: MODERATOR_USER_ID,
                     points: 40000,
-                    startPlace: 'SOUTH'
+                    startPlace: 'SOUTH',
                 },
                 {
                     userId: includeNonClubPlayer ? NON_MEMBER_USER_ID : MEMBER_USER_ID,
                     points: 30000,
-                    startPlace: 'WEST'
-                }
-            ]
+                    startPlace: 'WEST',
+                },
+            ],
         };
     }
 
@@ -316,7 +319,7 @@ describe('Permissions matrix integration specification', () => {
             telegramId: 950010001,
             isAdmin: true,
             isActive: true,
-            status: 'ACTIVE'
+            status: 'ACTIVE',
         });
 
         insertUser({
@@ -326,7 +329,7 @@ describe('Permissions matrix integration specification', () => {
             telegramId: 950020001,
             isAdmin: false,
             isActive: true,
-            status: 'ACTIVE'
+            status: 'ACTIVE',
         });
 
         insertUser({
@@ -336,7 +339,7 @@ describe('Permissions matrix integration specification', () => {
             telegramId: 950030001,
             isAdmin: false,
             isActive: true,
-            status: 'ACTIVE'
+            status: 'ACTIVE',
         });
 
         insertUser({
@@ -346,7 +349,7 @@ describe('Permissions matrix integration specification', () => {
             telegramId: 950040001,
             isAdmin: false,
             isActive: true,
-            status: 'ACTIVE'
+            status: 'ACTIVE',
         });
 
         insertUser({
@@ -356,7 +359,7 @@ describe('Permissions matrix integration specification', () => {
             telegramId: 950050001,
             isAdmin: false,
             isActive: true,
-            status: 'ACTIVE'
+            status: 'ACTIVE',
         });
 
         insertUser({
@@ -366,7 +369,7 @@ describe('Permissions matrix integration specification', () => {
             telegramId: null,
             isAdmin: false,
             isActive: false,
-            status: 'PENDING'
+            status: 'PENDING',
         });
 
         insertClub(TEST_CLUB_ID, 'Permissions Matrix Test Club');
@@ -452,36 +455,41 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             201,
-            (authHeader) => request(app).post('/api/clubs').set('Authorization', authHeader).send(buildClubCreatePayload()),
-            (response) => captureCreatedId(response, createdClubIds)
+            authHeader =>
+                request(app).post('/api/clubs').set('Authorization', authHeader).send(buildClubCreatePayload()),
+            response => captureCreatedId(response, createdClubIds)
         );
 
         createRoleTest(
             'owner',
             403,
-            (authHeader) => request(app).post('/api/clubs').set('Authorization', authHeader).send(buildClubCreatePayload()),
-            (response) => captureCreatedId(response, createdClubIds)
+            authHeader =>
+                request(app).post('/api/clubs').set('Authorization', authHeader).send(buildClubCreatePayload()),
+            response => captureCreatedId(response, createdClubIds)
         );
 
         createRoleTest(
             'moderator',
             403,
-            (authHeader) => request(app).post('/api/clubs').set('Authorization', authHeader).send(buildClubCreatePayload()),
-            (response) => captureCreatedId(response, createdClubIds)
+            authHeader =>
+                request(app).post('/api/clubs').set('Authorization', authHeader).send(buildClubCreatePayload()),
+            response => captureCreatedId(response, createdClubIds)
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app).post('/api/clubs').set('Authorization', authHeader).send(buildClubCreatePayload()),
-            (response) => captureCreatedId(response, createdClubIds)
+            authHeader =>
+                request(app).post('/api/clubs').set('Authorization', authHeader).send(buildClubCreatePayload()),
+            response => captureCreatedId(response, createdClubIds)
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app).post('/api/clubs').set('Authorization', authHeader).send(buildClubCreatePayload()),
-            (response) => captureCreatedId(response, createdClubIds)
+            authHeader =>
+                request(app).post('/api/clubs').set('Authorization', authHeader).send(buildClubCreatePayload()),
+            response => captureCreatedId(response, createdClubIds)
         );
     });
 
@@ -489,46 +497,51 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             200,
-            (authHeader) => request(app)
-                .put(`/api/clubs/${TEST_CLUB_ID}`)
-                .set('Authorization', authHeader)
-                .send(buildClubUpdatePayload())
+            authHeader =>
+                request(app)
+                    .put(`/api/clubs/${TEST_CLUB_ID}`)
+                    .set('Authorization', authHeader)
+                    .send(buildClubUpdatePayload())
         );
 
         createRoleTest(
             'owner',
             200,
-            (authHeader) => request(app)
-                .put(`/api/clubs/${TEST_CLUB_ID}`)
-                .set('Authorization', authHeader)
-                .send(buildClubUpdatePayload())
+            authHeader =>
+                request(app)
+                    .put(`/api/clubs/${TEST_CLUB_ID}`)
+                    .set('Authorization', authHeader)
+                    .send(buildClubUpdatePayload())
         );
 
         createRoleTest(
             'moderator',
             403,
-            (authHeader) => request(app)
-                .put(`/api/clubs/${TEST_CLUB_ID}`)
-                .set('Authorization', authHeader)
-                .send(buildClubUpdatePayload())
+            authHeader =>
+                request(app)
+                    .put(`/api/clubs/${TEST_CLUB_ID}`)
+                    .set('Authorization', authHeader)
+                    .send(buildClubUpdatePayload())
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .put(`/api/clubs/${TEST_CLUB_ID}`)
-                .set('Authorization', authHeader)
-                .send(buildClubUpdatePayload())
+            authHeader =>
+                request(app)
+                    .put(`/api/clubs/${TEST_CLUB_ID}`)
+                    .set('Authorization', authHeader)
+                    .send(buildClubUpdatePayload())
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .put(`/api/clubs/${TEST_CLUB_ID}`)
-                .set('Authorization', authHeader)
-                .send(buildClubUpdatePayload())
+            authHeader =>
+                request(app)
+                    .put(`/api/clubs/${TEST_CLUB_ID}`)
+                    .set('Authorization', authHeader)
+                    .send(buildClubUpdatePayload())
         );
     });
 
@@ -547,41 +560,46 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             204,
-            (authHeader) => request(app)
-                .delete(`/api/clubs/${deletableClubId}`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .delete(`/api/clubs/${deletableClubId}`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'owner',
             403,
-            (authHeader) => request(app)
-                .delete(`/api/clubs/${deletableClubId}`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .delete(`/api/clubs/${deletableClubId}`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'moderator',
             403,
-            (authHeader) => request(app)
-                .delete(`/api/clubs/${deletableClubId}`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .delete(`/api/clubs/${deletableClubId}`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .delete(`/api/clubs/${deletableClubId}`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .delete(`/api/clubs/${deletableClubId}`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .delete(`/api/clubs/${deletableClubId}`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .delete(`/api/clubs/${deletableClubId}`)
+                    .set('Authorization', authHeader)
         );
     });
 
@@ -594,41 +612,46 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             200,
-            (authHeader) => request(app)
-                .post(`/api/users/${PENDING_ACTIVATION_USER_ID}/activate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/users/${PENDING_ACTIVATION_USER_ID}/activate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'owner',
             200,
-            (authHeader) => request(app)
-                .post(`/api/users/${PENDING_ACTIVATION_USER_ID}/activate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/users/${PENDING_ACTIVATION_USER_ID}/activate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'moderator',
             200,
-            (authHeader) => request(app)
-                .post(`/api/users/${PENDING_ACTIVATION_USER_ID}/activate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/users/${PENDING_ACTIVATION_USER_ID}/activate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .post(`/api/users/${PENDING_ACTIVATION_USER_ID}/activate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/users/${PENDING_ACTIVATION_USER_ID}/activate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .post(`/api/users/${PENDING_ACTIVATION_USER_ID}/activate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/users/${PENDING_ACTIVATION_USER_ID}/activate`)
+                    .set('Authorization', authHeader)
         );
     });
 
@@ -641,41 +664,46 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             200,
-            (authHeader) => request(app)
-                .post(`/api/users/${MEMBER_USER_ID}/deactivate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/users/${MEMBER_USER_ID}/deactivate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'owner',
             200,
-            (authHeader) => request(app)
-                .post(`/api/users/${MEMBER_USER_ID}/deactivate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/users/${MEMBER_USER_ID}/deactivate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'moderator',
             403,
-            (authHeader) => request(app)
-                .post(`/api/users/${MEMBER_USER_ID}/deactivate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/users/${MEMBER_USER_ID}/deactivate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .post(`/api/users/${MEMBER_USER_ID}/deactivate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/users/${MEMBER_USER_ID}/deactivate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .post(`/api/users/${MEMBER_USER_ID}/deactivate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/users/${MEMBER_USER_ID}/deactivate`)
+                    .set('Authorization', authHeader)
         );
     });
 
@@ -692,51 +720,56 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             201,
-            (authHeader) => request(app)
-                .post('/api/events')
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID)),
-            (response) => captureCreatedId(response, createdEventIds)
+            authHeader =>
+                request(app)
+                    .post('/api/events')
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID)),
+            response => captureCreatedId(response, createdEventIds)
         );
 
         createRoleTest(
             'owner',
             201,
-            (authHeader) => request(app)
-                .post('/api/events')
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID)),
-            (response) => captureCreatedId(response, createdEventIds)
+            authHeader =>
+                request(app)
+                    .post('/api/events')
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID)),
+            response => captureCreatedId(response, createdEventIds)
         );
 
         createRoleTest(
             'moderator',
             403,
-            (authHeader) => request(app)
-                .post('/api/events')
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID)),
-            (response) => captureCreatedId(response, createdEventIds)
+            authHeader =>
+                request(app)
+                    .post('/api/events')
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID)),
+            response => captureCreatedId(response, createdEventIds)
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .post('/api/events')
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID)),
-            (response) => captureCreatedId(response, createdEventIds)
+            authHeader =>
+                request(app)
+                    .post('/api/events')
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID)),
+            response => captureCreatedId(response, createdEventIds)
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .post('/api/events')
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID)),
-            (response) => captureCreatedId(response, createdEventIds)
+            authHeader =>
+                request(app)
+                    .post('/api/events')
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID)),
+            response => captureCreatedId(response, createdEventIds)
         );
     });
 
@@ -760,46 +793,51 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             200,
-            (authHeader) => request(app)
-                .put(`/api/events/${editableEventId}`)
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
+            authHeader =>
+                request(app)
+                    .put(`/api/events/${editableEventId}`)
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
         );
 
         createRoleTest(
             'owner',
             200,
-            (authHeader) => request(app)
-                .put(`/api/events/${editableEventId}`)
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
+            authHeader =>
+                request(app)
+                    .put(`/api/events/${editableEventId}`)
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
         );
 
         createRoleTest(
             'moderator',
             403,
-            (authHeader) => request(app)
-                .put(`/api/events/${editableEventId}`)
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
+            authHeader =>
+                request(app)
+                    .put(`/api/events/${editableEventId}`)
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .put(`/api/events/${editableEventId}`)
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
+            authHeader =>
+                request(app)
+                    .put(`/api/events/${editableEventId}`)
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .put(`/api/events/${editableEventId}`)
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
+            authHeader =>
+                request(app)
+                    .put(`/api/events/${editableEventId}`)
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
         );
     });
 
@@ -871,46 +909,51 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             201,
-            (authHeader) => request(app)
-                .post('/api/games')
-                .set('Authorization', authHeader)
-                .send(buildGamePayload(gameEventId, false))
+            authHeader =>
+                request(app)
+                    .post('/api/games')
+                    .set('Authorization', authHeader)
+                    .send(buildGamePayload(gameEventId, false))
         );
 
         createRoleTest(
             'owner',
             201,
-            (authHeader) => request(app)
-                .post('/api/games')
-                .set('Authorization', authHeader)
-                .send(buildGamePayload(gameEventId, false))
+            authHeader =>
+                request(app)
+                    .post('/api/games')
+                    .set('Authorization', authHeader)
+                    .send(buildGamePayload(gameEventId, false))
         );
 
         createRoleTest(
             'moderator',
             201,
-            (authHeader) => request(app)
-                .post('/api/games')
-                .set('Authorization', authHeader)
-                .send(buildGamePayload(gameEventId, false))
+            authHeader =>
+                request(app)
+                    .post('/api/games')
+                    .set('Authorization', authHeader)
+                    .send(buildGamePayload(gameEventId, false))
         );
 
         createRoleTest(
             'member',
             201,
-            (authHeader) => request(app)
-                .post('/api/games')
-                .set('Authorization', authHeader)
-                .send(buildGamePayload(gameEventId, false))
+            authHeader =>
+                request(app)
+                    .post('/api/games')
+                    .set('Authorization', authHeader)
+                    .send(buildGamePayload(gameEventId, false))
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .post('/api/games')
-                .set('Authorization', authHeader)
-                .send(buildGamePayload(gameEventId, false))
+            authHeader =>
+                request(app)
+                    .post('/api/games')
+                    .set('Authorization', authHeader)
+                    .send(buildGamePayload(gameEventId, false))
         );
 
         test('MEMBER with non-club players -> 403', async () => {
@@ -947,46 +990,51 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             200,
-            (authHeader) => request(app)
-                .put(`/api/games/${editableGameId}`)
-                .set('Authorization', authHeader)
-                .send(buildGamePayload(editableEventId, false))
+            authHeader =>
+                request(app)
+                    .put(`/api/games/${editableGameId}`)
+                    .set('Authorization', authHeader)
+                    .send(buildGamePayload(editableEventId, false))
         );
 
         createRoleTest(
             'owner',
             200,
-            (authHeader) => request(app)
-                .put(`/api/games/${editableGameId}`)
-                .set('Authorization', authHeader)
-                .send(buildGamePayload(editableEventId, false))
+            authHeader =>
+                request(app)
+                    .put(`/api/games/${editableGameId}`)
+                    .set('Authorization', authHeader)
+                    .send(buildGamePayload(editableEventId, false))
         );
 
         createRoleTest(
             'moderator',
             200,
-            (authHeader) => request(app)
-                .put(`/api/games/${editableGameId}`)
-                .set('Authorization', authHeader)
-                .send(buildGamePayload(editableEventId, false))
+            authHeader =>
+                request(app)
+                    .put(`/api/games/${editableGameId}`)
+                    .set('Authorization', authHeader)
+                    .send(buildGamePayload(editableEventId, false))
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .put(`/api/games/${editableGameId}`)
-                .set('Authorization', authHeader)
-                .send(buildGamePayload(editableEventId, false))
+            authHeader =>
+                request(app)
+                    .put(`/api/games/${editableGameId}`)
+                    .set('Authorization', authHeader)
+                    .send(buildGamePayload(editableEventId, false))
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .put(`/api/games/${editableGameId}`)
-                .set('Authorization', authHeader)
-                .send(buildGamePayload(editableEventId, false))
+            authHeader =>
+                request(app)
+                    .put(`/api/games/${editableGameId}`)
+                    .set('Authorization', authHeader)
+                    .send(buildGamePayload(editableEventId, false))
         );
     });
 
@@ -1015,46 +1063,51 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             200,
-            (authHeader) => request(app)
-                .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
-                .set('Authorization', authHeader)
-                .send({ isSubstitutePlayer: true })
+            authHeader =>
+                request(app)
+                    .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
+                    .set('Authorization', authHeader)
+                    .send({ isSubstitutePlayer: true })
         );
 
         createRoleTest(
             'owner',
             200,
-            (authHeader) => request(app)
-                .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
-                .set('Authorization', authHeader)
-                .send({ isSubstitutePlayer: true })
+            authHeader =>
+                request(app)
+                    .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
+                    .set('Authorization', authHeader)
+                    .send({ isSubstitutePlayer: true })
         );
 
         createRoleTest(
             'moderator',
             200,
-            (authHeader) => request(app)
-                .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
-                .set('Authorization', authHeader)
-                .send({ isSubstitutePlayer: true })
+            authHeader =>
+                request(app)
+                    .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
+                    .set('Authorization', authHeader)
+                    .send({ isSubstitutePlayer: true })
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
-                .set('Authorization', authHeader)
-                .send({ isSubstitutePlayer: true })
+            authHeader =>
+                request(app)
+                    .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
+                    .set('Authorization', authHeader)
+                    .send({ isSubstitutePlayer: true })
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
-                .set('Authorization', authHeader)
-                .send({ isSubstitutePlayer: true })
+            authHeader =>
+                request(app)
+                    .patch(`/api/games/${substituteGameId}/players/${MEMBER_USER_ID}/substitute-player`)
+                    .set('Authorization', authHeader)
+                    .send({ isSubstitutePlayer: true })
         );
     });
 
@@ -1082,41 +1135,46 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             204,
-            (authHeader) => request(app)
-                .delete(`/api/games/${deletableGameId}`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .delete(`/api/games/${deletableGameId}`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'owner',
             204,
-            (authHeader) => request(app)
-                .delete(`/api/games/${deletableGameId}`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .delete(`/api/games/${deletableGameId}`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'moderator',
             403,
-            (authHeader) => request(app)
-                .delete(`/api/games/${deletableGameId}`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .delete(`/api/games/${deletableGameId}`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .delete(`/api/games/${deletableGameId}`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .delete(`/api/games/${deletableGameId}`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .delete(`/api/games/${deletableGameId}`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .delete(`/api/games/${deletableGameId}`)
+                    .set('Authorization', authHeader)
         );
     });
 
@@ -1128,46 +1186,51 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             200,
-            (authHeader) => request(app)
-                .patch(`/api/clubs/${TEST_CLUB_ID}/members/${MEMBER_USER_ID}`)
-                .set('Authorization', authHeader)
-                .send({ role: 'MODERATOR' })
+            authHeader =>
+                request(app)
+                    .patch(`/api/clubs/${TEST_CLUB_ID}/members/${MEMBER_USER_ID}`)
+                    .set('Authorization', authHeader)
+                    .send({ role: 'MODERATOR' })
         );
 
         createRoleTest(
             'owner',
             200,
-            (authHeader) => request(app)
-                .patch(`/api/clubs/${TEST_CLUB_ID}/members/${MEMBER_USER_ID}`)
-                .set('Authorization', authHeader)
-                .send({ role: 'MODERATOR' })
+            authHeader =>
+                request(app)
+                    .patch(`/api/clubs/${TEST_CLUB_ID}/members/${MEMBER_USER_ID}`)
+                    .set('Authorization', authHeader)
+                    .send({ role: 'MODERATOR' })
         );
 
         createRoleTest(
             'moderator',
             403,
-            (authHeader) => request(app)
-                .patch(`/api/clubs/${TEST_CLUB_ID}/members/${MEMBER_USER_ID}`)
-                .set('Authorization', authHeader)
-                .send({ role: 'MODERATOR' })
+            authHeader =>
+                request(app)
+                    .patch(`/api/clubs/${TEST_CLUB_ID}/members/${MEMBER_USER_ID}`)
+                    .set('Authorization', authHeader)
+                    .send({ role: 'MODERATOR' })
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .patch(`/api/clubs/${TEST_CLUB_ID}/members/${MEMBER_USER_ID}`)
-                .set('Authorization', authHeader)
-                .send({ role: 'MODERATOR' })
+            authHeader =>
+                request(app)
+                    .patch(`/api/clubs/${TEST_CLUB_ID}/members/${MEMBER_USER_ID}`)
+                    .set('Authorization', authHeader)
+                    .send({ role: 'MODERATOR' })
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .patch(`/api/clubs/${TEST_CLUB_ID}/members/${MEMBER_USER_ID}`)
-                .set('Authorization', authHeader)
-                .send({ role: 'MODERATOR' })
+            authHeader =>
+                request(app)
+                    .patch(`/api/clubs/${TEST_CLUB_ID}/members/${MEMBER_USER_ID}`)
+                    .set('Authorization', authHeader)
+                    .send({ role: 'MODERATOR' })
         );
     });
 
@@ -1180,41 +1243,46 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             200,
-            (authHeader) => request(app)
-                .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'owner',
             200,
-            (authHeader) => request(app)
-                .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'moderator',
             200,
-            (authHeader) => request(app)
-                .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
+                    .set('Authorization', authHeader)
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
-                .set('Authorization', authHeader)
+            authHeader =>
+                request(app)
+                    .post(`/api/clubs/${TEST_CLUB_ID}/members/${PENDING_ACTIVATION_USER_ID}/activate`)
+                    .set('Authorization', authHeader)
         );
     });
 
@@ -1222,31 +1290,31 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             200,
-            (authHeader) => request(app).get('/api/clubs').set('Authorization', authHeader)
+            authHeader => request(app).get('/api/clubs').set('Authorization', authHeader)
         );
 
         createRoleTest(
             'owner',
             200,
-            (authHeader) => request(app).get('/api/clubs').set('Authorization', authHeader)
+            authHeader => request(app).get('/api/clubs').set('Authorization', authHeader)
         );
 
         createRoleTest(
             'moderator',
             200,
-            (authHeader) => request(app).get('/api/clubs').set('Authorization', authHeader)
+            authHeader => request(app).get('/api/clubs').set('Authorization', authHeader)
         );
 
         createRoleTest(
             'member',
             200,
-            (authHeader) => request(app).get('/api/clubs').set('Authorization', authHeader)
+            authHeader => request(app).get('/api/clubs').set('Authorization', authHeader)
         );
 
         createRoleTest(
             'nonMember',
             200,
-            (authHeader) => request(app).get('/api/clubs').set('Authorization', authHeader)
+            authHeader => request(app).get('/api/clubs').set('Authorization', authHeader)
         );
     });
 
@@ -1263,51 +1331,56 @@ describe('Permissions matrix integration specification', () => {
         createRoleTest(
             'admin',
             201,
-            (authHeader) => request(app)
-                .post('/api/events')
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(null, GLOBAL_GAME_RULES_ID)),
-            (response) => captureCreatedId(response, createdEventIds)
+            authHeader =>
+                request(app)
+                    .post('/api/events')
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(null, GLOBAL_GAME_RULES_ID)),
+            response => captureCreatedId(response, createdEventIds)
         );
 
         createRoleTest(
             'owner',
             403,
-            (authHeader) => request(app)
-                .post('/api/events')
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(null, GLOBAL_GAME_RULES_ID)),
-            (response) => captureCreatedId(response, createdEventIds)
+            authHeader =>
+                request(app)
+                    .post('/api/events')
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(null, GLOBAL_GAME_RULES_ID)),
+            response => captureCreatedId(response, createdEventIds)
         );
 
         createRoleTest(
             'moderator',
             403,
-            (authHeader) => request(app)
-                .post('/api/events')
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(null, GLOBAL_GAME_RULES_ID)),
-            (response) => captureCreatedId(response, createdEventIds)
+            authHeader =>
+                request(app)
+                    .post('/api/events')
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(null, GLOBAL_GAME_RULES_ID)),
+            response => captureCreatedId(response, createdEventIds)
         );
 
         createRoleTest(
             'member',
             403,
-            (authHeader) => request(app)
-                .post('/api/events')
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(null, GLOBAL_GAME_RULES_ID)),
-            (response) => captureCreatedId(response, createdEventIds)
+            authHeader =>
+                request(app)
+                    .post('/api/events')
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(null, GLOBAL_GAME_RULES_ID)),
+            response => captureCreatedId(response, createdEventIds)
         );
 
         createRoleTest(
             'nonMember',
             403,
-            (authHeader) => request(app)
-                .post('/api/events')
-                .set('Authorization', authHeader)
-                .send(buildEventPayload(null, GLOBAL_GAME_RULES_ID)),
-            (response) => captureCreatedId(response, createdEventIds)
+            authHeader =>
+                request(app)
+                    .post('/api/events')
+                    .set('Authorization', authHeader)
+                    .send(buildEventPayload(null, GLOBAL_GAME_RULES_ID)),
+            response => captureCreatedId(response, createdEventIds)
         );
     });
 
@@ -1347,8 +1420,11 @@ describe('Permissions matrix integration specification', () => {
                 .set('Authorization', authHeaders.owner)
                 .send({
                     name: 'Permissions Matrix Club B',
-                    address: null, city: null, description: null, contactInfo: null,
-                    isActive: true
+                    address: null,
+                    city: null,
+                    description: null,
+                    contactInfo: null,
+                    isActive: true,
                 });
             expect(res.status).toBe(403);
         });
@@ -1370,8 +1446,8 @@ describe('Permissions matrix integration specification', () => {
                     playersData: [
                         { userId: OWNER_USER_ID, points: 45000 },
                         { userId: MODERATOR_USER_ID, points: 40000 },
-                        { userId: MEMBER_USER_ID, points: 35000 }
-                    ]
+                        { userId: MEMBER_USER_ID, points: 35000 },
+                    ],
                 });
             expect(res.status).toBe(403);
         });
@@ -1389,8 +1465,11 @@ describe('Permissions matrix integration specification', () => {
                 .set('Authorization', authHeaders.member)
                 .send({
                     name: 'Permissions Matrix Club B',
-                    address: null, city: null, description: null, contactInfo: null,
-                    isActive: true
+                    address: null,
+                    city: null,
+                    description: null,
+                    contactInfo: null,
+                    isActive: true,
                 });
             expect(res.status).toBe(200);
         });
@@ -1421,8 +1500,11 @@ describe('Permissions matrix integration specification', () => {
                 .set('Authorization', authHeaders.member)
                 .send({
                     name: 'Permissions Matrix Test Club',
-                    address: null, city: null, description: null, contactInfo: null,
-                    isActive: true
+                    address: null,
+                    city: null,
+                    description: null,
+                    contactInfo: null,
+                    isActive: true,
                 });
             expect(res.status).toBe(403);
         });

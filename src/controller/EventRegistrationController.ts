@@ -9,7 +9,7 @@ import {
     eventRegistrationManualSchema,
     eventRegistrationRejectSchema,
     eventRegistrationWithdrawSchema,
-    myRegistrationsSchema
+    myRegistrationsSchema,
 } from '../schema/EventRegistrationSchemas.ts';
 import { EventRegistrationService } from '../service/EventRegistrationService.ts';
 
@@ -56,24 +56,36 @@ export class EventRegistrationController {
         const profileNames = body?.firstName !== undefined && body?.lastName !== undefined
             ? { firstName: body.firstName, lastName: body.lastName }
             : undefined;
-        const registration = this.registrationService.manualRegister(eventId, userId, modifierId, profileNames, body?.isFillerPlayer);
+        const registration = this.registrationService.manualRegister(
+            eventId,
+            userId,
+            modifierId,
+            profileNames,
+            body?.isFillerPlayer
+        );
         return res.status(StatusCodes.OK).json(registration);
     }
 
     editParticipantProfileNames(req: Request, res: Response) {
         const {
             params: { eventId, userId },
-            body: { firstName, lastName }
+            body: { firstName, lastName },
         } = eventRegistrationEditProfileSchema.parse(req);
         const modifierId = req.user!.userId;
-        const profile = this.registrationService.editParticipantProfileNames(eventId, userId, firstName, lastName, modifierId);
+        const profile = this.registrationService.editParticipantProfileNames(
+            eventId,
+            userId,
+            firstName,
+            lastName,
+            modifierId
+        );
         return res.status(StatusCodes.OK).json(profile);
     }
 
     setFillerPlayer(req: Request, res: Response) {
         const {
             params: { eventId, userId },
-            body: { isFillerPlayer }
+            body: { isFillerPlayer },
         } = eventRegistrationEditFillerPlayerSchema.parse(req);
         const modifierId = req.user!.userId;
         const registration = this.registrationService.setFillerPlayer(eventId, userId, isFillerPlayer, modifierId);

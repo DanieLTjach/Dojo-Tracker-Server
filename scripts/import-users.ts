@@ -104,7 +104,9 @@ const runImport = dbManager.db.transaction(() => {
         // Check if user already exists by telegramId
         const existingByTelegramId = userRepository.findUserByTelegramId(row.telegramId);
         if (existingByTelegramId) {
-            console.log(`  SKIP: "${row.name}" — telegramId ${row.telegramId} already exists (user: ${existingByTelegramId.name})`);
+            console.log(
+                `  SKIP: "${row.name}" — telegramId ${row.telegramId} already exists (user: ${existingByTelegramId.name})`
+            );
             skipped++;
             continue;
         }
@@ -112,7 +114,9 @@ const runImport = dbManager.db.transaction(() => {
         // Check if user already exists by telegramUsername
         const existingByUsername = userRepository.findUserByTelegramUsername(row.telegramUsername);
         if (existingByUsername) {
-            console.log(`  SKIP: "${row.name}" — ${row.telegramUsername} already exists (user: ${existingByUsername.name})`);
+            console.log(
+                `  SKIP: "${row.name}" — ${row.telegramUsername} already exists (user: ${existingByUsername.name})`
+            );
             skipped++;
             continue;
         }

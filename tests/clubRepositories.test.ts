@@ -23,7 +23,7 @@ function seedTestUsers(): void {
         modifiedBy: SYSTEM_USER_ID,
         isActive: 1,
         isAdmin: 0,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
     });
 
     dbManager.db.prepare(`
@@ -39,7 +39,7 @@ function seedTestUsers(): void {
         modifiedBy: SYSTEM_USER_ID,
         isActive: 1,
         isAdmin: 0,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
     });
 }
 
@@ -82,7 +82,7 @@ describe('Club and Membership repositories', () => {
             contactInfo: '@repo_club',
             isActive: true,
             createdAt,
-            modifiedBy: SYSTEM_USER_ID
+            modifiedBy: SYSTEM_USER_ID,
         });
 
         const byId = clubRepository.findClubById(clubId);
@@ -95,7 +95,7 @@ describe('Club and Membership repositories', () => {
             description: 'Repository test club',
             contactInfo: '@repo_club',
             isActive: true,
-            modifiedBy: SYSTEM_USER_ID
+            modifiedBy: SYSTEM_USER_ID,
         });
         expect(byId!.createdAt).toEqual(createdAt);
         expect(byId!.modifiedAt).toEqual(createdAt);
@@ -113,7 +113,7 @@ describe('Club and Membership repositories', () => {
             contactInfo: 'updated-contact',
             isActive: true,
             modifiedAt: new Date('2026-03-10T11:00:00.000Z'),
-            modifiedBy: TEST_USER_A_ID
+            modifiedBy: TEST_USER_A_ID,
         });
 
         const updated = clubRepository.findClubById(clubId);
@@ -126,7 +126,7 @@ describe('Club and Membership repositories', () => {
             description: null,
             contactInfo: 'updated-contact',
             isActive: true,
-            modifiedBy: TEST_USER_A_ID
+            modifiedBy: TEST_USER_A_ID,
         });
 
         const allClubs = clubRepository.findAllClubs();
@@ -143,7 +143,7 @@ describe('Club and Membership repositories', () => {
             description: null,
             contactInfo: 'updated-contact',
             isActive: false,
-            modifiedBy: TEST_USER_A_ID
+            modifiedBy: TEST_USER_A_ID,
         });
     });
 
@@ -156,7 +156,7 @@ describe('Club and Membership repositories', () => {
             contactInfo: null,
             isActive: true,
             createdAt: new Date('2026-03-11T10:00:00.000Z'),
-            modifiedBy: SYSTEM_USER_ID
+            modifiedBy: SYSTEM_USER_ID,
         });
 
         membershipRepository.createMembership({
@@ -166,7 +166,7 @@ describe('Club and Membership repositories', () => {
             status: 'PENDING',
             createdAt: new Date('2026-03-11T11:00:00.000Z'),
             modifiedAt: new Date('2026-03-11T11:00:00.000Z'),
-            modifiedBy: SYSTEM_USER_ID
+            modifiedBy: SYSTEM_USER_ID,
         });
 
         membershipRepository.createMembership({
@@ -176,7 +176,7 @@ describe('Club and Membership repositories', () => {
             status: 'PENDING',
             createdAt: new Date('2026-03-11T12:00:00.000Z'),
             modifiedAt: new Date('2026-03-11T12:00:00.000Z'),
-            modifiedBy: SYSTEM_USER_ID
+            modifiedBy: SYSTEM_USER_ID,
         });
 
         const allMembers = membershipRepository.findMembersByClubId(clubId);
@@ -197,7 +197,7 @@ describe('Club and Membership repositories', () => {
             userId: TEST_USER_A_ID,
             role: 'MODERATOR',
             status: 'ACTIVE',
-            modifiedBy: TEST_USER_B_ID
+            modifiedBy: TEST_USER_B_ID,
         });
 
         expect(membershipRepository.getUserClubRole(clubId, TEST_USER_A_ID)).toBe('MODERATOR');

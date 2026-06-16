@@ -30,7 +30,9 @@ const importedBy = Number(values.importedBy);
 const dryRun = values['dry-run'] ?? false;
 
 if (!filePath || !fs.existsSync(filePath)) {
-    console.error('Usage: npx tsx scripts/import-games.ts --file <csv> --eventId <id> [--importedBy <userId>] [--dry-run]');
+    console.error(
+        'Usage: npx tsx scripts/import-games.ts --file <csv> --eventId <id> [--importedBy <userId>] [--dry-run]'
+    );
     console.error('Error: --file is required and must exist');
     process.exit(1);
 }
@@ -39,7 +41,10 @@ if (!eventId || isNaN(eventId)) {
     process.exit(1);
 }
 
-const event = dbManager.db.prepare('SELECT id, name FROM event WHERE id = ?').get(eventId) as { id: number; name: string } | undefined;
+const event = dbManager.db.prepare('SELECT id, name FROM event WHERE id = ?').get(eventId) as {
+    id: number;
+    name: string;
+} | undefined;
 if (!event) {
     console.error(`Error: Event with id ${eventId} not found`);
     process.exit(1);

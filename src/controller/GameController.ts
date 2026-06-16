@@ -1,12 +1,12 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { GameService } from '../service/GameService.ts';
-import { 
+import {
     gameCreationSchema,
     trackedGameCreationSchema,
-    gameGetByIdSchema, 
-    gameGetListSchema, 
-    gameUpdateSchema, 
+    gameGetByIdSchema,
+    gameGetListSchema,
+    gameUpdateSchema,
     gameDeletionSchema,
     gameRoundPostSchema,
     gameRoundPreviewSchema,
@@ -14,30 +14,39 @@ import {
     gameFinishSchema,
     gameUndoFinishSchema,
     gameStartSchema,
-    gamePlayerSubstitutePlayerSchema
+    gamePlayerSubstitutePlayerSchema,
 } from '../schema/GameSchemas.ts';
 import { TrackedGameService } from '../service/TrackedGameService.ts';
 
 export class GameController {
-
     private gameService: GameService = new GameService();
     private trackedGameService: TrackedGameService = new TrackedGameService();
 
     addGame(req: Request, res: Response) {
-        const { body: { eventId, playersData, createdAt, hideNewGameMessage, tournamentRound, tournamentTable } } = gameCreationSchema.parse(req);
+        const { body: { eventId, playersData, createdAt, hideNewGameMessage, tournamentRound, tournamentTable } } =
+            gameCreationSchema.parse(req);
         const createdBy = req.user!.userId;
-        const newGame = this.gameService.addGame(eventId, playersData, createdBy, createdAt ?? undefined, hideNewGameMessage ?? false, tournamentRound ?? null, tournamentTable ?? null);
+        const newGame = this.gameService.addGame(
+            eventId,
+            playersData,
+            createdBy,
+            createdAt ?? undefined,
+            hideNewGameMessage ?? false,
+            tournamentRound ?? null,
+            tournamentTable ?? null
+        );
         return res.status(StatusCodes.CREATED).json(newGame);
     }
 
     addTrackedGame(req: Request, res: Response) {
-        const { body: { eventId, players, tournamentRound, tournamentTable, status } } = trackedGameCreationSchema.parse(req);
+        const { body: { eventId, players, tournamentRound, tournamentTable, status } } = trackedGameCreationSchema
+            .parse(req);
         const createdBy = req.user!.userId;
         const newGame = this.trackedGameService.createTrackedGame(
             eventId,
             players,
             createdBy,
-            status ?? "IN_PROGRESS",
+            status ?? 'IN_PROGRESS',
             undefined,
             tournamentRound ?? undefined,
             tournamentTable ?? undefined
@@ -102,7 +111,7 @@ export class GameController {
     editGame(req: Request, res: Response) {
         const {
             params: { gameId },
-            body: { playersData, eventId, createdAt, tournamentRound, tournamentTable }
+            body: { playersData, eventId, createdAt, tournamentRound, tournamentTable },
         } = gameUpdateSchema.parse(req);
 
         const modifiedBy = req.user!.userId; // Non-null assertion safe because requireAdmin ensures user exists
@@ -129,7 +138,7 @@ export class GameController {
     setSubstitutePlayer(req: Request, res: Response) {
         const {
             params: { gameId, userId },
-            body: { isSubstitutePlayer }
+            body: { isSubstitutePlayer },
         } = gamePlayerSubstitutePlayerSchema.parse(req);
         const modifiedBy = req.user!.userId;
         const player = this.gameService.setSubstitutePlayer(gameId, userId, isSubstitutePlayer, modifiedBy);

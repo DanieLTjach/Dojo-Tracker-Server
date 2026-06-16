@@ -42,7 +42,7 @@ describe('Event registration permissions matrix', () => {
         member: '',
         nonMember: '',
         pending: '',
-        otherClubOwner: ''
+        otherClubOwner: '',
     };
 
     let timestampOffset = 0;
@@ -67,7 +67,12 @@ describe('Event registration permissions matrix', () => {
         ).run(clubId, name, ts, ts, SYSTEM_USER_ID);
     }
 
-    function upsertMembership(clubId: number, userId: number, role: 'OWNER' | 'MODERATOR' | 'MEMBER', status: 'ACTIVE' | 'PENDING' | 'INACTIVE'): void {
+    function upsertMembership(
+        clubId: number,
+        userId: number,
+        role: 'OWNER' | 'MODERATOR' | 'MEMBER',
+        status: 'ACTIVE' | 'PENDING' | 'INACTIVE'
+    ): void {
         const ts = nextTs();
         dbManager.db.prepare(
             `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
@@ -114,7 +119,17 @@ describe('Event registration permissions matrix', () => {
         insertUser(OTHER_CLUB_OWNER_USER_ID, 'EReg OtherClubOwner', false);
 
         // Set firstName/lastName for all users so apply doesn't fail on missing profile names
-        for (const id of [ADMIN_USER_ID, OWNER_USER_ID, MODERATOR_USER_ID, MEMBER_USER_ID, NON_MEMBER_USER_ID, PENDING_USER_ID, OTHER_CLUB_OWNER_USER_ID]) {
+        for (
+            const id of [
+                ADMIN_USER_ID,
+                OWNER_USER_ID,
+                MODERATOR_USER_ID,
+                MEMBER_USER_ID,
+                NON_MEMBER_USER_ID,
+                PENDING_USER_ID,
+                OTHER_CLUB_OWNER_USER_ID,
+            ]
+        ) {
             setProfile(id, 'Імʼя', 'Прізвище');
         }
 
@@ -153,10 +168,22 @@ describe('Event registration permissions matrix', () => {
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId IN (?, ?)').run(TEST_CLUB_ID, OTHER_CLUB_ID);
         dbManager.db.prepare('DELETE FROM club WHERE id IN (?, ?)').run(TEST_CLUB_ID, OTHER_CLUB_ID);
         dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?, ?, ?, ?, ?, ?)').run(
-            ADMIN_USER_ID, OWNER_USER_ID, MODERATOR_USER_ID, MEMBER_USER_ID, NON_MEMBER_USER_ID, PENDING_USER_ID, OTHER_CLUB_OWNER_USER_ID
+            ADMIN_USER_ID,
+            OWNER_USER_ID,
+            MODERATOR_USER_ID,
+            MEMBER_USER_ID,
+            NON_MEMBER_USER_ID,
+            PENDING_USER_ID,
+            OTHER_CLUB_OWNER_USER_ID
         );
         dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?, ?, ?, ?, ?, ?)').run(
-            ADMIN_USER_ID, OWNER_USER_ID, MODERATOR_USER_ID, MEMBER_USER_ID, NON_MEMBER_USER_ID, PENDING_USER_ID, OTHER_CLUB_OWNER_USER_ID
+            ADMIN_USER_ID,
+            OWNER_USER_ID,
+            MODERATOR_USER_ID,
+            MEMBER_USER_ID,
+            NON_MEMBER_USER_ID,
+            PENDING_USER_ID,
+            OTHER_CLUB_OWNER_USER_ID
         );
         dbManager.closeDB();
         cleanupTestDatabase();
@@ -169,55 +196,78 @@ describe('Event registration permissions matrix', () => {
             createRoleTest(
                 role,
                 201,
-                (authHeader) => request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/register`).set('Authorization', authHeader).send({})
+                authHeader =>
+                    request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/register`).set('Authorization', authHeader)
+                        .send({})
             );
         }
     });
 
     describe('list registrations — admin/owner/moderator only', () => {
         const cases: Array<[MatrixRole, number]> = [
-            ['admin', 200], ['owner', 200], ['moderator', 200],
-            ['member', 403], ['nonMember', 403], ['pending', 403], ['otherClubOwner', 403]
+            ['admin', 200],
+            ['owner', 200],
+            ['moderator', 200],
+            ['member', 403],
+            ['nonMember', 403],
+            ['pending', 403],
+            ['otherClubOwner', 403],
         ];
         for (const [role, expected] of cases) {
             createRoleTest(
                 role,
                 expected,
-                (authHeader) => request(app).get(`/api/events/${TOURNAMENT_EVENT_ID}/registrations`).set('Authorization', authHeader)
+                authHeader =>
+                    request(app).get(`/api/events/${TOURNAMENT_EVENT_ID}/registrations`).set(
+                        'Authorization',
+                        authHeader
+                    )
             );
         }
     });
 
     describe('list registrations ?status=APPROVED — open to any authenticated user', () => {
         const cases: Array<[MatrixRole, number]> = [
-            ['admin', 200], ['owner', 200], ['moderator', 200],
-            ['member', 200], ['nonMember', 200], ['pending', 200], ['otherClubOwner', 200]
+            ['admin', 200],
+            ['owner', 200],
+            ['moderator', 200],
+            ['member', 200],
+            ['nonMember', 200],
+            ['pending', 200],
+            ['otherClubOwner', 200],
         ];
         for (const [role, expected] of cases) {
             createRoleTest(
                 role,
                 expected,
-                (authHeader) => request(app)
-                    .get(`/api/events/${TOURNAMENT_EVENT_ID}/registrations`)
-                    .query({ status: 'APPROVED' })
-                    .set('Authorization', authHeader)
+                authHeader =>
+                    request(app)
+                        .get(`/api/events/${TOURNAMENT_EVENT_ID}/registrations`)
+                        .query({ status: 'APPROVED' })
+                        .set('Authorization', authHeader)
             );
         }
     });
 
     describe('list registrations ?status=PENDING — still admin/owner/moderator only', () => {
         const cases: Array<[MatrixRole, number]> = [
-            ['admin', 200], ['owner', 200], ['moderator', 200],
-            ['member', 403], ['nonMember', 403], ['pending', 403], ['otherClubOwner', 403]
+            ['admin', 200],
+            ['owner', 200],
+            ['moderator', 200],
+            ['member', 403],
+            ['nonMember', 403],
+            ['pending', 403],
+            ['otherClubOwner', 403],
         ];
         for (const [role, expected] of cases) {
             createRoleTest(
                 role,
                 expected,
-                (authHeader) => request(app)
-                    .get(`/api/events/${TOURNAMENT_EVENT_ID}/registrations`)
-                    .query({ status: 'PENDING' })
-                    .set('Authorization', authHeader)
+                authHeader =>
+                    request(app)
+                        .get(`/api/events/${TOURNAMENT_EVENT_ID}/registrations`)
+                        .query({ status: 'PENDING' })
+                        .set('Authorization', authHeader)
             );
         }
     });
@@ -227,14 +277,21 @@ describe('Event registration permissions matrix', () => {
         afterEach(() => clearRegistrations());
 
         const cases: Array<[MatrixRole, number]> = [
-            ['admin', 200], ['owner', 200], ['moderator', 200],
-            ['member', 403], ['nonMember', 403], ['pending', 403], ['otherClubOwner', 403]
+            ['admin', 200],
+            ['owner', 200],
+            ['moderator', 200],
+            ['member', 403],
+            ['nonMember', 403],
+            ['pending', 403],
+            ['otherClubOwner', 403],
         ];
         for (const [role, expected] of cases) {
             createRoleTest(
                 role,
                 expected,
-                (authHeader) => request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/approve`).set('Authorization', authHeader).send({})
+                authHeader =>
+                    request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/approve`)
+                        .set('Authorization', authHeader).send({})
             );
         }
     });
@@ -244,14 +301,21 @@ describe('Event registration permissions matrix', () => {
         afterEach(() => clearRegistrations());
 
         const cases: Array<[MatrixRole, number]> = [
-            ['admin', 200], ['owner', 200], ['moderator', 200],
-            ['member', 403], ['nonMember', 403], ['pending', 403], ['otherClubOwner', 403]
+            ['admin', 200],
+            ['owner', 200],
+            ['moderator', 200],
+            ['member', 403],
+            ['nonMember', 403],
+            ['pending', 403],
+            ['otherClubOwner', 403],
         ];
         for (const [role, expected] of cases) {
             createRoleTest(
                 role,
                 expected,
-                (authHeader) => request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/reject`).set('Authorization', authHeader).send({})
+                authHeader =>
+                    request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/reject`)
+                        .set('Authorization', authHeader).send({})
             );
         }
     });
@@ -260,14 +324,21 @@ describe('Event registration permissions matrix', () => {
         afterEach(() => clearRegistrations());
 
         const cases: Array<[MatrixRole, number]> = [
-            ['admin', 200], ['owner', 200], ['moderator', 200],
-            ['member', 403], ['nonMember', 403], ['pending', 403], ['otherClubOwner', 403]
+            ['admin', 200],
+            ['owner', 200],
+            ['moderator', 200],
+            ['member', 403],
+            ['nonMember', 403],
+            ['pending', 403],
+            ['otherClubOwner', 403],
         ];
         for (const [role, expected] of cases) {
             createRoleTest(
                 role,
                 expected,
-                (authHeader) => request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/manual`).set('Authorization', authHeader).send({})
+                authHeader =>
+                    request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/manual`)
+                        .set('Authorization', authHeader).send({})
             );
         }
     });
@@ -277,17 +348,23 @@ describe('Event registration permissions matrix', () => {
         afterEach(() => clearRegistrations());
 
         const cases: Array<[MatrixRole, number]> = [
-            ['admin', 200], ['owner', 200], ['moderator', 200],
-            ['member', 403], ['nonMember', 403], ['pending', 403], ['otherClubOwner', 403]
+            ['admin', 200],
+            ['owner', 200],
+            ['moderator', 200],
+            ['member', 403],
+            ['nonMember', 403],
+            ['pending', 403],
+            ['otherClubOwner', 403],
         ];
         for (const [role, expected] of cases) {
             createRoleTest(
                 role,
                 expected,
-                (authHeader) => request(app)
-                    .patch(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/profile`)
-                    .set('Authorization', authHeader)
-                    .send({ firstName: 'NewName' })
+                authHeader =>
+                    request(app)
+                        .patch(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/profile`)
+                        .set('Authorization', authHeader)
+                        .send({ firstName: 'NewName' })
             );
         }
     });
@@ -297,17 +374,23 @@ describe('Event registration permissions matrix', () => {
         afterEach(() => clearRegistrations());
 
         const cases: Array<[MatrixRole, number]> = [
-            ['admin', 200], ['owner', 200], ['moderator', 200],
-            ['member', 403], ['nonMember', 403], ['pending', 403], ['otherClubOwner', 403]
+            ['admin', 200],
+            ['owner', 200],
+            ['moderator', 200],
+            ['member', 403],
+            ['nonMember', 403],
+            ['pending', 403],
+            ['otherClubOwner', 403],
         ];
         for (const [role, expected] of cases) {
             createRoleTest(
                 role,
                 expected,
-                (authHeader) => request(app)
-                    .patch(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/filler-player`)
-                    .set('Authorization', authHeader)
-                    .send({ isFillerPlayer: true })
+                authHeader =>
+                    request(app)
+                        .patch(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/filler-player`)
+                        .set('Authorization', authHeader)
+                        .send({ isFillerPlayer: true })
             );
         }
 
@@ -331,7 +414,10 @@ describe('Event registration permissions matrix', () => {
         createRoleTest(
             'member',
             204,
-            (authHeader) => request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/withdraw`).set('Authorization', authHeader).send({})
+            authHeader =>
+                request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/withdraw`).set('Authorization', authHeader).send(
+                    {}
+                )
         );
 
         // Other roles trying to withdraw their own (non-existent) registration get a 404, not a 403:
@@ -340,7 +426,9 @@ describe('Event registration permissions matrix', () => {
             createRoleTest(
                 role,
                 404,
-                (authHeader) => request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/withdraw`).set('Authorization', authHeader).send({})
+                authHeader =>
+                    request(app).post(`/api/events/${TOURNAMENT_EVENT_ID}/withdraw`).set('Authorization', authHeader)
+                        .send({})
             );
         }
     });
@@ -350,7 +438,7 @@ describe('Event registration permissions matrix', () => {
             createRoleTest(
                 role,
                 200,
-                (authHeader) => request(app).get('/api/users/current/registrations').set('Authorization', authHeader)
+                authHeader => request(app).get('/api/users/current/registrations').set('Authorization', authHeader)
             );
         }
     });
@@ -382,7 +470,9 @@ describe('Event registration permissions matrix', () => {
             expect(response.status).toBe(201);
             expect(response.body.status).toBe('APPROVED');
 
-            const count = (dbManager.db.prepare('SELECT COUNT(*) as count FROM eventRegistration WHERE eventId = ? AND userId = ?').get(TOURNAMENT_EVENT_ID, MEMBER_USER_ID) as { count: number }).count;
+            const count = (dbManager.db.prepare(
+                'SELECT COUNT(*) as count FROM eventRegistration WHERE eventId = ? AND userId = ?'
+            ).get(TOURNAMENT_EVENT_ID, MEMBER_USER_ID) as { count: number }).count;
             expect(count).toBe(1);
         });
 
@@ -398,7 +488,10 @@ describe('Event registration permissions matrix', () => {
 
         it('approve atomically activates clubMembership for non-member', async () => {
             // First clear any existing membership for NON_MEMBER
-            dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(TEST_CLUB_ID, NON_MEMBER_USER_ID);
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(
+                TEST_CLUB_ID,
+                NON_MEMBER_USER_ID
+            );
 
             await request(app)
                 .post(`/api/events/${TOURNAMENT_EVENT_ID}/register`)
@@ -406,7 +499,9 @@ describe('Event registration permissions matrix', () => {
                 .send({})
                 .expect(201);
 
-            const membershipBefore = dbManager.db.prepare('SELECT status FROM clubMembership WHERE clubId = ? AND userId = ?').get(TEST_CLUB_ID, NON_MEMBER_USER_ID) as { status: string };
+            const membershipBefore = dbManager.db.prepare(
+                'SELECT status FROM clubMembership WHERE clubId = ? AND userId = ?'
+            ).get(TEST_CLUB_ID, NON_MEMBER_USER_ID) as { status: string };
             expect(membershipBefore.status).toBe('PENDING');
 
             await request(app)
@@ -415,17 +510,27 @@ describe('Event registration permissions matrix', () => {
                 .send({})
                 .expect(200);
 
-            const regAfter = dbManager.db.prepare('SELECT status FROM eventRegistration WHERE eventId = ? AND userId = ?').get(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID) as { status: string };
-            const membershipAfter = dbManager.db.prepare('SELECT status FROM clubMembership WHERE clubId = ? AND userId = ?').get(TEST_CLUB_ID, NON_MEMBER_USER_ID) as { status: string };
+            const regAfter = dbManager.db.prepare(
+                'SELECT status FROM eventRegistration WHERE eventId = ? AND userId = ?'
+            ).get(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID) as { status: string };
+            const membershipAfter = dbManager.db.prepare(
+                'SELECT status FROM clubMembership WHERE clubId = ? AND userId = ?'
+            ).get(TEST_CLUB_ID, NON_MEMBER_USER_ID) as { status: string };
             expect(regAfter.status).toBe('APPROVED');
             expect(membershipAfter.status).toBe('ACTIVE');
 
             // cleanup
-            dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(TEST_CLUB_ID, NON_MEMBER_USER_ID);
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(
+                TEST_CLUB_ID,
+                NON_MEMBER_USER_ID
+            );
         });
 
         it('manual on non-member → registration APPROVED + membership ACTIVE in one call', async () => {
-            dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(TEST_CLUB_ID, NON_MEMBER_USER_ID);
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(
+                TEST_CLUB_ID,
+                NON_MEMBER_USER_ID
+            );
 
             await request(app)
                 .post(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/manual`)
@@ -433,12 +538,17 @@ describe('Event registration permissions matrix', () => {
                 .send({})
                 .expect(200);
 
-            const reg = dbManager.db.prepare('SELECT status FROM eventRegistration WHERE eventId = ? AND userId = ?').get(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID) as { status: string };
-            const membership = dbManager.db.prepare('SELECT status FROM clubMembership WHERE clubId = ? AND userId = ?').get(TEST_CLUB_ID, NON_MEMBER_USER_ID) as { status: string };
+            const reg = dbManager.db.prepare('SELECT status FROM eventRegistration WHERE eventId = ? AND userId = ?')
+                .get(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID) as { status: string };
+            const membership = dbManager.db.prepare('SELECT status FROM clubMembership WHERE clubId = ? AND userId = ?')
+                .get(TEST_CLUB_ID, NON_MEMBER_USER_ID) as { status: string };
             expect(reg.status).toBe('APPROVED');
             expect(membership.status).toBe('ACTIVE');
 
-            dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(TEST_CLUB_ID, NON_MEMBER_USER_ID);
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(
+                TEST_CLUB_ID,
+                NON_MEMBER_USER_ID
+            );
         });
 
         it('withdraw allows re-apply afterwards', async () => {
@@ -467,7 +577,7 @@ describe('Event registration permissions matrix', () => {
                     gameRulesId: GAME_RULES_ID,
                     clubId: null,
                     startingRating: 0,
-                    minimumGamesForRating: 0
+                    minimumGamesForRating: 0,
                 });
             expect(response.status).toBe(400);
             expect(response.body.errorCode).toBe('tournamentMustHaveClub');

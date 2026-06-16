@@ -18,8 +18,7 @@ export class GameRulesRepository {
                 umaTieBreak,
                 details
             FROM gameRules
-            ORDER BY id ASC`
-        );
+            ORDER BY id ASC`);
     }
 
     findAllGameRules(): GameRules[] {
@@ -39,8 +38,7 @@ export class GameRulesRepository {
                 details
             FROM gameRules
             WHERE clubId = :clubId OR clubId IS NULL
-            ORDER BY id ASC`
-        );
+            ORDER BY id ASC`);
     }
 
     findAllGameRulesByClubId(clubId: number): GameRules[] {
@@ -59,8 +57,7 @@ export class GameRulesRepository {
                 umaTieBreak,
                 details
             FROM gameRules
-            WHERE id = :id`
-        );
+            WHERE id = :id`);
     }
 
     findGameRulesById(id: number): GameRules | undefined {
@@ -68,7 +65,7 @@ export class GameRulesRepository {
         return dbEntity !== undefined ? gameRulesFromDBEntity(dbEntity) : undefined;
     }
 
-    private updateGameRulesDetailsStatement(): Statement<{ id: number; details: string | null }, void> {
+    private updateGameRulesDetailsStatement(): Statement<{ id: number, details: string | null }, void> {
         return dbManager.db.prepare(`
             UPDATE gameRules
             SET details = :details
@@ -79,7 +76,7 @@ export class GameRulesRepository {
     updateGameRulesDetails(id: number, details: GameRulesDetails | null): void {
         this.updateGameRulesDetailsStatement().run({
             id,
-            details: details ? JSON.stringify(details) : null
+            details: details ? JSON.stringify(details) : null,
         });
     }
 
@@ -151,6 +148,6 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         uma: parseUma(dbEntity.uma),
         startingPoints: dbEntity.startingPoints,
         umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak),
-        details: parseGameRulesDetailsAndApplyPresets(dbEntity.details)
+        details: parseGameRulesDetailsAndApplyPresets(dbEntity.details),
     };
 }

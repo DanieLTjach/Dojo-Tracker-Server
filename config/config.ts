@@ -37,35 +37,35 @@ function tryParseIntEnvVariable(varName: string): number | undefined {
     return intValue;
 }
 
-const env = getRequiredStringEnvVariable("NODE_ENV");
+const env = getRequiredStringEnvVariable('NODE_ENV');
 
-const globalLogsChatId = tryParseIntEnvVariable("GLOBAL_LOGS_CHAT_ID");
+const globalLogsChatId = tryParseIntEnvVariable('GLOBAL_LOGS_CHAT_ID');
 
 if (env === 'production') {
     if (globalLogsChatId === undefined) {
-        throw new Error("GLOBAL_LOGS_CHAT_ID environment variable is required in production");
+        throw new Error('GLOBAL_LOGS_CHAT_ID environment variable is required in production');
     }
 }
 
-const tournamentMode = process.env["TOURNAMENT_MODE"] === 'true';
+const tournamentMode = process.env['TOURNAMENT_MODE'] === 'true';
 
 const config: Config = {
-    env: getRequiredStringEnvVariable("NODE_ENV"),
-    port: tryParseIntEnvVariable("PORT") || 3000,
-    dbPath: process.env["DB_PATH"] || './db/data/data.db',
-    botToken: getRequiredStringEnvVariable("BOT_TOKEN"),
-    jwtSecret: getRequiredStringEnvVariable("JWT_SECRET"),
-    jwtExpiry: process.env["JWT_EXPIRY"] || '7d',
-    authInitDataValiditySeconds: tryParseIntEnvVariable("AUTH_INIT_DATA_VALIDITY_SECONDS") || 86400,
-    frontendUrl: getRequiredStringEnvVariable("FRONTEND_URL"),
-    botUrl: getRequiredStringEnvVariable("BOT_URL"),
+    env: getRequiredStringEnvVariable('NODE_ENV'),
+    port: tryParseIntEnvVariable('PORT') || 3000,
+    dbPath: process.env['DB_PATH'] || './db/data/data.db',
+    botToken: getRequiredStringEnvVariable('BOT_TOKEN'),
+    jwtSecret: getRequiredStringEnvVariable('JWT_SECRET'),
+    jwtExpiry: process.env['JWT_EXPIRY'] || '7d',
+    authInitDataValiditySeconds: tryParseIntEnvVariable('AUTH_INIT_DATA_VALIDITY_SECONDS') || 86400,
+    frontendUrl: getRequiredStringEnvVariable('FRONTEND_URL'),
+    botUrl: getRequiredStringEnvVariable('BOT_URL'),
     globalLogsChatId: globalLogsChatId,
-    globalErrorLogsTopicId: tryParseIntEnvVariable("GLOBAL_ERROR_LOGS_TOPIC_ID"),
-    globalUserLogsTopicId: tryParseIntEnvVariable("GLOBAL_USER_LOGS_TOPIC_ID"),
-    globalGameLogsTopicId: tryParseIntEnvVariable("GLOBAL_GAME_LOGS_TOPIC_ID"),
-    globalClubLogsTopicId: tryParseIntEnvVariable("GLOBAL_CLUB_LOGS_TOPIC_ID"),
+    globalErrorLogsTopicId: tryParseIntEnvVariable('GLOBAL_ERROR_LOGS_TOPIC_ID'),
+    globalUserLogsTopicId: tryParseIntEnvVariable('GLOBAL_USER_LOGS_TOPIC_ID'),
+    globalGameLogsTopicId: tryParseIntEnvVariable('GLOBAL_GAME_LOGS_TOPIC_ID'),
+    globalClubLogsTopicId: tryParseIntEnvVariable('GLOBAL_CLUB_LOGS_TOPIC_ID'),
     tournamentMode,
-    tournamentUserId: tournamentMode ? (tryParseIntEnvVariable("TOURNAMENT_USER_ID") || 1) : undefined
+    tournamentUserId: tournamentMode ? (tryParseIntEnvVariable('TOURNAMENT_USER_ID') || 1) : undefined,
 };
 
 export default config;

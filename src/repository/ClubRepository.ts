@@ -19,8 +19,7 @@ export class ClubRepository {
                 modifiedAt,
                 modifiedBy
             FROM club
-            ORDER BY id ASC`
-        );
+            ORDER BY id ASC`);
     }
 
     findAllClubs(): Club[] {
@@ -42,8 +41,7 @@ export class ClubRepository {
                 modifiedAt,
                 modifiedBy
             FROM club
-            WHERE id = :id`
-        );
+            WHERE id = :id`);
     }
 
     findClubById(id: number): Club | undefined {
@@ -66,8 +64,7 @@ export class ClubRepository {
                 modifiedAt,
                 modifiedBy
             FROM club
-            WHERE name = :name`
-        );
+            WHERE name = :name`);
     }
 
     findClubByName(name: string): Club | undefined {
@@ -98,7 +95,7 @@ export class ClubRepository {
             ...params,
             isActive: booleanToInteger(params.isActive),
             createdAt: params.createdAt.toISOString(),
-            modifiedAt: params.createdAt.toISOString()
+            modifiedAt: params.createdAt.toISOString(),
         });
 
         return result!.id;
@@ -133,7 +130,7 @@ export class ClubRepository {
         this.updateClubStatement().run({
             ...params,
             isActive: booleanToInteger(params.isActive),
-            modifiedAt: params.modifiedAt.toISOString()
+            modifiedAt: params.modifiedAt.toISOString(),
         });
     }
 
@@ -157,7 +154,7 @@ export class ClubRepository {
             id,
             isActive: booleanToInteger(isActive),
             modifiedBy,
-            modifiedAt: modifiedAt.toISOString()
+            modifiedAt: modifiedAt.toISOString(),
         });
     }
 
@@ -176,12 +173,17 @@ export class ClubRepository {
         `);
     }
 
-    updateCurrentRatingEvent(clubId: number, currentRatingEventId: number | null, modifiedAt: Date, modifiedBy: number): void {
+    updateCurrentRatingEvent(
+        clubId: number,
+        currentRatingEventId: number | null,
+        modifiedAt: Date,
+        modifiedBy: number
+    ): void {
         this.updateCurrentRatingEventStatement().run({
             clubId,
             currentRatingEventId,
             modifiedAt: modifiedAt.toISOString(),
-            modifiedBy
+            modifiedBy,
         });
     }
 
@@ -249,7 +251,7 @@ export class ClubRepository {
             clubLogs: topics.clubLogs ? JSON.stringify(topics.clubLogs) : null,
             main: topics.main ? JSON.stringify(topics.main) : null,
             modifiedAt: modifiedAt.toISOString(),
-            modifiedBy
+            modifiedBy,
         });
     }
 }
@@ -314,7 +316,7 @@ function clubFromDBEntity(dbEntity: ClubDBEntity): Club {
         currentRatingEventId: dbEntity.currentRatingEventId,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
-        modifiedBy: dbEntity.modifiedBy
+        modifiedBy: dbEntity.modifiedBy,
     };
 }
 
@@ -324,6 +326,6 @@ function clubTelegramTopicsFromDBEntity(dbEntity: ClubTelegramTopicsDBEntity): C
         userLogs: dbEntity.userLogs ? JSON.parse(dbEntity.userLogs) : null,
         gameLogs: dbEntity.gameLogs ? JSON.parse(dbEntity.gameLogs) : null,
         clubLogs: dbEntity.clubLogs ? JSON.parse(dbEntity.clubLogs) : null,
-        main: dbEntity.main ? JSON.parse(dbEntity.main) : null
-    }
+        main: dbEntity.main ? JSON.parse(dbEntity.main) : null,
+    };
 }

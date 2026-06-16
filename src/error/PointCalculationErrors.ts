@@ -1,5 +1,5 @@
-import { BadRequestError, InternalServerError } from "./BaseErrors.ts";
-import type { Wind } from "../model/GameModels.ts";
+import { BadRequestError, InternalServerError } from './BaseErrors.ts';
+import type { Wind } from '../model/GameModels.ts';
 
 export class RulesetShouldContainDetailedRulesError extends InternalServerError {
     constructor() {
