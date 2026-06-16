@@ -13,6 +13,7 @@ import {
 import type { Event } from '../model/EventModels.ts';
 import { GameStatus, Wind } from '../model/GameModels.ts';
 import type { DetailedGame, TrackedGamePlayerData } from '../model/GameModels.ts';
+import { globalLogsTopic } from '../model/TelegramTopic.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
@@ -25,10 +26,10 @@ import { TrackedGameService } from './TrackedGameService.ts';
 
 const PLAYERS_PER_TABLE = 4;
 /** Seating generation is rare, so we give it a generous budget: at least 5s per candidate. */
-const MIN_TIME_PER_CANDIDATE_MS = 5000;
+const DEFAULT_TIME_PER_CANDIDATE_MS = 5000;
 const DEFAULT_CANDIDATE_COUNT = 3;
 const MAX_CANDIDATE_COUNT = 5;
-const MAX_TIME_LIMIT_MS = MAX_CANDIDATE_COUNT * MIN_TIME_PER_CANDIDATE_MS; // 25s
+const MAX_TIME_LIMIT_MS = 30000;
 
 export interface SeatingGenerateOptions {
     /** Wall-clock budget for generation across all candidates (ms). */
@@ -98,7 +99,7 @@ export class TournamentSeatingService {
             LogService.logInfo(
                 `Seating generation FAILED for event ${event.id} ("${event.name}") by user ${userId}: `
                 + `${tables} tables, ${rounds} rounds, ${candidateCount} candidates, budget ${timeLimitMs}ms, took ${elapsedMs}ms`,
-                null
+                globalLogsTopic
             );
             if (error instanceof SeatingGenerationError) {
                 throw new SeatingGenerationFailedError(event.name);
@@ -109,7 +110,7 @@ export class TournamentSeatingService {
         LogService.logInfo(
             `Seating generation for event ${event.id} ("${event.name}") by user ${userId}: `
             + `${tables} tables, ${rounds} rounds, ${candidateCount} candidates, budget ${timeLimitMs}ms, took ${elapsedMs}ms`,
-            null
+            globalLogsTopic
         );
 
         return {
@@ -228,13 +229,9 @@ export class TournamentSeatingService {
     }
 
     private resolveTimeLimit(requested: number | undefined, candidateCount: number): number {
-        // The default scales with candidate count to give at least MIN_TIME_PER_CANDIDATE_MS
-        // per candidate, so generation has a real chance to converge. An explicit request is
-        // honoured (clamped to sane bounds) so callers can trade quality for latency.
-        if (requested === undefined) {
-            return Math.min(candidateCount * MIN_TIME_PER_CANDIDATE_MS, MAX_TIME_LIMIT_MS);
-        }
-        return Math.min(Math.max(requested, 100), MAX_TIME_LIMIT_MS);
+        return Math.min(MAX_TIME_LIMIT_MS, Math.max(100,
+            requested !== undefined ? requested : candidateCount * DEFAULT_TIME_PER_CANDIDATE_MS
+        ));
     }
 
     private resolveCandidateCount(requested: number | undefined): number {

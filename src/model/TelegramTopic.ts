@@ -20,8 +20,14 @@ export type TelegramTopicType = typeof TelegramTopicType[keyof typeof TelegramTo
 export interface TelegramTopic {
     type: TelegramTopicType;
     chatId: number;
-    topicId: number | undefined;
+    topicId?: number | undefined;
 }
+
+export const globalLogsTopic: TelegramTopic | null =
+    config.globalLogsChatId !== undefined ? {
+        type: TelegramTopicType.MAIN,
+        chatId: config.globalLogsChatId
+    } : null;
 
 export const globalUserLogsTopic: TelegramTopic | null =
     config.globalLogsChatId !== undefined ? {
