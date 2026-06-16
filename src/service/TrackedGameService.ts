@@ -151,7 +151,7 @@ export class TrackedGameService {
             event.startingRating
         );
 
-        this.achievementService.recomputeEventAchievements(event);
+        this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
 
         const finishedGame = this.gameService.getDetailedGameById(gameId);
         this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
@@ -195,7 +195,7 @@ export class TrackedGameService {
         this.gameRepository.undoFinishGame(gameId, modifiedBy);
         this.undoRemainingRiichiSticksOnFinish(game, event.gameRules, modifiedBy);
 
-        this.achievementService.recomputeEventAchievements(event);
+        this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
 
         const reopenedGame = this.gameService.getDetailedGameById(gameId);
         this.gameService.logGameAction(reopenedGame, event, modifiedBy, '↩️ Game Finish Undone', 'Undone by');

@@ -37,7 +37,7 @@ import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
-import { GameCreationBlockedError } from '../error/EventErrors.ts';
+import { GameCreationBlockedError, TournamentGameNotInCurrentRoundError } from '../error/EventErrors.ts';
 import { AchievementService } from './AchievementService.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 
@@ -74,13 +74,13 @@ export class GameService {
         this.validateGameWithinEventDates(event, gameTimestamp, createdBy);
         this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
         this.validateUniqueTournamentRoundTable(event, tournamentRound, tournamentTable, null);
+        this.validateTournamentGameRound(event, tournamentRound, createdBy);
 
         const standingsBefore = this.ratingService.calculateStandings(eventId);
 
         const newGameId = this.gameRepository.createGame(eventId, createdBy, gameTimestamp, tournamentRound, tournamentTable);
         this.addPlayersToGame(newGameId, playersData, createdBy);
         this.ratingService.addRatingChangesFromGame(newGameId, gameTimestamp, playersData, eventId, event.gameRules, event.startingRating);
-        this.achievementService.recomputeEventAchievements(event);
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
 
@@ -172,9 +172,9 @@ export class GameService {
         this.ratingService.deleteRatingChangesFromGame(oldGame);
         this.ratingService.addRatingChangesFromGame(gameId, newGameTimestamp, playersData, eventId, event.gameRules, event.startingRating);
 
-        this.achievementService.recomputeEventAchievements(event);
+        this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
         if (oldEvent.id !== event.id) {
-            this.achievementService.recomputeEventAchievements(oldEvent);
+            this.achievementService.recomputeEventAchievementsIfTournamentFinished(oldEvent);
         }
 
         const updatedGame = this.getGameById(gameId);
@@ -202,7 +202,7 @@ export class GameService {
 
         if (game.status === GameStatus.FINISHED) {
             this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
-            this.achievementService.recomputeEventAchievements(event);
+            this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
         }
 
         return this.gameRepository.findGamePlayersByGameId(gameId)
@@ -236,7 +236,7 @@ export class GameService {
         this.gameRepository.deleteGameById(gameId);
 
         if (game.status === GameStatus.FINISHED) {
-            this.achievementService.recomputeEventAchievements(event);
+            this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
         }
 
         this.logDeletedGame(game, event, deletedBy);
@@ -631,6 +631,21 @@ export class GameService {
         }
         if (event.dateFrom !== null && gameTimestamp < event.dateFrom) {
             throw new EventHasntStartedError(event.name);
+        }
+    }
+
+    // In a tournament, regular users may only add games to the current round.
+    // Admins and club owners/moderators are exempt (e.g. backfilling earlier rounds).
+    validateTournamentGameRound(event: Event, tournamentRound: number | null, createdBy: number): void {
+        if (event.type !== 'TOURNAMENT') {
+            return;
+        }
+        if (this.clubMembershipService.userIsAdminOrHasClubRole(event.clubId, createdBy, [ClubRole.OWNER, ClubRole.MODERATOR])) {
+            return;
+        }
+        const currentRound = event.tournament?.currentRound ?? null;
+        if (tournamentRound !== currentRound) {
+            throw new TournamentGameNotInCurrentRoundError(currentRound, tournamentRound);
         }
     }
 

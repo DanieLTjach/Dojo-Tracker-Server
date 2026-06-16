@@ -245,9 +245,11 @@ describe('Game API Endpoints', () => {
                 'TOURNAMENT'
             );
 
+            // Posted as admin so the current-round restriction (members may only add games to
+            // the tournament's current round) does not interfere — this test covers uniqueness.
             const first = await request(app)
                 .post('/api/games')
-                .set('Authorization', user1AuthHeader)
+                .set('Authorization', adminAuthHeader)
                 .send({
                     eventId: tournamentEventId,
                     playersData: [
@@ -263,7 +265,7 @@ describe('Game API Endpoints', () => {
 
             const dup = await request(app)
                 .post('/api/games')
-                .set('Authorization', user1AuthHeader)
+                .set('Authorization', adminAuthHeader)
                 .send({
                     eventId: tournamentEventId,
                     playersData: [
@@ -278,6 +280,39 @@ describe('Game API Endpoints', () => {
 
             expect(dup.status).toBe(400);
             expect(dup.body.errorCode).toBe('duplicateTournamentRoundTable');
+        });
+
+        test('should reject a member adding a tournament game to a non-current round', async () => {
+            const tournamentEventId = 1501;
+            createCustomEvent(
+                tournamentEventId,
+                'Member Round Restriction Tournament',
+                '2024-01-01T00:00:00.000Z',
+                '2026-12-31T23:59:59.999Z',
+                2,
+                1,
+                'TOURNAMENT'
+            );
+
+            // Tournament not started yet (currentRound = null); a regular member must not add
+            // games to a round that is not current.
+            const response = await request(app)
+                .post('/api/games')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: tournamentEventId,
+                    playersData: [
+                        { userId: testUser1Id, points: 40000 },
+                        { userId: testUser2Id, points: 30000 },
+                        { userId: testUser3Id, points: 25000 },
+                        { userId: testUser4Id, points: 25000 }
+                    ],
+                    tournamentRound: 1,
+                    tournamentTable: '1'
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentGameNotInCurrentRound');
         });
 
         test('should reject empty tournamentTable', async () => {
