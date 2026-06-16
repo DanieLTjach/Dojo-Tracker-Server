@@ -1,7 +1,7 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
 import type { EventAchievementRow } from '../model/AchievementModels.ts';
-import { AchievementMetric } from '../data/achievementsCatalog.ts';
+import type { AchievementMetric } from '../data/achievementsCatalog.ts';
 
 /** A winning row joined with the winner's display fields, for the tournament page. */
 export interface EventAchievementWinnerRow {

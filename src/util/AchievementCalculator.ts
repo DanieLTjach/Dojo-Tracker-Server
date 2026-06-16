@@ -4,12 +4,12 @@
 // to the Python: it throws on inconsistent point data. Callers should run it
 // defensively (catch + log) so a data quirk never blocks a game operation.
 
-import { DetailedGame, Wind } from '../model/GameModels.ts';
+import { type DetailedGame, Wind } from '../model/GameModels.ts';
 import type { GameRoundResult, WinningHandData } from '../model/GameRoundResultModels.ts';
 import { ACHIEVEMENTS, newStats, type AchievementDefinition, type PlayerStats } from '../data/achievementsCatalog.ts';
 import { AchievementCriterion, type ComputedAchievement } from '../model/AchievementModels.ts';
 import { calculateHandBaseValue } from './PointCalculationUtil.ts';
-import { GameRulesValues } from '../data/gameRulesCatalog.ts';
+import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
 import { getSubstitutePlayerPenaltyBeforeUma } from './RulesUtils.ts';
 
 interface WinningHand {
