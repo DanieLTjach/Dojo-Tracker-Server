@@ -105,9 +105,12 @@ export class TournamentTotalRoundsLessThanCurrentRoundError extends BadRequestEr
     }
 }
 
-export class TournamentRoundGamesNotPreparedError extends BadRequestError {
-    constructor(eventName: string, round: number) {
-        super(`Ігри для раунду ${round} турніру "${eventName}" ще не створені`, 'tournamentRoundGamesNotPrepared');
+export class TournamentRoundOutOfSequenceError extends BadRequestError {
+    constructor(eventName: string, expectedRound: number, requestedRound: number) {
+        super(
+            `Не можна розпочати раунд ${requestedRound} турніру "${eventName}": наступний доступний раунд — ${expectedRound}`,
+            'tournamentRoundOutOfSequence'
+        );
     }
 }
 

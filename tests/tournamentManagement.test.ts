@@ -129,21 +129,9 @@ describe('Tournament management', () => {
         cleanupTestDatabase();
     });
 
-    test('rejects starting a round when games are not prepared', async () => {
+    test('starts round 1 even without pre-generated games (seating done outside the app)', async () => {
         const response = await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
-            .set('Authorization', adminAuthHeader)
-            .send({});
-
-        expect(response.status).toBe(400);
-        expect(response.body.errorCode).toBe('tournamentRoundGamesNotPrepared');
-    });
-
-    test('starts round 1 when games are prepared', async () => {
-        importRound(1);
-
-        const response = await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
             .set('Authorization', adminAuthHeader)
             .send({});
 
@@ -155,18 +143,65 @@ describe('Tournament management', () => {
         });
     });
 
+    test('starts round 1 when games are prepared', async () => {
+        importRound(1);
+
+        const response = await request(app)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+            .set('Authorization', adminAuthHeader)
+            .send({});
+
+        expect(response.status).toBe(200);
+        expect(response.body.tournament).toMatchObject({
+            status: 'IN_PROGRESS',
+            currentRound: 1,
+            totalRounds: 3
+        });
+    });
+
+    test('is idempotent: re-posting the current round is a no-op, not a skip', async () => {
+        importRound(1);
+
+        await request(app)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+            .set('Authorization', adminAuthHeader)
+            .send({})
+            .expect(200);
+
+        const duplicate = await request(app)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+            .set('Authorization', adminAuthHeader)
+            .send({});
+
+        expect(duplicate.status).toBe(200);
+        expect(duplicate.body.tournament).toMatchObject({
+            status: 'IN_PROGRESS',
+            currentRound: 1
+        });
+    });
+
+    test('rejects starting a round out of sequence', async () => {
+        const response = await request(app)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/2/start`)
+            .set('Authorization', adminAuthHeader)
+            .send({});
+
+        expect(response.status).toBe(400);
+        expect(response.body.errorCode).toBe('tournamentRoundOutOfSequence');
+    });
+
     test('rejects starting round 2 until every round 1 game is finished', async () => {
         importRound(1);
         importRound(2);
 
         await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
             .set('Authorization', adminAuthHeader)
             .send({})
             .expect(200);
 
         const response = await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/2/start`)
             .set('Authorization', adminAuthHeader)
             .send({});
 
@@ -179,7 +214,7 @@ describe('Tournament management', () => {
         importRound(2);
 
         await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
             .set('Authorization', adminAuthHeader)
             .send({})
             .expect(200);
@@ -194,7 +229,7 @@ describe('Tournament management', () => {
         });
 
         const nextRound = await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/2/start`)
             .set('Authorization', adminAuthHeader)
             .send({});
 
@@ -211,14 +246,14 @@ describe('Tournament management', () => {
         importRound(2);
 
         await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
             .set('Authorization', adminAuthHeader)
             .send({})
             .expect(200);
         markRoundFinished(1);
 
         const finalRound = await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/2/start`)
             .set('Authorization', adminAuthHeader)
             .send({});
         expect(finalRound.status).toBe(200);
@@ -251,7 +286,7 @@ describe('Tournament management', () => {
         importRound(1);
 
         const response = await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
             .set('Authorization', moderatorAuthHeader)
             .send({});
 
@@ -263,7 +298,7 @@ describe('Tournament management', () => {
         importRound(1);
 
         const response = await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
             .set('Authorization', playerAuthHeader)
             .send({});
 
@@ -275,7 +310,7 @@ describe('Tournament management', () => {
         const round2GameId = importRound(2);
 
         await request(app)
-            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/start-next-round`)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
             .set('Authorization', adminAuthHeader)
             .send({})
             .expect(200);

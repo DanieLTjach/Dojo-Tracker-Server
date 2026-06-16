@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { EventService } from '../service/EventService.ts';
 import { TournamentSeatingService } from '../service/TournamentSeatingService.ts';
-import { eventGetByIdSchema, eventCreateSchema, eventUpdateSchema, eventDeleteSchema, eventGetListSchema, eventTournamentUpdateSchema, tournamentSeatingGenerateSchema, tournamentSeatingApplySchema, tournamentSeatingClearSchema } from '../schema/EventSchemas.ts';
+import { eventGetByIdSchema, eventCreateSchema, eventUpdateSchema, eventDeleteSchema, eventGetListSchema, tournamentRoundStartSchema, tournamentSeatingGenerateSchema, tournamentSeatingApplySchema, tournamentSeatingClearSchema } from '../schema/EventSchemas.ts';
 
 export class EventController {
     private eventService: EventService = new EventService();
@@ -34,17 +34,10 @@ export class EventController {
         return res.status(StatusCodes.OK).json(event);
     }
 
-    updateTournament(req: Request, res: Response) {
-        const { params: { eventId }, body } = eventTournamentUpdateSchema.parse(req);
+    startTournamentRound(req: Request, res: Response) {
+        const { params: { eventId, roundId } } = tournamentRoundStartSchema.parse(req);
         const userId = req.user!.userId;
-        const event = this.eventService.updateTournament(eventId, body, userId);
-        return res.status(StatusCodes.OK).json(event);
-    }
-
-    startNextTournamentRound(req: Request, res: Response) {
-        const { params: { eventId } } = eventGetByIdSchema.parse(req);
-        const userId = req.user!.userId;
-        const event = this.eventService.startNextTournamentRound(eventId, userId);
+        const event = this.eventService.startTournamentRound(eventId, roundId, userId);
         return res.status(StatusCodes.OK).json(event);
     }
 

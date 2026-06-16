@@ -161,11 +161,11 @@ export const eventDeleteSchema = z.object({
     })
 });
 
-export const eventTournamentUpdateSchema = z.object({
+export const tournamentRoundStartSchema = z.object({
     params: z.object({
-        eventId: eventIdParamSchema
-    }),
-    body: tournamentConfigSchema
+        eventId: eventIdParamSchema,
+        roundId: z.coerce.number().int("Round ID must be an integer").positive("Round ID must be positive")
+    })
 });
 
 export const tournamentSeatingGenerateSchema = z.object({

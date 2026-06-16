@@ -63,20 +63,13 @@ router.post('/', requireAuth, withTransaction((req, res) => eventController.crea
 router.put('/:eventId', requireAuth, withTransaction((req, res) => eventController.updateEvent(req, res)));
 
 /**
- * PATCH /api/events/:eventId/tournament
- * Update tournament settings for an event
- *
- * Authentication: Required (Admin or Club Owner)
- */
-router.patch('/:eventId/tournament', requireAuth, withTransaction((req, res) => eventController.updateTournament(req, res)));
-
-/**
- * POST /api/events/:eventId/tournament/start-next-round
- * Advance tournament state to the next prepared round
+ * POST /api/events/:eventId/tournament/rounds/:roundId/start
+ * Advance tournament state to the given round. Idempotent: including the round id makes a
+ * duplicated request (double tap, retry on bad network) a no-op instead of skipping a round.
  *
  * Authentication: Required (Admin, Club Owner, or Club Moderator)
  */
-router.post('/:eventId/tournament/start-next-round', requireAuth, withTransaction((req, res) => eventController.startNextTournamentRound(req, res)));
+router.post('/:eventId/tournament/rounds/:roundId/start', requireAuth, withTransaction((req, res) => eventController.startTournamentRound(req, res)));
 
 /**
  * POST /api/events/:eventId/tournament/finish

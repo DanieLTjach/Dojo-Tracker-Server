@@ -9,8 +9,8 @@ import {
     TournamentConfigOnlyForTournamentError,
     EventIsNotTournamentError,
     TournamentTotalRoundsLessThanCurrentRoundError,
-    TournamentRoundGamesNotPreparedError,
     TournamentRoundGamesNotFinishedError,
+    TournamentRoundOutOfSequenceError,
     TournamentHasNoMoreRoundsError,
     TournamentAlreadyFinishedError,
     TournamentNotInLastRoundError,
@@ -165,39 +165,40 @@ export class EventService {
         return this.getEventById(eventId);
     }
 
-    updateTournament(eventId: number, data: TournamentData, modifiedBy: number): Event {
-        const event = this.getEventById(eventId);
-        if (event.type !== 'TOURNAMENT' || event.tournament === null) {
-            throw new EventIsNotTournamentError(event.name);
-        }
-
-        this.authorizeEventUpdate(event, event.clubId, modifiedBy);
-        this.validateTotalRoundsNotLessThanCurrentRound(data.totalRounds, event.tournament.currentRound);
-
-        this.tournamentRepository.updateTournamentTotalRounds(eventId, data.totalRounds, new Date(), modifiedBy);
-
-        return this.getEventById(eventId);
-    }
-
-    startNextTournamentRound(eventId: number, modifiedBy: number): Event {
+    /**
+     * Advance the tournament to `roundId`. Idempotent by design: the caller passes the round
+     * it wants to become current, so a duplicated request (double tap, retry on bad network)
+     * is a no-op rather than skipping a round.
+     *
+     * - roundId === currentRound          → no-op (already started).
+     * - roundId === (currentRound ?? 0)+1 → start that round.
+     * - anything else                     → rejected as out of sequence.
+     */
+    startTournamentRound(eventId: number, roundId: number, modifiedBy: number): Event {
         const event = this.getTournamentEvent(eventId);
         this.authorizeTournamentManagement(event, modifiedBy);
         const tournament = event.tournament!;
+
+        // Already on the requested round: treat a duplicate request as a successful no-op.
+        if (tournament.currentRound === roundId) {
+            return event;
+        }
 
         if (tournament.status === TournamentStatus.FINISHED) {
             throw new TournamentAlreadyFinishedError(event.name);
         }
 
-        if (tournament.currentRound !== null) {
-            this.validateTournamentRoundFinished(event, tournament.currentRound);
-        }
-
         const nextRound = (tournament.currentRound ?? 0) + 1;
+        if (roundId !== nextRound) {
+            throw new TournamentRoundOutOfSequenceError(event.name, nextRound, roundId);
+        }
         if (nextRound > tournament.totalRounds) {
             throw new TournamentHasNoMoreRoundsError(event.name);
         }
 
-        this.validateTournamentRoundPrepared(event, nextRound);
+        if (tournament.currentRound !== null) {
+            this.validateTournamentRoundFinished(event, tournament.currentRound);
+        }
 
         const status = nextRound === tournament.totalRounds
             ? TournamentStatus.LAST_ROUND
@@ -221,7 +222,6 @@ export class EventService {
             throw new TournamentNotInLastRoundError(event.name);
         }
 
-        this.validateTournamentRoundPrepared(event, tournament.currentRound);
         this.validateTournamentRoundFinished(event, tournament.currentRound);
 
         this.tournamentRepository.updateTournamentState(
@@ -351,13 +351,6 @@ export class EventService {
         const role = this.membershipRepository.getUserClubRole(event.clubId, userId);
         if (role !== ClubRole.OWNER && role !== ClubRole.MODERATOR) {
             throw new InsufficientClubPermissionsError([ClubRole.OWNER, ClubRole.MODERATOR]);
-        }
-    }
-
-    private validateTournamentRoundPrepared(event: Event, round: number): void {
-        const gameCount = this.gameRepository.countGamesByEventAndTournamentRound(event.id, round);
-        if (gameCount === 0) {
-            throw new TournamentRoundGamesNotPreparedError(event.name, round);
         }
     }
 
