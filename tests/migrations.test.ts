@@ -324,32 +324,6 @@ describe('Database Migrations', () => {
 
     db.close();
   });
-  
-  test('migration 8 creates achievement storage', () => {
-    const db = createMigratedDb('8.sql');
-    db.pragma('foreign_keys = ON');
-
-    const achievementColumns = (db.prepare('PRAGMA table_info(eventAchievement)').all() as Array<{ name: string; type: string; notnull: number; pk: number }>)
-      .map(({ name, type, notnull, pk }) => ({ name, type, notnull, pk }));
-    expect(achievementColumns).toEqual([
-      { name: 'eventId', type: 'INTEGER', notnull: 1, pk: 1 },
-      { name: 'metric', type: 'TEXT', notnull: 1, pk: 2 },
-      { name: 'userId', type: 'INTEGER', notnull: 1, pk: 3 },
-      { name: 'value', type: 'INTEGER', notnull: 0, pk: 0 },
-    ]);
-
-    const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; type: string; notnull: number }>;
-    expect(eventColumns.find(c => c.name === 'achievementsComputedAt')).toMatchObject({ type: 'TIMESTAMP', notnull: 0 });
-
-    const indexes = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_eventAchievement%'").all() as Array<{ name: string }>)
-      .map(({ name }) => name);
-    expect(indexes).toEqual(['idx_eventAchievement_userId']);
-
-    const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
-    expect(foreignKeyViolations).toEqual([]);
-
-    db.close();
-  });
 
   test('migration 8 removes duplicate chomboPointsAfterUma from game rules', () => {
     const db = createMigratedDb('8.sql');
@@ -382,8 +356,34 @@ describe('Database Migrations', () => {
     db.close();
   });
 
-  test('migration 8 creates tournament state and backfills tournament events', () => {
-    const db = createMigratedDb('7.sql');
+  test('migration 9 creates achievement storage', () => {
+    const db = createMigratedDb('9.sql');
+    db.pragma('foreign_keys = ON');
+
+    const achievementColumns = (db.prepare('PRAGMA table_info(eventAchievement)').all() as Array<{ name: string; type: string; notnull: number; pk: number }>)
+      .map(({ name, type, notnull, pk }) => ({ name, type, notnull, pk }));
+    expect(achievementColumns).toEqual([
+      { name: 'eventId', type: 'INTEGER', notnull: 1, pk: 1 },
+      { name: 'metric', type: 'TEXT', notnull: 1, pk: 2 },
+      { name: 'userId', type: 'INTEGER', notnull: 1, pk: 3 },
+      { name: 'value', type: 'INTEGER', notnull: 0, pk: 0 },
+    ]);
+
+    const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string; type: string; notnull: number }>;
+    expect(eventColumns.find(c => c.name === 'achievementsComputedAt')).toMatchObject({ type: 'TIMESTAMP', notnull: 0 });
+
+    const indexes = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_eventAchievement%'").all() as Array<{ name: string }>)
+      .map(({ name }) => name);
+    expect(indexes).toEqual(['idx_eventAchievement_userId']);
+
+    const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+    expect(foreignKeyViolations).toEqual([]);
+
+    db.close();
+  });
+
+  test('migration 9 creates tournament state and backfills tournament events', () => {
+    const db = createMigratedDb('8.sql');
 
     db.prepare(`
       INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
@@ -401,7 +401,7 @@ describe('Database Migrations', () => {
         (9203, 9101, '2026-04-01T14:00:00.000Z', '2026-04-01T14:00:00.000Z', 0, NULL, NULL, 'FINISHED', '2026-04-01T14:00:00.000Z', '2026-04-01T15:00:00.000Z', 0)
     `).run();
 
-    runMigration(db, '8.sql');
+    runMigration(db, '9.sql');
     db.pragma('foreign_keys = ON');
 
     const statuses = db.prepare('SELECT status FROM tournamentStatus ORDER BY status').all() as Array<{ status: string }>;
