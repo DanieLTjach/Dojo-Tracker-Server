@@ -12,6 +12,6 @@ export function parseGameRulesDetailsAndApplyPresets(details: string | null): Ga
 
     return {
         ...parsed,
-        rules: { ...preset.rules, ...parsed.rules }
+        rules: { ...preset.rules, ...parsed.rules },
     };
 }

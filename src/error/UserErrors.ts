@@ -1,4 +1,4 @@
-import { BadRequestError, ForbiddenError, NotFoundError } from "./BaseErrors.ts";
+import { BadRequestError, ForbiddenError, NotFoundError } from './BaseErrors.ts';
 
 export class NameAlreadyTakenByAnotherUser extends BadRequestError {
     constructor(name: string) {
@@ -8,7 +8,10 @@ export class NameAlreadyTakenByAnotherUser extends BadRequestError {
 
 export class TelegramUsernameAlreadyTakenByAnotherUser extends BadRequestError {
     constructor(telegramUsername: string) {
-        super(`Telegram юзернейм '${telegramUsername}' вже зайнятий іншим користувачем`, 'telegramUsernameAlreadyTakenByAnotherUser');
+        super(
+            `Telegram юзернейм '${telegramUsername}' вже зайнятий іншим користувачем`,
+            'telegramUsernameAlreadyTakenByAnotherUser'
+        );
     }
 }
 
@@ -32,7 +35,10 @@ export class UserNotFoundByTelegramId extends NotFoundError {
 
 export class YouHaveToBeAdminToEditAnotherUser extends ForbiddenError {
     constructor() {
-        super('Щоб редагувати іншого користувача, ви повинні бути адміністратором', 'youHaveToBeAdminToEditAnotherUser');
+        super(
+            'Щоб редагувати іншого користувача, ви повинні бути адміністратором',
+            'youHaveToBeAdminToEditAnotherUser'
+        );
     }
 }
 

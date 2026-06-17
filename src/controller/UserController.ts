@@ -7,13 +7,12 @@ import {
     getUserListSchema,
     getUserByTelegramIdSchema,
     userRegistrationSchema,
-    getUserByIdSchema
+    getUserByIdSchema,
 } from '../schema/UserSchemas.ts';
 import { SYSTEM_USER_ID } from '../../config/constants.ts';
 import { AuthService } from '../service/AuthService.ts';
 
 export class UserController {
-
     private userService: UserService = new UserService();
     private authService: AuthService = new AuthService();
 
@@ -22,7 +21,7 @@ export class UserController {
         const initDataParams = req.query as Record<string, string>;
 
         this.authService.validateInitData(initDataParams);
-        
+
         const telegramUser = this.authService.extractTelegramUser(initDataParams);
         const telegramId = telegramUser.id;
         const telegramUsername = telegramUser.username ? `@${telegramUser.username}` : undefined;
@@ -66,7 +65,7 @@ export class UserController {
     editUser(req: Request, res: Response) {
         const {
             params: { id },
-            body: { name, telegramUsername }
+            body: { name, telegramUsername },
         } = userEditSchema.parse(req);
 
         const modifiedBy = req.user!.userId; // Non-null assertion safe because requireAuth ensures user exists

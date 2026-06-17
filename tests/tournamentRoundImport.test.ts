@@ -109,15 +109,19 @@ describe('TournamentRoundImportService', () => {
         for (const userId of [user1Id, user2Id, user3Id, user4Id]) {
             insertApprovedRegistration(TOURNAMENT_EVENT_ID, userId);
         }
-        dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(TOURNAMENT_EVENT_ID);
-        dbManager.db.prepare('DELETE FROM gameRound WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(TOURNAMENT_EVENT_ID);
+        dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(
+            TOURNAMENT_EVENT_ID
+        );
+        dbManager.db.prepare('DELETE FROM gameRound WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(
+            TOURNAMENT_EVENT_ID
+        );
         dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(TOURNAMENT_EVENT_ID);
     });
 
     test('imports CREATED games with tournament metadata and seating', () => {
         const text = [
             'Round 2',
-            `${user1Id} ${user2Id} ${user3Id} ${user4Id}`
+            `${user1Id} ${user2Id} ${user3Id} ${user4Id}`,
         ].join('\n');
 
         const result = importService.parseAndImport(TOURNAMENT_EVENT_ID, 2, text, SYSTEM_USER_ID);
@@ -137,7 +141,7 @@ describe('TournamentRoundImportService', () => {
             { userId: user1Id, startPlace: 'EAST' },
             { userId: user2Id, startPlace: 'SOUTH' },
             { userId: user3Id, startPlace: 'WEST' },
-            { userId: user4Id, startPlace: 'NORTH' }
+            { userId: user4Id, startPlace: 'NORTH' },
         ]);
     });
 
@@ -187,7 +191,7 @@ describe('TournamentRoundImportService', () => {
         const text = [
             'Round 1',
             `${user1Id} ${user2Id} ${user3Id} ${user4Id}`,
-            `${user1Id} ${user2Id} ${user3Id} ${user4Id}`
+            `${user1Id} ${user2Id} ${user3Id} ${user4Id}`,
         ].join('\n');
 
         const result = importService.parseAndImport(TOURNAMENT_EVENT_ID, 1, text, SYSTEM_USER_ID);
@@ -246,12 +250,20 @@ describe('TournamentRoundImportService', () => {
         });
 
         afterAll(() => {
-            dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(FUTURE_TOURNAMENT_EVENT_ID);
+            dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(
+                FUTURE_TOURNAMENT_EVENT_ID
+            );
             dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(FUTURE_TOURNAMENT_EVENT_ID);
             dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId = ?').run(FUTURE_TOURNAMENT_EVENT_ID);
             dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(FUTURE_TOURNAMENT_EVENT_ID);
-            dbManager.db.prepare('DELETE FROM clubMembership WHERE userId IN (?, ?)').run(ADMIN_IMPORTER_USER_ID, NON_ADMIN_IMPORTER_USER_ID);
-            dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?)').run(ADMIN_IMPORTER_USER_ID, NON_ADMIN_IMPORTER_USER_ID);
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE userId IN (?, ?)').run(
+                ADMIN_IMPORTER_USER_ID,
+                NON_ADMIN_IMPORTER_USER_ID
+            );
+            dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?)').run(
+                ADMIN_IMPORTER_USER_ID,
+                NON_ADMIN_IMPORTER_USER_ID
+            );
         });
 
         test('system admin can import even before the event start date', () => {
@@ -269,7 +281,12 @@ describe('TournamentRoundImportService', () => {
             // not a "round already exists" check.
             const text = `Round 2\n${user1Id} ${user2Id} ${user3Id} ${user4Id}`;
 
-            const result = importService.parseAndImport(FUTURE_TOURNAMENT_EVENT_ID, 2, text, NON_ADMIN_IMPORTER_USER_ID);
+            const result = importService.parseAndImport(
+                FUTURE_TOURNAMENT_EVENT_ID,
+                2,
+                text,
+                NON_ADMIN_IMPORTER_USER_ID
+            );
 
             expect(result.imported).toBe(0);
             expect(result.errors).toHaveLength(1);
@@ -294,7 +311,7 @@ describe('TournamentRoundImportService', () => {
         const text = [
             'Round 7',
             `${user1Id} ${user2Id} ${user3Id} ${user4Id}`,
-            `99105 99106 99107 99108`
+            `99105 99106 99107 99108`,
         ].join('\n');
 
         const result = importService.parseAndImport(TOURNAMENT_EVENT_ID, 7, text, SYSTEM_USER_ID);
@@ -320,8 +337,12 @@ describe('POST /api/games/:gameId/start', () => {
         for (const userId of [99101, 99102, 99103, 99104]) {
             insertApprovedRegistration(TOURNAMENT_EVENT_ID, userId);
         }
-        dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(TOURNAMENT_EVENT_ID);
-        dbManager.db.prepare('DELETE FROM gameRound WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(TOURNAMENT_EVENT_ID);
+        dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(
+            TOURNAMENT_EVENT_ID
+        );
+        dbManager.db.prepare('DELETE FROM gameRound WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(
+            TOURNAMENT_EVENT_ID
+        );
         dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(TOURNAMENT_EVENT_ID);
     });
 
@@ -406,7 +427,7 @@ describe('POST /api/games/:gameId/start', () => {
                 { userId: 99101, startPlace: 'EAST' },
                 { userId: 99102, startPlace: 'SOUTH' },
                 { userId: 99103, startPlace: 'WEST' },
-                { userId: 99104, startPlace: 'NORTH' }
+                { userId: 99104, startPlace: 'NORTH' },
             ],
             SYSTEM_USER_ID,
             'CREATED',
@@ -433,13 +454,22 @@ describe('createTrackedGame options', () => {
     const TEST_EVENT_ID = 1001;
 
     beforeAll(() => {
-        createCustomEvent(TEST_EVENT_ID, 'Tracked options test', '2024-01-01T00:00:00.000Z', '2026-12-31T23:59:59.999Z');
+        createCustomEvent(
+            TEST_EVENT_ID,
+            'Tracked options test',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z'
+        );
     });
 
     afterAll(() => {
-        dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId IN (?, ?))').run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
+        dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId IN (?, ?))')
+            .run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
         dbManager.db.prepare('DELETE FROM game WHERE eventId IN (?, ?)').run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
-        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?)').run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
+        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?)').run(
+            TOURNAMENT_EVENT_ID,
+            TEST_EVENT_ID
+        );
         dbManager.db.prepare('DELETE FROM event WHERE id IN (?, ?)').run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
         dbManager.closeDB();
         cleanupTestDatabase();
@@ -457,8 +487,8 @@ describe('createTrackedGame options', () => {
                 eventId: TEST_EVENT_ID,
                 players: users.map((u, i) => ({
                     userId: u.id,
-                    startPlace: ['EAST', 'SOUTH', 'WEST', 'NORTH'][i]
-                }))
+                    startPlace: ['EAST', 'SOUTH', 'WEST', 'NORTH'][i],
+                })),
             });
 
         expect(response.status).toBe(201);
@@ -480,10 +510,10 @@ describe('createTrackedGame options', () => {
             TEST_EVENT_ID,
             users.map((u, i) => ({
                 userId: u.id,
-                startPlace: (['EAST', 'SOUTH', 'WEST', 'NORTH'] as const)[i]!
+                startPlace: (['EAST', 'SOUTH', 'WEST', 'NORTH'] as const)[i]!,
             })),
             SYSTEM_USER_ID,
-            "CREATED",
+            'CREATED',
             new Date(),
             9,
             '7'

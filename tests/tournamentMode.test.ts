@@ -100,8 +100,8 @@ describe('Tournament Mode', () => {
                         { userId: 1, points: 50000, startPlace: 'EAST' },
                         { userId: 2, points: 30000, startPlace: 'SOUTH' },
                         { userId: 3, points: 25000, startPlace: 'WEST' },
-                        { userId: 4, points: 15000, startPlace: 'NORTH' }
-                    ]
+                        { userId: 4, points: 15000, startPlace: 'NORTH' },
+                    ],
                 });
 
             // May fail due to user/event not existing, but should not fail due to auth
@@ -117,7 +117,7 @@ describe('Tournament Mode', () => {
                 .post('/api/events')
                 .send({
                     name: 'Test Event',
-                    type: 'SEASON'
+                    type: 'SEASON',
                 });
 
             // Should fail with 403 if user 1 is not admin, not 401

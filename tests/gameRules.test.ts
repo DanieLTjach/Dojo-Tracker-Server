@@ -40,7 +40,7 @@ describe('Game Rules API Endpoints', () => {
             expect(response.body.rules.find((rule: { key: string }) => rule.key === 'nb_quads_max')).toMatchObject({
                 key: 'nb_quads_max',
                 type: 'enumInteger',
-                enum: [4]
+                enum: [4],
             });
         });
 
@@ -202,7 +202,11 @@ describe('Game Rules API Endpoints', () => {
                 .get(`/api/game-rules?clubId=${clubId}`)
                 .set('Authorization', adminAuthHeader);
 
-            dbManager.db.prepare('DELETE FROM gameRules WHERE id IN (?, ?, ?)').run(clubRuleId, globalRuleId, otherClubRuleId);
+            dbManager.db.prepare('DELETE FROM gameRules WHERE id IN (?, ?, ?)').run(
+                clubRuleId,
+                globalRuleId,
+                otherClubRuleId
+            );
             dbManager.db.prepare('DELETE FROM club WHERE id IN (?, ?)').run(clubId, otherClubId);
 
             expect(response.status).toBe(200);
@@ -274,28 +278,30 @@ describe('Game Rules API Endpoints', () => {
                             preset: 'ema_2025',
                             rules: {
                                 starting_points: 25000,
-                                red_fives: 'three_one_per_suit'
-                            }
-                        }
+                                red_fives: 'three_one_per_suit',
+                            },
+                        },
                     });
 
                 expect(response.status).toBe(200);
                 expect(response.body.details).toMatchObject({
-                    preset: 'ema_2025'
+                    preset: 'ema_2025',
                 });
                 expect(response.body.details.rules.number_of_players).toBe(4);
                 expect(response.body.details.rules.open_tanyao).toBe(true);
                 expect(response.body.details.rules.starting_points).toBe(25000);
                 expect(response.body.details.rules.red_fives).toBe('three_one_per_suit');
 
-                const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(ruleId) as { details: string };
+                const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(ruleId) as {
+                    details: string;
+                };
                 const stored = JSON.parse(raw.details);
                 expect(stored).toEqual({
                     preset: 'ema_2025',
                     rules: {
                         starting_points: 25000,
-                        red_fives: 'three_one_per_suit'
-                    }
+                        red_fives: 'three_one_per_suit',
+                    },
                 });
             } finally {
                 dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
@@ -310,8 +316,8 @@ describe('Game Rules API Endpoints', () => {
                 .send({
                     details: {
                         preset: 'totally_made_up',
-                        rules: {}
-                    }
+                        rules: {},
+                    },
                 });
 
             expect(response.status).toBe(400);
@@ -325,8 +331,8 @@ describe('Game Rules API Endpoints', () => {
                     details: {
                         preset: 'ema_2025',
                         rules: {},
-                        unexpectedField: 'nope'
-                    }
+                        unexpectedField: 'nope',
+                    },
                 });
 
             expect(response.status).toBe(400);
@@ -340,9 +346,9 @@ describe('Game Rules API Endpoints', () => {
                     details: {
                         preset: 'ema_2025',
                         rules: {
-                            not_a_real_rule: true
-                        }
-                    }
+                            not_a_real_rule: true,
+                        },
+                    },
                 });
 
             expect(response.status).toBe(400);
@@ -356,9 +362,9 @@ describe('Game Rules API Endpoints', () => {
                     details: {
                         preset: 'ema_2025',
                         rules: {
-                            open_tanyao: 'yes'
-                        }
-                    }
+                            open_tanyao: 'yes',
+                        },
+                    },
                 });
 
             expect(response.status).toBe(400);
@@ -371,8 +377,8 @@ describe('Game Rules API Endpoints', () => {
                 .send({
                     details: {
                         preset: 'default',
-                        rules: {}
-                    }
+                        rules: {},
+                    },
                 });
 
             expect(response.status).toBe(400);
@@ -382,7 +388,7 @@ describe('Game Rules API Endpoints', () => {
             const response = await request(app)
                 .put('/api/game-rules/1/details')
                 .send({
-                    details: null
+                    details: null,
                 });
 
             expect(response.status).toBe(401);
@@ -412,7 +418,7 @@ describe('Game Rules API Endpoints', () => {
                     .put(`/api/game-rules/${ruleId}/details`)
                     .set('Authorization', createAuthHeader(userId))
                     .send({
-                        details: { preset: 'ema_2025', rules: {} }
+                        details: { preset: 'ema_2025', rules: {} },
                     });
                 expect(response.status).toBe(403);
             } finally {
@@ -450,7 +456,7 @@ describe('Game Rules API Endpoints', () => {
                     .put(`/api/game-rules/${ruleId}/details`)
                     .set('Authorization', createAuthHeader(ownerId))
                     .send({
-                        details: { preset: 'ema_2025', rules: { starting_points: 25000 } }
+                        details: { preset: 'ema_2025', rules: { starting_points: 25000 } },
                     });
                 expect(response.status).toBe(200);
                 expect(response.body.details.preset).toBe('ema_2025');
@@ -475,7 +481,7 @@ describe('Game Rules API Endpoints', () => {
             uma: [15, 5, -5, -15],
             startingPoints: 30000,
             umaTieBreak: 'DIVIDE',
-            clubId
+            clubId,
         };
 
         beforeAll(() => {
@@ -723,9 +729,9 @@ describe('Game Rules API Endpoints', () => {
                             customRules: [{
                                 category: 'rule',
                                 value: true,
-                                name: 'Allow table note'
-                            }]
-                        }
+                                name: 'Allow table note',
+                            }],
+                        },
                     });
 
                 expect(response.status).toBe(200);
@@ -735,7 +741,7 @@ describe('Game Rules API Endpoints', () => {
                 expect(response.body.details.customRules).toEqual([{
                     category: 'rule',
                     value: true,
-                    name: 'Allow table note'
+                    name: 'Allow table note',
                 }]);
             } finally {
                 dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);

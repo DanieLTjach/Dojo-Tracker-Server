@@ -1,5 +1,5 @@
-import type { GameRulesValues } from "../data/gameRulesCatalog.ts";
-import { GameNotInProgressWhenAddingNewRoundError } from "../error/GameErrors.ts";
+import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
+import { GameNotInProgressWhenAddingNewRoundError } from '../error/GameErrors.ts';
 import {
     CannotDetermineDealerError,
     CannotDeterminePlayerPlacementError,
@@ -20,11 +20,21 @@ import {
     TwoHanMinimumIsRequiredError,
     NoPlayersInTheGameError,
     AbortiveDrawNotInRulesetError,
-} from "../error/PointCalculationErrors.ts";
-import type { GameRules } from "../model/EventModels.ts";
-import type { GamePlayer, DetailedGame, GameState } from "../model/GameModels.ts";
-import { GameFinishReason, nextWind, Wind, WIND_ORDER } from "../model/GameModels.ts";
-import type { AbortiveDraw, Chombo, ExhaustiveDraw, GameRoundResult, GameRoundResultInputDTO, PlayerPointChange, Ron, Tsumo, WinningHandData } from "../model/GameRoundResultModels.ts";
+} from '../error/PointCalculationErrors.ts';
+import type { GameRules } from '../model/EventModels.ts';
+import type { GamePlayer, DetailedGame, GameState } from '../model/GameModels.ts';
+import { GameFinishReason, nextWind, Wind, WIND_ORDER } from '../model/GameModels.ts';
+import type {
+    AbortiveDraw,
+    Chombo,
+    ExhaustiveDraw,
+    GameRoundResult,
+    GameRoundResultInputDTO,
+    PlayerPointChange,
+    Ron,
+    Tsumo,
+    WinningHandData,
+} from '../model/GameRoundResultModels.ts';
 import {
     getAgariYame,
     getBankruptHandling as getBankruptcyHandling,
@@ -50,7 +60,7 @@ import {
     isWestRoundEnabled,
     isYakumanStackingEnabled,
     isAbortiveDrawEnabled,
-} from "./RulesUtils.ts";
+} from './RulesUtils.ts';
 
 export function calculateGameRoundResult(
     game: DetailedGame,
@@ -74,13 +84,20 @@ export function calculateGameRoundResult(
     const updatedGamePlayers = game.players.map(player => updatePlayerPoints(player, roundPointChanges));
     const nextRoundState = calculateNextRoundState(currentGameState, updatedGamePlayers, detailedRules, result);
 
-    const gameFinishReason = shouldFinishGame(currentGameState, nextRoundState, updatedGamePlayers, rules, detailedRules, result);
+    const gameFinishReason = shouldFinishGame(
+        currentGameState,
+        nextRoundState,
+        updatedGamePlayers,
+        rules,
+        detailedRules,
+        result
+    );
     if (gameFinishReason === undefined) {
         return {
             ...result,
             playerPointChanges: roundPointChanges,
             nextState: nextRoundState,
-            gameFinishReason: undefined
+            gameFinishReason: undefined,
         };
     }
 
@@ -88,10 +105,15 @@ export function calculateGameRoundResult(
         ...result,
         playerPointChanges: mergePlayerPointChanges(
             roundPointChanges,
-            handleRemaningRiichiSticksAfterGameFinished(updatedGamePlayers, rules, detailedRules, nextRoundState.riichiSticks)
+            handleRemaningRiichiSticksAfterGameFinished(
+                updatedGamePlayers,
+                rules,
+                detailedRules,
+                nextRoundState.riichiSticks
+            )
         ),
         nextState: undefined,
-        gameFinishReason
+        gameFinishReason,
     };
 }
 
@@ -102,15 +124,15 @@ function calculateRoundPointChanges(
     result: GameRoundResultInputDTO
 ): PlayerPointChange[] {
     switch (result.type) {
-        case "TSUMO":
+        case 'TSUMO':
             return calculateTsumoPointChanges(gameState, players, rules, result);
-        case "RON":
+        case 'RON':
             return calculateRonPointChanges(gameState, players, rules, result);
-        case "EXHAUSTIVE_DRAW":
+        case 'EXHAUSTIVE_DRAW':
             return calculateExhaustiveDrawPointChanges(gameState, players, rules, result);
-        case "ABORTIVE_DRAW":
+        case 'ABORTIVE_DRAW':
             return calculateAbortiveDrawPointChanges(rules, result);
-        case "CHOMBO":
+        case 'CHOMBO':
             return calculateChomboPointChanges(gameState, players, rules, result);
     }
 }
@@ -127,14 +149,14 @@ function validateResultPlayersInGame(
     };
 
     switch (result.type) {
-        case "TSUMO":
+        case 'TSUMO':
             requireInGame(result.winningHandData.winnerPlayerId);
             result.riichiPlayerIds.forEach(requireInGame);
             if (result.winningHandData.yakumanLiabilityPlayerId !== undefined) {
                 requireInGame(result.winningHandData.yakumanLiabilityPlayerId);
             }
             break;
-        case "RON":
+        case 'RON':
             requireInGame(result.dealInPlayerId);
             result.riichiPlayerIds.forEach(requireInGame);
             result.winningHandData.forEach(hand => {
@@ -144,15 +166,15 @@ function validateResultPlayersInGame(
                 }
             });
             break;
-        case "EXHAUSTIVE_DRAW":
+        case 'EXHAUSTIVE_DRAW':
             result.tenpaiPlayerIds.forEach(requireInGame);
             result.nagashiManganPlayerIds.forEach(requireInGame);
             result.riichiPlayerIds.forEach(requireInGame);
             break;
-        case "ABORTIVE_DRAW":
+        case 'ABORTIVE_DRAW':
             result.riichiPlayerIds.forEach(requireInGame);
             break;
-        case "CHOMBO":
+        case 'CHOMBO':
             requireInGame(result.offenderPlayerId);
             break;
     }
@@ -170,15 +192,17 @@ function calculateTsumoPointChanges(
             throw new YakumanLiabilityRequiresYakumanError();
         }
         return calculateRonPointChanges(
-            gameState, players, rules,
+            gameState,
+            players,
+            rules,
             {
-                type: "RON",
+                type: 'RON',
                 dealInPlayerId: tsumo.winningHandData.yakumanLiabilityPlayerId,
                 riichiPlayerIds: tsumo.riichiPlayerIds,
                 winningHandData: [{
                     ...tsumo.winningHandData,
-                    yakumanLiabilityPlayerId: undefined
-                }]
+                    yakumanLiabilityPlayerId: undefined,
+                }],
             },
             includeHonba
         );
@@ -194,13 +218,14 @@ function calculateTsumoPointChanges(
         .filter(player => player.userId !== tsumo.winningHandData.winnerPlayerId)
         .map(player => ({
             playerId: player.userId,
-            pointChange: -(roundUpToHundreds(handBaseValue * (player.userId === dealerPlayerId ? 2 : 1)) + honba * gameState.counters)
+            pointChange: -(roundUpToHundreds(handBaseValue * (player.userId === dealerPlayerId ? 2 : 1)) +
+                honba * gameState.counters),
         }));
 
     const totalPayment = -payments.reduce((sum, payment) => sum + payment.pointChange, 0);
     let result = [
         ...payments,
-        { playerId: tsumo.winningHandData.winnerPlayerId, pointChange: totalPayment }
+        { playerId: tsumo.winningHandData.winnerPlayerId, pointChange: totalPayment },
     ];
     return mergePlayerPointChanges(
         result,
@@ -230,16 +255,18 @@ function calculateRonPointChanges(
     ron = resolveMultipleRonIfNecessary(rules, ron, headBumpPlayerId);
 
     const pointChangesFromEachHand = ron.winningHandData
-        .map(winningHandData => calculateRonRoundPointChangesForSingleHand(
-            gameState,
-            players,
-            rules,
-            ron.dealInPlayerId,
-            winningHandData,
-            (getContinuancePaymentOnMultipleRon(rules) === "bump"
-                ? winningHandData.winnerPlayerId === headBumpPlayerId
-                : true) && includeHonba
-        ));
+        .map(winningHandData =>
+            calculateRonRoundPointChangesForSingleHand(
+                gameState,
+                players,
+                rules,
+                ron.dealInPlayerId,
+                winningHandData,
+                (getContinuancePaymentOnMultipleRon(rules) === 'bump'
+                    ? winningHandData.winnerPlayerId === headBumpPlayerId
+                    : true) && includeHonba
+            )
+        );
     return mergePlayerPointChanges(
         ...pointChangesFromEachHand,
         giveBankRiichiSticksToPlayer(gameState, headBumpPlayerId),
@@ -266,15 +293,15 @@ function findHeadBumpPlayerId(
     let curWind = dealInPlayerWind;
     for (let i = 0; i < getNumberOfPlayers(rules) - 1; i++) {
         curWind = nextWind(curWind);
-        if (curWind === "NORTH" && getNumberOfPlayers(rules) === 3) {
-            curWind = "EAST";
+        if (curWind === 'NORTH' && getNumberOfPlayers(rules) === 3) {
+            curWind = 'EAST';
         }
         const curPlayer = players.find(player => player.startPlace === curWind);
         if (curPlayer === undefined) {
             throw new MissingPlayerForWindError(curWind);
         }
         if (winningPlayerIds.includes(curPlayer.userId)) {
-            return curPlayer.userId
+            return curPlayer.userId;
         }
     }
 
@@ -286,24 +313,24 @@ function resolveMultipleRonIfNecessary(rules: GameRulesValues, ron: Ron, headBum
         case 2:
             const doubleRonHandling = getDoubleRonHandling(rules);
             switch (doubleRonHandling) {
-                case "first":
+                case 'first':
                     throw new NoDoubleRonFirstWinsOnlyError();
-                case "head_bump":
+                case 'head_bump':
                     return convertMultipleRonToHeadBump(ron, headBumpPlayerId);
-                case "yes":
+                case 'yes':
                     return ron;
             }
             break;
         case 3:
             const tripleRonHandling = getTripleRonHandling(rules);
             switch (tripleRonHandling) {
-                case "first":
+                case 'first':
                     throw new NoTripleRonFirstWinsOnlyError();
-                case "cancel":
+                case 'cancel':
                     throw new TripleRonShouldBeAbortiveDrawError();
-                case "head_bump":
+                case 'head_bump':
                     return convertMultipleRonToHeadBump(ron, headBumpPlayerId);
-                case "yes":
+                case 'yes':
                     return ron;
             }
             break;
@@ -316,7 +343,7 @@ function convertMultipleRonToHeadBump(ron: Ron, headBumpPlayerId: number): Ron {
     return {
         ...ron,
         winningHandData: ron.winningHandData
-            .filter(winningHandData => winningHandData.winnerPlayerId === headBumpPlayerId)
+            .filter(winningHandData => winningHandData.winnerPlayerId === headBumpPlayerId),
     };
 }
 
@@ -350,23 +377,23 @@ function calculateRonRoundPointChangesForSingleHand(
             return [
                 {
                     playerId: winningHandData.yakumanLiabilityPlayerId,
-                    pointChange: -(handValue / 2 + (honbaPayer === 'feeder' ? fullHonbaPayment : 0))
+                    pointChange: -(handValue / 2 + (honbaPayer === 'feeder' ? fullHonbaPayment : 0)),
                 },
                 {
                     playerId: dealInPlayerId,
-                    pointChange: -(handValue / 2 + (honbaPayer === 'discarder' ? fullHonbaPayment : 0))
+                    pointChange: -(handValue / 2 + (honbaPayer === 'discarder' ? fullHonbaPayment : 0)),
                 },
                 {
                     playerId: winningHandData.winnerPlayerId,
-                    pointChange: handValue + fullHonbaPayment
-                }
+                    pointChange: handValue + fullHonbaPayment,
+                },
             ];
         }
     }
 
     return [
         { playerId: dealInPlayerId, pointChange: -(handValue + fullHonbaPayment) },
-        { playerId: winningHandData.winnerPlayerId, pointChange: handValue + fullHonbaPayment }
+        { playerId: winningHandData.winnerPlayerId, pointChange: handValue + fullHonbaPayment },
     ];
 }
 
@@ -385,7 +412,7 @@ function calculatePointChangesFromThisRoundRiichiCalls(
     const totalPayment = -payments.reduce((sum, payment) => sum + payment.pointChange, 0);
     return [
         ...payments,
-        { playerId: receiverPlayerId, pointChange: totalPayment }
+        { playerId: receiverPlayerId, pointChange: totalPayment },
     ];
 }
 
@@ -420,15 +447,17 @@ function calculateNagashiManganPointChanges(
     const gameStateWithoutBank: GameState = { ...gameState, riichiSticks: 0 };
     const nagashiManganPointChanges = exhaustiveDraw.nagashiManganPlayerIds.map(playerId =>
         calculateTsumoPointChanges(
-            gameStateWithoutBank, players, rules,
+            gameStateWithoutBank,
+            players,
+            rules,
             {
                 type: 'TSUMO',
                 winningHandData: {
                     winnerPlayerId: playerId,
                     yakumanCount: 0,
-                    han: 5
+                    han: 5,
                 },
-                riichiPlayerIds: []
+                riichiPlayerIds: [],
             },
             false
         )
@@ -444,8 +473,10 @@ function calculateNotenPaymentPointChanges(
     rules: GameRulesValues,
     exhaustiveDraw: ExhaustiveDraw
 ): PlayerPointChange[] {
-    if (exhaustiveDraw.tenpaiPlayerIds.length === 0 ||
-        exhaustiveDraw.tenpaiPlayerIds.length === getNumberOfPlayers(rules)) {
+    if (
+        exhaustiveDraw.tenpaiPlayerIds.length === 0 ||
+        exhaustiveDraw.tenpaiPlayerIds.length === getNumberOfPlayers(rules)
+    ) {
         return [];
     }
 
@@ -459,11 +490,11 @@ function calculateNotenPaymentPointChanges(
     return mergePlayerPointChanges(
         notenPlayerIds.map(playerId => ({
             playerId,
-            pointChange: -notenPenalty / notenPlayerIds.length
+            pointChange: -notenPenalty / notenPlayerIds.length,
         })),
         exhaustiveDraw.tenpaiPlayerIds.map(playerId => ({
             playerId,
-            pointChange: notenPenalty / exhaustiveDraw.tenpaiPlayerIds.length
+            pointChange: notenPenalty / exhaustiveDraw.tenpaiPlayerIds.length,
         }))
     );
 }
@@ -483,26 +514,28 @@ function calculateChomboPointChanges(
     chombo: Chombo
 ): PlayerPointChange[] {
     switch (getChomboHandling(rules)) {
-        case "twenty_thousand_after_uma":
+        case 'twenty_thousand_after_uma':
             return [];
-        case "mangan":
+        case 'mangan':
             const manganTsumoPayments = calculateTsumoPointChanges(
-                gameState, players, rules,
+                gameState,
+                players,
+                rules,
                 {
                     type: 'TSUMO',
                     winningHandData: {
                         winnerPlayerId: chombo.offenderPlayerId,
                         yakumanCount: 0,
-                        han: 5
+                        han: 5,
                     },
-                    riichiPlayerIds: []
+                    riichiPlayerIds: [],
                 },
                 false
             );
 
             return manganTsumoPayments.map(playerPointChange => ({
                 playerId: playerPointChange.playerId,
-                pointChange: -playerPointChange.pointChange
+                pointChange: -playerPointChange.pointChange,
             }));
     }
 }
@@ -510,7 +543,7 @@ function calculateChomboPointChanges(
 function giveBankRiichiSticksToPlayer(gameState: GameState, playerId: number): PlayerPointChange[] {
     return [{
         playerId,
-        pointChange: gameState.riichiSticks * 1000
+        pointChange: gameState.riichiSticks * 1000,
     }];
 }
 
@@ -583,29 +616,31 @@ function updatePlayerPoints(player: GamePlayer, pointChanges: PlayerPointChange[
 
     return {
         ...player,
-        points: player.points + pointChange
-    }
+        points: player.points + pointChange,
+    };
 }
 
 export function calculateNextRoundState(
     gameState: GameState,
     players: GamePlayer[],
     rules: GameRulesValues,
-    result: GameRoundResultInputDTO,
+    result: GameRoundResultInputDTO
 ): GameState {
     switch (result.type) {
-        case "TSUMO":
+        case 'TSUMO':
             return nextRoundStateAfterWin(
-                gameState, players, rules,
+                gameState,
+                players,
+                rules,
                 [result.winningHandData.winnerPlayerId]
             );
-        case "RON":
+        case 'RON':
             return nextRoundStateAfterRon(gameState, players, rules, result);
-        case "EXHAUSTIVE_DRAW":
+        case 'EXHAUSTIVE_DRAW':
             return nextRoundStateAfterExhaustiveDraw(gameState, players, rules, result);
-        case "ABORTIVE_DRAW":
+        case 'ABORTIVE_DRAW':
             return nextRoundStateAfterAbortiveDraw(gameState, rules, result);
-        case "CHOMBO":
+        case 'CHOMBO':
             return gameState;
     }
 }
@@ -624,7 +659,9 @@ function nextRoundStateAfterRon(
     );
     ron = resolveMultipleRonIfNecessary(rules, ron, headBumpPlayerId);
     return nextRoundStateAfterWin(
-        gameState, players, rules,
+        gameState,
+        players,
+        rules,
         ron.winningHandData.map(winningHandData => winningHandData.winnerPlayerId)
     );
 }
@@ -639,12 +676,12 @@ function nextRoundStateAfterWin(
         ? {
             ...gameState,
             counters: gameState.counters + 1,
-            riichiSticks: 0
+            riichiSticks: 0,
         }
         : nextDealer(rules, {
             ...gameState,
             counters: 0,
-            riichiSticks: 0
+            riichiSticks: 0,
         });
 }
 
@@ -655,10 +692,11 @@ function nextRoundStateAfterExhaustiveDraw(
     exhaustiveDraw: ExhaustiveDraw
 ): GameState {
     return nextRoundStateAfterDraw(
-        gameState, rules,
+        gameState,
+        rules,
         exhaustiveDraw.riichiPlayerIds.length,
-        getContinuation(rules) === "tenpai"
-        && exhaustiveDraw.tenpaiPlayerIds.includes(getCurrentDealerPlayerId(gameState, players))
+        getContinuation(rules) === 'tenpai' &&
+            exhaustiveDraw.tenpaiPlayerIds.includes(getCurrentDealerPlayerId(gameState, players))
     );
 }
 
@@ -668,7 +706,8 @@ function nextRoundStateAfterAbortiveDraw(
     abortiveDraw: AbortiveDraw
 ): GameState {
     return nextRoundStateAfterDraw(
-        gameState, rules,
+        gameState,
+        rules,
         abortiveDraw.riichiPlayerIds.length,
         isContinuationWhenAbortionEnabled(rules)
     );
@@ -683,8 +722,8 @@ function nextRoundStateAfterDraw(
     const result = {
         ...gameState,
         counters: gameState.counters + 1,
-        riichiSticks: gameState.riichiSticks + numberOfNewRiichiSticks
-    }
+        riichiSticks: gameState.riichiSticks + numberOfNewRiichiSticks,
+    };
     return shouldKeepCurrentDealer
         ? result
         : nextDealer(rules, result);
@@ -695,13 +734,13 @@ function nextDealer(rules: GameRulesValues, gameState: GameState): GameState {
     return nextDealerNumber <= getNumberOfPlayers(rules)
         ? {
             ...gameState,
-            dealerNumber: nextDealerNumber
+            dealerNumber: nextDealerNumber,
         }
         : {
             ...gameState,
             wind: nextWind(gameState.wind),
-            dealerNumber: 1
-        }
+            dealerNumber: 1,
+        };
 }
 
 export function shouldFinishGame(
@@ -710,7 +749,7 @@ export function shouldFinishGame(
     players: GamePlayer[],
     rules: GameRules,
     detailedRules: GameRulesValues,
-    result: GameRoundResultInputDTO,
+    result: GameRoundResultInputDTO
 ): GameFinishReason | undefined {
     if (shouldFinishGameByBankruptcy(players, detailedRules)) {
         return GameFinishReason.BANKRUPTCY;
@@ -721,7 +760,7 @@ export function shouldFinishGame(
     }
 
     const nextRoundIsAllLastRepeat = isAllLastRepeat(detailedRules, gameState, nextRoundState);
-    if (nextRoundState.wind === "EAST" || (nextRoundState.wind === "SOUTH" && !nextRoundIsAllLastRepeat)) {
+    if (nextRoundState.wind === 'EAST' || (nextRoundState.wind === 'SOUTH' && !nextRoundIsAllLastRepeat)) {
         return undefined;
     }
 
@@ -729,7 +768,7 @@ export function shouldFinishGame(
         return shouldFinishGameWithAgariOrTenpaiYame(nextRoundState, players, rules, detailedRules, result);
     }
 
-    if (nextRoundState.wind === "NORTH") {
+    if (nextRoundState.wind === 'NORTH') {
         return GameFinishReason.REACHED_NORTH_ROUND;
     }
 
@@ -739,13 +778,13 @@ export function shouldFinishGame(
     }
 
     const clearedGoal = players.some(player => player.points >= detailedRules.goal!);
-    if (gameState.wind === "SOUTH") {
+    if (gameState.wind === 'SOUTH') {
         // just got into WEST, end if someone is above goal
         return clearedGoal ? GameFinishReason.PLAYED_ALL_ROUNDS : undefined;
     }
 
     // previous round was also WEST, only end if someone is above goal and round ended by win
-    return clearedGoal && (result.type === "TSUMO" || result.type === "RON")
+    return clearedGoal && (result.type === 'TSUMO' || result.type === 'RON')
         ? GameFinishReason.GOAL_EXCEEDED_IN_WEST_ROUND
         : undefined;
 }
@@ -755,11 +794,11 @@ function shouldFinishGameByBankruptcy(
     rules: GameRulesValues
 ): boolean {
     switch (getBankruptcyHandling(rules)) {
-        case "none":
+        case 'none':
             return false;
-        case "below_zero":
+        case 'below_zero':
             return players.some(player => player.points < 0);
-        case "zero_or_less":
+        case 'zero_or_less':
             return players.some(player => player.points <= 0);
     }
 }
@@ -778,8 +817,8 @@ function shouldFinishGameByMaxPoints(
 
 function isAllLastRepeat(rules: GameRulesValues, state: GameState, nextState: GameState) {
     const numberOfPlayers = getNumberOfPlayers(rules);
-    return state.wind === "SOUTH" && state.dealerNumber === numberOfPlayers
-        && nextState.wind === "SOUTH" && nextState.dealerNumber === numberOfPlayers;
+    return state.wind === 'SOUTH' && state.dealerNumber === numberOfPlayers &&
+        nextState.wind === 'SOUTH' && nextState.dealerNumber === numberOfPlayers;
 }
 
 function shouldFinishGameWithAgariOrTenpaiYame(
@@ -797,13 +836,15 @@ function shouldFinishGameWithAgariOrTenpaiYame(
     const dealerPlacement = getPlayerPlacement(rules, players, dealerId);
 
     switch (result.type) {
-        case "EXHAUSTIVE_DRAW":
+        case 'EXHAUSTIVE_DRAW':
             return shouldFinishGameWithTenpaiYame(detailedRules, dealerPlacement)
-                ? GameFinishReason.TENPAI_YAME : undefined;
-        case "TSUMO":
-        case "RON":
+                ? GameFinishReason.TENPAI_YAME
+                : undefined;
+        case 'TSUMO':
+        case 'RON':
             return shouldFinishGameWithAgariYame(detailedRules, dealerPlacement)
-                ? GameFinishReason.AGARI_YAME : undefined;
+                ? GameFinishReason.AGARI_YAME
+                : undefined;
         default:
             return undefined;
     }
@@ -820,7 +861,7 @@ function getPlayerPlacement(
     for (const [index, player] of sortedPlayers.entries()) {
         if (index !== 0) {
             const prevPlayer = sortedPlayers[index - 1]!;
-            if (prevPlayer.points > player.points || rules.umaTieBreak === "WIND") {
+            if (prevPlayer.points > player.points || rules.umaTieBreak === 'WIND') {
                 curPlace = index + 1;
             }
         }
@@ -842,11 +883,11 @@ function shouldFinishGameWithTenpaiYame(
     dealerPlacement: number
 ): boolean {
     switch (getTenpaiYame(rules)) {
-        case "no":
+        case 'no':
             return false;
-        case "rank_1":
+        case 'rank_1':
             return dealerPlacement === 1;
-        case "rank_1_2":
+        case 'rank_1_2':
             return dealerPlacement <= 2;
     }
 }
@@ -856,11 +897,11 @@ function shouldFinishGameWithAgariYame(
     dealerPlacement: number
 ): boolean {
     switch (getAgariYame(rules)) {
-        case "no":
+        case 'no':
             return false;
-        case "rank_1":
+        case 'rank_1':
             return dealerPlacement === 1;
-        case "rank_1_2":
+        case 'rank_1_2':
             return dealerPlacement <= 2;
     }
 }
@@ -883,7 +924,7 @@ function handleRemaningRiichiSticksAfterGameFinished(
     detailedRules: GameRulesValues,
     riichiStickCount: number
 ): PlayerPointChange[] {
-    if (riichiStickCount === 0 || getRemainingRiichiDeposits(detailedRules) === "lost") {
+    if (riichiStickCount === 0 || getRemainingRiichiDeposits(detailedRules) === 'lost') {
         return [];
     }
 
@@ -912,7 +953,7 @@ function getPlayersTiedForFirstPlace(players: GamePlayer[], gameRules: GameRules
 
     const sortedPlayers = sortPlayersByPoints(players);
 
-    if (gameRules.umaTieBreak === "WIND") {
+    if (gameRules.umaTieBreak === 'WIND') {
         return [sortedPlayers[0]!.userId];
     }
 

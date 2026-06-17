@@ -4,14 +4,13 @@ import type { TelegramTopic } from '../model/TelegramTopic.ts';
 import { telegramBot } from './TelegramBot.ts';
 
 class TelegramMessageService {
-
     async sendMessage(message: string, topic: TelegramTopic) {
         let sendingOptions = getSendingOptionsForTopicType(topic.type);
         if (topic.topicId !== undefined) {
             sendingOptions = {
                 ...sendingOptions,
-                message_thread_id: topic.topicId
-            }
+                message_thread_id: topic.topicId,
+            };
         }
 
         try {
@@ -32,7 +31,8 @@ class TelegramMessageService {
 
 type SendMessageOptions = Omit<
     Parameters<ApiMethods<any>['sendMessage']>[0],
-    'chat_id' | 'text'>;
+    'chat_id' | 'text'
+>;
 
 function getSendingOptionsForTopicType(topicType: TelegramTopicType): SendMessageOptions {
     switch (topicType) {
@@ -40,8 +40,8 @@ function getSendingOptionsForTopicType(topicType: TelegramTopicType): SendMessag
             return {
                 parse_mode: 'HTML',
                 link_preview_options: {
-                    is_disabled: true
-                }
+                    is_disabled: true,
+                },
             };
         case TelegramTopicType.GAME_LOGS:
         case TelegramTopicType.USER_LOGS:
@@ -51,6 +51,5 @@ function getSendingOptionsForTopicType(topicType: TelegramTopicType): SendMessag
             return { parse_mode: 'HTML' };
     }
 }
-
 
 export default new TelegramMessageService();

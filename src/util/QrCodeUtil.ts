@@ -9,6 +9,6 @@ export async function generateQrPng(text: string): Promise<Buffer> {
         type: 'png',
         errorCorrectionLevel: 'M',
         margin: 2,
-        width: 512
+        width: 512,
     });
 }

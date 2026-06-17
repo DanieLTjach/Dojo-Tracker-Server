@@ -1,14 +1,17 @@
-import { InternalServerError } from "../error/BaseErrors.ts";
-import { ClubInviteSource, ClubInviteType, ClubMembershipStatus, ClubRole } from "../model/ClubModels.ts";
-import { EventRegistrationStatus } from "../model/EventRegistrationModels.ts";
-import { UmaTieBreak } from "../model/EventModels.ts";
-import { GameStatus, Wind } from "../model/GameModels.ts";
-import { ClubTelegramTopicType } from "../model/TelegramTopic.ts";
-import { UserStatus } from "../model/UserModels.ts";
+import { InternalServerError } from '../error/BaseErrors.ts';
+import { ClubInviteSource, ClubInviteType, ClubMembershipStatus, ClubRole } from '../model/ClubModels.ts';
+import { EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
+import { UmaTieBreak } from '../model/EventModels.ts';
+import { GameStatus, Wind } from '../model/GameModels.ts';
+import { ClubTelegramTopicType } from '../model/TelegramTopic.ts';
+import { UserStatus } from '../model/UserModels.ts';
 
 class EnumParsingError extends InternalServerError {
     constructor(value: string, enumName: string, allowedValues: string[]) {
-        super(`Неприпустиме значення '${value}' для enum ${enumName}. Дозволені значення: ${allowedValues.join(', ')}`, 'enumParsingError');
+        super(
+            `Неприпустиме значення '${value}' для enum ${enumName}. Дозволені значення: ${allowedValues.join(', ')}`,
+            'enumParsingError'
+        );
     }
 }
 

@@ -1,17 +1,17 @@
-import z from "zod";
+import z from 'zod';
 import { gameRulesCatalog, type GameRulesCatalog, type RuleSpec } from '../data/gameRulesCatalog.ts';
 import { gameRulesPresetsByKey } from '../data/gameRulesPresets.ts';
 import type { GameRulesDetails, RuleValue } from '../model/EventModels.ts';
 import { clubIdParamSchema } from './ClubSchemas.ts';
 
-export const gameRulesIdSchema = z.number().int("Game Rules ID must be an integer");
-export const gameRulesIdParamSchema = z.coerce.number().int("Game Rules ID must be an integer");
+export const gameRulesIdSchema = z.number().int('Game Rules ID must be an integer');
+export const gameRulesIdParamSchema = z.coerce.number().int('Game Rules ID must be an integer');
 
 const linkLabelSchema = z.string().trim().min(1, 'Link label cannot be empty');
 
 const gameRulesLinkSchema = z.strictObject({
     url: z.url('Link URL must be a valid URL'),
-    label: linkLabelSchema
+    label: linkLabelSchema,
 });
 
 const customRuleCategorySchema = z.enum(['yaku', 'fu', 'rule']);
@@ -29,7 +29,7 @@ const customRuleEntrySchema = z.strictObject({
     category: customRuleCategorySchema,
     value: customRuleValueSchema,
     name: customRuleNameSchema,
-    tooltip: customRuleTooltipSchema.optional()
+    tooltip: customRuleTooltipSchema.optional(),
 });
 
 function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
@@ -64,7 +64,10 @@ function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
         schema = numberSchema
             .refine(value => spec.min === undefined || value >= spec.min, `${spec.key} must be >= ${spec.min}`)
             .refine(value => spec.max === undefined || value <= spec.max, `${spec.key} must be <= ${spec.max}`)
-            .refine(value => spec.multipleOf === undefined || value % spec.multipleOf === 0, `${spec.key} must be a multiple of ${spec.multipleOf}`);
+            .refine(
+                value => spec.multipleOf === undefined || value % spec.multipleOf === 0,
+                `${spec.key} must be a multiple of ${spec.multipleOf}`
+            );
     }
 
     return schema;
@@ -103,13 +106,15 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
         catalog.rules.map(spec => [spec.key, ruleSpecToSchema(spec).optional()])
     );
     const withRequiredShape = Object.fromEntries(
-        catalog.rules.map(spec => [spec.key, spec.required ? ruleSpecToSchema(spec) : ruleSpecToSchema(spec).optional()])
+        catalog.rules.map(
+            spec => [spec.key, spec.required ? ruleSpecToSchema(spec) : ruleSpecToSchema(spec).optional()]
+        )
     );
     const allOptionalRulesSchema = z.strictObject(allOptionalShape);
     const withRequiredRulesSchema = z.strictObject(withRequiredShape);
 
     const presetSchema = z.string().trim().min(1, 'Preset cannot be empty').refine(
-        (key) => {
+        key => {
             const preset = gameRulesPresetsByKey.get(key);
             return preset !== undefined && !preset.internal;
         },
@@ -123,19 +128,19 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
             preset: presetSchema,
             rules: allOptionalRulesSchema,
             links: z.array(gameRulesLinkSchema).optional(),
-            customRules: customRulesSchema.optional()
+            customRules: customRulesSchema.optional(),
         }).refine(
-            (details) => notenPenaltyDividesCleanly(details.rules, details.preset),
+            details => notenPenaltyDividesCleanly(details.rules, details.preset),
             { error: NOTEN_PENALTY_DIVISIBILITY_MESSAGE, path: ['rules', 'noten_penalty'] }
         ),
         z.strictObject({
             rules: withRequiredRulesSchema,
             links: z.array(gameRulesLinkSchema).optional(),
-            customRules: customRulesSchema.optional()
+            customRules: customRulesSchema.optional(),
         }).refine(
-            (details) => notenPenaltyDividesCleanly(details.rules),
+            details => notenPenaltyDividesCleanly(details.rules),
             { error: NOTEN_PENALTY_DIVISIBILITY_MESSAGE, path: ['rules', 'noten_penalty'] }
-        )
+        ),
     ]) as z.ZodType<GameRulesDetails>;
 }
 
@@ -143,29 +148,29 @@ export const gameRulesDetailsSchema = buildDetailsSchema(gameRulesCatalog);
 
 export const gameRulesGetByIdSchema = z.object({
     params: z.object({
-        id: gameRulesIdParamSchema
-    })
+        id: gameRulesIdParamSchema,
+    }),
 });
 
 export const gameRulesGetListSchema = z.object({
     query: z.object({
-        clubId: clubIdParamSchema.optional()
-    }).optional()
+        clubId: clubIdParamSchema.optional(),
+    }).optional(),
 });
 
 export const gameRulesDetailsUpdateSchema = z.object({
     params: z.object({
-        id: gameRulesIdParamSchema
+        id: gameRulesIdParamSchema,
     }),
     body: z.object({
-        details: gameRulesDetailsSchema
-    })
+        details: gameRulesDetailsSchema,
+    }),
 });
 
 const umaEntrySchema = z.number().int();
 const umaSchema = z.union([
     z.array(umaEntrySchema).min(3).max(4),
-    z.array(z.array(umaEntrySchema).min(3).max(4)).min(1)
+    z.array(z.array(umaEntrySchema).min(3).max(4)).min(1),
 ]);
 
 export const gameRulesUpsertBodySchema = z.strictObject({
@@ -174,26 +179,26 @@ export const gameRulesUpsertBodySchema = z.strictObject({
     uma: umaSchema,
     startingPoints: z.number().int().min(0),
     umaTieBreak: z.enum(['WIND', 'DIVIDE']),
-    clubId: z.number().int().nullable()
+    clubId: z.number().int().nullable(),
 });
 
 export const gameRulesCreateSchema = z.object({
-    body: gameRulesUpsertBodySchema
+    body: gameRulesUpsertBodySchema,
 });
 
 const gameRulesUpdateBodySchema = gameRulesUpsertBodySchema.extend({
-    details: gameRulesDetailsSchema.optional()
+    details: gameRulesDetailsSchema.optional(),
 });
 
 export const gameRulesUpdateSchema = z.object({
     params: z.object({
-        id: gameRulesIdParamSchema
+        id: gameRulesIdParamSchema,
     }),
-    body: gameRulesUpdateBodySchema
+    body: gameRulesUpdateBodySchema,
 });
 
 export const gameRulesDeleteSchema = z.object({
     params: z.object({
-        id: gameRulesIdParamSchema
-    })
+        id: gameRulesIdParamSchema,
+    }),
 });

@@ -18,15 +18,27 @@ router.post('/', withTransaction((req, res) => userController.registerUser(req, 
 // Public - get current user status
 router.post('/current/status', withTransaction((req, res) => userController.getCurrentUserStatus(req, res)));
 // Authenticated - get current user's club memberships
-router.get('/current/clubs', requireAuth, withTransaction((req, res) => membershipController.getCurrentUserClubs(req, res)));
+router.get(
+    '/current/clubs',
+    requireAuth,
+    withTransaction((req, res) => membershipController.getCurrentUserClubs(req, res))
+);
 // Authenticated - get current user's tournament registrations
-router.get('/current/registrations', requireAuth, withTransaction((req, res) => registrationController.listForCurrentUser(req, res)));
+router.get(
+    '/current/registrations',
+    requireAuth,
+    withTransaction((req, res) => registrationController.listForCurrentUser(req, res))
+);
 
 // Authenticated users - read operations
 router.get('/', requireAuth, withTransaction((req, res) => userController.getAllUsers(req, res)));
 router.get('/:id', requireAuth, withTransaction((req, res) => userController.getUserById(req, res)));
 // Authenticated - tournament achievements the user has won (profile page)
-router.get('/:id/achievements', requireAuth, withTransaction((req, res) => achievementController.getUserAchievements(req, res)));
+router.get(
+    '/:id/achievements',
+    requireAuth,
+    withTransaction((req, res) => achievementController.getUserAchievements(req, res))
+);
 router.get(
     '/by-telegram-id/:telegramId',
     requireAuth,

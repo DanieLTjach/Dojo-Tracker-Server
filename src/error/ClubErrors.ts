@@ -42,14 +42,19 @@ export class YouHaveToBeClubMemberError extends ForbiddenError {
 
 export class YouNeedToBeModeratorToCreateGamesWithNonClubMembersError extends ForbiddenError {
     constructor() {
-        super('Для створення гри з гравцями, які не є учасниками клубу, потрібна роль OWNER або MODERATOR', 'needModeratorForNonClubMembers');
+        super(
+            'Для створення гри з гравцями, які не є учасниками клубу, потрібна роль OWNER або MODERATOR',
+            'needModeratorForNonClubMembers'
+        );
     }
 }
 
 export class InvalidClubMembershipStateError extends BadRequestError {
     constructor(action: string, currentStatus: ClubMembershipStatus, allowedStatuses: ClubMembershipStatus[]) {
         super(
-            `Неможливо ${action} учасника клубу зі статусом ${currentStatus}. Дозволені статуси: ${allowedStatuses.join(', ')}`,
+            `Неможливо ${action} учасника клубу зі статусом ${currentStatus}. Дозволені статуси: ${
+                allowedStatuses.join(', ')
+            }`,
             'invalidClubMembershipState'
         );
     }

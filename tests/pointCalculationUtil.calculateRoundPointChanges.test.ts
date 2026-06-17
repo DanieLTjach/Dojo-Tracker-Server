@@ -24,7 +24,7 @@ const mahjongSoul = gameRulesPresetsByKey.get('mahjong_soul')!.rules;
 function pointChanges(
     rules: GameRulesValues,
     state: GameState,
-    result: GameRoundResultInputDTO,
+    result: GameRoundResultInputDTO
 ): PlayerPointChange[] {
     const game = detailedGame(fourPlayers(), state);
     return calculateGameRoundResult(game, makeGameRules(rules), result).playerPointChanges;
@@ -39,7 +39,7 @@ function expectChanges(
     rules: GameRulesValues,
     state: GameState,
     result: GameRoundResultInputDTO,
-    expected: PlayerPointChange[],
+    expected: PlayerPointChange[]
 ): void {
     expect(sorted(pointChanges(rules, state, result))).toEqual(sorted(expected));
 }
@@ -153,28 +153,34 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
         });
 
         it('rejects a 13-han hand when counted yakuman is enabled', () => {
-            expect(() => pointChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'TSUMO',
-                winningHandData: { winnerPlayerId: 2, yakumanCount: 0, han: 13, fu: 30 },
-                riichiPlayerIds: [],
-            })).toThrow(HandShouldBeRecordedAsCountedYakumanError);
+            expect(() =>
+                pointChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'TSUMO',
+                    winningHandData: { winnerPlayerId: 2, yakumanCount: 0, han: 13, fu: 30 },
+                    riichiPlayerIds: [],
+                })
+            ).toThrow(HandShouldBeRecordedAsCountedYakumanError);
         });
 
         it('rejects a 1-han hand when two-han-minimum is enabled', () => {
             const rules: GameRulesValues = { ...ema, two_han_minimum: true };
-            expect(() => pointChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'TSUMO',
-                winningHandData: { winnerPlayerId: 2, yakumanCount: 0, han: 1, fu: 30 },
-                riichiPlayerIds: [],
-            })).toThrow(TwoHanMinimumIsRequiredError);
+            expect(() =>
+                pointChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'TSUMO',
+                    winningHandData: { winnerPlayerId: 2, yakumanCount: 0, han: 1, fu: 30 },
+                    riichiPlayerIds: [],
+                })
+            ).toThrow(TwoHanMinimumIsRequiredError);
         });
 
         it('requires fu for a low-han hand', () => {
-            expect(() => pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'TSUMO',
-                winningHandData: { winnerPlayerId: 2, yakumanCount: 0, han: 3 },
-                riichiPlayerIds: [],
-            })).toThrow(FuRequiredForLowHanHandError);
+            expect(() =>
+                pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'TSUMO',
+                    winningHandData: { winnerPlayerId: 2, yakumanCount: 0, han: 3 },
+                    riichiPlayerIds: [],
+                })
+            ).toThrow(FuRequiredForLowHanHandError);
         });
     });
 
@@ -253,56 +259,64 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
 
         it('rejects triple ron when triple_ron is "cancel"', () => {
             const rules: GameRulesValues = { ...ema, triple_ron: 'cancel' };
-            expect(() => pointChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'RON',
-                dealInPlayerId: 4,
-                winningHandData: [
-                    { winnerPlayerId: 1, yakumanCount: 0, han: 3, fu: 40 },
-                    { winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 },
-                    { winnerPlayerId: 3, yakumanCount: 0, han: 3, fu: 40 },
-                ],
-                riichiPlayerIds: [],
-            })).toThrow(TripleRonShouldBeAbortiveDrawError);
+            expect(() =>
+                pointChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'RON',
+                    dealInPlayerId: 4,
+                    winningHandData: [
+                        { winnerPlayerId: 1, yakumanCount: 0, han: 3, fu: 40 },
+                        { winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 },
+                        { winnerPlayerId: 3, yakumanCount: 0, han: 3, fu: 40 },
+                    ],
+                    riichiPlayerIds: [],
+                })
+            ).toThrow(TripleRonShouldBeAbortiveDrawError);
         });
 
         it('rejects triple ron when triple_ron is "first"', () => {
             const rules: GameRulesValues = { ...ema, triple_ron: 'first' };
-            expect(() => pointChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'RON',
-                dealInPlayerId: 4,
-                winningHandData: [
-                    { winnerPlayerId: 1, yakumanCount: 0, han: 3, fu: 40 },
-                    { winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 },
-                    { winnerPlayerId: 3, yakumanCount: 0, han: 3, fu: 40 },
-                ],
-                riichiPlayerIds: [],
-            })).toThrow(NoTripleRonFirstWinsOnlyError);
+            expect(() =>
+                pointChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'RON',
+                    dealInPlayerId: 4,
+                    winningHandData: [
+                        { winnerPlayerId: 1, yakumanCount: 0, han: 3, fu: 40 },
+                        { winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 },
+                        { winnerPlayerId: 3, yakumanCount: 0, han: 3, fu: 40 },
+                    ],
+                    riichiPlayerIds: [],
+                })
+            ).toThrow(NoTripleRonFirstWinsOnlyError);
         });
 
         it('rejects double ron when double_ron is "first"', () => {
             const rules: GameRulesValues = { ...ema, double_ron: 'first' };
-            expect(() => pointChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'RON',
-                dealInPlayerId: 4,
-                winningHandData: [
-                    { winnerPlayerId: 1, yakumanCount: 0, han: 3, fu: 40 },
-                    { winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 },
-                ],
-                riichiPlayerIds: [],
-            })).toThrow(NoDoubleRonFirstWinsOnlyError);
+            expect(() =>
+                pointChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'RON',
+                    dealInPlayerId: 4,
+                    winningHandData: [
+                        { winnerPlayerId: 1, yakumanCount: 0, han: 3, fu: 40 },
+                        { winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 },
+                    ],
+                    riichiPlayerIds: [],
+                })
+            ).toThrow(NoDoubleRonFirstWinsOnlyError);
         });
 
         it('rejects a hand where the deal-in player is also a winner', () => {
             // 2-hand ron so head-bump resolution finds a valid winner before the deal-in==winner hand
-            expect(() => pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'RON',
-                dealInPlayerId: 2,
-                winningHandData: [
-                    { winnerPlayerId: 3, yakumanCount: 0, han: 3, fu: 40 },
-                    { winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 },
-                ],
-                riichiPlayerIds: [],
-            })).toThrow(DealInPlayerCannotBeWinnerError);
+            expect(() =>
+                pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'RON',
+                    dealInPlayerId: 2,
+                    winningHandData: [
+                        { winnerPlayerId: 3, yakumanCount: 0, han: 3, fu: 40 },
+                        { winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 },
+                    ],
+                    riichiPlayerIds: [],
+                })
+            ).toThrow(DealInPlayerCannotBeWinnerError);
         });
     });
 
@@ -440,7 +454,7 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
             ]);
         });
 
-        it('takes this round\'s riichi deposits to the table without awarding them to the achiever', () => {
+        it("takes this round's riichi deposits to the table without awarding them to the achiever", () => {
             // Player 3's declared riichi stick (-1000) joins the bank rather than going to the achiever.
             expectChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 0), {
                 type: 'EXHAUSTIVE_DRAW',
@@ -456,12 +470,14 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
         });
 
         it('rejects nagashi mangan when the ruleset disables it', () => {
-            expect(() => pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'EXHAUSTIVE_DRAW',
-                riichiPlayerIds: [],
-                tenpaiPlayerIds: [],
-                nagashiManganPlayerIds: [2],
-            })).toThrow(NagashiManganNotInRulesetError);
+            expect(() =>
+                pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [],
+                    tenpaiPlayerIds: [],
+                    nagashiManganPlayerIds: [2],
+                })
+            ).toThrow(NagashiManganNotInRulesetError);
         });
     });
 
@@ -502,63 +518,77 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
 
     describe('player-in-game validation', () => {
         it('rejects a chombo offender not in the game', () => {
-            expect(() => pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'CHOMBO',
-                offenderPlayerId: 99,
-            })).toThrow(PlayerNotInGameError);
+            expect(() =>
+                pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'CHOMBO',
+                    offenderPlayerId: 99,
+                })
+            ).toThrow(PlayerNotInGameError);
         });
 
         it('rejects a tsumo winner not in the game', () => {
-            expect(() => pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'TSUMO',
-                winningHandData: { winnerPlayerId: 99, yakumanCount: 0, han: 3, fu: 40 },
-                riichiPlayerIds: [],
-            })).toThrow(PlayerNotInGameError);
+            expect(() =>
+                pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'TSUMO',
+                    winningHandData: { winnerPlayerId: 99, yakumanCount: 0, han: 3, fu: 40 },
+                    riichiPlayerIds: [],
+                })
+            ).toThrow(PlayerNotInGameError);
         });
 
         it('rejects a ron deal-in player not in the game', () => {
-            expect(() => pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'RON',
-                dealInPlayerId: 99,
-                winningHandData: [{ winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 }],
-                riichiPlayerIds: [],
-            })).toThrow(PlayerNotInGameError);
+            expect(() =>
+                pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'RON',
+                    dealInPlayerId: 99,
+                    winningHandData: [{ winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 }],
+                    riichiPlayerIds: [],
+                })
+            ).toThrow(PlayerNotInGameError);
         });
 
         it('rejects a ron winner not in the game', () => {
-            expect(() => pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'RON',
-                dealInPlayerId: 4,
-                winningHandData: [{ winnerPlayerId: 99, yakumanCount: 0, han: 3, fu: 40 }],
-                riichiPlayerIds: [],
-            })).toThrow(PlayerNotInGameError);
+            expect(() =>
+                pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'RON',
+                    dealInPlayerId: 4,
+                    winningHandData: [{ winnerPlayerId: 99, yakumanCount: 0, han: 3, fu: 40 }],
+                    riichiPlayerIds: [],
+                })
+            ).toThrow(PlayerNotInGameError);
         });
 
         it('rejects an exhaustive-draw tenpai id not in the game', () => {
-            expect(() => pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'EXHAUSTIVE_DRAW',
-                riichiPlayerIds: [],
-                tenpaiPlayerIds: [99],
-                nagashiManganPlayerIds: [],
-            })).toThrow(PlayerNotInGameError);
+            expect(() =>
+                pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [],
+                    tenpaiPlayerIds: [99],
+                    nagashiManganPlayerIds: [],
+                })
+            ).toThrow(PlayerNotInGameError);
         });
 
         it('rejects an exhaustive-draw nagashi id not in the game (before the ruleset check)', () => {
-            expect(() => pointChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'EXHAUSTIVE_DRAW',
-                riichiPlayerIds: [],
-                tenpaiPlayerIds: [],
-                nagashiManganPlayerIds: [99],
-            })).toThrow(PlayerNotInGameError);
+            expect(() =>
+                pointChanges(mahjongSoul, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [],
+                    tenpaiPlayerIds: [],
+                    nagashiManganPlayerIds: [99],
+                })
+            ).toThrow(PlayerNotInGameError);
         });
 
         it('rejects an exhaustive-draw riichi id not in the game', () => {
-            expect(() => pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
-                type: 'EXHAUSTIVE_DRAW',
-                riichiPlayerIds: [99],
-                tenpaiPlayerIds: [1],
-                nagashiManganPlayerIds: [],
-            })).toThrow(PlayerNotInGameError);
+            expect(() =>
+                pointChanges(ema, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [99],
+                    tenpaiPlayerIds: [1],
+                    nagashiManganPlayerIds: [],
+                })
+            ).toThrow(PlayerNotInGameError);
         });
     });
 });

@@ -6,7 +6,7 @@ import type {
     ClubInvite,
     ClubInviteSource,
     ClubInviteType,
-    InviteRedemptionResult
+    InviteRedemptionResult,
 } from '../model/ClubModels.ts';
 import type { TelegramUser } from '../model/AuthModels.ts';
 import type { User } from '../model/UserModels.ts';
@@ -20,7 +20,7 @@ import {
     InviteExpiredError,
     InviteNotFoundError,
     InviteRevokedError,
-    NameRequiredForNewUserError
+    NameRequiredForNewUserError,
 } from '../error/ClubErrors.ts';
 import { generateInviteCode } from '../util/InviteCodeUtil.ts';
 
@@ -63,7 +63,7 @@ export class ClubInviteService {
             isActive: true,
             createdAt: now,
             modifiedAt: now,
-            modifiedBy: params.createdBy
+            modifiedBy: params.createdBy,
         });
 
         const invite = this.getInviteById(id);
@@ -120,7 +120,7 @@ export class ClubInviteService {
             clubId: invite.clubId,
             clubName: invite.clubName,
             user,
-            nextAction: invite.type === 'REGISTRATION_ONLY' ? 'TUTORIAL' : 'CLUB_HOME'
+            nextAction: invite.type === 'REGISTRATION_ONLY' ? 'TUTORIAL' : 'CLUB_HOME',
         };
     }
 
@@ -240,8 +240,12 @@ export class ClubInviteService {
             <b>✨ Invite Redeemed</b>
 
             <b>Club:</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
-            <b>Code:</b> <code>${invite.code}</code> (${invite.type}, ${invite.source})${invite.label !== null ? ` — ${invite.label}` : ''}
-            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>${user.telegramUsername !== null ? `\n<b>Telegram:</b> ${user.telegramUsername}` : ''}
+            <b>Code:</b> <code>${invite.code}</code> (${invite.type}, ${invite.source})${
+            invite.label !== null ? ` — ${invite.label}` : ''
+        }
+            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>${
+            user.telegramUsername !== null ? `\n<b>Telegram:</b> ${user.telegramUsername}` : ''
+        }
         `;
         this.logClubEvent(invite.clubId, message);
     }

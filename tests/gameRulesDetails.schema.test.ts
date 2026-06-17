@@ -9,8 +9,8 @@ describe('gameRulesDetailsSchema compact format', () => {
             rules: {
                 number_of_players: 4,
                 starting_points: 30000,
-                made_up_rule: true
-            }
+                made_up_rule: true,
+            },
         });
 
         expect(result.success).toBe(false);
@@ -20,8 +20,8 @@ describe('gameRulesDetailsSchema compact format', () => {
         const result = gameRulesDetailsSchema.safeParse({
             rules: {
                 number_of_players: '4',
-                starting_points: 30000
-            }
+                starting_points: 30000,
+            },
         });
 
         expect(result.success).toBe(false);
@@ -31,15 +31,15 @@ describe('gameRulesDetailsSchema compact format', () => {
         const result = gameRulesDetailsSchema.safeParse({
             rules: {
                 number_of_players: 4,
-                starting_points: 30000
+                starting_points: 30000,
             },
             customRules: [
                 {
                     category: 'yaku',
                     value: 1,
-                    name: '   '
-                }
-            ]
+                    name: '   ',
+                },
+            ],
         });
 
         expect(result.success).toBe(false);
@@ -49,21 +49,21 @@ describe('gameRulesDetailsSchema compact format', () => {
         const result = gameRulesDetailsSchema.safeParse({
             rules: {
                 number_of_players: 4,
-                starting_points: 30000
+                starting_points: 30000,
             },
             customRules: [
                 {
                     category: 'yaku',
                     value: 1,
                     name: 'Танукі',
-                    tooltip: 'Домашнє яку'
+                    tooltip: 'Домашнє яку',
                 },
                 {
                     category: 'rule',
                     value: true,
-                    name: 'Щось особливе'
-                }
-            ]
+                    name: 'Щось особливе',
+                },
+            ],
         });
 
         expect(result.success).toBe(true);
@@ -73,14 +73,14 @@ describe('gameRulesDetailsSchema compact format', () => {
         const result = gameRulesDetailsSchema.safeParse({
             rules: {
                 number_of_players: 4,
-                starting_points: 30000
+                starting_points: 30000,
             },
             links: [
                 {
                     url: 'https://riichi.wiki/Mahjong_Soul',
-                    label: 'Mahjong Soul'
-                }
-            ]
+                    label: 'Mahjong Soul',
+                },
+            ],
         });
 
         expect(result.success).toBe(true);
@@ -90,14 +90,14 @@ describe('gameRulesDetailsSchema compact format', () => {
         const result = gameRulesDetailsSchema.safeParse({
             rules: {
                 number_of_players: 4,
-                starting_points: 30000
+                starting_points: 30000,
             },
             links: [
                 {
                     url: 'https://riichi.wiki/Mahjong_Soul',
-                    label: '   '
-                }
-            ]
+                    label: '   ',
+                },
+            ],
         });
 
         expect(result.success).toBe(false);
@@ -108,7 +108,7 @@ describe('preset validation', () => {
     test('accepts preset with overrides only (required keys satisfied by preset)', () => {
         const result = gameRulesDetailsSchema.safeParse({
             preset: 'ema_2025',
-            rules: { starting_points: 25000, red_fives: 'three_one_per_suit' }
+            rules: { starting_points: 25000, red_fives: 'three_one_per_suit' },
         });
 
         expect(result.success).toBe(true);
@@ -121,7 +121,7 @@ describe('preset validation', () => {
     test('accepts preset with empty rules', () => {
         const result = gameRulesDetailsSchema.safeParse({
             preset: 'ema_2025',
-            rules: {}
+            rules: {},
         });
 
         expect(result.success).toBe(true);
@@ -130,7 +130,7 @@ describe('preset validation', () => {
     test('rejects unknown preset', () => {
         const result = gameRulesDetailsSchema.safeParse({
             preset: 'unknown_preset',
-            rules: {}
+            rules: {},
         });
 
         expect(result.success).toBe(false);
@@ -139,7 +139,7 @@ describe('preset validation', () => {
     test('rejects internal preset', () => {
         const result = gameRulesDetailsSchema.safeParse({
             preset: 'default',
-            rules: {}
+            rules: {},
         });
 
         expect(result.success).toBe(false);
@@ -148,7 +148,7 @@ describe('preset validation', () => {
     test('rejects preset with invalid override value type', () => {
         const result = gameRulesDetailsSchema.safeParse({
             preset: 'ema_2025',
-            rules: { open_tanyao: 'yes' }
+            rules: { open_tanyao: 'yes' },
         });
 
         expect(result.success).toBe(false);
@@ -157,7 +157,7 @@ describe('preset validation', () => {
     test('rejects preset with unknown rule key', () => {
         const result = gameRulesDetailsSchema.safeParse({
             preset: 'ema_2025',
-            rules: { made_up_rule: true }
+            rules: { made_up_rule: true },
         });
 
         expect(result.success).toBe(false);
@@ -165,7 +165,7 @@ describe('preset validation', () => {
 
     test('without preset, required keys must be present', () => {
         const result = gameRulesDetailsSchema.safeParse({
-            rules: { open_tanyao: true }
+            rules: { open_tanyao: true },
         });
 
         expect(result.success).toBe(false);
@@ -175,7 +175,7 @@ describe('preset validation', () => {
         for (const preset of gameRulesPresets.filter(candidate => !candidate.internal)) {
             const result = gameRulesDetailsSchema.safeParse({
                 preset: preset.key,
-                rules: preset.rules
+                rules: preset.rules,
             });
 
             expect(result.success).toBe(true);

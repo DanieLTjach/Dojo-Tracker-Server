@@ -14,81 +14,81 @@ const clubBodySchema = z.object({
     city: optionalTextFieldSchema,
     description: optionalTextFieldSchema,
     contactInfo: optionalTextFieldSchema,
-    isActive: z.boolean().nullish()
+    isActive: z.boolean().nullish(),
 });
 
 const clubParamsSchema = z.object({
-    clubId: clubIdParamSchema
+    clubId: clubIdParamSchema,
 });
 
 const clubMembershipParamsSchema = z.object({
     clubId: clubIdParamSchema,
-    userId: userIdParamSchema
+    userId: userIdParamSchema,
 });
 
 export const clubGetByIdSchema = z.object({
-    params: clubParamsSchema
+    params: clubParamsSchema,
 });
 
 export const clubCreateSchema = z.object({
-    body: clubBodySchema
+    body: clubBodySchema,
 });
 
 export const clubUpdateSchema = z.object({
     params: clubParamsSchema,
-    body: clubBodySchema
+    body: clubBodySchema,
 });
 
 export const clubDeleteSchema = z.object({
-    params: clubParamsSchema
+    params: clubParamsSchema,
 });
 
 export const clubMembershipGetListSchema = z.object({
-    params: clubParamsSchema
+    params: clubParamsSchema,
 });
 
 export const clubMembershipGetPendingListSchema = z.object({
-    params: clubParamsSchema
+    params: clubParamsSchema,
 });
 
 export const clubMembershipRequestJoinSchema = z.object({
-    params: clubParamsSchema
+    params: clubParamsSchema,
 });
 
 export const clubMembershipLeaveSchema = z.object({
-    params: clubParamsSchema
+    params: clubParamsSchema,
 });
 
 export const clubMembershipGetActiveMembersSchema = z.object({
-    params: clubParamsSchema
+    params: clubParamsSchema,
 });
 
 export const clubMembershipActivateSchema = z.object({
-    params: clubMembershipParamsSchema
+    params: clubMembershipParamsSchema,
 });
 
 export const clubMembershipDeactivateSchema = z.object({
-    params: clubMembershipParamsSchema
+    params: clubMembershipParamsSchema,
 });
 
 export const clubMembershipUpdateSchema = z.object({
     params: clubMembershipParamsSchema,
     body: z.object({
-        role: clubRoleSchema
-    })
+        role: clubRoleSchema,
+    }),
 });
 
 const inviteCodeParamSchema = z.object({
-    code: z.string().trim().min(1, 'Invite code is required')
+    code: z.string().trim().min(1, 'Invite code is required'),
 });
 
 export const clubInvitePreviewSchema = z.object({
-    params: inviteCodeParamSchema
+    params: inviteCodeParamSchema,
 });
 
 export const clubInviteRedeemSchema = z.object({
     params: inviteCodeParamSchema,
     body: z.object({
-        name: z.string().trim().min(1).max(100).optional()
-    })
+        name: z.string().trim().min(1).max(100).optional(),
+    }),
 });

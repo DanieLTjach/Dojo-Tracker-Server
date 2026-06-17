@@ -70,13 +70,13 @@ describe('Game API Endpoints', () => {
         { userId: testUser1Id, startPlace: 'EAST' as const },
         { userId: testUser2Id, startPlace: 'SOUTH' as const },
         { userId: testUser3Id, startPlace: 'WEST' as const },
-        { userId: testUser4Id, startPlace: 'NORTH' as const }
+        { userId: testUser4Id, startPlace: 'NORTH' as const },
     ];
 
     beforeAll(async () => {
         // Create test event
         createTestEvent();
-        
+
         // Create test users for games
         testUser1Id = await createTestUser('Player1', 111111111);
         testUser2Id = await createTestUser('Player2', 222222222);
@@ -109,8 +109,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
                         { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
                         { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(201);
@@ -120,7 +120,7 @@ describe('Game API Endpoints', () => {
             expect(response.body.players[0]).toMatchObject({
                 userId: testUser1Id,
                 points: 40000,
-                startPlace: 'EAST'
+                startPlace: 'EAST',
             });
             expect(response.body.tournamentRound).toBeNull();
             expect(response.body.tournamentTable).toBeNull();
@@ -138,10 +138,10 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000 },
                         { userId: testUser2Id, points: 35000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 20000 }
+                        { userId: testUser4Id, points: 20000 },
                     ],
                     tournamentRound: 1,
-                    tournamentTable: '3'
+                    tournamentTable: '3',
                 });
 
             expect(response.status).toBe(201);
@@ -161,8 +161,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000 },
                         { userId: testUser2Id, points: 35000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 20000 }
-                    ]
+                        { userId: testUser4Id, points: 20000 },
+                    ],
                 });
 
             dbManager.db.prepare('UPDATE event SET blockGameCreation = 0 WHERE id = ?').run(TEST_EVENT_ID);
@@ -183,8 +183,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000 },
                         { userId: testUser2Id, points: 35000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 20000 }
-                    ]
+                        { userId: testUser4Id, points: 20000 },
+                    ],
                 });
 
             dbManager.db.prepare('UPDATE event SET blockGameCreation = 0 WHERE id = ?').run(TEST_EVENT_ID);
@@ -205,8 +205,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000 },
                         { userId: testUser2Id, points: 35000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 20000 }
-                    ]
+                        { userId: testUser4Id, points: 20000 },
+                    ],
                 });
 
             setClubRole(1, testUser1Id, 'MEMBER');
@@ -225,9 +225,9 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
+                        { userId: testUser4Id, points: 30000 },
                     ],
-                    tournamentRound: 0
+                    tournamentRound: 0,
                 });
 
             expect(response.status).toBe(400);
@@ -254,10 +254,10 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 25000 }
+                        { userId: testUser4Id, points: 25000 },
                     ],
                     tournamentRound: 1,
-                    tournamentTable: '7'
+                    tournamentTable: '7',
                 });
             expect(first.status).toBe(201);
 
@@ -270,10 +270,10 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
+                        { userId: testUser4Id, points: 30000 },
                     ],
                     tournamentRound: 1,
-                    tournamentTable: '7'
+                    tournamentTable: '7',
                 });
 
             expect(dup.status).toBe(400);
@@ -290,9 +290,9 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
+                        { userId: testUser4Id, points: 30000 },
                     ],
-                    tournamentTable: ''
+                    tournamentTable: '',
                 });
 
             expect(response.status).toBe(400);
@@ -308,8 +308,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(201);
@@ -325,8 +325,8 @@ describe('Game API Endpoints', () => {
                     playersData: [
                         { userId: testUser1Id, points: 35000 },
                         { userId: testUser2Id, points: 30000 },
-                        { userId: testUser3Id, points: 25000 }
-                    ]
+                        { userId: testUser3Id, points: 25000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -344,8 +344,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
                         { userId: testUser4Id, points: 30000 },
-                        { userId: testUser1Id, points: 30000 }
-                    ]
+                        { userId: testUser1Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -362,8 +362,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000 },
                         { userId: testUser1Id, points: 35000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 20000 }
-                    ]
+                        { userId: testUser4Id, points: 20000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -380,8 +380,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
                         { userId: testUser2Id, points: 35000, startPlace: 'EAST' },
                         { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -398,8 +398,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(404);
@@ -416,8 +416,8 @@ describe('Game API Endpoints', () => {
                         { userId: 99999, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(404);
@@ -434,8 +434,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000.5 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -452,8 +452,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000, startPlace: 'INVALID' },
                         { userId: testUser2Id, points: 30000, startPlace: 'SOUTH' },
                         { userId: testUser3Id, points: 30000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 30000, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, points: 30000, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -469,8 +469,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 35000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 20000 }
-                    ]
+                        { userId: testUser4Id, points: 20000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -487,8 +487,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000 },
                         { userId: testUser2Id, points: 40000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 20000 }
-                    ]
+                        { userId: testUser4Id, points: 20000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -505,12 +505,14 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 1000001 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: -940001 }
-                    ]
+                        { userId: testUser4Id, points: -940001 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe('Очки гравця (1000001) повинні бути в діапазоні від -1000000 до 1000000');
+            expect(response.body.message).toBe(
+                'Очки гравця (1000001) повинні бути в діапазоні від -1000000 до 1000000'
+            );
         });
 
         test('should fail with points outside valid range (too low)', async () => {
@@ -523,12 +525,14 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: -1000001 },
                         { userId: testUser2Id, points: 1060001 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe('Очки гравця (-1000001) повинні бути в діапазоні від -1000000 до 1000000');
+            expect(response.body.message).toBe(
+                'Очки гравця (-1000001) повинні бути в діапазоні від -1000000 до 1000000'
+            );
         });
 
         test('should fail when event has not started yet', async () => {
@@ -550,8 +554,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000 },
                         { userId: testUser2Id, points: 35000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 20000 }
-                    ]
+                        { userId: testUser4Id, points: 20000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -577,8 +581,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000 },
                         { userId: testUser2Id, points: 35000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 20000 }
-                    ]
+                        { userId: testUser4Id, points: 20000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -593,7 +597,7 @@ describe('Game API Endpoints', () => {
             { userId: testUser1Id, startPlace: 'EAST' as const },
             { userId: testUser2Id, startPlace: 'SOUTH' as const },
             { userId: testUser3Id, startPlace: 'WEST' as const },
-            { userId: testUser4Id, startPlace: 'NORTH' as const }
+            { userId: testUser4Id, startPlace: 'NORTH' as const },
         ];
 
         test('should create a tracked game and return detailed game response', async () => {
@@ -602,7 +606,7 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
-                    players: trackedPlayers()
+                    players: trackedPlayers(),
                 });
 
             expect(response.status).toBe(201);
@@ -620,29 +624,29 @@ describe('Game API Endpoints', () => {
                     points: STARTING_POINTS,
                     startPlace: 'EAST',
                     chomboCount: 0,
-                    ratingChange: 0
+                    ratingChange: 0,
                 }),
                 expect.objectContaining({
                     userId: testUser2Id,
                     points: STARTING_POINTS,
                     startPlace: 'SOUTH',
                     chomboCount: 0,
-                    ratingChange: 0
+                    ratingChange: 0,
                 }),
                 expect.objectContaining({
                     userId: testUser3Id,
                     points: STARTING_POINTS,
                     startPlace: 'WEST',
                     chomboCount: 0,
-                    ratingChange: 0
+                    ratingChange: 0,
                 }),
                 expect.objectContaining({
                     userId: testUser4Id,
                     points: STARTING_POINTS,
                     startPlace: 'NORTH',
                     chomboCount: 0,
-                    ratingChange: 0
-                })
+                    ratingChange: 0,
+                }),
             ]));
 
             const getResponse = await request(app)
@@ -653,7 +657,12 @@ describe('Game API Endpoints', () => {
             expect(getResponse.body.status).toBe('IN_PROGRESS');
             expect(getResponse.body.startedAt).toBe(getResponse.body.createdAt);
             expect(getResponse.body.rounds).toEqual([]);
-            expect(getResponse.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 });
+            expect(getResponse.body.currentState).toEqual({
+                wind: 'EAST',
+                dealerNumber: 1,
+                counters: 0,
+                riichiSticks: 0,
+            });
         });
 
         test('should reject tracked game creation for members when event blocks game creation', async () => {
@@ -664,7 +673,7 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
-                    players: trackedPlayers()
+                    players: trackedPlayers(),
                 });
 
             dbManager.db.prepare('UPDATE event SET blockGameCreation = 0 WHERE id = ?').run(TEST_EVENT_ID);
@@ -681,7 +690,7 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
-                    players: trackedPlayers()
+                    players: trackedPlayers(),
                 });
 
             dbManager.db.prepare('UPDATE event SET blockGameCreation = 0 WHERE id = ?').run(TEST_EVENT_ID);
@@ -727,7 +736,11 @@ describe('Game API Endpoints', () => {
                 expect(byUserId(testUser4Id).profileLastName).toBe('Прихований');
                 expect(byUserId(testUser4Id).profileHidden).toBe(true);
             } finally {
-                dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?, ?)').run(testUser1Id, testUser3Id, testUser4Id);
+                dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?, ?)').run(
+                    testUser1Id,
+                    testUser3Id,
+                    testUser4Id
+                );
             }
         });
 
@@ -740,8 +753,8 @@ describe('Game API Endpoints', () => {
                     players: [
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
-                        { userId: testUser3Id, startPlace: 'WEST' }
-                    ]
+                        { userId: testUser3Id, startPlace: 'WEST' },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -758,8 +771,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'EAST' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -774,7 +787,7 @@ describe('Game API Endpoints', () => {
                     eventId: TEST_EVENT_ID,
                     players: trackedPlayers(),
                     tournamentRound: 4,
-                    tournamentTable: '2'
+                    tournamentTable: '2',
                 });
 
             expect(response.status).toBe(201);
@@ -800,7 +813,7 @@ describe('Game API Endpoints', () => {
                 .send({
                     eventId: TEST_EVENT_ID,
                     players: trackedPlayers(),
-                    status: 'CREATED'
+                    status: 'CREATED',
                 });
 
             expect(response.status).toBe(201);
@@ -827,7 +840,7 @@ describe('Game API Endpoints', () => {
                     eventId: tournamentEventId,
                     players: trackedPlayers(),
                     tournamentRound: 1,
-                    tournamentTable: '9'
+                    tournamentTable: '9',
                 });
             expect(first.status).toBe(201);
 
@@ -838,7 +851,7 @@ describe('Game API Endpoints', () => {
                     eventId: tournamentEventId,
                     players: trackedPlayers(),
                     tournamentRound: 1,
-                    tournamentTable: '9'
+                    tournamentTable: '9',
                 });
 
             expect(dup.status).toBe(400);
@@ -855,8 +868,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -871,7 +884,7 @@ describe('Game API Endpoints', () => {
             type: 'EXHAUSTIVE_DRAW',
             riichiPlayerIds: [] as number[],
             tenpaiPlayerIds: [] as number[],
-            nagashiManganPlayerIds: [] as number[]
+            nagashiManganPlayerIds: [] as number[],
         };
 
         beforeAll(async () => {
@@ -884,8 +897,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(201);
@@ -910,8 +923,8 @@ describe('Game API Endpoints', () => {
                 riichiSticks: 0,
                 result: {
                     ...exhaustiveDrawResult,
-                    playerPointChanges: []
-                }
+                    playerPointChanges: [],
+                },
             });
             expect(response.body.currentState).toEqual({ wind: 'EAST', dealerNumber: 2, counters: 1, riichiSticks: 0 });
 
@@ -929,7 +942,7 @@ describe('Game API Endpoints', () => {
                 type: 'EXHAUSTIVE_DRAW',
                 riichiPlayerIds: [],
                 tenpaiPlayerIds: [],
-                nagashiManganPlayerIds: []
+                nagashiManganPlayerIds: [],
             };
 
             const response = await request(app)
@@ -943,8 +956,8 @@ describe('Game API Endpoints', () => {
                 roundNumber: 2,
                 result: {
                     ...exhaustiveDrawResult,
-                    playerPointChanges: []
-                }
+                    playerPointChanges: [],
+                },
             });
 
             const duplicateRoundResponse = await request(app)
@@ -982,7 +995,7 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', user1AuthHeader)
                 .send({
                     type: 'CHOMBO',
-                    offenderPlayerId: 99999
+                    offenderPlayerId: 99999,
                 });
 
             expect(response.status).toBe(400);
@@ -1015,7 +1028,7 @@ describe('Game API Endpoints', () => {
             type: 'EXHAUSTIVE_DRAW',
             riichiPlayerIds: [] as number[],
             tenpaiPlayerIds: [] as number[],
-            nagashiManganPlayerIds: [] as number[]
+            nagashiManganPlayerIds: [] as number[],
         };
 
         beforeAll(async () => {
@@ -1024,7 +1037,7 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', user1AuthHeader)
                 .send({
                     eventId: TEST_EVENT_ID,
-                    players: trackedPlayersPayload()
+                    players: trackedPlayersPayload(),
                 });
 
             expect(response.status).toBe(201);
@@ -1049,7 +1062,7 @@ describe('Game API Endpoints', () => {
                 ...exhaustiveDrawResult,
                 playerPointChanges: [],
                 nextState: { wind: 'EAST', dealerNumber: 2, counters: 1, riichiSticks: 0 },
-                gameFinishReason: undefined
+                gameFinishReason: undefined,
             });
 
             const afterGame = await request(app)
@@ -1084,7 +1097,7 @@ describe('Game API Endpoints', () => {
             type: 'EXHAUSTIVE_DRAW',
             riichiPlayerIds: [] as number[],
             tenpaiPlayerIds: [] as number[],
-            nagashiManganPlayerIds: [] as number[]
+            nagashiManganPlayerIds: [] as number[],
         };
 
         const postRound = (gameId: number, roundId: number, authHeader: string) =>
@@ -1108,8 +1121,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(createResponse.status).toBe(201);
@@ -1140,8 +1153,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -1150,7 +1163,7 @@ describe('Game API Endpoints', () => {
 
             const round2PointChanges = [
                 { playerId: testUser1Id, pointChange: 5000 },
-                { playerId: testUser3Id, pointChange: -5000 }
+                { playerId: testUser3Id, pointChange: -5000 },
             ];
 
             const roundRow = dbManager.db.prepare(
@@ -1172,14 +1185,20 @@ describe('Game API Endpoints', () => {
                 .get(`/api/games/${gameId}`)
                 .set('Authorization', user1AuthHeader);
 
-            expect(beforeRollback.body.players.find((p: { userId: number }) => p.userId === testUser1Id).points).toBe(35000);
-            expect(beforeRollback.body.players.find((p: { userId: number }) => p.userId === testUser3Id).points).toBe(25000);
+            expect(beforeRollback.body.players.find((p: { userId: number }) => p.userId === testUser1Id).points).toBe(
+                35000
+            );
+            expect(beforeRollback.body.players.find((p: { userId: number }) => p.userId === testUser3Id).points).toBe(
+                25000
+            );
 
             const response = await deleteRound(gameId, 2, user1AuthHeader);
 
             expect(response.status).toBe(200);
             for (const userId of [testUser1Id, testUser2Id, testUser3Id, testUser4Id]) {
-                expect(response.body.players.find((p: { userId: number }) => p.userId === userId).points).toBe(STARTING_POINTS);
+                expect(response.body.players.find((p: { userId: number }) => p.userId === userId).points).toBe(
+                    STARTING_POINTS
+                );
             }
         });
 
@@ -1193,8 +1212,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -1217,8 +1236,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -1241,8 +1260,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const response = await deleteRound(createResponse.body.id, 1, user1AuthHeader);
@@ -1261,8 +1280,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -1288,8 +1307,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -1315,8 +1334,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -1353,8 +1372,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -1375,7 +1394,7 @@ describe('Game API Endpoints', () => {
             type: 'EXHAUSTIVE_DRAW',
             riichiPlayerIds: [] as number[],
             tenpaiPlayerIds: [] as number[],
-            nagashiManganPlayerIds: [] as number[]
+            nagashiManganPlayerIds: [] as number[],
         };
 
         const postRound = (gameId: number, roundId: number, authHeader: string) =>
@@ -1399,8 +1418,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(createResponse.status).toBe(201);
@@ -1431,8 +1450,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const response = await finishGame(createResponse.body.id, user1AuthHeader);
@@ -1451,8 +1470,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -1483,8 +1502,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(createResponse.status).toBe(201);
@@ -1494,7 +1513,7 @@ describe('Game API Endpoints', () => {
                 type: 'EXHAUSTIVE_DRAW',
                 riichiPlayerIds: [testUser1Id],
                 tenpaiPlayerIds: [],
-                nagashiManganPlayerIds: []
+                nagashiManganPlayerIds: [],
             });
             expect(roundWithRiichi.status).toBe(200);
             expect(roundWithRiichi.body.currentState.riichiSticks).toBe(1);
@@ -1510,12 +1529,14 @@ describe('Game API Endpoints', () => {
                     { playerId: testUser1Id, pointChange: -1000 },
                     { playerId: testUser2Id, pointChange: 333 },
                     { playerId: testUser3Id, pointChange: 333 },
-                    { playerId: testUser4Id, pointChange: 333 }
+                    { playerId: testUser4Id, pointChange: 333 },
                 ])
             );
 
             const playerPoints = Object.fromEntries(
-                response.body.players.map((player: { userId: number; points: number }) => [player.userId, player.points])
+                response.body.players.map((
+                    player: { userId: number, points: number }
+                ) => [player.userId, player.points])
             );
             expect(playerPoints[testUser1Id]).toBe(29000);
             expect(playerPoints[testUser2Id]).toBe(30333);
@@ -1533,8 +1554,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, startPlace: 'EAST' },
                         { userId: testUser2Id, startPlace: 'SOUTH' },
                         { userId: testUser3Id, startPlace: 'WEST' },
-                        { userId: testUser4Id, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, startPlace: 'NORTH' },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -1555,7 +1576,7 @@ describe('Game API Endpoints', () => {
             type: 'EXHAUSTIVE_DRAW',
             riichiPlayerIds: [] as number[],
             tenpaiPlayerIds: [] as number[],
-            nagashiManganPlayerIds: [] as number[]
+            nagashiManganPlayerIds: [] as number[],
         };
 
         const createTrackedGame = () =>
@@ -1664,8 +1685,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             setClubRole(1, testUser2Id, 'MODERATOR');
@@ -1700,7 +1721,7 @@ describe('Game API Endpoints', () => {
                     type: 'EXHAUSTIVE_DRAW',
                     riichiPlayerIds: [testUser1Id],
                     tenpaiPlayerIds: [],
-                    nagashiManganPlayerIds: []
+                    nagashiManganPlayerIds: [],
                 });
             expect(roundWithRiichi.status).toBe(200);
             expect(roundWithRiichi.body.currentState.riichiSticks).toBe(1);
@@ -1709,9 +1730,9 @@ describe('Game API Endpoints', () => {
             expect(firstFinish.status).toBe(200);
 
             const expectedPlayerPoints = Object.fromEntries(
-                firstFinish.body.players.map((player: { userId: number; points: number }) => [
+                firstFinish.body.players.map((player: { userId: number, points: number }) => [
                     player.userId,
-                    player.points
+                    player.points,
                 ])
             );
             const expectedLastRoundPointChanges =
@@ -1728,9 +1749,9 @@ describe('Game API Endpoints', () => {
             expect(secondFinish.status).toBe(200);
 
             const actualPlayerPoints = Object.fromEntries(
-                secondFinish.body.players.map((player: { userId: number; points: number }) => [
+                secondFinish.body.players.map((player: { userId: number, points: number }) => [
                     player.userId,
-                    player.points
+                    player.points,
                 ])
             );
             expect(actualPlayerPoints).toEqual(expectedPlayerPoints);
@@ -1777,8 +1798,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(createResponse.status).toBe(201);
@@ -1788,11 +1809,11 @@ describe('Game API Endpoints', () => {
                 type: 'EXHAUSTIVE_DRAW',
                 riichiPlayerIds: [testUser1Id],
                 tenpaiPlayerIds: [testUser1Id, testUser2Id],
-                nagashiManganPlayerIds: []
+                nagashiManganPlayerIds: [],
             };
             const roundTwoResult = {
                 type: 'CHOMBO',
-                offenderPlayerId: testUser3Id
+                offenderPlayerId: testUser3Id,
             };
 
             dbManager.db.prepare(`
@@ -1819,7 +1840,7 @@ describe('Game API Endpoints', () => {
                     dealerNumber: 1,
                     counters: 0,
                     riichiSticks: 1,
-                    result: roundOneResult
+                    result: roundOneResult,
                 },
                 {
                     gameId,
@@ -1828,8 +1849,8 @@ describe('Game API Endpoints', () => {
                     dealerNumber: 2,
                     counters: 1,
                     riichiSticks: 0,
-                    result: roundTwoResult
-                }
+                    result: roundTwoResult,
+                },
             ]);
         });
 
@@ -1904,8 +1925,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
                         { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
                         { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, points: 20000, startPlace: 'NORTH' },
+                    ],
                 });
 
             const response = await request(app)
@@ -2008,8 +2029,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 45000, startPlace: 'EAST' },
                         { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
                         { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
-                        { userId: testUser4Id, points: 15000, startPlace: 'NORTH' }
-                    ]
+                        { userId: testUser4Id, points: 15000, startPlace: 'NORTH' },
+                    ],
                 });
 
             expect(response.status).toBe(200);
@@ -2027,10 +2048,10 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 45000 },
                         { userId: testUser2Id, points: 35000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 15000 }
+                        { userId: testUser4Id, points: 15000 },
                     ],
                     tournamentRound: 2,
-                    tournamentTable: '5'
+                    tournamentTable: '5',
                 });
 
             expect(response.status).toBe(200);
@@ -2048,10 +2069,10 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 45000 },
                         { userId: testUser2Id, points: 35000 },
                         { userId: testUser3Id, points: 25000 },
-                        { userId: testUser4Id, points: 15000 }
+                        { userId: testUser4Id, points: 15000 },
                     ],
                     tournamentRound: null,
-                    tournamentTable: null
+                    tournamentTable: null,
                 });
 
             expect(response.status).toBe(200);
@@ -2069,8 +2090,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(403);
@@ -2086,8 +2107,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(404);
@@ -2102,8 +2123,8 @@ describe('Game API Endpoints', () => {
                     eventId: TEST_EVENT_ID,
                     playersData: [
                         { userId: testUser1Id, points: 30000 },
-                        { userId: testUser2Id, points: 30000 }
-                    ]
+                        { userId: testUser2Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -2120,8 +2141,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             expect(response.status).toBe(400);
@@ -2149,7 +2170,8 @@ describe('Game API Endpoints', () => {
                 .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(200);
-            expect(response.body.players.every((p: { isSubstitutePlayer: boolean }) => p.isSubstitutePlayer === false)).toBe(true);
+            expect(response.body.players.every((p: { isSubstitutePlayer: boolean }) => p.isSubstitutePlayer === false))
+                .toBe(true);
         });
 
         test('should allow admin to set substitute player flag', async () => {
@@ -2213,7 +2235,7 @@ describe('Game API Endpoints', () => {
             type: 'EXHAUSTIVE_DRAW',
             riichiPlayerIds: [] as number[],
             tenpaiPlayerIds: [] as number[],
-            nagashiManganPlayerIds: [] as number[]
+            nagashiManganPlayerIds: [] as number[],
         };
 
         beforeAll(() => {
@@ -2250,8 +2272,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -2278,8 +2300,8 @@ describe('Game API Endpoints', () => {
                         { userId: testUser1Id, points: 30000 },
                         { userId: testUser2Id, points: 30000 },
                         { userId: testUser3Id, points: 30000 },
-                        { userId: testUser4Id, points: 30000 }
-                    ]
+                        { userId: testUser4Id, points: 30000 },
+                    ],
                 });
 
             const gameId = createResponse.body.id;
@@ -2407,9 +2429,9 @@ describe('Game API Endpoints', () => {
                             { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
                             { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
                             { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
-                            { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
+                            { userId: testUser4Id, points: 20000, startPlace: 'NORTH' },
                         ],
-                        createdAt: customDate.toISOString()
+                        createdAt: customDate.toISOString(),
                     });
 
                 expect(response.status).toBe(201);
@@ -2430,9 +2452,9 @@ describe('Game API Endpoints', () => {
                             { userId: testUser1Id, points: 40000, startPlace: 'EAST' },
                             { userId: testUser2Id, points: 35000, startPlace: 'SOUTH' },
                             { userId: testUser3Id, points: 25000, startPlace: 'WEST' },
-                            { userId: testUser4Id, points: 20000, startPlace: 'NORTH' }
+                            { userId: testUser4Id, points: 20000, startPlace: 'NORTH' },
                         ],
-                        createdAt: customDate.toISOString()
+                        createdAt: customDate.toISOString(),
                     });
 
                 expect(response.status).toBe(403);
@@ -2449,8 +2471,8 @@ describe('Game API Endpoints', () => {
                             { userId: testUser1Id, points: 40000 },
                             { userId: testUser2Id, points: 35000 },
                             { userId: testUser3Id, points: 25000 },
-                            { userId: testUser4Id, points: 20000 }
-                        ]
+                            { userId: testUser4Id, points: 20000 },
+                        ],
                     });
 
                 expect(response.status).toBe(201);
@@ -2478,9 +2500,9 @@ describe('Game API Endpoints', () => {
                             { userId: testUser1Id, points: 30000 },
                             { userId: testUser2Id, points: 30000 },
                             { userId: testUser3Id, points: 30000 },
-                            { userId: testUser4Id, points: 30000 }
+                            { userId: testUser4Id, points: 30000 },
                         ],
-                        createdAt: originalDate.toISOString()
+                        createdAt: originalDate.toISOString(),
                     });
                 gameToUpdateId = response.body.id;
             });
@@ -2496,9 +2518,9 @@ describe('Game API Endpoints', () => {
                             { userId: testUser1Id, points: 40000 },
                             { userId: testUser2Id, points: 35000 },
                             { userId: testUser3Id, points: 25000 },
-                            { userId: testUser4Id, points: 20000 }
+                            { userId: testUser4Id, points: 20000 },
                         ],
-                        createdAt: newDate.toISOString()
+                        createdAt: newDate.toISOString(),
                     });
 
                 expect(response.status).toBe(200);
@@ -2516,8 +2538,8 @@ describe('Game API Endpoints', () => {
                             { userId: testUser1Id, points: 35000 },
                             { userId: testUser2Id, points: 35000 },
                             { userId: testUser3Id, points: 30000 },
-                            { userId: testUser4Id, points: 20000 }
-                        ]
+                            { userId: testUser4Id, points: 20000 },
+                        ],
                     });
 
                 expect(response.status).toBe(200);

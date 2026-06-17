@@ -35,10 +35,12 @@ class LogService {
     logError(message: string, error: unknown = null) {
         console.error(message, error);
         if (globalErrorLogsTopic !== null) {
-            const errorDetails = error instanceof Error ? `${escapeHtml(error.message)}\n<pre>${escapeHtml(error.stack || '')}</pre>` : '';
+            const errorDetails = error instanceof Error
+                ? `${escapeHtml(error.message)}\n<pre>${escapeHtml(error.stack || '')}</pre>`
+                : '';
             this.messageQueue.push({
                 message: `<b>❌ ERROR</b>\n${escapeHtml(message)} ${errorDetails}`,
-                topic: globalErrorLogsTopic
+                topic: globalErrorLogsTopic,
             });
         }
     }

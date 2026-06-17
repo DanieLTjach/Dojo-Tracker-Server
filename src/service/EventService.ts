@@ -4,7 +4,7 @@ import {
     CannotDeleteEventWithGamesError,
     CannotDeleteEventWithRegistrationsError,
     CurrentRatingEventMustBeClubScopedError,
-    TournamentMustHaveClubError
+    TournamentMustHaveClubError,
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
@@ -92,10 +92,17 @@ export class EventService {
             blockGameCreation: data.blockGameCreation ?? false,
             createdAt: now,
             modifiedAt: now,
-            modifiedBy
+            modifiedBy,
         });
 
-        this.syncCurrentRatingEvent(undefined, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
+        this.syncCurrentRatingEvent(
+            undefined,
+            data.clubId ?? null,
+            data.isCurrentRating ?? false,
+            eventId,
+            modifiedBy,
+            now
+        );
 
         return this.getEventById(eventId);
     }
@@ -116,7 +123,14 @@ export class EventService {
         this.validateTournamentClub(data);
 
         const now = new Date();
-        this.syncCurrentRatingEvent(existingEvent, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
+        this.syncCurrentRatingEvent(
+            existingEvent,
+            data.clubId ?? null,
+            data.isCurrentRating ?? false,
+            eventId,
+            modifiedBy,
+            now
+        );
 
         this.eventRepository.updateEvent({
             id: eventId,
@@ -134,7 +148,7 @@ export class EventService {
             info: data.info ?? null,
             blockGameCreation: data.blockGameCreation ?? false,
             modifiedAt: now,
-            modifiedBy
+            modifiedBy,
         });
 
         return this.getEventById(eventId);
@@ -156,7 +170,11 @@ export class EventService {
         }
     }
 
-    private authorizeEventUpdate(existingEvent: Event, requestedClubId: number | null | undefined, userId: number): void {
+    private authorizeEventUpdate(
+        existingEvent: Event,
+        requestedClubId: number | null | undefined,
+        userId: number
+    ): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
             return;

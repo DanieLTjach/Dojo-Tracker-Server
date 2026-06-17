@@ -200,7 +200,7 @@ describe('Event API Endpoints', () => {
 
             expect(response.status).toBe(200);
             expect(response.body.gameRules.details).toMatchObject({
-                preset: 'ema_2025'
+                preset: 'ema_2025',
             });
             expect(response.body.gameRules.details.rules.number_of_players).toBe(4);
             expect(response.body.gameRules.details.rules.open_tanyao).toBe(true);
@@ -265,7 +265,7 @@ describe('Event API Endpoints', () => {
             type: 'SEASON',
             gameRulesId: 1,
             dateFrom: '2026-01-01T00:00:00.000Z',
-            dateTo: '2026-01-31T00:00:00.000Z'
+            dateTo: '2026-01-31T00:00:00.000Z',
         };
 
         let createdEventId: number | undefined;
@@ -354,7 +354,9 @@ describe('Event API Endpoints', () => {
 
             createdEventId = response.body.id;
 
-            const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+            const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(
+                1
+            ) as { currentRatingEventId: number | null };
 
             deleteEventById(2104);
 
@@ -411,7 +413,7 @@ describe('Event API Endpoints', () => {
             clubId: 1,
             gameRulesId: 1,
             dateFrom: '2026-04-01T00:00:00.000Z',
-            dateTo: '2026-05-01T00:00:00.000Z'
+            dateTo: '2026-05-01T00:00:00.000Z',
         };
 
         beforeEach(() => {
@@ -467,7 +469,9 @@ describe('Event API Endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({ ...updatePayload, type: 'SEASON', isCurrentRating: true });
 
-            const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+            const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(
+                1
+            ) as { currentRatingEventId: number | null };
 
             deleteEventById(2105);
 
@@ -484,7 +488,9 @@ describe('Event API Endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({ ...updatePayload, type: 'SEASON', isCurrentRating: false });
 
-            const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+            const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as {
+                currentRatingEventId: number | null;
+            };
 
             expect(response.status).toBe(200);
             expect(response.body.isCurrentRating).toBe(false);
@@ -507,8 +513,12 @@ describe('Event API Endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({ ...updatePayload, clubId: 2, type: 'SEASON', isCurrentRating: true });
 
-            const club1 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
-            const club2 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(2) as { currentRatingEventId: number | null };
+            const club1 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as {
+                currentRatingEventId: number | null;
+            };
+            const club2 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(2) as {
+                currentRatingEventId: number | null;
+            };
 
             dbManager.db.prepare('UPDATE club SET currentRatingEventId = NULL WHERE id = ?').run(2);
             dbManager.db.prepare('UPDATE event SET clubId = 1 WHERE id = ?').run(baseEventId);
@@ -568,7 +578,7 @@ describe('Event API Endpoints', () => {
             clubId: 1,
             gameRulesId: 1,
             dateFrom: '2026-05-23T00:00:00.000Z',
-            dateTo: '2026-05-24T00:00:00.000Z'
+            dateTo: '2026-05-24T00:00:00.000Z',
         };
 
         const fullInfo = {
@@ -578,9 +588,9 @@ describe('Event API Endpoints', () => {
                     title: 'Перший день, субота, 23 травня',
                     items: [
                         { time: '10:00', title: 'Початок реєстрації' },
-                        { time: '10:30–12:00', title: 'Перший ханчан', kind: 'milestone' }
-                    ]
-                }
+                        { time: '10:30–12:00', title: 'Перший ханчан', kind: 'milestone' },
+                    ],
+                },
             ],
             venue: {
                 name: 'Shogi Dojo',
@@ -589,18 +599,18 @@ describe('Event API Endpoints', () => {
                 latitude: 50.45,
                 longitude: 30.52,
                 mapUrl: 'https://maps.google.com/?q=50.45,30.52',
-                contactTelegram: 'shogidojo'
+                contactTelegram: 'shogidojo',
             },
             contacts: { phone: '+380501112233', email: 'info@example.com', telegram: 'organizer' },
             links: {
                 site: 'https://example.com',
                 registrationForm: 'https://forms.example.com/x',
-                googleMaps: 'https://maps.google.com/?q=Kyiv'
+                googleMaps: 'https://maps.google.com/?q=Kyiv',
             },
             pairings: [
-                [[12,29,38,39], [1,6,9,25], [2,7,20,43]],
-                [[4,25,26,29], [11,18,42,43], [14,16,23,40]]
-            ]
+                [[12, 29, 38, 39], [1, 6, 9, 25], [2, 7, 20, 43]],
+                [[4, 25, 26, 29], [11, 18, 42, 43], [14, 16, 23, 40]],
+            ],
         };
 
         let createdEventId: number | undefined;
@@ -688,9 +698,9 @@ describe('Event API Endpoints', () => {
                     info: {
                         pairings: [
                             [[1, 2, 3, 4], [5, 6, 7, 8]],
-                            [[9, 10, 11, 12]]
-                        ]
-                    }
+                            [[9, 10, 11, 12]],
+                        ],
+                    },
                 });
             expect(response.status).toBe(400);
         });
@@ -703,9 +713,9 @@ describe('Event API Endpoints', () => {
                     ...basePayload,
                     info: {
                         schedule: [
-                            { date: '2026-05-23T00:00:00.000Z', items: [{ title: 'No time' }] }
-                        ]
-                    }
+                            { date: '2026-05-23T00:00:00.000Z', items: [{ title: 'No time' }] },
+                        ],
+                    },
                 });
             expect(response.status).toBe(400);
         });
@@ -729,7 +739,18 @@ describe('Event API Endpoints', () => {
             dbManager.db.prepare(
                 `INSERT INTO user (id, telegramUsername, telegramId, name, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(clubOwnerUserId, '@clubowner_event', 88888801, 'ClubOwnerEventUser', timestamp, timestamp, 0, 1, 0, 'ACTIVE');
+            ).run(
+                clubOwnerUserId,
+                '@clubowner_event',
+                88888801,
+                'ClubOwnerEventUser',
+                timestamp,
+                timestamp,
+                0,
+                1,
+                0,
+                'ACTIVE'
+            );
             dbManager.db.prepare(
                 `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -825,7 +846,9 @@ describe('Event API Endpoints', () => {
                 .delete(`/api/events/${deletableEventId}`)
                 .set('Authorization', adminAuthHeader);
 
-            const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+            const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as {
+                currentRatingEventId: number | null;
+            };
 
             expect(response.status).toBe(204);
             expect(club.currentRatingEventId).toBeNull();

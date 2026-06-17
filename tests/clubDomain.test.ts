@@ -4,13 +4,13 @@ import {
     clubGetByIdSchema,
     clubMembershipActivateSchema,
     clubMembershipRequestJoinSchema,
-    clubMembershipUpdateSchema
+    clubMembershipUpdateSchema,
 } from '../src/schema/ClubSchemas.ts';
 import {
     ClubMembershipAlreadyExistsError,
     ClubNotFoundError,
     InsufficientClubPermissionsError,
-    InvalidClubMembershipStateError
+    InvalidClubMembershipStateError,
 } from '../src/error/ClubErrors.ts';
 
 describe('ClubSchemas', () => {
@@ -22,14 +22,14 @@ describe('ClubSchemas', () => {
                 city: '  Kyiv  ',
                 description: '  Test club  ',
                 contactInfo: '  @dojo  ',
-                isActive: true
-            }
+                isActive: true,
+            },
         });
 
         const params = clubGetByIdSchema.parse({
             params: {
-                clubId: '7'
-            }
+                clubId: '7',
+            },
         });
 
         expect(parsed.body).toEqual({
@@ -38,7 +38,7 @@ describe('ClubSchemas', () => {
             city: 'Kyiv',
             description: 'Test club',
             contactInfo: '@dojo',
-            isActive: true
+            isActive: true,
         });
         expect(params.params.clubId).toBe(7);
     });
@@ -46,15 +46,15 @@ describe('ClubSchemas', () => {
     it('coerces membership route params', () => {
         const joinRequest = clubMembershipRequestJoinSchema.parse({
             params: {
-                clubId: '3'
-            }
+                clubId: '3',
+            },
         });
 
         const activated = clubMembershipActivateSchema.parse({
             params: {
                 clubId: '3',
-                userId: '11'
-            }
+                userId: '11',
+            },
         });
 
         expect(joinRequest.params).toEqual({ clubId: 3 });
@@ -66,11 +66,11 @@ describe('ClubSchemas', () => {
             clubMembershipUpdateSchema.parse({
                 params: {
                     clubId: '2',
-                    userId: '9'
+                    userId: '9',
                 },
                 body: {
-                    role: 'ADMIN'
-                }
+                    role: 'ADMIN',
+                },
             });
         }).toThrow(ZodError);
     });
@@ -81,13 +81,13 @@ describe('ClubErrors', () => {
         expect(new ClubNotFoundError(42)).toMatchObject({
             statusCode: 404,
             errorCode: 'clubNotFound',
-            message: "Клуб з id 42 не знайдено"
+            message: 'Клуб з id 42 не знайдено',
         });
 
         expect(new ClubMembershipAlreadyExistsError('Test Club', 8)).toMatchObject({
             statusCode: 400,
             errorCode: 'clubMembershipAlreadyExists',
-            message: "Користувач з id 8 вже є учасником клубу 'Test Club'"
+            message: "Користувач з id 8 вже є учасником клубу 'Test Club'",
         });
     });
 

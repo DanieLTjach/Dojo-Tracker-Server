@@ -1,4 +1,4 @@
-import { NotFoundError, BadRequestError } from "./BaseErrors.ts";
+import { NotFoundError, BadRequestError } from './BaseErrors.ts';
 
 export class EventNotFoundError extends NotFoundError {
     constructor(eventId: number) {
@@ -50,7 +50,10 @@ export class CannotDeleteEventWithRegistrationsError extends BadRequestError {
 
 export class CurrentRatingEventMustBeClubScopedError extends BadRequestError {
     constructor() {
-        super('Поточний рейтинговий сезон можна встановити лише для клубної події', 'currentRatingEventMustBeClubScoped');
+        super(
+            'Поточний рейтинговий сезон можна встановити лише для клубної події',
+            'currentRatingEventMustBeClubScoped'
+        );
     }
 }
 

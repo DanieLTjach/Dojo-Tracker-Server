@@ -21,7 +21,7 @@ function seedTestUser(): void {
         modifiedBy: SYSTEM_USER_ID,
         isActive: 1,
         isAdmin: 0,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
     });
 }
 
@@ -40,12 +40,14 @@ describe('ClubInviteRepository', () => {
             contactInfo: null,
             isActive: true,
             createdAt: new Date('2026-04-01T10:00:00.000Z'),
-            modifiedBy: SYSTEM_USER_ID
+            modifiedBy: SYSTEM_USER_ID,
         });
     });
 
     afterEach(() => {
-        dbManager.db.prepare('DELETE FROM clubInviteRedemption WHERE inviteId IN (SELECT id FROM clubInvite WHERE clubId = ?)').run(clubId);
+        dbManager.db.prepare(
+            'DELETE FROM clubInviteRedemption WHERE inviteId IN (SELECT id FROM clubInvite WHERE clubId = ?)'
+        ).run(clubId);
         dbManager.db.prepare('DELETE FROM clubInvite WHERE clubId = ?').run(clubId);
     });
 
@@ -70,7 +72,7 @@ describe('ClubInviteRepository', () => {
             createdAt: now,
             modifiedAt: now,
             modifiedBy: SYSTEM_USER_ID,
-            ...overrides
+            ...overrides,
         });
     }
 
@@ -89,7 +91,7 @@ describe('ClubInviteRepository', () => {
             label: 'Spring booth',
             maxUses: 5,
             usesCount: 0,
-            isActive: true
+            isActive: true,
         });
         expect(invite!.expiresAt).toEqual(new Date('2026-05-01T00:00:00.000Z'));
         expect(invite!.createdAt).toEqual(new Date('2026-04-02T10:00:00.000Z'));
