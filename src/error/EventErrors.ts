@@ -120,6 +120,17 @@ export class TournamentRoundOutOfSequenceError extends BadRequestError {
     }
 }
 
+export class TournamentRoundNotCurrentError extends BadRequestError {
+    constructor(eventName: string, currentRound: number | null, requestedRound: number) {
+        super(
+            currentRound === null
+                ? `Не можна скасувати раунд ${requestedRound} турніру "${eventName}": жоден раунд не розпочато`
+                : `Не можна скасувати раунд ${requestedRound} турніру "${eventName}": поточний раунд — ${currentRound}`,
+            'tournamentRoundNotCurrent'
+        );
+    }
+}
+
 export class TournamentRoundGamesNotFinishedError extends BadRequestError {
     constructor(eventName: string, round: number, unfinishedCount: number) {
         super(

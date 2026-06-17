@@ -11,6 +11,7 @@ import {
     TournamentTotalRoundsLessThanCurrentRoundError,
     TournamentRoundGamesNotFinishedError,
     TournamentRoundOutOfSequenceError,
+    TournamentRoundNotCurrentError,
     TournamentHasNoMoreRoundsError,
     TournamentRoundAlreadyPlayedError,
     TournamentAlreadyFinishedError,
@@ -242,9 +243,9 @@ export class EventService {
         }
 
         // Only the round that is actually current can be cancelled. A null currentRound (nothing
-        // started) or any other round id is treated as out of sequence.
+        // started) or any other round id is rejected.
         if (tournament.currentRound !== roundId) {
-            throw new TournamentRoundOutOfSequenceError(event.name, tournament.currentRound ?? 0, roundId);
+            throw new TournamentRoundNotCurrentError(event.name, tournament.currentRound, roundId);
         }
 
         this.validateTournamentRoundNotStarted(event, roundId);

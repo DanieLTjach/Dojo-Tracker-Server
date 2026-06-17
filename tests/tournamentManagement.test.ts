@@ -418,7 +418,7 @@ describe('Tournament management', () => {
                 .send({});
 
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('tournamentRoundOutOfSequence');
+            expect(response.body.errorCode).toBe('tournamentRoundNotCurrent');
         });
 
         test('rejects cancelling when nothing has been started', async () => {
@@ -428,7 +428,7 @@ describe('Tournament management', () => {
                 .send({});
 
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('tournamentRoundOutOfSequence');
+            expect(response.body.errorCode).toBe('tournamentRoundNotCurrent');
         });
 
         test('rejects cancelling a round whose games are already finished', async () => {
