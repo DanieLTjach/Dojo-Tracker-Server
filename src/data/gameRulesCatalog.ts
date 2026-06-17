@@ -45,48 +45,56 @@ export const gameRulesCatalog = {
     rules: [
         { key: 'abortive_draw', type: 'boolean' },
         { key: 'after_attaching', type: 'boolean' },
-        { key: 'agari_yame', type: 'enumString', enum: ['no','rank_1','rank_1_2'] },
+        { key: 'agari_yame', type: 'enumString', enum: ['no', 'rank_1', 'rank_1_2'] },
         { key: 'automatic_agari_tenpai_yame', type: 'boolean' },
-        { key: 'bankrupt', type: 'enumString', enum: ['none','below_zero','zero_or_less'] },
-        { key: 'blessing_of_man', type: 'enumString', enum: ['none','mangan','yakuman'] },
-        { key: 'call_precedence', type: 'enumString', enum: ['first','ron_first','ron_pon','sec3','sec05'] },
+        { key: 'bankrupt', type: 'enumString', enum: ['none', 'below_zero', 'zero_or_less'] },
+        { key: 'blessing_of_man', type: 'enumString', enum: ['none', 'mangan', 'yakuman'] },
+        { key: 'call_precedence', type: 'enumString', enum: ['first', 'ron_first', 'ron_pon', 'sec3', 'sec05'] },
         { key: 'can_call_kita', type: 'boolean' },
-        { key: 'chombo', type: 'enumString', enum: ['twenty_thousand_after_uma','mangan'] },
+        { key: 'chombo', type: 'enumString', enum: ['twenty_thousand_after_uma', 'mangan'] },
         { key: 'concealed_quad_after_riichi', type: 'boolean' },
         { key: 'concealed_quad_after_riichi_if_changes_hand_structure', type: 'boolean' },
         { key: 'concealed_quad_after_riichi_if_changes_yaku', type: 'boolean' },
-        { key: 'continuance_payment_on_multiple_ron', type: 'enumString', enum: ['all','bump'] },
-        { key: 'continuance_payment_pao', type: 'enumString', enum: ['feeder','discarder'] },
-        { key: 'continuation', type: 'enumString', enum: ['agari','tenpai'] },
+        { key: 'continuance_payment_on_multiple_ron', type: 'enumString', enum: ['all', 'bump'] },
+        { key: 'continuance_payment_pao', type: 'enumString', enum: ['feeder', 'discarder'] },
+        { key: 'continuation', type: 'enumString', enum: ['agari', 'tenpai'] },
         { key: 'continuation_when_abortion', type: 'boolean' },
         { key: 'counted_yakuman', type: 'boolean' },
         { key: 'dora', type: 'boolean' },
-        { key: 'double_ron', type: 'enumString', enum: ['yes','head_bump','first'] },
-        { key: 'double_wind_fu', type: 'enumString', enum: ['two_fu','four_fu'] },
+        { key: 'double_ron', type: 'enumString', enum: ['yes', 'head_bump', 'first'] },
+        { key: 'double_wind_fu', type: 'enumString', enum: ['two_fu', 'four_fu'] },
         { key: 'double_yakuman', type: 'boolean' },
         { key: 'furiten_from_kita', type: 'boolean' },
         { key: 'furiten_riichi', type: 'boolean' },
         { key: 'goal', type: 'integer', min: 0, multipleOf: 100 },
-        { key: 'honba', type: 'enumString', enum: ['2x100','2x200','2x300','2x500','3x100','3x200','3x300','3x500'] },
+        {
+            key: 'honba',
+            type: 'enumString',
+            enum: ['2x100', '2x200', '2x300', '2x500', '3x100', '3x200', '3x300', '3x500'],
+        },
         { key: 'kan_dora', type: 'boolean' },
-        { key: 'kan_dora_called_promoted_quad', type: 'enumString', enum: ['before_discard','after_discard'] },
-        { key: 'kan_dora_concealed_quad', type: 'enumString', enum: ['before_discard','after_discard'] },
+        { key: 'kan_dora_called_promoted_quad', type: 'enumString', enum: ['before_discard', 'after_discard'] },
+        { key: 'kan_dora_concealed_quad', type: 'enumString', enum: ['before_discard', 'after_discard'] },
         { key: 'kan_ura_dora', type: 'boolean' },
         { key: 'kita_after_pon', type: 'boolean' },
         { key: 'last_tile_draw_after_a_quad', type: 'boolean' },
-        { key: 'liability_payment', type: 'enumString', enum: ['none','big_dragons_big_winds'] },
+        { key: 'liability_payment', type: 'enumString', enum: ['none', 'big_dragons_big_winds'] },
         { key: 'mangan_rounding_up', type: 'boolean' },
         { key: 'max_points', type: 'integer', min: 0 },
         { key: 'nagashi_mangan', type: 'boolean' },
         { key: 'nb_quads_max', type: 'enumInteger', enum: [4] },
         { key: 'north_as_yaku', type: 'boolean' },
         { key: 'noten_penalty', type: 'integer', min: 0, multipleOf: 100 },
-        { key: 'number_of_players', type: 'enumInteger', enum: [3,4], required: true },
+        { key: 'number_of_players', type: 'enumInteger', enum: [3, 4], required: true },
         { key: 'oka', type: 'integer', min: 0 },
         { key: 'open_riichi', type: 'boolean' },
         { key: 'open_tanyao', type: 'boolean' },
-        { key: 'red_fives', type: 'enumString', enum: ['none','three_one_per_suit','two_red_fives_five_pin_and_five_sou'] },
-        { key: 'remaining_riichi_deposits', type: 'enumString', enum: ['final_winner','lost'] },
+        {
+            key: 'red_fives',
+            type: 'enumString',
+            enum: ['none', 'three_one_per_suit', 'two_red_fives_five_pin_and_five_sou'],
+        },
+        { key: 'remaining_riichi_deposits', type: 'enumString', enum: ['final_winner', 'lost'] },
         { key: 'riichi_1000_points_min', type: 'boolean' },
         { key: 'riichi_deposit_is_returned_if_one_of_multiple_ron', type: 'boolean' },
         { key: 'riichi_deposits_payment_on_multiple_ron', type: 'enumString', enum: ['bump'] },
@@ -98,12 +106,12 @@ export const gameRulesCatalog = {
         { key: 'starting_points', type: 'integer', min: 0, multipleOf: 100, required: true },
         { key: 'substitute_player_penalty_before_uma', type: 'integer', min: 0, multipleOf: 100 },
         { key: 'substitute_player_uma', type: 'integer' },
-        { key: 'swap_calling', type: 'enumString', enum: ['yes','soft','hard'] },
-        { key: 'temporary_furiten_duration', type: 'enumString', enum: ['players_discard','interrupt'] },
+        { key: 'swap_calling', type: 'enumString', enum: ['yes', 'soft', 'hard'] },
+        { key: 'temporary_furiten_duration', type: 'enumString', enum: ['players_discard', 'interrupt'] },
         { key: 'tenpai_with_fifth_tile_in_own_hand', type: 'boolean' },
-        { key: 'tenpai_yame', type: 'enumString', enum: ['no','rank_1','rank_1_2'] },
+        { key: 'tenpai_yame', type: 'enumString', enum: ['no', 'rank_1', 'rank_1_2'] },
         { key: 'thirteen_orphans_allows_to_rob_a_concealed_quad', type: 'boolean' },
-        { key: 'triple_ron', type: 'enumString', enum: ['yes','head_bump','first','cancel'] },
+        { key: 'triple_ron', type: 'enumString', enum: ['yes', 'head_bump', 'first', 'cancel'] },
         { key: 'two_han_minimum', type: 'boolean' },
         { key: 'ura_dora', type: 'boolean' },
         { key: 'west_round', type: 'boolean' },
@@ -118,13 +126,12 @@ export const gameRulesCatalogByKey = new Map<GameRuleKey, RuleSpec>(
 export type GameRuleKey = typeof gameRulesCatalog.rules[number]['key'];
 
 // Helper type to extract the value type from a RuleSpec
-type RuleValueType<T extends RuleSpec> = 
-    T extends { type: 'boolean' } ? boolean :
-    T extends { type: 'string' } ? string :
-    T extends { type: 'integer' } ? number :
-    T extends { type: 'enumString'; enum: readonly (infer E)[] } ? E :
-    T extends { type: 'enumInteger'; enum: readonly (infer E)[] } ? E :
-    never;
+type RuleValueType<T extends RuleSpec> = T extends { type: 'boolean' } ? boolean
+    : T extends { type: 'string' } ? string
+    : T extends { type: 'integer' } ? number
+    : T extends { type: 'enumString', enum: readonly (infer E)[] } ? E
+    : T extends { type: 'enumInteger', enum: readonly (infer E)[] } ? E
+    : never;
 
 type RulesUnion = typeof gameRulesCatalog.rules[number];
 

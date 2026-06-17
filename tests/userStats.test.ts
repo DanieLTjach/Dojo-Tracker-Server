@@ -149,8 +149,7 @@ describe('User Stats API Endpoints', () => {
             expect(response.body).toHaveProperty('percentageFourthPlace');
 
             // Verify placement percentages add up correctly (User1: 1st, 2nd, 3rd, 4th = 25% each)
-            const totalPlacementPercentage =
-                response.body.percentageFirstPlace +
+            const totalPlacementPercentage = response.body.percentageFirstPlace +
                 response.body.percentageSecondPlace +
                 response.body.percentageThirdPlace +
                 response.body.percentageFourthPlace;

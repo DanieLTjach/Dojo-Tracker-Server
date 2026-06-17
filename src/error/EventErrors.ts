@@ -1,4 +1,4 @@
-import { NotFoundError, BadRequestError, InternalServerError } from "./BaseErrors.ts";
+import { NotFoundError, BadRequestError, InternalServerError } from './BaseErrors.ts';
 
 export class EventNotFoundError extends NotFoundError {
     constructor(eventId: number) {
@@ -50,7 +50,10 @@ export class CannotDeleteEventWithRegistrationsError extends BadRequestError {
 
 export class CurrentRatingEventMustBeClubScopedError extends BadRequestError {
     constructor() {
-        super('Поточний рейтинговий сезон можна встановити лише для клубної події', 'currentRatingEventMustBeClubScoped');
+        super(
+            'Поточний рейтинговий сезон можна встановити лише для клубної події',
+            'currentRatingEventMustBeClubScoped'
+        );
     }
 }
 
@@ -92,7 +95,10 @@ export class EventIsNotTournamentError extends BadRequestError {
 
 export class TournamentMisconfigured extends InternalServerError {
     constructor() {
-        super("Цей турнір був неправильно сконфігурований. Будь ласка, звʼяжіться з підтримкою", 'tournamentMisconfigured');
+        super(
+            'Цей турнір був неправильно сконфігурований. Будь ласка, звʼяжіться з підтримкою',
+            'tournamentMisconfigured'
+        );
     }
 }
 
@@ -144,7 +150,9 @@ export class TournamentNotInLastRoundError extends BadRequestError {
 export class TournamentGameNotInCurrentRoundError extends BadRequestError {
     constructor(currentRound: number | null, gameRound: number | null) {
         super(
-            `Цю гру не можна розпочати зараз. Поточний раунд турніру: ${currentRound ?? '—'}, раунд гри: ${gameRound ?? '—'}`,
+            `Цю гру не можна розпочати зараз. Поточний раунд турніру: ${currentRound ?? '—'}, раунд гри: ${
+                gameRound ?? '—'
+            }`,
             'tournamentGameNotInCurrentRound'
         );
     }

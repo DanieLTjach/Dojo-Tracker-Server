@@ -65,7 +65,7 @@ export class PollRepository {
             extraOptions: config.extraOptions.length > 0 ? JSON.stringify(config.extraOptions) : null,
             isActive: booleanToInteger(config.isActive),
             modifiedAt: new Date().toISOString(),
-            modifiedBy
+            modifiedBy,
         });
     }
 }
@@ -88,6 +88,6 @@ function pollConfigFromDBEntity(dbEntity: PollConfigDBEntity): ClubPollConfig {
         sendDay: dbEntity.sendDay,
         sendTime: dbEntity.sendTime,
         extraOptions: dbEntity.extraOptions ? JSON.parse(dbEntity.extraOptions) : [],
-        isActive: Boolean(dbEntity.isActive)
+        isActive: Boolean(dbEntity.isActive),
     };
 }

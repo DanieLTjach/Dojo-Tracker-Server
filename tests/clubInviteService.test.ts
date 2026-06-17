@@ -11,7 +11,7 @@ import {
     InviteExpiredError,
     InviteNotFoundError,
     InviteRevokedError,
-    NameRequiredForNewUserError
+    NameRequiredForNewUserError,
 } from '../src/error/ClubErrors.ts';
 
 const SYSTEM_USER_ID = 0;
@@ -30,10 +30,15 @@ describe('ClubInviteService', () => {
     let clubId: number;
 
     function cleanupInvites(): void {
-        dbManager.db.prepare('DELETE FROM clubInviteRedemption WHERE inviteId IN (SELECT id FROM clubInvite WHERE clubId = ?)').run(clubId);
+        dbManager.db.prepare(
+            'DELETE FROM clubInviteRedemption WHERE inviteId IN (SELECT id FROM clubInvite WHERE clubId = ?)'
+        ).run(clubId);
         dbManager.db.prepare('DELETE FROM clubInvite WHERE clubId = ?').run(clubId);
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(clubId);
-        dbManager.db.prepare('DELETE FROM user WHERE telegramId >= ? AND telegramId < ?').run(TELEGRAM_BASE, TELEGRAM_BASE + 100000);
+        dbManager.db.prepare('DELETE FROM user WHERE telegramId >= ? AND telegramId < ?').run(
+            TELEGRAM_BASE,
+            TELEGRAM_BASE + 100000
+        );
     }
 
     beforeAll(() => {
@@ -45,7 +50,7 @@ describe('ClubInviteService', () => {
             contactInfo: null,
             isActive: true,
             createdAt: new Date('2026-04-01T10:00:00.000Z'),
-            modifiedBy: SYSTEM_USER_ID
+            modifiedBy: SYSTEM_USER_ID,
         });
     });
 
@@ -63,7 +68,7 @@ describe('ClubInviteService', () => {
             type: 'JOIN_CLUB',
             source: 'FESTIVAL',
             createdBy: SYSTEM_USER_ID,
-            ...overrides
+            ...overrides,
         });
     }
 
@@ -116,7 +121,10 @@ describe('ClubInviteService', () => {
 
     it('derives the name from Telegram first and last name', () => {
         const invite = createInvite({ type: 'REGISTRATION_ONLY' });
-        const result = inviteService.redeemInvite(invite.code, telegramUser(4, { first_name: 'Ichiro', last_name: 'Suzuki' }));
+        const result = inviteService.redeemInvite(
+            invite.code,
+            telegramUser(4, { first_name: 'Ichiro', last_name: 'Suzuki' })
+        );
         expect(result.user.name).toBe('Ichiro Suzuki');
     });
 

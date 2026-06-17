@@ -61,7 +61,7 @@ describe('Profile API Endpoints', () => {
                 firstNameEn: 'John',
                 lastNameEn: 'Doe',
                 emaNumber: '11990133',
-                hideProfile: false
+                hideProfile: false,
             };
 
             const response = await request(app)

@@ -8,7 +8,7 @@ import {
     SeatingNotEnoughParticipantsError,
     SeatingParticipantsNotMultipleOfTableSizeError,
     SeatingRoundCountMismatchError,
-    SeatingTableSizeMismatchError
+    SeatingTableSizeMismatchError,
 } from '../error/EventErrors.ts';
 import type { Event } from '../model/EventModels.ts';
 import { GameStatus, Wind } from '../model/GameModels.ts';
@@ -75,7 +75,11 @@ export class TournamentSeatingService {
      * configured round count. Does not persist anything — the moderator picks a candidate
      * and applies it separately. Authorisation matches other tournament-management actions.
      */
-    async generateSeating(eventId: number, options: SeatingGenerateOptions, userId: number): Promise<SeatingGenerationResultDTO> {
+    async generateSeating(
+        eventId: number,
+        options: SeatingGenerateOptions,
+        userId: number
+    ): Promise<SeatingGenerationResultDTO> {
         const event = this.getTournamentEventForManagement(eventId, userId);
         this.assertTournamentHasNotStarted(event);
 
@@ -97,8 +101,8 @@ export class TournamentSeatingService {
         } catch (error) {
             const elapsedMs = Date.now() - startedAt;
             LogService.logInfo(
-                `Seating generation FAILED for event ${event.id} ("${event.name}") by user ${userId}: `
-                + `${tables} tables, ${rounds} rounds, ${candidateCount} candidates, budget ${timeLimitMs}ms, took ${elapsedMs}ms`,
+                `Seating generation FAILED for event ${event.id} ("${event.name}") by user ${userId}: ` +
+                    `${tables} tables, ${rounds} rounds, ${candidateCount} candidates, budget ${timeLimitMs}ms, took ${elapsedMs}ms`,
                 globalLogsTopic
             );
             if (error instanceof SeatingGenerationError) {
@@ -108,8 +112,8 @@ export class TournamentSeatingService {
         }
         const elapsedMs = Date.now() - startedAt;
         LogService.logInfo(
-            `Seating generation for event ${event.id} ("${event.name}") by user ${userId}: `
-            + `${tables} tables, ${rounds} rounds, ${candidateCount} candidates, budget ${timeLimitMs}ms, took ${elapsedMs}ms`,
+            `Seating generation for event ${event.id} ("${event.name}") by user ${userId}: ` +
+                `${tables} tables, ${rounds} rounds, ${candidateCount} candidates, budget ${timeLimitMs}ms, took ${elapsedMs}ms`,
             globalLogsTopic
         );
 
@@ -124,11 +128,11 @@ export class TournamentSeatingService {
                     round.map(table =>
                         table.map((playerIndex, seatIndex) => ({
                             userId: participantIds[playerIndex]!,
-                            seat: Object.values(Wind)[seatIndex]!
+                            seat: Object.values(Wind)[seatIndex]!,
                         }))
                     )
-                )
-            }))
+                ),
+            })),
         };
     }
 
@@ -155,7 +159,7 @@ export class TournamentSeatingService {
                 const table = round[tableIndex]!;
                 const players: TrackedGamePlayerData[] = table.map((userIdAtSeat, seatIndex) => ({
                     userId: userIdAtSeat,
-                    startPlace: Object.values(Wind)[seatIndex]!
+                    startPlace: Object.values(Wind)[seatIndex]!,
                 }));
                 const createdAt = new Date(baseTimestamp.getTime() + sequence * 10);
                 sequence++;
@@ -229,9 +233,10 @@ export class TournamentSeatingService {
     }
 
     private resolveTimeLimit(requested: number | undefined, candidateCount: number): number {
-        return Math.min(MAX_TIME_LIMIT_MS, Math.max(100,
-            requested !== undefined ? requested : candidateCount * DEFAULT_TIME_PER_CANDIDATE_MS
-        ));
+        return Math.min(
+            MAX_TIME_LIMIT_MS,
+            Math.max(100, requested !== undefined ? requested : candidateCount * DEFAULT_TIME_PER_CANDIDATE_MS)
+        );
     }
 
     private resolveCandidateCount(requested: number | undefined): number {

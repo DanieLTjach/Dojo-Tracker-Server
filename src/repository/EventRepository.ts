@@ -35,8 +35,7 @@ export class EventRepository {
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
             LEFT JOIN tournament t ON t.eventId = e.id
-            ORDER BY e.createdAt DESC`
-        );
+            ORDER BY e.createdAt DESC`);
     }
 
     findAllEvents(): Event[] {
@@ -69,8 +68,7 @@ export class EventRepository {
             LEFT JOIN club c ON e.clubId = c.id
             LEFT JOIN tournament t ON t.eventId = e.id
             WHERE e.clubId = :clubId OR e.clubId IS NULL
-            ORDER BY e.createdAt DESC`
-        );
+            ORDER BY e.createdAt DESC`);
     }
 
     findAllEventsByClubId(clubId: number): Event[] {
@@ -102,8 +100,7 @@ export class EventRepository {
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
             LEFT JOIN tournament t ON t.eventId = e.id
-            WHERE e.id = :id`
-        );
+            WHERE e.id = :id`);
     }
 
     findEventById(eventId: number): Event | undefined {
@@ -147,7 +144,7 @@ export class EventRepository {
             config: params.config !== null ? JSON.stringify(params.config) : null,
             blockGameCreation: booleanToInteger(params.blockGameCreation),
             createdAt: params.createdAt.toISOString(),
-            modifiedAt: params.modifiedAt.toISOString()
+            modifiedAt: params.modifiedAt.toISOString(),
         });
         return result!.id;
     }
@@ -202,7 +199,7 @@ export class EventRepository {
             info: params.info !== null ? JSON.stringify(params.info) : null,
             config: params.config !== null ? JSON.stringify(params.config) : null,
             blockGameCreation: booleanToInteger(params.blockGameCreation),
-            modifiedAt: params.modifiedAt.toISOString()
+            modifiedAt: params.modifiedAt.toISOString(),
         });
     }
 
@@ -353,7 +350,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             uma: parseUma(dbEntity.gr_uma),
             startingPoints: dbEntity.gr_startingPoints,
             umaTieBreak: parseUmaTieBreak(dbEntity.gr_umaTieBreak),
-            details: parseGameRulesDetailsAndApplyPresets(dbEntity.gr_details)
+            details: parseGameRulesDetailsAndApplyPresets(dbEntity.gr_details),
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
@@ -371,12 +368,12 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
                 totalRounds: dbEntity.tournament_totalRounds!,
                 createdAt: new Date(dbEntity.tournament_createdAt!),
                 modifiedAt: new Date(dbEntity.tournament_modifiedAt!),
-                modifiedBy: dbEntity.tournament_modifiedBy!
+                modifiedBy: dbEntity.tournament_modifiedBy!,
             }
             : null,
         gameCount: dbEntity.gameCount,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
-        modifiedBy: dbEntity.modifiedBy
+        modifiedBy: dbEntity.modifiedBy,
     };
 }

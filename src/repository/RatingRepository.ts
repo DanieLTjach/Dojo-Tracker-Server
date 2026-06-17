@@ -1,40 +1,45 @@
-import type { Statement } from "better-sqlite3";
-import { dbManager } from "../db/dbInit.ts";
-import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO } from "../model/RatingModels.ts";
+import type { Statement } from 'better-sqlite3';
+import { dbManager } from '../db/dbInit.ts';
+import type { RatingSnapshot, UserRating, UserRatingChange, UserRatingChangeShortDTO } from '../model/RatingModels.ts';
 
 export class RatingRepository {
-
     private findUserRatingChangeInGameStatement(): Statement<{
-        userId: number,
-        gameId: number
+        userId: number;
+        gameId: number;
     }, UserRatingChangeDBEntity> {
         return dbManager.db.prepare(`
             SELECT * FROM userRatingChange
-            WHERE userId = :userId AND gameId = :gameId`
-        );
+            WHERE userId = :userId AND gameId = :gameId`);
     }
 
     findUserRatingChangeInGame(userId: number, gameId: number): UserRatingChange | undefined {
         const userRatingChangeDBEntity = this.findUserRatingChangeInGameStatement().get({ userId, gameId });
-        return userRatingChangeDBEntity !== undefined ? userRatingChangeFromDBEntity(userRatingChangeDBEntity) : undefined;
+        return userRatingChangeDBEntity !== undefined
+            ? userRatingChangeFromDBEntity(userRatingChangeDBEntity)
+            : undefined;
     }
 
     private findUserLatestRatingChangeBeforeDateStatement(): Statement<{
-        userId: number,
-        eventId: number,
-        beforeDate: string
+        userId: number;
+        eventId: number;
+        beforeDate: string;
     }, UserRatingChangeDBEntity> {
         return dbManager.db.prepare(`
             SELECT * FROM userRatingChange
             WHERE userId = :userId AND eventId = :eventId AND timestamp < :beforeDate
-            ORDER BY timestamp DESC LIMIT 1`
-        );
+            ORDER BY timestamp DESC LIMIT 1`);
     }
 
-    findUserLatestRatingChangeBeforeDate(userId: number, eventId: number, beforeDate: Date): UserRatingChange | undefined {
+    findUserLatestRatingChangeBeforeDate(
+        userId: number,
+        eventId: number,
+        beforeDate: Date
+    ): UserRatingChange | undefined {
         const userRatingChangeDBEntity = this.findUserLatestRatingChangeBeforeDateStatement()
             .get({ userId, eventId, beforeDate: beforeDate.toISOString() });
-        return userRatingChangeDBEntity !== undefined ? userRatingChangeFromDBEntity(userRatingChangeDBEntity) : undefined;
+        return userRatingChangeDBEntity !== undefined
+            ? userRatingChangeFromDBEntity(userRatingChangeDBEntity)
+            : undefined;
     }
 
     private findAllUsersCurrentRatingStatement(): Statement<{ eventId: number }, UserRatingDBEntity> {
@@ -63,8 +68,7 @@ export class RatingRepository {
                   WHERE er.eventId = :eventId
                     AND er.userId = u.id
                     AND er.isFillerPlayer = 1
-              )`
-        );
+              )`);
     }
 
     findAllUsersCurrentRating(eventId: number): UserRating[] {
@@ -72,17 +76,16 @@ export class RatingRepository {
     }
 
     private getAllUsersTotalRatingChangeDuringPeriodStatement(): Statement<{
-        eventId: number,
-        dateFrom: string,
-        dateTo: string
+        eventId: number;
+        dateFrom: string;
+        dateTo: string;
     }, UserRatingChangeShortDTODBEntity> {
         return dbManager.db.prepare(`
             SELECT u.id as userId, u.name as userName, SUM(urc.ratingChange) as ratingChange
             FROM userRatingChange urc
             JOIN user u ON urc.userId = u.id
             WHERE urc.eventId = :eventId AND urc.timestamp >= :dateFrom AND urc.timestamp <= :dateTo
-            GROUP BY urc.userId`
-        );
+            GROUP BY urc.userId`);
     }
 
     getAllUsersTotalRatingChangeDuringPeriod(
@@ -94,21 +97,20 @@ export class RatingRepository {
             .all({
                 eventId,
                 dateFrom: dateFrom.toISOString(),
-                dateTo: dateTo.toISOString()
+                dateTo: dateTo.toISOString(),
             })
             .map(userRatingChangeShortDTOFromDBEntity);
     }
 
     private getUserRatingHistoryStatement(): Statement<{
-        userId: number,
-        eventId: number
+        userId: number;
+        eventId: number;
     }, RatingSnapshotDBEntity> {
         return dbManager.db.prepare(`
             SELECT timestamp, rating
             FROM userRatingChange
             WHERE userId = :userId AND eventId = :eventId
-            ORDER BY timestamp`
-        );
+            ORDER BY timestamp`);
     }
 
     getUserRatingHistory(userId: number, eventId: number): RatingSnapshot[] {
@@ -118,8 +120,7 @@ export class RatingRepository {
     private addUserRatingChangeStatement(): Statement<UserRatingChangeDBEntity, void> {
         return dbManager.db.prepare(`
             INSERT INTO userRatingChange (userId, eventId, gameId, ratingChange, rating, timestamp)
-            VALUES (:userId, :eventId, :gameId, :ratingChange, :rating, :timestamp)`
-        );
+            VALUES (:userId, :eventId, :gameId, :ratingChange, :rating, :timestamp)`);
     }
 
     addUserRatingChange(userRatingChange: UserRatingChange): void {
@@ -137,16 +138,15 @@ export class RatingRepository {
     }
 
     private updateUserRatingChangesAfterDateStatement(): Statement<{
-        userId: number,
-        eventId: number,
-        ratingDelta: number,
-        afterDate: string
+        userId: number;
+        eventId: number;
+        ratingDelta: number;
+        afterDate: string;
     }> {
         return dbManager.db.prepare(`
             UPDATE userRatingChange
             SET rating = rating + :ratingDelta
-            WHERE userId = :userId and eventId = :eventId and timestamp > :afterDate`
-        );
+            WHERE userId = :userId and eventId = :eventId and timestamp > :afterDate`);
     }
 
     updateUserRatingChangesAfterDate(
@@ -160,7 +160,7 @@ export class RatingRepository {
                 userId,
                 eventId,
                 ratingDelta,
-                afterDate: afterDate.toISOString()
+                afterDate: afterDate.toISOString(),
             }
         );
     }
@@ -196,7 +196,7 @@ function userRatingFromDBEntity(dbEntity: UserRatingDBEntity): UserRating {
         user: { id: dbEntity.userId, name: dbEntity.userName },
         rating: dbEntity.rating,
         gamesPlayed: dbEntity.gamesPlayed,
-        minimumGamesPlayed: Boolean(dbEntity.minimumGamesPlayed)
+        minimumGamesPlayed: Boolean(dbEntity.minimumGamesPlayed),
     };
 }
 
@@ -209,7 +209,7 @@ interface UserRatingChangeShortDTODBEntity {
 function userRatingChangeShortDTOFromDBEntity(dbEntity: UserRatingChangeShortDTODBEntity): UserRatingChangeShortDTO {
     return {
         user: { id: dbEntity.userId, name: dbEntity.userName },
-        ratingChange: dbEntity.ratingChange
+        ratingChange: dbEntity.ratingChange,
     };
 }
 
@@ -221,6 +221,6 @@ interface RatingSnapshotDBEntity {
 function ratingSnapshotFromDBEntity(dbEntity: RatingSnapshotDBEntity): RatingSnapshot {
     return {
         timestamp: new Date(dbEntity.timestamp),
-        rating: dbEntity.rating
+        rating: dbEntity.rating,
     };
 }

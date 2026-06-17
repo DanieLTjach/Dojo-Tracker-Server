@@ -3,7 +3,7 @@ import type { Profile } from './ProfileModels.ts';
 export const UserStatus = {
     PENDING: 'PENDING',
     ACTIVE: 'ACTIVE',
-    INACTIVE: 'INACTIVE'
+    INACTIVE: 'INACTIVE',
 } as const;
 
 export type UserStatus = typeof UserStatus[keyof typeof UserStatus];

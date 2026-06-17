@@ -6,7 +6,7 @@ import { AchievementController } from '../controller/AchievementController.ts';
 import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
 import {
     requireEventManagementRole,
-    requireEventManagementRoleOrApprovedFilter
+    requireEventManagementRoleOrApprovedFilter,
 } from '../middleware/EventManagementMiddleware.ts';
 
 const router = Router();
@@ -36,7 +36,11 @@ router.get('/:eventId', requireAuth, withTransaction((req, res) => eventControll
  *
  * Authentication: Required
  */
-router.get('/:eventId/achievements', requireAuth, withTransaction((req, res) => achievementController.getEventAchievements(req, res)));
+router.get(
+    '/:eventId/achievements',
+    requireAuth,
+    withTransaction((req, res) => achievementController.getEventAchievements(req, res))
+);
 
 /**
  * POST /api/events/:eventId/achievements/recompute
@@ -44,7 +48,12 @@ router.get('/:eventId/achievements', requireAuth, withTransaction((req, res) => 
  *
  * Authentication: Required (Admin only)
  */
-router.post('/:eventId/achievements/recompute', requireAuth, requireAdmin, withTransaction((req, res) => achievementController.recomputeEventAchievements(req, res)));
+router.post(
+    '/:eventId/achievements/recompute',
+    requireAuth,
+    requireAdmin,
+    withTransaction((req, res) => achievementController.recomputeEventAchievements(req, res))
+);
 
 /**
  * POST /api/events
@@ -69,7 +78,11 @@ router.put('/:eventId', requireAuth, withTransaction((req, res) => eventControll
  *
  * Authentication: Required (Admin, Club Owner, or Club Moderator)
  */
-router.post('/:eventId/tournament/rounds/:roundId/start', requireAuth, withTransaction((req, res) => eventController.startTournamentRound(req, res)));
+router.post(
+    '/:eventId/tournament/rounds/:roundId/start',
+    requireAuth,
+    withTransaction((req, res) => eventController.startTournamentRound(req, res))
+);
 
 /**
  * POST /api/events/:eventId/tournament/finish
@@ -77,7 +90,11 @@ router.post('/:eventId/tournament/rounds/:roundId/start', requireAuth, withTrans
  *
  * Authentication: Required (Admin, Club Owner, or Club Moderator)
  */
-router.post('/:eventId/tournament/finish', requireAuth, withTransaction((req, res) => eventController.finishTournament(req, res)));
+router.post(
+    '/:eventId/tournament/finish',
+    requireAuth,
+    withTransaction((req, res) => eventController.finishTournament(req, res))
+);
 
 /**
  * POST /api/events/:eventId/tournament/seating/generate
@@ -87,7 +104,11 @@ router.post('/:eventId/tournament/finish', requireAuth, withTransaction((req, re
  * Authentication: Required (Admin, Club Owner, or Club Moderator)
  */
 // Read-only and CPU-bound (runs in a worker thread): no DB transaction, handled asynchronously.
-router.post('/:eventId/tournament/seating/generate', requireAuth, (req, res, next) => eventController.generateTournamentSeating(req, res).catch(next));
+router.post(
+    '/:eventId/tournament/seating/generate',
+    requireAuth,
+    (req, res, next) => eventController.generateTournamentSeating(req, res).catch(next)
+);
 
 /**
  * POST /api/events/:eventId/tournament/seating/apply
@@ -95,7 +116,11 @@ router.post('/:eventId/tournament/seating/generate', requireAuth, (req, res, nex
  *
  * Authentication: Required (Admin, Club Owner, or Club Moderator)
  */
-router.post('/:eventId/tournament/seating/apply', requireAuth, withTransaction((req, res) => eventController.applyTournamentSeating(req, res)));
+router.post(
+    '/:eventId/tournament/seating/apply',
+    requireAuth,
+    withTransaction((req, res) => eventController.applyTournamentSeating(req, res))
+);
 
 /**
  * DELETE /api/events/:eventId/tournament/seating
@@ -103,7 +128,11 @@ router.post('/:eventId/tournament/seating/apply', requireAuth, withTransaction((
  *
  * Authentication: Required (Admin, Club Owner, or Club Moderator)
  */
-router.delete('/:eventId/tournament/seating', requireAuth, withTransaction((req, res) => eventController.clearTournamentSeating(req, res)));
+router.delete(
+    '/:eventId/tournament/seating',
+    requireAuth,
+    withTransaction((req, res) => eventController.clearTournamentSeating(req, res))
+);
 
 /**
  * DELETE /api/events/:eventId

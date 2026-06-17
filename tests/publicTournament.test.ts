@@ -54,7 +54,10 @@ describe('Public tournament endpoint', () => {
     });
 
     afterAll(() => {
-        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?)').run(TOURNAMENT_EVENT_ID, SEASON_EVENT_ID);
+        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?)').run(
+            TOURNAMENT_EVENT_ID,
+            SEASON_EVENT_ID
+        );
         dbManager.db.prepare('DELETE FROM event WHERE id IN (?, ?)').run(TOURNAMENT_EVENT_ID, SEASON_EVENT_ID);
         dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(GAME_RULES_ID);
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(TEST_CLUB_ID);

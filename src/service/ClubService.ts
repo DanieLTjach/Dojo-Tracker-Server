@@ -46,7 +46,7 @@ export class ClubService {
             contactInfo: data.contactInfo ?? null,
             isActive: data.isActive ?? true,
             createdAt: now,
-            modifiedBy
+            modifiedBy,
         });
 
         const newClub = this.getClubById(clubId);
@@ -72,7 +72,7 @@ export class ClubService {
             contactInfo: data.contactInfo ?? null,
             isActive: data.isActive ?? true,
             modifiedAt: now,
-            modifiedBy
+            modifiedBy,
         });
 
         const newClub = this.getClubById(clubId);
@@ -92,7 +92,7 @@ export class ClubService {
             userLogs: null,
             gameLogs: null,
             clubLogs: null,
-            main: null
+            main: null,
         };
     }
 
@@ -129,11 +129,21 @@ export class ClubService {
         const changes: string[] = [];
 
         if (oldClub.name !== newClub.name) changes.push(`<b>Name:</b> ${oldClub.name} → ${newClub.name}`);
-        if (oldClub.city !== newClub.city) changes.push(`<b>City:</b> ${oldClub.city || 'N/A'} → ${newClub.city || 'N/A'}`);
-        if (oldClub.address !== newClub.address) changes.push(`<b>Address:</b> ${oldClub.address || 'N/A'} → ${newClub.address || 'N/A'}`);
-        if (oldClub.description !== newClub.description) changes.push(`<b>Description:</b> ${oldClub.description || 'N/A'} → ${newClub.description || 'N/A'}`);
-        if (oldClub.contactInfo !== newClub.contactInfo) changes.push(`<b>Contact Info:</b> ${oldClub.contactInfo || 'N/A'} → ${newClub.contactInfo || 'N/A'}`);
-        if (oldClub.isActive !== newClub.isActive) changes.push(`<b>Is Active:</b> ${oldClub.isActive} → ${newClub.isActive}`);
+        if (oldClub.city !== newClub.city) {
+            changes.push(`<b>City:</b> ${oldClub.city || 'N/A'} → ${newClub.city || 'N/A'}`);
+        }
+        if (oldClub.address !== newClub.address) {
+            changes.push(`<b>Address:</b> ${oldClub.address || 'N/A'} → ${newClub.address || 'N/A'}`);
+        }
+        if (oldClub.description !== newClub.description) {
+            changes.push(`<b>Description:</b> ${oldClub.description || 'N/A'} → ${newClub.description || 'N/A'}`);
+        }
+        if (oldClub.contactInfo !== newClub.contactInfo) {
+            changes.push(`<b>Contact Info:</b> ${oldClub.contactInfo || 'N/A'} → ${newClub.contactInfo || 'N/A'}`);
+        }
+        if (oldClub.isActive !== newClub.isActive) {
+            changes.push(`<b>Is Active:</b> ${oldClub.isActive} → ${newClub.isActive}`);
+        }
 
         let message = dedent`
             <b>✏️ Club Edited</b>
@@ -189,11 +199,16 @@ export function unsetClubTelegramTopic(
     topicType: ClubTelegramTopicType
 ): ClubTelegramTopics {
     switch (topicType) {
-        case ClubTelegramTopicType.RATING:    return { ...topics, rating: null };
-        case ClubTelegramTopicType.USER_LOGS: return { ...topics, userLogs: null };
-        case ClubTelegramTopicType.GAME_LOGS: return { ...topics, gameLogs: null };
-        case ClubTelegramTopicType.CLUB_LOGS: return { ...topics, clubLogs: null };
-        case ClubTelegramTopicType.MAIN:      return { ...topics, main: null };
+        case ClubTelegramTopicType.RATING:
+            return { ...topics, rating: null };
+        case ClubTelegramTopicType.USER_LOGS:
+            return { ...topics, userLogs: null };
+        case ClubTelegramTopicType.GAME_LOGS:
+            return { ...topics, gameLogs: null };
+        case ClubTelegramTopicType.CLUB_LOGS:
+            return { ...topics, clubLogs: null };
+        case ClubTelegramTopicType.MAIN:
+            return { ...topics, main: null };
     }
 }
 

@@ -2,7 +2,7 @@ export const TournamentStatus = {
     CREATED: 'CREATED',
     IN_PROGRESS: 'IN_PROGRESS',
     LAST_ROUND: 'LAST_ROUND',
-    FINISHED: 'FINISHED'
+    FINISHED: 'FINISHED',
 } as const;
 
 export type TournamentStatus = typeof TournamentStatus[keyof typeof TournamentStatus];

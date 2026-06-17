@@ -52,7 +52,7 @@ export class UserStatsService {
         let totalPlacement = 0;
         let negativeScoreCount = 0;
 
-        gameStats.forEach((game) => {
+        gameStats.forEach(game => {
             totalPlacement += game.placement;
             if (game.placement in placementCounts) {
                 placementCounts[game.placement as keyof typeof placementCounts]++;
@@ -63,7 +63,7 @@ export class UserStatsService {
         });
 
         // Calculate points stats
-        const allPoints = gameStats.map((g) => g.points);
+        const allPoints = gameStats.map(g => g.points);
         const sumOfPoints = allPoints.reduce((sum, pts) => sum + pts, 0);
         const maxPoints = Math.max(...allPoints);
         const minPoints = Math.min(...allPoints);

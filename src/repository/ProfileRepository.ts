@@ -4,7 +4,6 @@ import { dbManager } from '../db/dbInit.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
 
 export class ProfileRepository {
-
     private findProfileByUserIdStatement(): Statement<{ userId: number }, ProfileDBEntity> {
         return dbManager.db.prepare('SELECT * FROM profile WHERE userId = :userId');
     }
@@ -15,15 +14,15 @@ export class ProfileRepository {
     }
 
     private upsertProfileStatement(): Statement<{
-        userId: number,
-        firstNameEn: string | null,
-        lastNameEn: string | null,
-        firstName: string | null,
-        lastName: string | null,
-        emaNumber: string | null,
-        hideProfile: number,
-        modifiedBy: number,
-        timestamp: string
+        userId: number;
+        firstNameEn: string | null;
+        lastNameEn: string | null;
+        firstName: string | null;
+        lastName: string | null;
+        emaNumber: string | null;
+        hideProfile: number;
+        modifiedBy: number;
+        timestamp: string;
     }, void> {
         return dbManager.db.prepare(`
             INSERT INTO profile (userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, hideProfile, modifiedBy, modifiedAt)
@@ -36,8 +35,7 @@ export class ProfileRepository {
                 emaNumber = :emaNumber,
                 hideProfile = :hideProfile,
                 modifiedBy = :modifiedBy,
-                modifiedAt = :timestamp`
-        );
+                modifiedAt = :timestamp`);
     }
 
     upsertProfile(
@@ -59,16 +57,16 @@ export class ProfileRepository {
             emaNumber,
             hideProfile: booleanToInteger(hideProfile),
             modifiedBy,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         });
     }
 
     private updateProfileNamesStatement(): Statement<{
-        userId: number,
-        firstName: string | null,
-        lastName: string | null,
-        modifiedBy: number,
-        timestamp: string
+        userId: number;
+        firstName: string | null;
+        lastName: string | null;
+        modifiedBy: number;
+        timestamp: string;
     }, void> {
         return dbManager.db.prepare(`
             INSERT INTO profile (userId, firstName, lastName, hideProfile, modifiedBy, modifiedAt)
@@ -77,8 +75,7 @@ export class ProfileRepository {
                 firstName = COALESCE(:firstName, firstName),
                 lastName = COALESCE(:lastName, lastName),
                 modifiedBy = :modifiedBy,
-                modifiedAt = :timestamp`
-        );
+                modifiedAt = :timestamp`);
     }
 
     updateProfileNames(
@@ -92,7 +89,7 @@ export class ProfileRepository {
             firstName: firstName ?? null,
             lastName: lastName ?? null,
             modifiedBy,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         });
     }
 }
@@ -117,6 +114,6 @@ function profileFromDBEntity(dbEntity: ProfileDBEntity): Profile {
         firstName: dbEntity.firstName,
         lastName: dbEntity.lastName,
         emaNumber: dbEntity.emaNumber,
-        hideProfile: Boolean(dbEntity.hideProfile)
+        hideProfile: Boolean(dbEntity.hideProfile),
     };
 }

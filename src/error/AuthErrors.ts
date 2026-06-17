@@ -1,4 +1,4 @@
-import { UnauthorizedError, ForbiddenError } from "./BaseErrors.ts";
+import { UnauthorizedError, ForbiddenError } from './BaseErrors.ts';
 
 export class InvalidInitDataError extends UnauthorizedError {
     constructor(reason: string) {
@@ -8,7 +8,10 @@ export class InvalidInitDataError extends UnauthorizedError {
 
 export class ExpiredAuthDataError extends UnauthorizedError {
     constructor() {
-        super('Термін дії даних автентифікації минув. Будь ласка, закрийте та відкрийте додаток заново.', 'expiredAuthData');
+        super(
+            'Термін дії даних автентифікації минув. Будь ласка, закрийте та відкрийте додаток заново.',
+            'expiredAuthData'
+        );
     }
 }
 

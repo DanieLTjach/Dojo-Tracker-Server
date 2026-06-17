@@ -127,7 +127,7 @@ describe('calculateNextRoundState', () => {
             })).toEqual(gameState(Wind.EAST, 2, 2, 2));
         });
 
-        it('treats nagashi as a draw: keeps a tenpai dealer and carries the bank plus this round\'s sticks', () => {
+        it("treats nagashi as a draw: keeps a tenpai dealer and carries the bank plus this round's sticks", () => {
             // Carried bank (2) plus the stick declared this round (1) roll forward to next round.
             const current = gameState(Wind.EAST, 1, 1, 2);
 

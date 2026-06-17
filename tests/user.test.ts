@@ -191,17 +191,50 @@ describe('User API Endpoints', () => {
             dbManager.db.prepare(
                 `INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(activeMemberUserId, 'Club Active User', '@clubactiveuser', 920100001, 0, 0, 1, 'ACTIVE', timestamp, timestamp);
+            ).run(
+                activeMemberUserId,
+                'Club Active User',
+                '@clubactiveuser',
+                920100001,
+                0,
+                0,
+                1,
+                'ACTIVE',
+                timestamp,
+                timestamp
+            );
 
             dbManager.db.prepare(
                 `INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(pendingMemberUserId, 'Club Pending User', '@clubpendinguser', 920100002, 0, 0, 1, 'ACTIVE', timestamp, timestamp);
+            ).run(
+                pendingMemberUserId,
+                'Club Pending User',
+                '@clubpendinguser',
+                920100002,
+                0,
+                0,
+                1,
+                'ACTIVE',
+                timestamp,
+                timestamp
+            );
 
             dbManager.db.prepare(
                 `INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(otherClubUserId, 'Other Club User', '@otherclubuser', 920100003, 0, 0, 1, 'ACTIVE', timestamp, timestamp);
+            ).run(
+                otherClubUserId,
+                'Other Club User',
+                '@otherclubuser',
+                920100003,
+                0,
+                0,
+                1,
+                'ACTIVE',
+                timestamp,
+                timestamp
+            );
 
             dbManager.db.prepare(
                 `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
@@ -223,8 +256,16 @@ describe('User API Endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .expect(200);
 
-            dbManager.db.prepare('DELETE FROM clubMembership WHERE userId IN (?, ?, ?)').run(activeMemberUserId, pendingMemberUserId, otherClubUserId);
-            dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?, ?)').run(activeMemberUserId, pendingMemberUserId, otherClubUserId);
+            dbManager.db.prepare('DELETE FROM clubMembership WHERE userId IN (?, ?, ?)').run(
+                activeMemberUserId,
+                pendingMemberUserId,
+                otherClubUserId
+            );
+            dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?, ?)').run(
+                activeMemberUserId,
+                pendingMemberUserId,
+                otherClubUserId
+            );
             dbManager.db.prepare('DELETE FROM club WHERE id IN (?, ?)').run(clubId, otherClubId);
 
             expect(response.body.some((user: { id: number }) => user.id === activeMemberUserId)).toBe(true);
@@ -318,7 +359,7 @@ describe('User API Endpoints', () => {
     describe('PATCH /api/users/:id', () => {
         it('should update user name (requires auth)', async () => {
             const updateData = {
-                name: 'Updated User Name'
+                name: 'Updated User Name',
             };
 
             const response = await request(app)
@@ -333,7 +374,7 @@ describe('User API Endpoints', () => {
 
         it('should update user telegram username', async () => {
             const updateData = {
-                telegramUsername: '@updatedusername'
+                telegramUsername: '@updatedusername',
             };
 
             const response = await request(app)
@@ -348,7 +389,7 @@ describe('User API Endpoints', () => {
         it('should update both name and telegram username', async () => {
             const updateData = {
                 name: 'Another Update',
-                telegramUsername: '@anotherupdate'
+                telegramUsername: '@anotherupdate',
             };
 
             const response = await request(app)
@@ -375,7 +416,7 @@ describe('User API Endpoints', () => {
 
         it('should fail when no authentication token provided', async () => {
             const updateData = {
-                name: 'Test Name'
+                name: 'Test Name',
             };
 
             const response = await request(app)
@@ -387,7 +428,7 @@ describe('User API Endpoints', () => {
 
         it('should fail when user id does not exist', async () => {
             const updateData = {
-                name: 'Test Name'
+                name: 'Test Name',
             };
 
             const response = await request(app)
@@ -401,7 +442,7 @@ describe('User API Endpoints', () => {
 
         it('should fail when name is already taken by another user', async () => {
             const updateData = {
-                name: 'Test User 2'
+                name: 'Test User 2',
             };
 
             const response = await request(app)
@@ -415,7 +456,7 @@ describe('User API Endpoints', () => {
 
         it('should fail when telegram username is already taken by another user', async () => {
             const updateData = {
-                telegramUsername: '@testuser2'
+                telegramUsername: '@testuser2',
             };
 
             const response = await request(app)

@@ -8,7 +8,7 @@ import {
     EventCapacityReachedError,
     EventRegistrationNotFoundError,
     InvalidEventRegistrationStateError,
-    MissingProfileNamesForTournamentRegistrationError
+    MissingProfileNamesForTournamentRegistrationError,
 } from '../src/error/EventRegistrationErrors.ts';
 import { BadRequestError } from '../src/error/BaseErrors.ts';
 
@@ -54,7 +54,12 @@ describe('EventRegistrationService', () => {
         profileRepo.upsertProfile(userId, null, null, firstName, lastName, null, false, SYSTEM_USER_ID);
     }
 
-    function insertMembership(clubId: number, userId: number, status: 'ACTIVE' | 'PENDING' | 'INACTIVE', role: 'OWNER' | 'MODERATOR' | 'MEMBER' = 'MEMBER'): void {
+    function insertMembership(
+        clubId: number,
+        userId: number,
+        status: 'ACTIVE' | 'PENDING' | 'INACTIVE',
+        role: 'OWNER' | 'MODERATOR' | 'MEMBER' = 'MEMBER'
+    ): void {
         const ts = nextTs();
         dbManager.db.prepare(
             `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
@@ -76,7 +81,18 @@ describe('EventRegistrationService', () => {
         insertUser(SEASON_USER_ID, 'ERS SeasonUser');
 
         // Profiles with firstName/lastName for everyone except NO_NAMES_USER_ID
-        for (const id of [OWNER_USER_ID, NON_MEMBER_USER_ID, EXISTING_MEMBER_USER_ID, REJECTED_USER_ID, APPROVED_USER_ID, CAPACITY_USER_A, CAPACITY_USER_B, SEASON_USER_ID]) {
+        for (
+            const id of [
+                OWNER_USER_ID,
+                NON_MEMBER_USER_ID,
+                EXISTING_MEMBER_USER_ID,
+                REJECTED_USER_ID,
+                APPROVED_USER_ID,
+                CAPACITY_USER_A,
+                CAPACITY_USER_B,
+                SEASON_USER_ID,
+            ]
+        ) {
             setProfileNames(id, 'First', 'Last');
         }
 
@@ -113,18 +129,40 @@ describe('EventRegistrationService', () => {
     });
 
     afterAll(() => {
-        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?, ?)').run(TOURNAMENT_EVENT_ID, TOURNAMENT_LIMITED_EVENT_ID, SEASON_EVENT_ID);
-        dbManager.db.prepare('DELETE FROM event WHERE id IN (?, ?, ?)').run(TOURNAMENT_EVENT_ID, TOURNAMENT_LIMITED_EVENT_ID, SEASON_EVENT_ID);
+        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?, ?)').run(
+            TOURNAMENT_EVENT_ID,
+            TOURNAMENT_LIMITED_EVENT_ID,
+            SEASON_EVENT_ID
+        );
+        dbManager.db.prepare('DELETE FROM event WHERE id IN (?, ?, ?)').run(
+            TOURNAMENT_EVENT_ID,
+            TOURNAMENT_LIMITED_EVENT_ID,
+            SEASON_EVENT_ID
+        );
         dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(GAME_RULES_ID);
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(TEST_CLUB_ID);
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(TEST_CLUB_ID);
         dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-            OWNER_USER_ID, NON_MEMBER_USER_ID, EXISTING_MEMBER_USER_ID, NO_NAMES_USER_ID,
-            REJECTED_USER_ID, APPROVED_USER_ID, CAPACITY_USER_A, CAPACITY_USER_B, SEASON_USER_ID
+            OWNER_USER_ID,
+            NON_MEMBER_USER_ID,
+            EXISTING_MEMBER_USER_ID,
+            NO_NAMES_USER_ID,
+            REJECTED_USER_ID,
+            APPROVED_USER_ID,
+            CAPACITY_USER_A,
+            CAPACITY_USER_B,
+            SEASON_USER_ID
         );
         dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-            OWNER_USER_ID, NON_MEMBER_USER_ID, EXISTING_MEMBER_USER_ID, NO_NAMES_USER_ID,
-            REJECTED_USER_ID, APPROVED_USER_ID, CAPACITY_USER_A, CAPACITY_USER_B, SEASON_USER_ID
+            OWNER_USER_ID,
+            NON_MEMBER_USER_ID,
+            EXISTING_MEMBER_USER_ID,
+            NO_NAMES_USER_ID,
+            REJECTED_USER_ID,
+            APPROVED_USER_ID,
+            CAPACITY_USER_A,
+            CAPACITY_USER_B,
+            SEASON_USER_ID
         );
         dbManager.closeDB();
         cleanupTestDatabase();
@@ -132,9 +170,16 @@ describe('EventRegistrationService', () => {
 
     afterEach(() => {
         // Wipe registrations between tests for isolation
-        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?, ?)').run(TOURNAMENT_EVENT_ID, TOURNAMENT_LIMITED_EVENT_ID, SEASON_EVENT_ID);
+        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?, ?)').run(
+            TOURNAMENT_EVENT_ID,
+            TOURNAMENT_LIMITED_EVENT_ID,
+            SEASON_EVENT_ID
+        );
         // Reset NON_MEMBER club membership for clean apply tests
-        dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(TEST_CLUB_ID, NON_MEMBER_USER_ID);
+        dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(
+            TEST_CLUB_ID,
+            NON_MEMBER_USER_ID
+        );
     });
 
     describe('apply', () => {
@@ -180,7 +225,9 @@ describe('EventRegistrationService', () => {
         });
 
         it('throws MissingProfileNamesForTournamentRegistrationError when profile lacks firstName/lastName', () => {
-            expect(() => service.apply(TOURNAMENT_EVENT_ID, NO_NAMES_USER_ID)).toThrow(MissingProfileNamesForTournamentRegistrationError);
+            expect(() => service.apply(TOURNAMENT_EVENT_ID, NO_NAMES_USER_ID)).toThrow(
+                MissingProfileNamesForTournamentRegistrationError
+            );
         });
 
         it('rejects apply on non-tournament events', () => {
@@ -317,7 +364,13 @@ describe('EventRegistrationService', () => {
         });
 
         it('sets isFillerPlayer when provided', () => {
-            const result = service.manualRegister(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID, OWNER_USER_ID, undefined, true);
+            const result = service.manualRegister(
+                TOURNAMENT_EVENT_ID,
+                NON_MEMBER_USER_ID,
+                OWNER_USER_ID,
+                undefined,
+                true
+            );
             expect(result.isFillerPlayer).toBe(true);
         });
 
@@ -366,9 +419,24 @@ describe('EventRegistrationService', () => {
 
         it('updates only firstName/lastName, leaves other profile fields untouched', () => {
             // Set EMA fields on the participant first
-            profileRepo.upsertProfile(EXISTING_MEMBER_USER_ID, 'EmaFirst', 'EmaLast', 'First', 'Last', '12345', false, SYSTEM_USER_ID);
+            profileRepo.upsertProfile(
+                EXISTING_MEMBER_USER_ID,
+                'EmaFirst',
+                'EmaLast',
+                'First',
+                'Last',
+                '12345',
+                false,
+                SYSTEM_USER_ID
+            );
 
-            service.editParticipantProfileNames(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID, 'Новий', 'Прізвище', OWNER_USER_ID);
+            service.editParticipantProfileNames(
+                TOURNAMENT_EVENT_ID,
+                EXISTING_MEMBER_USER_ID,
+                'Новий',
+                'Прізвище',
+                OWNER_USER_ID
+            );
 
             const profile = profileRepo.findProfileByUserId(EXISTING_MEMBER_USER_ID);
             expect(profile?.firstName).toBe('Новий');
@@ -379,7 +447,9 @@ describe('EventRegistrationService', () => {
         });
 
         it('refuses to edit profile of a non-registered user', () => {
-            expect(() => service.editParticipantProfileNames(TOURNAMENT_EVENT_ID, APPROVED_USER_ID, 'X', 'Y', OWNER_USER_ID))
+            expect(() =>
+                service.editParticipantProfileNames(TOURNAMENT_EVENT_ID, APPROVED_USER_ID, 'X', 'Y', OWNER_USER_ID)
+            )
                 .toThrow(EventRegistrationNotFoundError);
         });
     });

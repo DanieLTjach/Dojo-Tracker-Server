@@ -14,7 +14,7 @@ export function generateTestToken(userId: number): string {
     const payload: DecodedToken = { userId };
 
     return jwt.sign(payload, config.jwtSecret, {
-        expiresIn: config.jwtExpiry
+        expiresIn: config.jwtExpiry,
     } as SignOptions);
 }
 
@@ -48,7 +48,7 @@ export function createCustomEvent(
     totalRounds: number = 1
 ): void {
     const timestamp = '2024-01-01T00:00:00.000Z';
-    
+
     dbManager.db.prepare(
         `INSERT INTO event (id, name, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -94,33 +94,33 @@ export function deleteEventById(eventId: number): void {
  */
 export function createTelegramInitData(telegramId: number, username?: string): Record<string, string> {
     const authDate = Math.floor(Date.now() / 1000); // Current timestamp in seconds
-    
+
     const userObj: any = { id: telegramId };
     if (username) {
         userObj.username = username;
     }
     const userParam = JSON.stringify(userObj);
-    
+
     // Create params without hash (sorted alphabetically for data-check-string)
     const params: Record<string, string> = {
         auth_date: authDate.toString(),
-        user: userParam
+        user: userParam,
     };
-    
+
     // Create data-check-string (all params sorted alphabetically)
     const dataCheckString = Object.entries(params)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([key, value]) => `${key}=${value}`)
         .join('\n');
-    
+
     // Calculate secret key: HMAC-SHA256(bot_token, "WebAppData")
     const secretKey = HashUtil.hmac(config.botToken, 'WebAppData');
-    
+
     // Calculate hash: HMAC-SHA256(data_check_string, secret_key)
     const hash = HashUtil.hmac(dataCheckString, secretKey).toString('hex');
-    
+
     // Add hash to params
     params['hash'] = hash;
-    
+
     return params;
 }

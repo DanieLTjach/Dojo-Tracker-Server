@@ -139,7 +139,7 @@ describe('Tournament management', () => {
         expect(response.body.tournament).toMatchObject({
             status: 'IN_PROGRESS',
             currentRound: 1,
-            totalRounds: 3
+            totalRounds: 3,
         });
     });
 
@@ -155,7 +155,7 @@ describe('Tournament management', () => {
         expect(response.body.tournament).toMatchObject({
             status: 'IN_PROGRESS',
             currentRound: 1,
-            totalRounds: 3
+            totalRounds: 3,
         });
     });
 
@@ -176,7 +176,7 @@ describe('Tournament management', () => {
         expect(duplicate.status).toBe(200);
         expect(duplicate.body.tournament).toMatchObject({
             status: 'IN_PROGRESS',
-            currentRound: 1
+            currentRound: 1,
         });
     });
 
@@ -225,7 +225,7 @@ describe('Tournament management', () => {
             .set('Authorization', adminAuthHeader);
         expect(paused.body.tournament).toMatchObject({
             status: 'IN_PROGRESS',
-            currentRound: 1
+            currentRound: 1,
         });
 
         const nextRound = await request(app)
@@ -236,7 +236,7 @@ describe('Tournament management', () => {
         expect(nextRound.status).toBe(200);
         expect(nextRound.body.tournament).toMatchObject({
             status: 'IN_PROGRESS',
-            currentRound: 2
+            currentRound: 2,
         });
     });
 
@@ -259,7 +259,7 @@ describe('Tournament management', () => {
         expect(finalRound.status).toBe(200);
         expect(finalRound.body.tournament).toMatchObject({
             status: 'LAST_ROUND',
-            currentRound: 2
+            currentRound: 2,
         });
 
         const unfinishedFinish = await request(app)
@@ -278,7 +278,7 @@ describe('Tournament management', () => {
         expect(finished.status).toBe(200);
         expect(finished.body.tournament).toMatchObject({
             status: 'FINISHED',
-            currentRound: 2
+            currentRound: 2,
         });
     });
 
@@ -349,8 +349,8 @@ describe('Tournament management', () => {
                 status: 'CREATED',
                 players: PLAYER_IDS.map((userId, index) => ({
                     userId,
-                    startPlace: ['EAST', 'SOUTH', 'WEST', 'NORTH'][index]
-                }))
+                    startPlace: ['EAST', 'SOUTH', 'WEST', 'NORTH'][index],
+                })),
             });
         expect(createResponse.status).toBe(201);
 

@@ -17,7 +17,7 @@ function tsumo(
         riichiPlayerIds: riichi,
         playerPointChanges: toChanges(pointChanges),
         nextState: undefined,
-        gameFinishReason: undefined
+        gameFinishReason: undefined,
     };
 }
 
@@ -36,14 +36,14 @@ function ron(
         riichiPlayerIds: riichi,
         playerPointChanges: toChanges(pointChanges),
         nextState: undefined,
-        gameFinishReason: undefined
+        gameFinishReason: undefined,
     };
 }
 
 function toChanges(pointChanges: Record<number, number>): PlayerPointChange[] {
     return Object.entries(pointChanges).map(([playerId, pointChange]) => ({
         playerId: Number(playerId),
-        pointChange
+        pointChange,
     }));
 }
 
@@ -51,7 +51,7 @@ function player(
     userId: number,
     points: number,
     startPlace: Wind,
-    opts: { isSubstitutePlayer?: boolean; chomboCount?: number; ratingChange?: number } = {}
+    opts: { isSubstitutePlayer?: boolean, chomboCount?: number, ratingChange?: number } = {}
 ): GamePlayer {
     return {
         gameId: 1,
@@ -65,7 +65,7 @@ function player(
         ratingChange: opts.ratingChange ?? 10,
         startPlace,
         chomboCount: opts.chomboCount ?? 0,
-        isSubstitutePlayer: opts.isSubstitutePlayer ?? false
+        isSubstitutePlayer: opts.isSubstitutePlayer ?? false,
     };
 }
 
@@ -77,7 +77,7 @@ function gameRound(roundNumber: number, dealerNumber: number, result: GameRoundR
         dealerNumber,
         counters: 0,
         riichiSticks: 0,
-        result
+        result,
     };
 }
 
@@ -97,12 +97,12 @@ function detailedGame(players: GamePlayer[], rounds: GameRound[]): DetailedGame 
         lastRoundWasDeleted: false,
         players,
         rounds,
-        currentState: null
+        currentState: null,
     };
 }
 
 function find(results: ComputedAchievement[], metric: string): ComputedAchievement {
-    const result = results.find((r) => r.metric === metric);
+    const result = results.find(r => r.metric === metric);
     if (result === undefined) {
         throw new Error(`Achievement ${metric} not produced`);
     }
@@ -116,11 +116,11 @@ describe('computeAchievements', () => {
             player(1, 40000, Wind.EAST),
             player(2, 30000, Wind.SOUTH),
             player(3, 20000, Wind.WEST, { ratingChange: 0 }),
-            player(4, 10000, Wind.NORTH, { chomboCount: 1 })
+            player(4, 10000, Wind.NORTH, { chomboCount: 1 }),
         ],
         [
             gameRound(1, 1, tsumo(1, 2, 30, [1], { 1: 6000, 2: -2000, 3: -2000, 4: -2000 })),
-            gameRound(2, 2, ron(3, 4, 1, 40, [3, 4], { 3: 1300, 4: -1300 }))
+            gameRound(2, 2, ron(3, 4, 1, 40, [3, 4], { 3: 1300, 4: -1300 })),
         ]
     );
 
@@ -181,7 +181,7 @@ describe('computeAchievements', () => {
         const subGame = detailedGame(
             [
                 player(1, 40000, Wind.EAST, { isSubstitutePlayer: true }),
-                player(2, 30000, Wind.SOUTH)
+                player(2, 30000, Wind.SOUTH),
             ],
             []
         );

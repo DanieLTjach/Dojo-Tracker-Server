@@ -51,7 +51,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBe(GameFinishReason.BANKRUPTCY);
         });
 
@@ -65,7 +65,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBeUndefined();
         });
 
@@ -79,7 +79,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBe(GameFinishReason.BANKRUPTCY);
         });
 
@@ -93,7 +93,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBeUndefined();
         });
     });
@@ -109,7 +109,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBe(GameFinishReason.MAX_POINTS);
         });
 
@@ -123,7 +123,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBeUndefined();
         });
     });
@@ -138,7 +138,7 @@ describe('shouldFinishGame', () => {
                 fourPlayers([25000, 25000, 25000, 25000]),
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBeUndefined();
         });
 
@@ -151,7 +151,7 @@ describe('shouldFinishGame', () => {
                 fourPlayers([25000, 25000, 25000, 25000]),
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBeUndefined();
         });
     });
@@ -174,7 +174,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBe(GameFinishReason.TENPAI_YAME);
         });
 
@@ -192,7 +192,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBeUndefined();
         });
 
@@ -206,7 +206,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBeUndefined();
         });
 
@@ -220,7 +220,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                tsumo,
+                tsumo
             )).toBe(GameFinishReason.AGARI_YAME);
         });
 
@@ -234,7 +234,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                tsumo,
+                tsumo
             )).toBeUndefined();
         });
 
@@ -248,7 +248,7 @@ describe('shouldFinishGame', () => {
                 players,
                 makeGameRules(rules),
                 rules,
-                { type: 'ABORTIVE_DRAW', drawType: 'FOUR_RIICHI', riichiPlayerIds: [] },
+                { type: 'ABORTIVE_DRAW', drawType: 'FOUR_RIICHI', riichiPlayerIds: [] }
             )).toBeUndefined();
         });
     });
@@ -263,7 +263,7 @@ describe('shouldFinishGame', () => {
                 fourPlayers([25000, 25000, 25000, 25000]),
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBe(GameFinishReason.REACHED_NORTH_ROUND);
         });
     });
@@ -278,7 +278,7 @@ describe('shouldFinishGame', () => {
                 fourPlayers([25000, 25000, 25000, 25000]),
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBe(GameFinishReason.PLAYED_ALL_ROUNDS);
         });
 
@@ -291,7 +291,7 @@ describe('shouldFinishGame', () => {
                 fourPlayers([25000, 25000, 25000, 25000]),
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBe(GameFinishReason.PLAYED_ALL_ROUNDS);
         });
 
@@ -304,7 +304,7 @@ describe('shouldFinishGame', () => {
                 fourPlayers([31000, 25000, 24000, 20000]),
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBe(GameFinishReason.PLAYED_ALL_ROUNDS);
         });
 
@@ -317,7 +317,7 @@ describe('shouldFinishGame', () => {
                 fourPlayers([25000, 25000, 25000, 25000]),
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBeUndefined();
         });
 
@@ -330,7 +330,7 @@ describe('shouldFinishGame', () => {
                 fourPlayers([31000, 25000, 24000, 20000]),
                 makeGameRules(rules),
                 rules,
-                ron,
+                ron
             )).toBe(GameFinishReason.GOAL_EXCEEDED_IN_WEST_ROUND);
         });
 
@@ -343,7 +343,7 @@ describe('shouldFinishGame', () => {
                 fourPlayers([31000, 25000, 24000, 20000]),
                 makeGameRules(rules),
                 rules,
-                exhaustiveDraw,
+                exhaustiveDraw
             )).toBeUndefined();
         });
     });

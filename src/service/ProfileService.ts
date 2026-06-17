@@ -4,7 +4,6 @@ import type { Profile } from '../model/ProfileModels.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 
 export class ProfileService {
-
     private profileRepository: ProfileRepository = new ProfileRepository();
     private userService: UserService = new UserService();
 
@@ -19,7 +18,15 @@ export class ProfileService {
         modifiedBy: number
     ): Profile {
         this.userService.validateUserExistsById(userId);
-        this.validateProfileUpdatePermissions(userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, modifiedBy);
+        this.validateProfileUpdatePermissions(
+            userId,
+            firstNameEn,
+            lastNameEn,
+            firstName,
+            lastName,
+            emaNumber,
+            modifiedBy
+        );
 
         const existing = this.profileRepository.findProfileByUserId(userId);
 

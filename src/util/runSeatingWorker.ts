@@ -24,7 +24,7 @@ export function runSeatingWorker(input: SeatingWorkerInput): Promise<SeatingCand
             void worker.terminate();
         });
 
-        worker.once('error', (error) => {
+        worker.once('error', error => {
             reject(error);
             void worker.terminate();
         });

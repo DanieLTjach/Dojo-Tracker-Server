@@ -13,14 +13,14 @@ import {
     generateSeatingCandidates,
     SeatingGenerationError,
     type SeatingCandidate,
-    type SeatingOptions
+    type SeatingOptions,
 } from './SeatingGeneratorUtil.ts';
 
 export type SeatingWorkerInput = SeatingOptions & { candidateCount: number };
 
 export type SeatingWorkerOutput =
-    | { ok: true; candidates: SeatingCandidate[] }
-    | { ok: false; generationError: boolean; message: string };
+    | { ok: true, candidates: SeatingCandidate[] }
+    | { ok: false, generationError: boolean, message: string };
 
 const input = workerData as SeatingWorkerInput;
 
@@ -31,7 +31,7 @@ try {
     output = {
         ok: false,
         generationError: error instanceof SeatingGenerationError,
-        message: error instanceof Error ? error.message : String(error)
+        message: error instanceof Error ? error.message : String(error),
     };
 }
 

@@ -5,7 +5,6 @@ import { booleanToInteger } from '../db/dbUtils.ts';
 import { parseUserStatus } from '../util/EnumUtil.ts';
 
 export class UserRepository {
-
     private findAllUsersStatement(): Statement<unknown[], UserWithProfileDBEntity> {
         return dbManager.db.prepare(`
             SELECT user.*,
@@ -72,8 +71,7 @@ export class UserRepository {
                 p.hideProfile as p_hideProfile
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
-            WHERE user.id = :id`
-        );
+            WHERE user.id = :id`);
     }
 
     findUserById(id: number): User | undefined {
@@ -92,8 +90,7 @@ export class UserRepository {
                 p.hideProfile as p_hideProfile
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
-            WHERE telegramId = :telegramId`
-        );
+            WHERE telegramId = :telegramId`);
     }
 
     findUserByTelegramId(telegramId: number): User | undefined {
@@ -112,8 +109,7 @@ export class UserRepository {
                 p.hideProfile as p_hideProfile
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
-            WHERE telegramUsername = :telegramUsername`
-        );
+            WHERE telegramUsername = :telegramUsername`);
     }
 
     findUserByTelegramUsername(telegramUsername: string): User | undefined {
@@ -132,8 +128,7 @@ export class UserRepository {
                 p.hideProfile as p_hideProfile
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
-            WHERE name = :name`
-        );
+            WHERE name = :name`);
     }
 
     findUserByName(name: string): User | undefined {
@@ -142,43 +137,48 @@ export class UserRepository {
     }
 
     private registerUserStatement(): Statement<{
-        name: string,
-        telegramUsername: string | undefined,
-        telegramId: number | undefined,
-        modifiedBy: number,
-        isActive: number,
-        status: UserStatus,
-        timestamp: string
+        name: string;
+        telegramUsername: string | undefined;
+        telegramId: number | undefined;
+        modifiedBy: number;
+        isActive: number;
+        status: UserStatus;
+        timestamp: string;
     }, void> {
         return dbManager.db.prepare(`
             INSERT INTO user (name, telegramUsername, telegramId, modifiedBy, isActive, status, createdAt, modifiedAt)
-            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :isActive, :status, :timestamp, :timestamp)`
+            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :isActive, :status, :timestamp, :timestamp)`);
+    }
+
+    registerUser(
+        name: string,
+        telegramUsername: string | undefined,
+        telegramId: number | undefined,
+        createdBy: number
+    ): number {
+        return Number(
+            this.registerUserStatement().run({
+                name,
+                telegramUsername,
+                telegramId,
+                modifiedBy: createdBy,
+                isActive: booleanToInteger(true),
+                status: 'ACTIVE',
+                timestamp: new Date().toISOString(),
+            }).lastInsertRowid
         );
     }
 
-    registerUser(name: string, telegramUsername: string | undefined, telegramId: number | undefined, createdBy: number): number {
-        return Number(this.registerUserStatement().run({
-            name,
-            telegramUsername,
-            telegramId,
-            modifiedBy: createdBy,
-            isActive: booleanToInteger(true),
-            status: 'ACTIVE',
-            timestamp: new Date().toISOString()
-        }).lastInsertRowid);
-    }
-
     private updateUserNameStatement(): Statement<{
-        name: string,
-        modifiedBy: number,
-        id: number,
-        timestamp: string
+        name: string;
+        modifiedBy: number;
+        id: number;
+        timestamp: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE user
             SET name = :name, modifiedBy = :modifiedBy, modifiedAt = :timestamp
-            WHERE id = :id`
-        );
+            WHERE id = :id`);
     }
 
     updateUserName(userId: number, name: string, modifiedBy: number) {
@@ -186,34 +186,37 @@ export class UserRepository {
     }
 
     private updateUserTelegramUsernameStatement(): Statement<{
-        telegramUsername: string,
-        modifiedBy: number,
-        id: number,
-        timestamp: string
+        telegramUsername: string;
+        modifiedBy: number;
+        id: number;
+        timestamp: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE user
             SET telegramUsername = :telegramUsername, modifiedBy = :modifiedBy, modifiedAt = :timestamp
-            WHERE id = :id`
-        );
+            WHERE id = :id`);
     }
 
     updateUserTelegramUsername(userId: number, telegramUsername: string, modifiedBy: number) {
-        this.updateUserTelegramUsernameStatement().run({ telegramUsername, modifiedBy, id: userId, timestamp: new Date().toISOString() });
+        this.updateUserTelegramUsernameStatement().run({
+            telegramUsername,
+            modifiedBy,
+            id: userId,
+            timestamp: new Date().toISOString(),
+        });
     }
 
     private updateUserStatusStatement(): Statement<{
-        isActive: number,
-        status: UserStatus,
-        modifiedBy: number,
-        id: number,
-        timestamp: string
+        isActive: number;
+        status: UserStatus;
+        modifiedBy: number;
+        id: number;
+        timestamp: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE user
             SET isActive = :isActive, status = :status, modifiedBy = :modifiedBy, modifiedAt = :timestamp
-            WHERE id = :id`
-        );
+            WHERE id = :id`);
     }
 
     updateUserStatus(userId: number, newIsActive: boolean, newStatus: UserStatus, modifiedBy: number) {
@@ -222,7 +225,7 @@ export class UserRepository {
             status: newStatus,
             modifiedBy,
             id: userId,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         });
     }
 }
@@ -255,17 +258,19 @@ function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
         isAdmin: Boolean(dbEntity.isAdmin),
         isActive: Boolean(dbEntity.isActive),
         status: parseUserStatus(dbEntity.status),
-        profile: dbEntity.p_hideProfile !== null ? {
-            userId: dbEntity.id,
-            firstNameEn: dbEntity.p_firstNameEn,
-            lastNameEn: dbEntity.p_lastNameEn,
-            firstName: dbEntity.p_firstName,
-            lastName: dbEntity.p_lastName,
-            emaNumber: dbEntity.p_emaNumber,
-            hideProfile: Boolean(dbEntity.p_hideProfile)
-        } : null,
+        profile: dbEntity.p_hideProfile !== null
+            ? {
+                userId: dbEntity.id,
+                firstNameEn: dbEntity.p_firstNameEn,
+                lastNameEn: dbEntity.p_lastNameEn,
+                firstName: dbEntity.p_firstName,
+                lastName: dbEntity.p_lastName,
+                emaNumber: dbEntity.p_emaNumber,
+                hideProfile: Boolean(dbEntity.p_hideProfile),
+            }
+            : null,
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
-        modifiedBy: dbEntity.modifiedBy
+        modifiedBy: dbEntity.modifiedBy,
     };
 }

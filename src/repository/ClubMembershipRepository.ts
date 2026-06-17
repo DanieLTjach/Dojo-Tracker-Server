@@ -26,15 +26,17 @@ export class ClubMembershipRepository {
                 GROUP BY userId
             ) lastGame ON cm.userId = lastGame.userId
             WHERE cm.clubId = :clubId
-            ORDER BY lastGame.lastGameDate DESC NULLS LAST, cm.userId`
-        );
+            ORDER BY lastGame.lastGameDate DESC NULLS LAST, cm.userId`);
     }
 
     findMembersByClubId(clubId: number): ClubMembership[] {
         return this.findMembersByClubIdStatement().all({ clubId }).map(clubMembershipFromDBEntity);
     }
 
-    private findMembersByClubIdAndStatusStatement(): Statement<{ clubId: number; status: ClubMembershipStatus }, ClubMembershipDBEntity> {
+    private findMembersByClubIdAndStatusStatement(): Statement<
+        { clubId: number, status: ClubMembershipStatus },
+        ClubMembershipDBEntity
+    > {
         return dbManager.db.prepare(`
             SELECT
                 cm.clubId,
@@ -57,19 +59,22 @@ export class ClubMembershipRepository {
             ) lastGame ON cm.userId = lastGame.userId
             WHERE cm.clubId = :clubId
               AND cm.status = :status
-            ORDER BY lastGame.lastGameDate DESC NULLS LAST, cm.userId`
-        );
+            ORDER BY lastGame.lastGameDate DESC NULLS LAST, cm.userId`);
     }
 
     findPendingMembersByClubId(clubId: number): ClubMembership[] {
-        return this.findMembersByClubIdAndStatusStatement().all({ clubId, status: 'PENDING' }).map(clubMembershipFromDBEntity);
+        return this.findMembersByClubIdAndStatusStatement().all({ clubId, status: 'PENDING' }).map(
+            clubMembershipFromDBEntity
+        );
     }
 
     findActiveMembersByClubId(clubId: number): ClubMembership[] {
-        return this.findMembersByClubIdAndStatusStatement().all({ clubId, status: 'ACTIVE' }).map(clubMembershipFromDBEntity);
+        return this.findMembersByClubIdAndStatusStatement().all({ clubId, status: 'ACTIVE' }).map(
+            clubMembershipFromDBEntity
+        );
     }
 
-    private findMembershipStatement(): Statement<{ clubId: number; userId: number }, ClubMembershipDBEntity> {
+    private findMembershipStatement(): Statement<{ clubId: number, userId: number }, ClubMembershipDBEntity> {
         return dbManager.db.prepare(`
             SELECT
                 cm.clubId,
@@ -85,8 +90,7 @@ export class ClubMembershipRepository {
             JOIN club c ON cm.clubId = c.id
             JOIN user u ON cm.userId = u.id
             WHERE cm.clubId = :clubId
-              AND cm.userId = :userId`
-        );
+              AND cm.userId = :userId`);
     }
 
     findMembership(clubId: number, userId: number): ClubMembership | undefined {
@@ -113,7 +117,7 @@ export class ClubMembershipRepository {
         this.createMembershipStatement().run({
             ...params,
             createdAt: params.createdAt.toISOString(),
-            modifiedAt: params.modifiedAt.toISOString()
+            modifiedAt: params.modifiedAt.toISOString(),
         });
     }
 
@@ -140,7 +144,7 @@ export class ClubMembershipRepository {
             userId,
             role,
             modifiedAt: new Date().toISOString(),
-            modifiedBy
+            modifiedBy,
         });
     }
 
@@ -167,11 +171,11 @@ export class ClubMembershipRepository {
             userId,
             status,
             modifiedAt: new Date().toISOString(),
-            modifiedBy
+            modifiedBy,
         });
     }
 
-    private deleteMembershipStatement(): Statement<{ clubId: number; userId: number }, void> {
+    private deleteMembershipStatement(): Statement<{ clubId: number, userId: number }, void> {
         return dbManager.db.prepare(`
             DELETE FROM clubMembership
             WHERE clubId = :clubId
@@ -183,7 +187,10 @@ export class ClubMembershipRepository {
         this.deleteMembershipStatement().run({ clubId, userId });
     }
 
-    private getUserClubRoleStatement(): Statement<{ clubId: number; userId: number; status: ClubMembershipStatus }, { role: string }> {
+    private getUserClubRoleStatement(): Statement<
+        { clubId: number, userId: number, status: ClubMembershipStatus },
+        { role: string }
+    > {
         return dbManager.db.prepare(`
             SELECT role
             FROM clubMembership
@@ -195,10 +202,13 @@ export class ClubMembershipRepository {
 
     getUserClubRole(clubId: number, userId: number): ClubRole | undefined {
         const result = this.getUserClubRoleStatement().get({ clubId, userId, status: 'ACTIVE' });
-        return result !== undefined? parseClubRole(result.role) : undefined;
+        return result !== undefined ? parseClubRole(result.role) : undefined;
     }
 
-    private findMembershipsByUserIdAndStatusStatement(): Statement<{ userId: number; status: ClubMembershipStatus }, ClubMembershipDBEntity> {
+    private findMembershipsByUserIdAndStatusStatement(): Statement<
+        { userId: number, status: ClubMembershipStatus },
+        ClubMembershipDBEntity
+    > {
         return dbManager.db.prepare(`
             SELECT
                 cm.clubId,
@@ -219,7 +229,9 @@ export class ClubMembershipRepository {
     }
 
     findActiveMembershipsByUserId(userId: number): ClubMembership[] {
-        return this.findMembershipsByUserIdAndStatusStatement().all({ userId, status: 'ACTIVE' }).map(clubMembershipFromDBEntity);
+        return this.findMembershipsByUserIdAndStatusStatement().all({ userId, status: 'ACTIVE' }).map(
+            clubMembershipFromDBEntity
+        );
     }
 
     private findMembershipsByUserIdStatement(): Statement<{ userId: number }, ClubMembershipDBEntity> {
@@ -287,6 +299,6 @@ function clubMembershipFromDBEntity(dbEntity: ClubMembershipDBEntity): ClubMembe
         status: parseClubMembershipStatus(dbEntity.status),
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
-        modifiedBy: dbEntity.modifiedBy
+        modifiedBy: dbEntity.modifiedBy,
     };
 }

@@ -8,49 +8,49 @@ const winningHandDataSchema = z.object({
     yakumanLiabilityPlayerId: userIdSchema.optional(),
     han: z.number().int().min(1).max(100).optional(),
     fu: z.number().int().min(20).max(200).optional().refine(
-        (fu) => fu === undefined || fu % 10 === 0 || fu === 25,
+        fu => fu === undefined || fu % 10 === 0 || fu === 25,
         { error: 'fu must a multiple of 10 or equal to 25' }
-    )
+    ),
 }).refine(
-    (winningHandData) => winningHandData.yakumanLiabilityPlayerId !== winningHandData.winnerPlayerId,
+    winningHandData => winningHandData.yakumanLiabilityPlayerId !== winningHandData.winnerPlayerId,
     { error: 'Yakuman liability player cannot be the same as winner' }
 );
 
 const tsumoSchema = z.object({
     type: z.literal('TSUMO'),
     winningHandData: winningHandDataSchema,
-    riichiPlayerIds: uniqueUserIdsSchema("riichi")
+    riichiPlayerIds: uniqueUserIdsSchema('riichi'),
 });
 
 const ronSchema = z.object({
     type: z.literal('RON'),
     dealInPlayerId: userIdSchema,
     winningHandData: z.array(winningHandDataSchema).min(1).max(3).refine(
-        (winningHandData) => {
+        winningHandData => {
             const uniquePlayerIds = new Set(winningHandData.map(hand => hand.winnerPlayerId));
             return uniquePlayerIds.size === winningHandData.length;
         },
         { error: 'Each winning player must be unique' }
     ),
-    riichiPlayerIds: uniqueUserIdsSchema("riichi")
+    riichiPlayerIds: uniqueUserIdsSchema('riichi'),
 });
 
 const exhaustiveDrawSchema = z.object({
     type: z.literal('EXHAUSTIVE_DRAW'),
-    riichiPlayerIds: uniqueUserIdsSchema("riichi"),
-    tenpaiPlayerIds: uniqueUserIdsSchema("tenpai"),
-    nagashiManganPlayerIds: uniqueUserIdsSchema("nagashi mangan")
+    riichiPlayerIds: uniqueUserIdsSchema('riichi'),
+    tenpaiPlayerIds: uniqueUserIdsSchema('tenpai'),
+    nagashiManganPlayerIds: uniqueUserIdsSchema('nagashi mangan'),
 });
 
 const abortiveDrawSchema = z.object({
     type: z.literal('ABORTIVE_DRAW'),
-    riichiPlayerIds: uniqueUserIdsSchema("riichi"),
-    drawType: z.enum(Object.values(AbortiveDrawType))
+    riichiPlayerIds: uniqueUserIdsSchema('riichi'),
+    drawType: z.enum(Object.values(AbortiveDrawType)),
 });
 
 const chomboSchema = z.object({
     type: z.literal('CHOMBO'),
-    offenderPlayerId: userIdSchema
+    offenderPlayerId: userIdSchema,
 });
 
 export const gameRoundResultWithoutPointsSchema = z.union([
@@ -58,5 +58,5 @@ export const gameRoundResultWithoutPointsSchema = z.union([
     ronSchema,
     exhaustiveDrawSchema,
     abortiveDrawSchema,
-    chomboSchema
+    chomboSchema,
 ]);

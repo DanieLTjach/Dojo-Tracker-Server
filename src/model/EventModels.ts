@@ -3,14 +3,14 @@ import type { Tournament } from './TournamentModels.ts';
 
 export const UmaTieBreak = {
     WIND: 'WIND',
-    DIVIDE: 'DIVIDE'
+    DIVIDE: 'DIVIDE',
 } as const;
 
 export type UmaTieBreak = typeof UmaTieBreak[keyof typeof UmaTieBreak];
 
 export const EventType = {
     SEASON: 'SEASON',
-    TOURNAMENT: 'TOURNAMENT'
+    TOURNAMENT: 'TOURNAMENT',
 } as const;
 
 export type EventType = typeof EventType[keyof typeof EventType];
@@ -93,7 +93,7 @@ export interface EventInfo {
 export const PlayerNameDisplay = {
     DEFAULT: 'DEFAULT',
     NICKNAME: 'NICKNAME',
-    REAL_NAME: 'REAL_NAME'
+    REAL_NAME: 'REAL_NAME',
 } as const;
 
 export type PlayerNameDisplay = typeof PlayerNameDisplay[keyof typeof PlayerNameDisplay];

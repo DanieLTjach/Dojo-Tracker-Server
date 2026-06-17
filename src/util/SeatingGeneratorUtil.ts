@@ -52,7 +52,7 @@ export interface SeatingOptions {
     seed: number;
 }
 
-export class SeatingGenerationError extends Error { }
+export class SeatingGenerationError extends Error {}
 
 /** Mulberry32 — small, fast, deterministic PRNG so candidates are reproducible by seed. */
 class Rng {
@@ -102,7 +102,13 @@ class Deadline {
  * Mirrors the original `schedule`/`random_tables` backtracking search: greedily
  * lay down non-overlapping tables for a round and recurse.
  */
-function buildSchedule(playerCount: number, tables: number, rounds: number, rng: Rng, deadline: Deadline): SeatingRound[] | null {
+function buildSchedule(
+    playerCount: number,
+    tables: number,
+    rounds: number,
+    rng: Rng,
+    deadline: Deadline
+): SeatingRound[] | null {
     // The randomised DFS can hit a dead end on tight configurations (rounds near the pairing
     // maximum), so restart from a fresh state until one succeeds or the deadline passes. The
     // RNG keeps advancing across restarts, so each attempt explores a different ordering.
@@ -113,7 +119,13 @@ function buildSchedule(playerCount: number, tables: number, rounds: number, rng:
     return null;
 }
 
-function attemptSchedule(playerCount: number, tables: number, rounds: number, rng: Rng, deadline: Deadline): SeatingRound[] | null {
+function attemptSchedule(
+    playerCount: number,
+    tables: number,
+    rounds: number,
+    rng: Rng,
+    deadline: Deadline
+): SeatingRound[] | null {
     // existingPairings[a] = set of players a is already playing with
     const existingPairings: Set<number>[] = Array.from({ length: playerCount }, () => new Set<number>());
     const allPossibleTables = generateAllPossibleTables(playerCount);
@@ -125,7 +137,7 @@ function attemptSchedule(playerCount: number, tables: number, rounds: number, rn
         if (deadline.expired()) return false;
 
         // Rebuild the still-valid table pool
-        let pool = possibleTables.filter((table) => areAllPairingsAllowedForTable(table, existingPairings));
+        let pool = possibleTables.filter(table => areAllPairingsAllowedForTable(table, existingPairings));
         // If the pool is exhausted, reset it to all possible tables
         // This means there aren't enough players to avoid repeats and some pairings will be repeated
         if (pool.length === 0) {
@@ -215,7 +227,7 @@ function pickTablesForOneRound(tables: number, pool: number[][], deadline: Deadl
     };
 
     return recurse(0) ? chosen : null;
-};
+}
 
 function areAllPairingsAllowedForTable(table: number[], forbiddenPairings: Set<number>[]): boolean {
     for (let i = 0; i < table.length; i++) {
@@ -224,7 +236,7 @@ function areAllPairingsAllowedForTable(table: number[], forbiddenPairings: Set<n
         }
     }
     return true;
-};
+}
 
 function exp3(n: number): number {
     return Math.pow(3, n);
@@ -289,7 +301,13 @@ const SEAT_PERMUTATIONS_4: number[][] = (() => {
  * the worst-scoring table with its best permutation; on a stall, randomly reshuffle a table
  * to escape. Bounded by the deadline.
  */
-function balanceSeats(schedule: SeatingRound[], playerCount: number, rounds: number, rng: Rng, deadline: Deadline): void {
+function balanceSeats(
+    schedule: SeatingRound[],
+    playerCount: number,
+    rounds: number,
+    rng: Rng,
+    deadline: Deadline
+): void {
     let sumOfScores = totalSeatScore(schedule, playerCount, rounds);
     let bestScore = sumOfScores;
     let stalledIterations = 0;
@@ -297,7 +315,7 @@ function balanceSeats(schedule: SeatingRound[], playerCount: number, rounds: num
     while (sumOfScores > 0 && !deadline.expired() && stalledIterations < MAX_STALL_ITERATIONS) {
         // Score every table by the summed penalty of its players, worst first.
         const playerScores: Map<number, number> = new Map();
-        const tableScores: { r: number; t: number; score: number }[] = [];
+        const tableScores: { r: number, t: number, score: number }[] = [];
         for (let p = 0; p < playerCount; p++) {
             playerScores.set(p, evalWinds(listWinds(schedule, p), rounds));
         }
@@ -401,7 +419,14 @@ function totalTableScore(schedule: SeatingRound[], playerCount: number, tables: 
  * `set_tables`/`improve`: hill-climb by swapping pairs of tables within a round, keeping the
  * best arrangement seen. Bounded by the deadline; returns the best schedule found.
  */
-function optimiseTableNumbers(schedule: SeatingRound[], playerCount: number, tables: number, rounds: number, rng: Rng, deadline: Deadline): number {
+function optimiseTableNumbers(
+    schedule: SeatingRound[],
+    playerCount: number,
+    tables: number,
+    rounds: number,
+    rng: Rng,
+    deadline: Deadline
+): number {
     let currentScore = totalTableScore(schedule, playerCount, tables, rounds);
     let bestScore = currentScore;
     let bestSnapshot = schedule.map(round => round.map(table => [...table] as SeatingTable));
@@ -410,7 +435,7 @@ function optimiseTableNumbers(schedule: SeatingRound[], playerCount: number, tab
     while (currentScore > 0 && !deadline.expired() && stalledIterations < MAX_STALL_ITERATIONS) {
         // Find the single best within-round table swap.
         let bestChange = 0;
-        let bestMove: { r: number; a: number; b: number } | null = null;
+        let bestMove: { r: number, a: number, b: number } | null = null;
         for (let r = 0; r < schedule.length; r++) {
             const round = schedule[r]!;
             for (let a = 0; a < round.length; a++) {
@@ -487,7 +512,7 @@ export function generateSeatingCandidate(options: SeatingOptions): SeatingCandid
         );
     }
 
-    const remainingTime = deadline.end - Date.now()
+    const remainingTime = deadline.end - Date.now();
     const seatBalanceDeadline = new Deadline(remainingTime / 2);
     balanceSeats(schedule, playerCount, rounds, rng, seatBalanceDeadline);
     const tableSpreadScore = optimiseTableNumbers(schedule, playerCount, tables, rounds, rng, deadline);
@@ -526,8 +551,8 @@ export function generateSeatingCandidates(
     }
 
     candidates.sort((a, b) =>
-        (a.tableSpreadScore - b.tableSpreadScore)
-        || (a.seatBalanceScore - b.seatBalanceScore)
+        (a.tableSpreadScore - b.tableSpreadScore) ||
+        (a.seatBalanceScore - b.seatBalanceScore)
     );
     return candidates;
 }

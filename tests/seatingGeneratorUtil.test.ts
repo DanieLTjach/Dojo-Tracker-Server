@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import {
     generateSeatingCandidate,
     generateSeatingCandidates,
-    type SeatingCandidate
+    type SeatingCandidate,
 } from '../src/util/SeatingGeneratorUtil.ts';
 
 // Generation always spends its full budget on table-spread optimisation, so keep this
@@ -99,7 +99,8 @@ describe('SeatingGeneratorUtil', () => {
 
     describe('generateSeatingCandidate - configurations with repeats', () => {
         it('should handle configurations where players repeat', () => {
-            expect(generateSeatingCandidate({ tables: 1, rounds: 3, timeLimitMs: TIME_LIMIT_MS, seed: 1 })).toBeDefined();
+            expect(generateSeatingCandidate({ tables: 1, rounds: 3, timeLimitMs: TIME_LIMIT_MS, seed: 1 }))
+                .toBeDefined();
         });
     });
 
@@ -119,7 +120,7 @@ describe('SeatingGeneratorUtil', () => {
             { tables: 3, rounds: 2 }, // 12 players — previously failed
             { tables: 3, rounds: 3 },
             { tables: 3, rounds: 4 },
-            { tables: 4, rounds: 6 }  // 16 players — previously failed at 6 rounds
+            { tables: 4, rounds: 6 }, // 16 players — previously failed at 6 rounds
         ];
 
         it.each(SMALL_CONFIGS)(
@@ -128,7 +129,12 @@ describe('SeatingGeneratorUtil', () => {
                 const expectedPlayers = Array.from({ length: tables * 4 }, (_, i) => i);
 
                 for (let seed = 1; seed <= 5; seed++) {
-                    const candidate = generateSeatingCandidate({ tables, rounds, timeLimitMs: SMALL_CLUB_TIME_LIMIT_MS, seed });
+                    const candidate = generateSeatingCandidate({
+                        tables,
+                        rounds,
+                        timeLimitMs: SMALL_CLUB_TIME_LIMIT_MS,
+                        seed,
+                    });
 
                     expect(candidate.rounds).toHaveLength(rounds);
                     for (const round of candidate.rounds) {
@@ -148,7 +154,12 @@ describe('SeatingGeneratorUtil', () => {
             // optimiser settles into a local minimum and should bail out long before the limit.
             const generousBudgetMs = 10000;
             const started = Date.now();
-            const candidate = generateSeatingCandidate({ tables: 2, rounds: 2, timeLimitMs: generousBudgetMs, seed: 1 });
+            const candidate = generateSeatingCandidate({
+                tables: 2,
+                rounds: 2,
+                timeLimitMs: generousBudgetMs,
+                seed: 1,
+            });
             const elapsed = Date.now() - started;
 
             expect(candidate.rounds).toHaveLength(2);
@@ -164,7 +175,7 @@ describe('SeatingGeneratorUtil', () => {
                 rounds: 1,
                 timeLimitMs: TIME_LIMIT_MS,
                 seed: 1,
-                candidateCount: 3
+                candidateCount: 3,
             });
             expect(candidates.length).toBeGreaterThanOrEqual(1);
             expect(candidates.length).toBeLessThanOrEqual(3);

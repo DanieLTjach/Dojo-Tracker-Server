@@ -17,7 +17,7 @@ const baseParams: InsertGameRulesParams = {
     uma: [15, 5, -5, -15],
     startingPoints: 25000,
     umaTieBreak: 'DIVIDE',
-    clubId: TEST_CLUB_ID
+    clubId: TEST_CLUB_ID,
 };
 
 describe('Game Rules CRUD', () => {
@@ -65,7 +65,7 @@ describe('Game Rules CRUD', () => {
                 uma: [15, 0, -15],
                 startingPoints: 30000,
                 umaTieBreak: 'WIND',
-                clubId: TEST_CLUB_ID
+                clubId: TEST_CLUB_ID,
             };
 
             repo.updateGameRules(createdRuleId, updatedParams);
@@ -109,7 +109,7 @@ describe('Game Rules CRUD', () => {
         test('createGameRules creates and returns complete record', () => {
             const created = service.createGameRules({
                 ...baseParams,
-                name: 'Service Create Test'
+                name: 'Service Create Test',
             }, ADMIN_USER_ID);
 
             expect(created.id).toBeGreaterThan(0);
@@ -123,7 +123,7 @@ describe('Game Rules CRUD', () => {
             const result = service.updateGameRules(createdRuleId, {
                 ...baseParams,
                 name: 'Service Update Test',
-                startingPoints: 35000
+                startingPoints: 35000,
             }, ADMIN_USER_ID);
 
             expect(result.name).toBe('Service Update Test');
@@ -144,11 +144,13 @@ describe('Game Rules CRUD', () => {
             ).run(gameId, eventId, timestamp, timestamp, 0, 'FINISHED', timestamp, timestamp);
 
             try {
-                expect(() => service.updateGameRules(ruleId, {
-                    ...baseParams,
-                    name: 'Blocked Update Rule',
-                    startingPoints: 35000
-                }, ADMIN_USER_ID)).toThrow(CannotUpdateGameRulesInUseError);
+                expect(() =>
+                    service.updateGameRules(ruleId, {
+                        ...baseParams,
+                        name: 'Blocked Update Rule',
+                        startingPoints: 35000,
+                    }, ADMIN_USER_ID)
+                ).toThrow(CannotUpdateGameRulesInUseError);
 
                 const fetched = repo.findGameRulesById(ruleId);
                 expect(fetched!.name).toBe('Referenced Update Rule');
@@ -168,7 +170,18 @@ describe('Game Rules CRUD', () => {
             dbManager.db.prepare(
                 `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(eventId, 'Details Update In Use Event', 'SEASON', ruleId, TEST_CLUB_ID, 0, 0, 0, timestamp, timestamp);
+            ).run(
+                eventId,
+                'Details Update In Use Event',
+                'SEASON',
+                ruleId,
+                TEST_CLUB_ID,
+                0,
+                0,
+                0,
+                timestamp,
+                timestamp
+            );
             dbManager.db.prepare(
                 `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, startedAt, endedAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -183,9 +196,9 @@ describe('Game Rules CRUD', () => {
                         customRules: [{
                             category: 'rule',
                             value: true,
-                            name: 'Allow table note'
-                        }]
-                    }
+                            name: 'Allow table note',
+                        }],
+                    },
                 }, ADMIN_USER_ID);
 
                 expect(updated.name).toBe(originalParams.name);
@@ -194,7 +207,7 @@ describe('Game Rules CRUD', () => {
                 expect(updated.details!.customRules).toEqual([{
                     category: 'rule',
                     value: true,
-                    name: 'Allow table note'
+                    name: 'Allow table note',
                 }]);
             } finally {
                 dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);
@@ -215,7 +228,7 @@ describe('Game Rules CRUD', () => {
                 const updated = service.updateGameRules(ruleId, {
                     ...baseParams,
                     name: 'Updated Without Games',
-                    startingPoints: 35000
+                    startingPoints: 35000,
                 }, ADMIN_USER_ID);
 
                 expect(updated.name).toBe('Updated Without Games');
@@ -229,7 +242,7 @@ describe('Game Rules CRUD', () => {
         test('deleteGameRules succeeds when no events reference it', () => {
             const toDelete = service.createGameRules({
                 ...baseParams,
-                name: 'Service Delete Test'
+                name: 'Service Delete Test',
             }, ADMIN_USER_ID);
 
             service.deleteGameRules(toDelete.id, ADMIN_USER_ID);
@@ -259,7 +272,7 @@ describe('Game Rules CRUD', () => {
                     starting_points: 25000,
                     open_tanyao: true,
                     red_fives: 'three_one_per_suit',
-                }
+                },
             };
 
             const updated = service.updateGameRulesDetails(createdRuleId, fullRules, ADMIN_USER_ID);
@@ -271,7 +284,9 @@ describe('Game Rules CRUD', () => {
             expect(updated.details!.rules['open_tanyao']).toBe(true);
             expect(updated.details!.rules['red_fives']).toBe('three_one_per_suit');
 
-            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
+            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as {
+                details: string;
+            };
             const stored = JSON.parse(raw.details);
             expect(stored.rules.starting_points).toBe(25000);
             expect(stored.rules.red_fives).toBe('three_one_per_suit');
@@ -286,7 +301,9 @@ describe('Game Rules CRUD', () => {
             expect(updated.details!.rules['number_of_players']).toBe(4);
             expect(updated.details!.rules['open_tanyao']).toBe(true);
 
-            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
+            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as {
+                details: string;
+            };
             const stored = JSON.parse(raw.details);
             expect(Object.keys(stored.rules).length).toBe(0);
         });
@@ -297,12 +314,14 @@ describe('Game Rules CRUD', () => {
                     number_of_players: 4,
                     starting_points: 30000,
                     open_tanyao: true,
-                }
+                },
             };
 
             service.updateGameRulesDetails(createdRuleId, details, ADMIN_USER_ID);
 
-            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
+            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as {
+                details: string;
+            };
             const stored = JSON.parse(raw.details);
             expect(stored.rules.number_of_players).toBe(4);
             expect(stored.rules.starting_points).toBe(30000);
@@ -339,7 +358,7 @@ describe('Game Rules CRUD', () => {
                 const updated = service.updateGameRules(ruleId, {
                     ...baseParams,
                     name: 'Owner Updated Rule',
-                    startingPoints: 35000
+                    startingPoints: 35000,
                 }, ownerUserId);
                 expect(updated.name).toBe('Owner Updated Rule');
 
@@ -360,11 +379,13 @@ describe('Game Rules CRUD', () => {
 
             const globalRuleId = repo.insertGameRules({ ...baseParams, name: 'Global Rule', clubId: null });
             try {
-                expect(() => service.updateGameRules(globalRuleId, {
-                    ...baseParams,
-                    name: 'Should Fail',
-                    clubId: null
-                }, nonAdminId)).toThrow(InsufficientPermissionsError);
+                expect(() =>
+                    service.updateGameRules(globalRuleId, {
+                        ...baseParams,
+                        name: 'Should Fail',
+                        clubId: null,
+                    }, nonAdminId)
+                ).toThrow(InsufficientPermissionsError);
             } finally {
                 repo.deleteGameRules(globalRuleId);
                 dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(nonAdminId);
@@ -377,12 +398,14 @@ describe('Game Rules CRUD', () => {
                 rules: {
                     open_tanyao: true,
                     starting_points: 35000,
-                }
+                },
             };
 
             service.updateGameRulesDetails(createdRuleId, details, ADMIN_USER_ID);
 
-            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as { details: string };
+            const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(createdRuleId) as {
+                details: string;
+            };
             const stored = JSON.parse(raw.details);
             expect(stored.rules.open_tanyao).toBeUndefined();
             expect(stored.rules.starting_points).toBe(35000);

@@ -36,7 +36,7 @@ export function computeAchievements(
         const startPlaceToPlayerId = new Map<Wind, number>();
         for (const player of game.players) {
             if (player.startPlace === null) {
-                throw new Error("Each player needs to have wind specified in each game to compute achievements");
+                throw new Error('Each player needs to have wind specified in each game to compute achievements');
             }
             startPlaceToPlayerId.set(player.startPlace, player.userId);
         }
@@ -61,7 +61,7 @@ export function computeAchievements(
 
             const riichiIds = new Set<number>(getRiichiPlayerIds(result));
             const pointChanges = new Map<number, number>(
-                result.playerPointChanges.map((pc) => [pc.playerId, pc.pointChange])
+                result.playerPointChanges.map(pc => [pc.playerId, pc.pointChange])
             );
 
             for (const playerId of riichiIds) {
@@ -172,7 +172,7 @@ export function computeAchievements(
         }
     }
 
-    return ACHIEVEMENTS.map((definition) => resolveWinners(stats, definition));
+    return ACHIEVEMENTS.map(definition => resolveWinners(stats, definition));
 }
 
 function isYakumanHand(hand: WinningHandData): boolean {
@@ -205,7 +205,7 @@ function iterWinningHands(result: GameRoundResult): WinningHand[] {
         return [{ hand: result.winningHandData, winType: 'TSUMO' }];
     }
     if (result.type === 'RON') {
-        return result.winningHandData.map((hand) => ({ hand, winType: 'RON' as const }));
+        return result.winningHandData.map(hand => ({ hand, winType: 'RON' as const }));
     }
     return [];
 }
@@ -227,7 +227,7 @@ function resolveWinners(stats: Map<number, PlayerStats>, definition: Achievement
     const metric = definition.metric;
     const values = [...stats.entries()].map(([userId, s]) => ({
         userId,
-        value: s[metric]
+        value: s[metric],
     }));
 
     if (values.length === 0) {
@@ -236,19 +236,19 @@ function resolveWinners(stats: Map<number, PlayerStats>, definition: Achievement
 
     switch (definition.criterion) {
         case AchievementCriterion.AllQualifiers: {
-            const winners = values.filter((v) => v.value > 0);
-            return { metric, value: undefined, winnerUserIds: winners.map((w) => w.userId) };
+            const winners = values.filter(v => v.value > 0);
+            return { metric, value: undefined, winnerUserIds: winners.map(w => w.userId) };
         }
         case AchievementCriterion.Highest: {
-            const best = Math.max(...values.map((v) => v.value));
+            const best = Math.max(...values.map(v => v.value));
             if (best === 0) {
                 return { metric, value: undefined, winnerUserIds: [] };
             }
-            return { metric, value: best, winnerUserIds: values.filter((v) => v.value === best).map((v) => v.userId) };
+            return { metric, value: best, winnerUserIds: values.filter(v => v.value === best).map(v => v.userId) };
         }
         case AchievementCriterion.Lowest: {
-            const best = Math.min(...values.map((v) => v.value));
-            return { metric, value: best, winnerUserIds: values.filter((v) => v.value === best).map((v) => v.userId) };
+            const best = Math.min(...values.map(v => v.value));
+            return { metric, value: best, winnerUserIds: values.filter(v => v.value === best).map(v => v.userId) };
         }
     }
 }

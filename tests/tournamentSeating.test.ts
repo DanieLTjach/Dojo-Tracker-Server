@@ -47,7 +47,9 @@ function cleanupEvent(eventId: number): void {
 }
 
 function gameCount(eventId: number): number {
-    return (dbManager.db.prepare('SELECT COUNT(*) as count FROM game WHERE eventId = ?').get(eventId) as { count: number }).count;
+    return (dbManager.db.prepare('SELECT COUNT(*) as count FROM game WHERE eventId = ?').get(eventId) as {
+        count: number;
+    }).count;
 }
 
 describe('Tournament seating generation', () => {
@@ -201,7 +203,10 @@ describe('Tournament seating generation', () => {
         });
 
         it('rejects generation once the tournament has started', async () => {
-            dbManager.db.prepare('UPDATE tournament SET status = ?, currentRound = 1 WHERE eventId = ?').run('IN_PROGRESS', TOURNAMENT_EVENT_ID);
+            dbManager.db.prepare('UPDATE tournament SET status = ?, currentRound = 1 WHERE eventId = ?').run(
+                'IN_PROGRESS',
+                TOURNAMENT_EVENT_ID
+            );
             const response = await request(app)
                 .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/seating/generate`)
                 .set('Authorization', adminAuthHeader)
@@ -291,7 +296,10 @@ describe('Tournament seating generation', () => {
 
         it('rejects apply once the tournament has started', async () => {
             const rounds = await generate();
-            dbManager.db.prepare('UPDATE tournament SET status = ?, currentRound = 1 WHERE eventId = ?').run('IN_PROGRESS', TOURNAMENT_EVENT_ID);
+            dbManager.db.prepare('UPDATE tournament SET status = ?, currentRound = 1 WHERE eventId = ?').run(
+                'IN_PROGRESS',
+                TOURNAMENT_EVENT_ID
+            );
 
             const response = await request(app)
                 .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/seating/apply`)

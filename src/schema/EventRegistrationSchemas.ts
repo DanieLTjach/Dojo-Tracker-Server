@@ -6,37 +6,37 @@ import { EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
 export const eventRegistrationStatusSchema = z.enum(Object.values(EventRegistrationStatus));
 
 const eventParamsSchema = z.object({
-    eventId: eventIdParamSchema
+    eventId: eventIdParamSchema,
 });
 
 const eventUserParamsSchema = z.object({
     eventId: eventIdParamSchema,
-    userId: userIdParamSchema
+    userId: userIdParamSchema,
 });
 
 const statusFilterQuerySchema = z.object({
-    status: eventRegistrationStatusSchema.optional()
+    status: eventRegistrationStatusSchema.optional(),
 }).optional();
 
 export const eventRegistrationApplySchema = z.object({
-    params: eventParamsSchema
+    params: eventParamsSchema,
 });
 
 export const eventRegistrationWithdrawSchema = z.object({
-    params: eventParamsSchema
+    params: eventParamsSchema,
 });
 
 export const eventRegistrationListSchema = z.object({
     params: eventParamsSchema,
-    query: statusFilterQuerySchema
+    query: statusFilterQuerySchema,
 });
 
 export const eventRegistrationApproveSchema = z.object({
-    params: eventUserParamsSchema
+    params: eventUserParamsSchema,
 });
 
 export const eventRegistrationRejectSchema = z.object({
-    params: eventUserParamsSchema
+    params: eventUserParamsSchema,
 });
 
 export const eventRegistrationManualSchema = z.object({
@@ -44,31 +44,31 @@ export const eventRegistrationManualSchema = z.object({
     body: z.object({
         firstName: z.string().trim().min(1).optional(),
         lastName: z.string().trim().min(1).optional(),
-        isFillerPlayer: z.boolean().optional()
+        isFillerPlayer: z.boolean().optional(),
     }).refine(
-        (data) => (data.firstName === undefined) === (data.lastName === undefined),
+        data => (data.firstName === undefined) === (data.lastName === undefined),
         { error: 'firstName and lastName must both be provided or both be omitted' }
-    ).optional()
+    ).optional(),
 });
 
 export const eventRegistrationEditProfileSchema = z.object({
     params: eventUserParamsSchema,
     body: z.object({
         firstName: z.string().trim().min(1).nullish(),
-        lastName: z.string().trim().min(1).nullish()
+        lastName: z.string().trim().min(1).nullish(),
     }).refine(
-        (data) => data.firstName !== undefined || data.lastName !== undefined,
+        data => data.firstName !== undefined || data.lastName !== undefined,
         { error: 'At least one of firstName or lastName must be provided' }
-    )
+    ),
 });
 
 export const eventRegistrationEditFillerPlayerSchema = z.object({
     params: eventUserParamsSchema,
     body: z.object({
-        isFillerPlayer: z.boolean()
-    })
+        isFillerPlayer: z.boolean(),
+    }),
 });
 
 export const myRegistrationsSchema = z.object({
-    query: statusFilterQuerySchema
+    query: statusFilterQuerySchema,
 });

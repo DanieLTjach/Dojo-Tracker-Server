@@ -25,7 +25,7 @@ export class TournamentRepository {
             totalRounds,
             createdAt: timestamp,
             modifiedAt: timestamp,
-            modifiedBy
+            modifiedBy,
         });
     }
 
@@ -49,7 +49,7 @@ export class TournamentRepository {
             eventId,
             totalRounds,
             modifiedAt: modifiedAt.toISOString(),
-            modifiedBy
+            modifiedBy,
         });
     }
 
@@ -82,7 +82,7 @@ export class TournamentRepository {
             status,
             currentRound,
             modifiedAt: modifiedAt.toISOString(),
-            modifiedBy
+            modifiedBy,
         });
     }
 

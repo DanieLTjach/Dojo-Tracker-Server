@@ -1,29 +1,51 @@
-import dedent from "dedent";
-import { BadRequestError } from "../error/BaseErrors.ts";
-import { CannotUndoFinishOnNonTrackedGameError, GameNotCreatedWhenStartingError, GameNotFinishedWhenUndoingFinishError, GameNotInProgressWhenAddingNewRoundError, GameNotInProgressWhenDeletingRoundError, GameNotInProgressWhenFinishingError, IncorrectPlayerCountError, InvalidRoundIdError, LastRoundRollbackAlreadyUsedError, NoRoundsCompletedError, NoRoundsToRollbackError, RoundAlreadyExistsError } from "../error/GameErrors.ts";
-import type { Event, GameRules } from "../model/EventModels.ts";
-import type { DetailedGame, GamePlayer, GameRound, GameWithPlayers, TrackedGamePlayerData } from "../model/GameModels.ts";
-import { GameStatus } from "../model/GameModels.ts";
-import type { GameRoundResult, GameRoundResultInputDTO, PlayerPointChange } from "../model/GameRoundResultModels.ts";
-import { GameRepository } from "../repository/GameRepository.ts";
-import { calculateGameRoundResult, calculateRemainingRiichiSticksPointChanges, mergePlayerPointChanges } from "../util/PointCalculationUtil.ts";
-import { AchievementService } from "./AchievementService.ts";
-import { ClubMembershipService } from "./ClubMembershipService.ts";
-import { EventService } from "./EventService.ts";
-import { GameService } from "./GameService.ts";
-import { RatingService } from "./RatingService.ts";
-import { UserService } from "./UserService.ts";
+import dedent from 'dedent';
+import { BadRequestError } from '../error/BaseErrors.ts';
+import {
+    CannotUndoFinishOnNonTrackedGameError,
+    GameNotCreatedWhenStartingError,
+    GameNotFinishedWhenUndoingFinishError,
+    GameNotInProgressWhenAddingNewRoundError,
+    GameNotInProgressWhenDeletingRoundError,
+    GameNotInProgressWhenFinishingError,
+    IncorrectPlayerCountError,
+    InvalidRoundIdError,
+    LastRoundRollbackAlreadyUsedError,
+    NoRoundsCompletedError,
+    NoRoundsToRollbackError,
+    RoundAlreadyExistsError,
+} from '../error/GameErrors.ts';
+import type { Event, GameRules } from '../model/EventModels.ts';
+import type {
+    DetailedGame,
+    GamePlayer,
+    GameRound,
+    GameWithPlayers,
+    TrackedGamePlayerData,
+} from '../model/GameModels.ts';
+import { GameStatus } from '../model/GameModels.ts';
+import type { GameRoundResult, GameRoundResultInputDTO, PlayerPointChange } from '../model/GameRoundResultModels.ts';
+import { GameRepository } from '../repository/GameRepository.ts';
+import {
+    calculateGameRoundResult,
+    calculateRemainingRiichiSticksPointChanges,
+    mergePlayerPointChanges,
+} from '../util/PointCalculationUtil.ts';
+import { AchievementService } from './AchievementService.ts';
+import { ClubMembershipService } from './ClubMembershipService.ts';
+import { EventService } from './EventService.ts';
+import { GameService } from './GameService.ts';
+import { RatingService } from './RatingService.ts';
+import { UserService } from './UserService.ts';
 
 const TRACKED_GAME_LOG_ACTIONS = {
     CREATED: { heading: 'New Tracked Game Created', actorLabel: 'Created by' },
     STARTED_ON_CREATE: { heading: 'New Tracked Game Started', actorLabel: 'Created by' },
-    STARTED: { heading: 'Tracked Game Started', actorLabel: 'Started by' }
+    STARTED: { heading: 'Tracked Game Started', actorLabel: 'Started by' },
 } as const;
 
 type TrackedGameLogAction = keyof typeof TRACKED_GAME_LOG_ACTIONS;
 
 export class TrackedGameService {
-
     private gameService: GameService = new GameService();
     private gameRepository: GameRepository = new GameRepository();
     private userService: UserService = new UserService();
@@ -55,7 +77,14 @@ export class TrackedGameService {
             null
         );
 
-        const newGameId = this.gameRepository.createTrackedGame(eventId, createdBy, gameTimestamp, status, tournamentRound, tournamentTable);
+        const newGameId = this.gameRepository.createTrackedGame(
+            eventId,
+            createdBy,
+            gameTimestamp,
+            status,
+            tournamentRound,
+            tournamentTable
+        );
         this.addPlayersToTrackedGame(newGameId, players, event.gameRules.startingPoints, createdBy);
 
         const newGame = this.gameService.getDetailedGameById(newGameId);
@@ -96,7 +125,7 @@ export class TrackedGameService {
     ): GameRoundResult {
         const game = this.gameService.getDetailedGameById(gameId);
         const event = this.eventService.getEventById(game.eventId);
-        
+
         this.validateRoundResultInput(game, event, roundId, modifiedBy);
 
         return calculateGameRoundResult(game, event.gameRules, resultInputDTO);
@@ -112,9 +141,9 @@ export class TrackedGameService {
         this.validatePlayerCanRollbackLastRound(game, event, modifiedBy);
 
         const lastRound = game.rounds[game.rounds.length - 1]!;
-        const reversedPointChanges = lastRound.result.playerPointChanges.map((change) => ({
+        const reversedPointChanges = lastRound.result.playerPointChanges.map(change => ({
             playerId: change.playerId,
-            pointChange: -change.pointChange
+            pointChange: -change.pointChange,
         }));
 
         this.gameRepository.deleteGameRound(gameId, roundId);
@@ -227,13 +256,13 @@ export class TrackedGameService {
         }
     }
 
-    private validateGameIsInProgress(game: GameWithPlayers, error: (() => BadRequestError)): void {
+    private validateGameIsInProgress(game: GameWithPlayers, error: () => BadRequestError): void {
         if (game.status !== GameStatus.IN_PROGRESS) {
             throw error();
         }
     }
 
-    private validateGameIsFinished(game: GameWithPlayers, error: (() => BadRequestError)): void {
+    private validateGameIsFinished(game: GameWithPlayers, error: () => BadRequestError): void {
         if (game.status !== GameStatus.FINISHED) {
             throw error();
         }
@@ -264,7 +293,7 @@ export class TrackedGameService {
     }
 
     private validateCurrentRoundIdBeforeAdding(rounds: GameRound[], roundId: number): void {
-        if (rounds.some((round) => round.roundNumber === roundId)) {
+        if (rounds.some(round => round.roundNumber === roundId)) {
             throw new RoundAlreadyExistsError();
         }
 
@@ -348,9 +377,9 @@ export class TrackedGameService {
             return;
         }
 
-        const reversedPointChanges = extraPointChanges.map((change) => ({
+        const reversedPointChanges = extraPointChanges.map(change => ({
             playerId: change.playerId,
-            pointChange: -change.pointChange
+            pointChange: -change.pointChange,
         }));
 
         this.persistRemainingRiichiSticksPointChanges(game, reversedPointChanges, modifiedBy);
@@ -384,7 +413,7 @@ export class TrackedGameService {
             playerPointChanges: mergePlayerPointChanges(
                 lastRound.result.playerPointChanges,
                 pointChanges
-            )
+            ),
         };
 
         this.gameRepository.updateGameRoundResult(game.id, lastRound.roundNumber, updatedResult);
@@ -433,7 +462,8 @@ export class TrackedGameService {
     ): void {
         const user = this.userService.getUserById(modifiedBy);
         const pointChangesSection = deletedRound.result.playerPointChanges.length > 0
-            ? `\n\n<b>Point changes removed:</b>\n` + this.printRoundPointChangesLog(deletedRound.result.playerPointChanges)
+            ? `\n\n<b>Point changes removed:</b>\n` +
+                this.printRoundPointChangesLog(deletedRound.result.playerPointChanges)
             : '';
 
         const message = dedent`
@@ -451,16 +481,17 @@ export class TrackedGameService {
     private printTrackedGamePlayersLog(players: GamePlayer[]): string {
         return players.map((p, index) => {
             const user = this.userService.getUserById(p.userId);
-            return `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>\n   • Start Place: <b>${p.startPlace}</b>`;
+            return `${
+                index + 1
+            }. <b>${user.name}</b> <code>(ID: ${user.id})</code>\n   • Start Place: <b>${p.startPlace}</b>`;
         }).join('\n\n');
     }
 
     private printRoundPointChangesLog(pointChanges: PlayerPointChange[]): string {
-        return pointChanges.map((change) => {
+        return pointChanges.map(change => {
             const user = this.userService.getUserById(change.playerId);
             const sign = change.pointChange >= 0 ? '+' : '';
             return `• <b>${user.name}</b> <code>(ID: ${user.id})</code>: <b>${sign}${change.pointChange}</b>`;
         }).join('\n');
     }
-
 }

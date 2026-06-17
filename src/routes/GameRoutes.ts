@@ -13,12 +13,28 @@ router.get('/:gameId', requireAuth, withTransaction((req, res) => gameController
 // Authenticated users - create games
 router.post('/tracked', requireAuth, withTransaction((req, res) => gameController.addTrackedGame(req, res)));
 router.post('/', requireAuth, withTransaction((req, res) => gameController.addGame(req, res)));
-router.post('/:gameId/rounds/:roundId/preview', requireAuth, withTransaction((req, res) => gameController.previewRoundResult(req, res)));
-router.post('/:gameId/rounds/:roundId', requireAuth, withTransaction((req, res) => gameController.postRoundResult(req, res)));
-router.delete('/:gameId/rounds/:roundId', requireAuth, withTransaction((req, res) => gameController.deleteRoundResult(req, res)));
+router.post(
+    '/:gameId/rounds/:roundId/preview',
+    requireAuth,
+    withTransaction((req, res) => gameController.previewRoundResult(req, res))
+);
+router.post(
+    '/:gameId/rounds/:roundId',
+    requireAuth,
+    withTransaction((req, res) => gameController.postRoundResult(req, res))
+);
+router.delete(
+    '/:gameId/rounds/:roundId',
+    requireAuth,
+    withTransaction((req, res) => gameController.deleteRoundResult(req, res))
+);
 router.post('/:gameId/start', requireAuth, withTransaction((req, res) => gameController.startTrackedGame(req, res)));
 router.post('/:gameId/finish', requireAuth, withTransaction((req, res) => gameController.finishGame(req, res)));
-router.post('/:gameId/undo-finish', requireAuth, withTransaction((req, res) => gameController.undoFinishGame(req, res)));
+router.post(
+    '/:gameId/undo-finish',
+    requireAuth,
+    withTransaction((req, res) => gameController.undoFinishGame(req, res))
+);
 
 router.put('/:gameId', requireAuth, withTransaction((req, res) => gameController.editGame(req, res)));
 router.patch(

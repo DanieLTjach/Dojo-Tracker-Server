@@ -7,45 +7,48 @@ import { parseGameStatus, parseWind } from '../util/EnumUtil.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
 
 export class GameRepository {
-
     private createGameStatement(): Statement<{
-        eventId: number,
-        modifiedBy: number,
-        timestamp: string,
-        tournamentRound: number | null,
-        tournamentTable: string | null
+        eventId: number;
+        modifiedBy: number;
+        timestamp: string;
+        tournamentRound: number | null;
+        tournamentTable: string | null;
     }, void> {
         return dbManager.db.prepare(`
             INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt, tournamentRound, tournamentTable, status, startedAt, endedAt)
-            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentRound, :tournamentTable, 'FINISHED', :timestamp, :timestamp)`
-        );
+            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentRound, :tournamentTable, 'FINISHED', :timestamp, :timestamp)`);
     }
 
-    createGame(eventId: number, modifiedBy: number, timestamp: Date, tournamentRound: number | null, tournamentTable: string | null): number {
+    createGame(
+        eventId: number,
+        modifiedBy: number,
+        timestamp: Date,
+        tournamentRound: number | null,
+        tournamentTable: string | null
+    ): number {
         return Number(
             this.createGameStatement().run({
                 eventId,
                 modifiedBy,
                 timestamp: timestamp.toISOString(),
                 tournamentRound,
-                tournamentTable
+                tournamentTable,
             }).lastInsertRowid
         );
     }
 
     private createTrackedGameStatement(): Statement<{
-        eventId: number,
-        modifiedBy: number,
-        timestamp: string,
-        tournamentRound: number | null,
-        tournamentTable: string | null,
-        status: GameStatus,
-        startedAt: string | null
+        eventId: number;
+        modifiedBy: number;
+        timestamp: string;
+        tournamentRound: number | null;
+        tournamentTable: string | null;
+        status: GameStatus;
+        startedAt: string | null;
     }, void> {
         return dbManager.db.prepare(`
             INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt, tournamentRound, tournamentTable, status, startedAt, endedAt, lastRoundWasDeleted)
-            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentRound, :tournamentTable, :status, :startedAt, NULL, 0)`
-        );
+            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentRound, :tournamentTable, :status, :startedAt, NULL, 0)`);
     }
 
     createTrackedGame(
@@ -66,25 +69,24 @@ export class GameRepository {
                 tournamentRound: tournamentRound ?? null,
                 tournamentTable: tournamentTable ?? null,
                 status,
-                startedAt: status === "CREATED" ? null : timestampStr
+                startedAt: status === 'CREATED' ? null : timestampStr,
             }).lastInsertRowid
         );
     }
 
     private addGamePlayerStatement(): Statement<{
-        gameId: number,
-        userId: number,
-        points: number,
-        startPlace: string | undefined,
-        chomboCount: number,
-        isSubstitutePlayer: number,
-        modifiedBy: number,
-        timestamp: string
+        gameId: number;
+        userId: number;
+        points: number;
+        startPlace: string | undefined;
+        chomboCount: number;
+        isSubstitutePlayer: number;
+        modifiedBy: number;
+        timestamp: string;
     }, void> {
         return dbManager.db.prepare(`
             INSERT INTO userToGame (gameId, userId, points, startPlace, chomboCount, isSubstitutePlayer, modifiedBy, createdAt, modifiedAt)
-            VALUES (:gameId, :userId, :points, :startPlace, :chomboCount, :isSubstitutePlayer, :modifiedBy, :timestamp, :timestamp)`
-        );
+            VALUES (:gameId, :userId, :points, :startPlace, :chomboCount, :isSubstitutePlayer, :modifiedBy, :timestamp, :timestamp)`);
     }
 
     addGamePlayer(
@@ -104,22 +106,21 @@ export class GameRepository {
             chomboCount,
             isSubstitutePlayer: booleanToInteger(isSubstitutePlayer),
             modifiedBy,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         });
     }
 
     private updatePlayerIsSubstitutePlayerStatement(): Statement<{
-        gameId: number,
-        userId: number,
-        isSubstitutePlayer: number,
-        modifiedBy: number,
-        modifiedAt: string
+        gameId: number;
+        userId: number;
+        isSubstitutePlayer: number;
+        modifiedBy: number;
+        modifiedAt: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE userToGame
             SET isSubstitutePlayer = :isSubstitutePlayer, modifiedAt = :modifiedAt, modifiedBy = :modifiedBy
-            WHERE gameId = :gameId AND userId = :userId`
-        );
+            WHERE gameId = :gameId AND userId = :userId`);
     }
 
     updatePlayerIsSubstitutePlayer(
@@ -133,7 +134,7 @@ export class GameRepository {
             userId,
             isSubstitutePlayer: booleanToInteger(isSubstitutePlayer),
             modifiedBy,
-            modifiedAt: new Date().toISOString()
+            modifiedAt: new Date().toISOString(),
         });
     }
 
@@ -161,8 +162,7 @@ export class GameRepository {
             LEFT JOIN profile p ON p.userId = utg.userId
             LEFT JOIN userRatingChange urc ON urc.userId = utg.userId AND urc.gameId = utg.gameId
             WHERE utg.gameId = :gameId
-            ORDER BY points DESC, userId`
-        );
+            ORDER BY points DESC, userId`);
     }
 
     findGamePlayersByGameId(gameId: number): GamePlayer[] {
@@ -174,8 +174,7 @@ export class GameRepository {
             SELECT gameId, roundNumber, wind, dealerNumber, counters, riichiSticks, result
             FROM gameRound
             WHERE gameId = :gameId
-            ORDER BY roundNumber`
-        );
+            ORDER BY roundNumber`);
     }
 
     findGameRoundsByGameId(gameId: number): GameRound[] {
@@ -183,18 +182,17 @@ export class GameRepository {
     }
 
     private createGameRoundStatement(): Statement<{
-        gameId: number,
-        roundNumber: number,
-        wind: string,
-        dealerNumber: number,
-        counters: number,
-        riichiSticks: number,
-        result: string
+        gameId: number;
+        roundNumber: number;
+        wind: string;
+        dealerNumber: number;
+        counters: number;
+        riichiSticks: number;
+        result: string;
     }, void> {
         return dbManager.db.prepare(`
             INSERT INTO gameRound (gameId, roundNumber, wind, dealerNumber,counters, riichiSticks, result)
-            VALUES (:gameId, :roundNumber, :wind, :dealerNumber, :counters, :riichiSticks, :result)`
-        );
+            VALUES (:gameId, :roundNumber, :wind, :dealerNumber, :counters, :riichiSticks, :result)`);
     }
 
     createGameRound(
@@ -210,42 +208,40 @@ export class GameRepository {
             dealerNumber: roundState.dealerNumber,
             counters: roundState.counters,
             riichiSticks: roundState.riichiSticks,
-            result: JSON.stringify(result)
+            result: JSON.stringify(result),
         });
     }
 
     private updateGameRoundResultStatement(): Statement<{
-        gameId: number,
-        roundNumber: number,
-        result: string
+        gameId: number;
+        roundNumber: number;
+        result: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE gameRound
             SET result = :result
-            WHERE gameId = :gameId AND roundNumber = :roundNumber`
-        );
+            WHERE gameId = :gameId AND roundNumber = :roundNumber`);
     }
 
     updateGameRoundResult(gameId: number, roundNumber: number, result: GameRoundResult): void {
         this.updateGameRoundResultStatement().run({
             gameId,
             roundNumber,
-            result: JSON.stringify(result)
+            result: JSON.stringify(result),
         });
     }
 
     private updatePlayerPointsStatement(): Statement<{
-        gameId: number,
-        userId: number,
-        pointChange: number,
-        modifiedBy: number,
-        modifiedAt: string
+        gameId: number;
+        userId: number;
+        pointChange: number;
+        modifiedBy: number;
+        modifiedAt: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE userToGame
             SET points = points + :pointChange, modifiedAt = :modifiedAt, modifiedBy = :modifiedBy
-            WHERE gameId = :gameId AND userId = :userId`
-        );
+            WHERE gameId = :gameId AND userId = :userId`);
     }
 
     applyPlayerPointChanges(
@@ -263,17 +259,16 @@ export class GameRepository {
     }
 
     private updatePlayerChomboCountStatement(): Statement<{
-        gameId: number,
-        userId: number,
-        chomboCountChange: number,
-        modifiedBy: number,
-        modifiedAt: string
+        gameId: number;
+        userId: number;
+        chomboCountChange: number;
+        modifiedBy: number;
+        modifiedAt: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE userToGame
             SET chomboCount = chomboCount + :chomboCountChange, modifiedAt = :modifiedAt, modifiedBy = :modifiedBy
-            WHERE gameId = :gameId AND userId = :userId`
-        );
+            WHERE gameId = :gameId AND userId = :userId`);
     }
 
     updatePlayerChomboCount(
@@ -288,28 +283,26 @@ export class GameRepository {
             userId,
             chomboCountChange,
             modifiedBy,
-            modifiedAt
+            modifiedAt,
         });
     }
 
     private touchGameStatement(): Statement<{ id: number, modifiedBy: number, modifiedAt: string }, void> {
         return dbManager.db.prepare(`
-            UPDATE game SET modifiedBy = :modifiedBy, modifiedAt = :modifiedAt WHERE id = :id`
-        );
+            UPDATE game SET modifiedBy = :modifiedBy, modifiedAt = :modifiedAt WHERE id = :id`);
     }
 
     touchGame(gameId: number, modifiedBy: number): void {
         this.touchGameStatement().run({
             id: gameId,
             modifiedBy,
-            modifiedAt: new Date().toISOString()
+            modifiedAt: new Date().toISOString(),
         });
     }
 
     private deleteGameRoundStatement(): Statement<{ gameId: number, roundNumber: number }, void> {
         return dbManager.db.prepare(`
-            DELETE FROM gameRound WHERE gameId = :gameId AND roundNumber = :roundNumber`
-        );
+            DELETE FROM gameRound WHERE gameId = :gameId AND roundNumber = :roundNumber`);
     }
 
     deleteGameRound(gameId: number, roundNumber: number): void {
@@ -325,16 +318,15 @@ export class GameRepository {
     }
 
     private setLastRoundWasDeletedStatement(): Statement<{
-        id: number,
-        lastRoundWasDeleted: number,
-        modifiedBy: number,
-        modifiedAt: string
+        id: number;
+        lastRoundWasDeleted: number;
+        modifiedBy: number;
+        modifiedAt: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE game
             SET lastRoundWasDeleted = :lastRoundWasDeleted, modifiedBy = :modifiedBy, modifiedAt = :modifiedAt
-            WHERE id = :id`
-        );
+            WHERE id = :id`);
     }
 
     setLastRoundWasDeleted(gameId: number, value: boolean, modifiedBy: number): void {
@@ -342,21 +334,20 @@ export class GameRepository {
             id: gameId,
             lastRoundWasDeleted: booleanToInteger(value),
             modifiedBy,
-            modifiedAt: new Date().toISOString()
+            modifiedAt: new Date().toISOString(),
         });
     }
 
     private finishGameStatement(): Statement<{
-        id: number,
-        modifiedBy: number,
-        endedAt: string,
-        modifiedAt: string
+        id: number;
+        modifiedBy: number;
+        endedAt: string;
+        modifiedAt: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE game
             SET status = 'FINISHED', endedAt = :endedAt, modifiedBy = :modifiedBy, modifiedAt = :modifiedAt
-            WHERE id = :id`
-        );
+            WHERE id = :id`);
     }
 
     finishGame(gameId: number, modifiedBy: number, endedAt: Date): void {
@@ -365,41 +356,39 @@ export class GameRepository {
             id: gameId,
             modifiedBy,
             endedAt: timestamp,
-            modifiedAt: timestamp
+            modifiedAt: timestamp,
         });
     }
 
     private undoFinishGameStatement(): Statement<{
-        id: number,
-        modifiedBy: number,
-        modifiedAt: string
+        id: number;
+        modifiedBy: number;
+        modifiedAt: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE game
             SET status = 'IN_PROGRESS', endedAt = NULL, modifiedBy = :modifiedBy, modifiedAt = :modifiedAt
-            WHERE id = :id`
-        );
+            WHERE id = :id`);
     }
 
     undoFinishGame(gameId: number, modifiedBy: number): void {
         this.undoFinishGameStatement().run({
             id: gameId,
             modifiedBy,
-            modifiedAt: new Date().toISOString()
+            modifiedAt: new Date().toISOString(),
         });
     }
 
     private startTrackedGameStatement(): Statement<{
-        id: number,
-        modifiedBy: number,
-        startedAt: string,
-        modifiedAt: string
+        id: number;
+        modifiedBy: number;
+        startedAt: string;
+        modifiedAt: string;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE game
             SET status = 'IN_PROGRESS', startedAt = :startedAt, modifiedBy = :modifiedBy, modifiedAt = :modifiedAt
-            WHERE id = :id`
-        );
+            WHERE id = :id`);
     }
 
     startTrackedGame(gameId: number, modifiedBy: number, startedAt: Date): void {
@@ -408,7 +397,7 @@ export class GameRepository {
             id: gameId,
             modifiedBy,
             startedAt: timestamp,
-            modifiedAt: timestamp
+            modifiedAt: timestamp,
         });
     }
 
@@ -495,24 +484,38 @@ export class GameRepository {
     }
 
     private updateGameStatement(): Statement<{
-        eventId: number,
-        modifiedBy: number,
-        id: number,
-        createdAt: string,
-        modifiedAt: string,
-        tournamentRound: number | null,
-        tournamentTable: string | null
+        eventId: number;
+        modifiedBy: number;
+        id: number;
+        createdAt: string;
+        modifiedAt: string;
+        tournamentRound: number | null;
+        tournamentTable: string | null;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE game
             SET eventId = :eventId, modifiedBy = :modifiedBy, createdAt = :createdAt, modifiedAt = :modifiedAt,
                 tournamentRound = :tournamentRound, tournamentTable = :tournamentTable
-            WHERE id = :id`
-        );
+            WHERE id = :id`);
     }
 
-    updateGame(gameId: number, eventId: number, modifiedBy: number, createdAt: Date, tournamentRound: number | null, tournamentTable: string | null): void {
-        this.updateGameStatement().run({ eventId, modifiedBy, id: gameId, createdAt: createdAt.toISOString(), modifiedAt: new Date().toISOString(), tournamentRound, tournamentTable });
+    updateGame(
+        gameId: number,
+        eventId: number,
+        modifiedBy: number,
+        createdAt: Date,
+        tournamentRound: number | null,
+        tournamentTable: string | null
+    ): void {
+        this.updateGameStatement().run({
+            eventId,
+            modifiedBy,
+            id: gameId,
+            createdAt: createdAt.toISOString(),
+            modifiedAt: new Date().toISOString(),
+            tournamentRound,
+            tournamentTable,
+        });
     }
 
     private deleteGamePlayersByGameIdStatement(): Statement<{ gameId: number }, void> {
@@ -536,14 +539,17 @@ export class GameRepository {
     }
 
     findGameByEventAndTimestamp(eventId: number, timestamp: Date): Game | undefined {
-        const gameDBEntity = this.findGameByEventAndTimestampStatement().get({ eventId, timestamp: timestamp.toISOString() });
+        const gameDBEntity = this.findGameByEventAndTimestampStatement().get({
+            eventId,
+            timestamp: timestamp.toISOString(),
+        });
         return gameDBEntity !== undefined ? gameFromDBEntity(gameDBEntity) : undefined;
     }
 
     private findGameByEventRoundAndTableStatement(): Statement<{
-        eventId: number,
-        tournamentRound: number,
-        tournamentTable: string
+        eventId: number;
+        tournamentRound: number;
+        tournamentTable: string;
     }, GameDBEntity> {
         return dbManager.db.prepare(
             'SELECT * FROM game WHERE eventId = :eventId AND tournamentRound = :tournamentRound AND tournamentTable = :tournamentTable'
@@ -551,13 +557,17 @@ export class GameRepository {
     }
 
     findGameByEventRoundAndTable(eventId: number, tournamentRound: number, tournamentTable: string): Game | undefined {
-        const gameDBEntity = this.findGameByEventRoundAndTableStatement().get({ eventId, tournamentRound, tournamentTable });
+        const gameDBEntity = this.findGameByEventRoundAndTableStatement().get({
+            eventId,
+            tournamentRound,
+            tournamentTable,
+        });
         return gameDBEntity !== undefined ? gameFromDBEntity(gameDBEntity) : undefined;
     }
 
     private countGamesByEventAndTournamentRoundStatement(): Statement<{
-        eventId: number,
-        tournamentRound: number
+        eventId: number;
+        tournamentRound: number;
     }, { count: number }> {
         return dbManager.db.prepare(`
             SELECT COUNT(*) as count
@@ -571,8 +581,8 @@ export class GameRepository {
     }
 
     private countUnfinishedGamesByEventAndTournamentRoundStatement(): Statement<{
-        eventId: number,
-        tournamentRound: number
+        eventId: number;
+        tournamentRound: number;
     }, { count: number }> {
         return dbManager.db.prepare(`
             SELECT COUNT(*) as count
@@ -588,7 +598,9 @@ export class GameRepository {
     }
 
     private findGamesByEventIdStatement(): Statement<{ eventId: number }, GameDBEntity> {
-        return dbManager.db.prepare('SELECT * FROM game WHERE eventId = :eventId ORDER BY tournamentRound, tournamentTable, createdAt');
+        return dbManager.db.prepare(
+            'SELECT * FROM game WHERE eventId = :eventId ORDER BY tournamentRound, tournamentTable, createdAt'
+        );
     }
 
     findGamesByEventId(eventId: number): Game[] {
@@ -622,8 +634,8 @@ function gameFromDBEntity(dbEntity: GameDBEntity): Game {
         status: parseGameStatus(dbEntity.status),
         startedAt: dbEntity.startedAt !== null ? new Date(dbEntity.startedAt) : null,
         endedAt: dbEntity.endedAt !== null ? new Date(dbEntity.endedAt) : null,
-        lastRoundWasDeleted: Boolean(dbEntity.lastRoundWasDeleted)
-    }
+        lastRoundWasDeleted: Boolean(dbEntity.lastRoundWasDeleted),
+    };
 }
 
 interface GameRoundDBEntity {
@@ -644,7 +656,7 @@ function gameRoundFromDBEntity(dbEntity: GameRoundDBEntity): GameRound {
         dealerNumber: dbEntity.dealerNumber,
         counters: dbEntity.counters,
         riichiSticks: dbEntity.riichiSticks,
-        result: JSON.parse(dbEntity.result)
+        result: JSON.parse(dbEntity.result),
     };
 }
 
@@ -669,6 +681,6 @@ function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
         profileHidden: Boolean(dbEntity.profileHidden),
         startPlace: dbEntity.startPlace !== null ? parseWind(dbEntity.startPlace) : null,
         ratingChange: dbEntity.ratingChange / RATING_TO_POINTS_COEFFICIENT,
-        isSubstitutePlayer: Boolean(dbEntity.isSubstitutePlayer)
-    }
+        isSubstitutePlayer: Boolean(dbEntity.isSubstitutePlayer),
+    };
 }

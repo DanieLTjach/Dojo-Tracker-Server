@@ -1,4 +1,9 @@
-import { type AchievementMetric, ACHIEVEMENTS, type AchievementDefinition, type AchievementValueUnit } from '../data/achievementsCatalog.ts';
+import {
+    type AchievementMetric,
+    ACHIEVEMENTS,
+    type AchievementDefinition,
+    type AchievementValueUnit,
+} from '../data/achievementsCatalog.ts';
 import type { Event } from '../model/EventModels.ts';
 import { AchievementCriterion, type EventAchievementResult, type UserAchievement } from '../model/AchievementModels.ts';
 import { type DetailedGame, GameStatus } from '../model/GameModels.ts';
@@ -11,7 +16,7 @@ import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
 
 const DEFINITION_BY_METRIC = new Map<AchievementMetric, AchievementDefinition>(
-    ACHIEVEMENTS.map((definition) => [definition.metric, definition])
+    ACHIEVEMENTS.map(definition => [definition.metric, definition])
 );
 
 export class AchievementService {
@@ -66,24 +71,24 @@ export class AchievementService {
     private computeAndPersist(event: Event): void {
         const finishedGames = this.gameRepository
             .findGames({ eventId: event.id })
-            .filter((game) => game.status === GameStatus.FINISHED);
+            .filter(game => game.status === GameStatus.FINISHED);
 
-        const games: DetailedGame[] = finishedGames.map((game) => ({
+        const games: DetailedGame[] = finishedGames.map(game => ({
             ...game,
             players: this.gameRepository.findGamePlayersByGameId(game.id),
             rounds: this.gameRepository.findGameRoundsByGameId(game.id),
-            currentState: null
+            currentState: null,
         }));
 
         const rules = event.gameRules.details?.rules ?? {};
         const achievements = computeAchievements(games, rules);
 
-        const rows = achievements.flatMap((achievement) =>
-            achievement.winnerUserIds.map((userId) => ({
+        const rows = achievements.flatMap(achievement =>
+            achievement.winnerUserIds.map(userId => ({
                 eventId: event.id,
                 metric: achievement.metric,
                 userId,
-                value: achievement.value ?? null
+                value: achievement.value ?? null,
             }))
         );
 
@@ -107,7 +112,7 @@ export class AchievementService {
             this.recomputeEventAchievements(this.eventService.getEventById(eventId));
         }
 
-        return this.achievementRepository.findByUserId(userId).flatMap((row) => {
+        return this.achievementRepository.findByUserId(userId).flatMap(row => {
             const definition = DEFINITION_BY_METRIC.get(row.metric);
             if (definition === undefined) {
                 return [];
@@ -121,14 +126,14 @@ export class AchievementService {
                 description: definition.description,
                 valueUnit: definition.valueUnit,
                 value,
-                valueFormatted: formatValue(value, definition.valueUnit)
+                valueFormatted: formatValue(value, definition.valueUnit),
             }];
         });
     }
 
     private buildEventResults(winnerRows: EventAchievementWinnerRow[]): EventAchievementResult[] {
-        return ACHIEVEMENTS.map((definition) => {
-            const winners = winnerRows.filter((row) => row.metric === definition.metric);
+        return ACHIEVEMENTS.map(definition => {
+            const winners = winnerRows.filter(row => row.metric === definition.metric);
             const value = winners[0]?.value ?? undefined;
             return {
                 metric: definition.metric,
@@ -139,12 +144,12 @@ export class AchievementService {
                 value,
                 valueFormatted: formatValue(value, definition.valueUnit),
                 tied: definition.criterion !== AchievementCriterion.AllQualifiers && winners.length > 1,
-                winners: winners.map((row) => ({
+                winners: winners.map(row => ({
                     userId: row.userId,
                     name: row.name,
                     profileFirstName: row.profileFirstName,
-                    profileLastName: row.profileLastName
-                }))
+                    profileLastName: row.profileLastName,
+                })),
             };
         });
     }

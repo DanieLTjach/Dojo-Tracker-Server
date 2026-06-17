@@ -36,7 +36,7 @@ describe('TokenService', () => {
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM',
-                profile: null
+                profile: null,
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -58,7 +58,7 @@ describe('TokenService', () => {
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM',
-                profile: null
+                profile: null,
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -83,7 +83,7 @@ describe('TokenService', () => {
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM',
-                profile: null
+                profile: null,
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -105,7 +105,7 @@ describe('TokenService', () => {
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM',
-                profile: null
+                profile: null,
             };
 
             // Create an expired token (expired 1 hour ago)
@@ -132,7 +132,7 @@ describe('TokenService', () => {
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM',
-                profile: null
+                profile: null,
             };
 
             // Create a token with wrong secret
@@ -173,7 +173,7 @@ describe('TokenService', () => {
                 createdAt: new Date(),
                 modifiedAt: new Date(),
                 modifiedBy: 'SYSTEM',
-                profile: null
+                profile: null,
             };
 
             const tokenPair = tokenService.createTokenPair(user);
@@ -221,5 +221,4 @@ describe('TokenService', () => {
             expect(decoded!.userId).toBe(10);
         });
     });
-
 });

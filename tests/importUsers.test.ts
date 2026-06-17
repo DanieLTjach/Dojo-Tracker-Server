@@ -36,7 +36,6 @@ function runImportScript(filePath: string, clubId: number, createdBy: number = 0
 }
 
 describe('Import Users CLI Script', () => {
-
     beforeAll(() => {
         createTestEvent();
     });
@@ -108,7 +107,7 @@ describe('Import Users CLI Script', () => {
                     { userId: userIds[1], points: 35000, startPlace: 'SOUTH' },
                     { userId: userIds[2], points: 25000, startPlace: 'WEST' },
                     { userId: userIds[3], points: 20000, startPlace: 'NORTH' },
-                ]
+                ],
             });
 
         expect(response.status).toBe(201);

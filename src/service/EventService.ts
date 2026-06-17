@@ -15,7 +15,7 @@ import {
     TournamentAlreadyFinishedError,
     TournamentNotInLastRoundError,
     TournamentGameNotInCurrentRoundError,
-    TournamentMisconfigured
+    TournamentMisconfigured,
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
@@ -112,11 +112,18 @@ export class EventService {
             blockGameCreation: data.blockGameCreation ?? false,
             createdAt: now,
             modifiedAt: now,
-            modifiedBy
+            modifiedBy,
         });
 
         this.syncTournamentConfig(undefined, eventId, data, modifiedBy, now);
-        this.syncCurrentRatingEvent(undefined, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
+        this.syncCurrentRatingEvent(
+            undefined,
+            data.clubId ?? null,
+            data.isCurrentRating ?? false,
+            eventId,
+            modifiedBy,
+            now
+        );
 
         return this.getEventById(eventId);
     }
@@ -138,7 +145,14 @@ export class EventService {
         this.validateTournamentConfig(data, existingEvent);
 
         const now = new Date();
-        this.syncCurrentRatingEvent(existingEvent, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
+        this.syncCurrentRatingEvent(
+            existingEvent,
+            data.clubId ?? null,
+            data.isCurrentRating ?? false,
+            eventId,
+            modifiedBy,
+            now
+        );
 
         this.eventRepository.updateEvent({
             id: eventId,
@@ -157,7 +171,7 @@ export class EventService {
             config: data.config ?? null,
             blockGameCreation: data.blockGameCreation ?? false,
             modifiedAt: now,
-            modifiedBy
+            modifiedBy,
         });
 
         this.syncTournamentConfig(existingEvent, eventId, data, modifiedBy, now);
@@ -241,7 +255,10 @@ export class EventService {
         }
 
         if (event.tournament === null || game.tournamentRound !== event.tournament.currentRound) {
-            throw new TournamentGameNotInCurrentRoundError(event.tournament?.currentRound ?? null, game.tournamentRound);
+            throw new TournamentGameNotInCurrentRoundError(
+                event.tournament?.currentRound ?? null,
+                game.tournamentRound
+            );
         }
     }
 
@@ -261,7 +278,11 @@ export class EventService {
         }
     }
 
-    private authorizeEventUpdate(existingEvent: Event, requestedClubId: number | null | undefined, userId: number): void {
+    private authorizeEventUpdate(
+        existingEvent: Event,
+        requestedClubId: number | null | undefined,
+        userId: number
+    ): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
             return;
@@ -420,7 +441,12 @@ export class EventService {
     ): void {
         if (data.type === 'TOURNAMENT') {
             if (existingEvent === undefined || existingEvent.tournament === null) {
-                this.tournamentRepository.createTournament(eventId, data.tournament!.totalRounds, modifiedAt, modifiedBy);
+                this.tournamentRepository.createTournament(
+                    eventId,
+                    data.tournament!.totalRounds,
+                    modifiedAt,
+                    modifiedBy
+                );
                 return;
             }
 

@@ -2,7 +2,17 @@ import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { EventService } from '../service/EventService.ts';
 import { TournamentSeatingService } from '../service/TournamentSeatingService.ts';
-import { eventGetByIdSchema, eventCreateSchema, eventUpdateSchema, eventDeleteSchema, eventGetListSchema, tournamentRoundStartSchema, tournamentSeatingGenerateSchema, tournamentSeatingApplySchema, tournamentSeatingClearSchema } from '../schema/EventSchemas.ts';
+import {
+    eventGetByIdSchema,
+    eventCreateSchema,
+    eventUpdateSchema,
+    eventDeleteSchema,
+    eventGetListSchema,
+    tournamentRoundStartSchema,
+    tournamentSeatingGenerateSchema,
+    tournamentSeatingApplySchema,
+    tournamentSeatingClearSchema,
+} from '../schema/EventSchemas.ts';
 
 export class EventController {
     private eventService: EventService = new EventService();

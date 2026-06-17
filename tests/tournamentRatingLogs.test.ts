@@ -41,16 +41,16 @@ async function addScoreOnlyTournamentGame(round: number) {
             playersData: PLAYER_IDS.map((userId, index) => ({
                 userId,
                 points: [40000, 32000, 26000, 22000][index],
-                startPlace: ['EAST', 'SOUTH', 'WEST', 'NORTH'][index]
-            }))
+                startPlace: ['EAST', 'SOUTH', 'WEST', 'NORTH'][index],
+            })),
         });
 }
 
 function ratingUpdateLogCalls(spy: jest.SpiedFunction<typeof LogService.logInfo>): unknown[][] {
     return spy.mock.calls.filter(([message]) =>
-        typeof message === 'string'
-        && message.includes('Додано')
-        && message.includes('нову гру')
+        typeof message === 'string' &&
+        message.includes('Додано') &&
+        message.includes('нову гру')
     );
 }
 

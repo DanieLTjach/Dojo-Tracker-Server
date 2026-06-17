@@ -61,7 +61,15 @@ describe('AchievementService (persisted tournament achievements)', () => {
         u3 = userService.registerUser('Charlie', 'charlie', 910003, 0).id;
         u4 = userService.registerUser('Delta', 'delta', 910004, 0).id;
 
-        createCustomEvent(EVENT_ID, 'Achievements Cup', '2024-01-01T00:00:00.000Z', '2026-12-31T23:59:59.999Z', 2, 1, 'TOURNAMENT');
+        createCustomEvent(
+            EVENT_ID,
+            'Achievements Cup',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z',
+            2,
+            1,
+            'TOURNAMENT'
+        );
 
         const gameId = insertFinishedGame(EVENT_ID);
         addPlayer(gameId, u1, 'EAST', 40000, 0);
@@ -77,10 +85,10 @@ describe('AchievementService (persisted tournament achievements)', () => {
                 { playerId: u1, pointChange: 6000 },
                 { playerId: u2, pointChange: -2000 },
                 { playerId: u3, pointChange: -2000 },
-                { playerId: u4, pointChange: -2000 }
+                { playerId: u4, pointChange: -2000 },
             ],
             nextState: undefined,
-            gameFinishReason: undefined
+            gameFinishReason: undefined,
         };
         addRound(gameId, 1, 1, tsumo);
         addRatingChange(u1, EVENT_ID, gameId, 10);
@@ -98,22 +106,22 @@ describe('AchievementService (persisted tournament achievements)', () => {
         const results = achievementService.getEventAchievements(EVENT_ID);
         expect(results).toHaveLength(21);
 
-        const dealerWins = results.find((r) => r.metric === 'dealer_wins')!;
+        const dealerWins = results.find(r => r.metric === 'dealer_wins')!;
         expect(dealerWins.value).toBe(1);
-        expect(dealerWins.winners.map((w) => w.userId)).toEqual([u1]);
+        expect(dealerWins.winners.map(w => w.userId)).toEqual([u1]);
         expect(dealerWins.criterion).toBe(AchievementCriterion.Highest);
         expect(dealerWins.valueFormatted).toBe('1 wins');
 
-        const chombo = results.find((r) => r.metric === 'chombo_count')!;
-        expect(chombo.winners.map((w) => w.userId)).toEqual([u4]);
+        const chombo = results.find(r => r.metric === 'chombo_count')!;
+        expect(chombo.winners.map(w => w.userId)).toEqual([u4]);
 
-        const saki = results.find((r) => r.metric === 'saki_zero_after_uma_games')!;
+        const saki = results.find(r => r.metric === 'saki_zero_after_uma_games')!;
         expect(saki.criterion).toBe(AchievementCriterion.AllQualifiers);
-        expect(saki.winners.map((w) => w.userId)).toEqual([u3]);
+        expect(saki.winners.map(w => w.userId)).toEqual([u3]);
         expect(saki.value).toBeUndefined();
         expect(saki.valueFormatted).toBeUndefined();
 
-        const yakuman = results.find((r) => r.metric === 'yakuman_wins')!;
+        const yakuman = results.find(r => r.metric === 'yakuman_wins')!;
         expect(yakuman.winners).toEqual([]);
         expect(yakuman.value).toBeUndefined();
     });
@@ -128,24 +136,32 @@ describe('AchievementService (persisted tournament achievements)', () => {
 
     it('force recompute returns results and refreshes the computed marker', () => {
         const results = achievementService.forceRecomputeEventAchievements(EVENT_ID);
-        const dealerWins = results.find((r) => r.metric === 'dealer_wins')!;
-        expect(dealerWins.winners.map((w) => w.userId)).toEqual([u1]);
+        const dealerWins = results.find(r => r.metric === 'dealer_wins')!;
+        expect(dealerWins.winners.map(w => w.userId)).toEqual([u1]);
     });
 
     it('force recompute rejects non-tournament events', () => {
         const seasonEventId = 9101;
-        createCustomEvent(seasonEventId, 'Achievements Season', '2024-01-01T00:00:00.000Z', '2026-12-31T23:59:59.999Z', 2, 1, 'SEASON');
+        createCustomEvent(
+            seasonEventId,
+            'Achievements Season',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z',
+            2,
+            1,
+            'SEASON'
+        );
         expect(() => achievementService.forceRecomputeEventAchievements(seasonEventId))
             .toThrow(AchievementsOnlyForTournamentsError);
     });
 
-    it('returns a user\'s achievements across tournaments for the profile page', () => {
+    it("returns a user's achievements across tournaments for the profile page", () => {
         const achievements = achievementService.getUserAchievements(u1);
-        const metrics = achievements.map((a) => a.metric);
+        const metrics = achievements.map(a => a.metric);
         expect(metrics).toContain('dealer_wins');
         expect(metrics).toContain('best_game_points');
 
-        const dealerWins = achievements.find((a) => a.metric === 'dealer_wins')!;
+        const dealerWins = achievements.find(a => a.metric === 'dealer_wins')!;
         expect(dealerWins.eventId).toBe(EVENT_ID);
         expect(dealerWins.eventName).toBe('Achievements Cup');
         expect(dealerWins.value).toBe(1);
