@@ -1,9 +1,10 @@
 import { InternalServerError } from '../error/BaseErrors.ts';
 import { ClubInviteSource, ClubInviteType, ClubMembershipStatus, ClubRole } from '../model/ClubModels.ts';
 import { EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
-import { UmaTieBreak } from '../model/EventModels.ts';
+import { EventType, UmaTieBreak } from '../model/EventModels.ts';
 import { GameStatus, Wind } from '../model/GameModels.ts';
 import { ClubTelegramTopicType } from '../model/TelegramTopic.ts';
+import { TournamentStatus } from '../model/TournamentModels.ts';
 import { UserStatus } from '../model/UserModels.ts';
 
 class EnumParsingError extends InternalServerError {
@@ -61,8 +62,16 @@ export function parseGameStatus(value: string): GameStatus {
     return parseEnumValue('GameStatus', GameStatus, value);
 }
 
+export function parseTournamentStatus(value: string): TournamentStatus {
+    return parseEnumValue('TournamentStatus', TournamentStatus, value);
+}
+
 export function parseUmaTieBreak(value: string): UmaTieBreak {
     return parseEnumValue('UmaTieBreak', UmaTieBreak, value);
+}
+
+export function parseEventType(value: string): EventType {
+    return parseEnumValue('EventType', EventType, value);
 }
 
 export function parseClubTelegramTopicType(value: string): ClubTelegramTopicType {

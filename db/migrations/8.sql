@@ -38,24 +38,3 @@ ALTER TABLE gameRules DROP COLUMN chomboPointsAfterUma;
 
 -- Remove the deprecated nagashi_mangan_count_as_a_win rule from the EMA 2025 ruleset.
 UPDATE gameRules SET details = '{"preset":"ema_2025","rules":{"call_precedence":"ron_pon","chombo":"mangan","counted_yakuman":true,"double_yakuman":true,"nagashi_mangan":true,"red_fives":"three_one_per_suit","starting_points":30000,"yakuman_stacking":true}}' WHERE id = 2;
-
-
--- One row per (event, metric, winning user). `value` is the achievement's
--- headline value (the max/min metric value the winners share) and is repeated
--- across the winners of the same metric. NULL for "list all qualifiers"
--- achievements, where a single value makes no sense.
-CREATE TABLE eventAchievement (
-    eventId INTEGER NOT NULL REFERENCES event(id),
-    metric TEXT NOT NULL,
-    userId INTEGER NOT NULL REFERENCES user(id),
-    value INTEGER,
-    PRIMARY KEY (eventId, metric, userId)
-);
-
--- Lookup by user for the profile page (achievements won across all tournaments).
-CREATE INDEX idx_eventAchievement_userId ON eventAchievement(userId);
-
--- Marks when an event's achievements were last computed. Without this an event
--- whose computation legitimately produced no awards would be recomputed on every
--- read; the marker lets us distinguish "no awards" from "never computed".
-ALTER TABLE event ADD COLUMN achievementsComputedAt TIMESTAMP;

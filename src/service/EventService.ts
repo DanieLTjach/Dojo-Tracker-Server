@@ -5,21 +5,41 @@ import {
     CannotDeleteEventWithRegistrationsError,
     CurrentRatingEventMustBeClubScopedError,
     TournamentMustHaveClubError,
+    TournamentConfigRequiredError,
+    TournamentConfigOnlyForTournamentError,
+    EventIsNotTournamentError,
+    TournamentTotalRoundsLessThanCurrentRoundError,
+    TournamentRoundGamesNotFinishedError,
+    TournamentRoundOutOfSequenceError,
+    TournamentRoundNotCurrentError,
+    TournamentHasNoMoreRoundsError,
+    TournamentRoundAlreadyPlayedError,
+    TournamentAlreadyFinishedError,
+    TournamentNotInLastRoundError,
+    TournamentGameNotInCurrentRoundError,
+    TournamentMisconfigured,
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
-import type { Event, EventInfo } from '../model/EventModels.ts';
+import type { Event, EventConfig, EventInfo, EventType } from '../model/EventModels.ts';
+import type { Game } from '../model/GameModels.ts';
+import { ClubRole } from '../model/ClubModels.ts';
+import { TournamentStatus } from '../model/TournamentModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { UserService } from './UserService.ts';
+import { TournamentRepository } from '../repository/TournamentRepository.ts';
+import { GameRepository } from '../repository/GameRepository.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
     private clubRepository: ClubRepository = new ClubRepository();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
     private eventRegistrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
+    private tournamentRepository: TournamentRepository = new TournamentRepository();
+    private gameRepository: GameRepository = new GameRepository();
     private userService: UserService = new UserService();
 
     getAllEvents(clubId?: number): Event[] {
@@ -74,6 +94,7 @@ export class EventService {
 
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
+        this.validateTournamentConfig(data);
 
         const now = new Date();
         const eventId = this.eventRepository.createEvent({
@@ -89,12 +110,14 @@ export class EventService {
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
+            config: data.config ?? null,
             blockGameCreation: data.blockGameCreation ?? false,
             createdAt: now,
             modifiedAt: now,
             modifiedBy,
         });
 
+        this.syncTournamentConfig(undefined, eventId, data, modifiedBy, now);
         this.syncCurrentRatingEvent(
             undefined,
             data.clubId ?? null,
@@ -121,6 +144,7 @@ export class EventService {
 
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
+        this.validateTournamentConfig(data, existingEvent);
 
         const now = new Date();
         this.syncCurrentRatingEvent(
@@ -146,12 +170,132 @@ export class EventService {
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
+            config: data.config ?? null,
             blockGameCreation: data.blockGameCreation ?? false,
             modifiedAt: now,
             modifiedBy,
         });
 
+        this.syncTournamentConfig(existingEvent, eventId, data, modifiedBy, now);
+
         return this.getEventById(eventId);
+    }
+
+    /**
+     * Advance the tournament to `roundId`. Idempotent by design: the caller passes the round
+     * it wants to become current, so a duplicated request (double tap, retry on bad network)
+     * is a no-op rather than skipping a round.
+     *
+     * - roundId === currentRound          → no-op (already started).
+     * - roundId === (currentRound ?? 0)+1 → start that round.
+     * - anything else                     → rejected as out of sequence.
+     */
+    startTournamentRound(eventId: number, roundId: number, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.authorizeTournamentManagement(event, modifiedBy);
+        const tournament = event.tournament!;
+
+        // Already on the requested round: treat a duplicate request as a successful no-op.
+        if (tournament.currentRound === roundId) {
+            return event;
+        }
+
+        if (tournament.status === TournamentStatus.FINISHED) {
+            throw new TournamentAlreadyFinishedError(event.name);
+        }
+
+        const nextRound = (tournament.currentRound ?? 0) + 1;
+        if (roundId !== nextRound) {
+            throw new TournamentRoundOutOfSequenceError(event.name, nextRound, roundId);
+        }
+        if (nextRound > tournament.totalRounds) {
+            throw new TournamentHasNoMoreRoundsError(event.name);
+        }
+
+        if (tournament.currentRound !== null) {
+            this.validateTournamentRoundFinished(event, tournament.currentRound);
+        }
+
+        const status = nextRound === tournament.totalRounds
+            ? TournamentStatus.LAST_ROUND
+            : TournamentStatus.IN_PROGRESS;
+
+        this.tournamentRepository.updateTournamentState(eventId, status, nextRound, new Date(), modifiedBy);
+
+        return this.getEventById(eventId);
+    }
+
+    /**
+     * Cancel (undo) the start of the current tournament round, stepping currentRound back one step.
+     * Only the round that is currently active can be cancelled, and only while none of its games have
+     * been played yet (all still CREATED) — so we never discard in-progress or finished results.
+     *
+     * Cancelling round N returns the tournament to round N-1's state (IN_PROGRESS), or to the
+     * un-started state (CREATED / currentRound = null) when N was the first round.
+     */
+    cancelTournamentRound(eventId: number, roundId: number, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.authorizeTournamentManagement(event, modifiedBy);
+        const tournament = event.tournament!;
+
+        if (tournament.status === TournamentStatus.FINISHED) {
+            throw new TournamentAlreadyFinishedError(event.name);
+        }
+
+        // Only the round that is actually current can be cancelled. A null currentRound (nothing
+        // started) or any other round id is rejected.
+        if (tournament.currentRound !== roundId) {
+            throw new TournamentRoundNotCurrentError(event.name, tournament.currentRound, roundId);
+        }
+
+        this.validateTournamentRoundNotStarted(event, roundId);
+
+        const previousRound = roundId - 1;
+        const newCurrentRound = previousRound >= 1 ? previousRound : null;
+        const newStatus = newCurrentRound === null ? TournamentStatus.CREATED : TournamentStatus.IN_PROGRESS;
+
+        this.tournamentRepository.updateTournamentState(eventId, newStatus, newCurrentRound, new Date(), modifiedBy);
+
+        return this.getEventById(eventId);
+    }
+
+    finishTournament(eventId: number, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.authorizeTournamentManagement(event, modifiedBy);
+        const tournament = event.tournament!;
+
+        if (tournament.status === TournamentStatus.FINISHED) {
+            throw new TournamentAlreadyFinishedError(event.name);
+        }
+
+        if (tournament.currentRound !== tournament.totalRounds) {
+            throw new TournamentNotInLastRoundError(event.name);
+        }
+
+        this.validateTournamentRoundFinished(event, tournament.currentRound);
+
+        this.tournamentRepository.updateTournamentState(
+            eventId,
+            TournamentStatus.FINISHED,
+            tournament.currentRound,
+            new Date(),
+            modifiedBy
+        );
+
+        return this.getEventById(eventId);
+    }
+
+    validateTournamentGameCanStart(event: Event, game: Game): void {
+        if (event.type !== 'TOURNAMENT') {
+            return;
+        }
+
+        if (event.tournament === null || game.tournamentRound !== event.tournament.currentRound) {
+            throw new TournamentGameNotInCurrentRoundError(
+                event.tournament?.currentRound ?? null,
+                game.tournamentRound
+            );
+        }
     }
 
     private authorizeEventCreation(clubId: number | null | undefined, userId: number): void {
@@ -212,6 +356,9 @@ export class EventService {
             this.clubRepository.updateCurrentRatingEvent(event.clubId, null, new Date(), modifiedBy);
         }
 
+        if (event.tournament !== null) {
+            this.tournamentRepository.deleteTournament(eventId);
+        }
         this.eventRepository.deleteEvent(eventId);
     }
 
@@ -234,6 +381,70 @@ export class EventService {
     private validateTournamentClub(data: EventData): void {
         if (data.type === 'TOURNAMENT' && (data.clubId === null || data.clubId === undefined)) {
             throw new TournamentMustHaveClubError();
+        }
+    }
+
+    getTournamentEvent(eventId: number): Event {
+        const event = this.getEventById(eventId);
+        if (event.type !== 'TOURNAMENT') {
+            throw new EventIsNotTournamentError(event.name);
+        }
+        if (event.tournament === null) {
+            throw new TournamentMisconfigured();
+        }
+        return event;
+    }
+
+    private authorizeTournamentManagement(event: Event, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (event.clubId === null) {
+            throw new InsufficientPermissionsError();
+        }
+
+        const role = this.membershipRepository.getUserClubRole(event.clubId, userId);
+        if (role !== ClubRole.OWNER && role !== ClubRole.MODERATOR) {
+            throw new InsufficientClubPermissionsError([ClubRole.OWNER, ClubRole.MODERATOR]);
+        }
+    }
+
+    private validateTournamentRoundFinished(event: Event, round: number): void {
+        const unfinishedCount = this.gameRepository.countUnfinishedGamesByEventAndTournamentRound(event.id, round);
+        if (unfinishedCount > 0) {
+            throw new TournamentRoundGamesNotFinishedError(event.name, round, unfinishedCount);
+        }
+    }
+
+    private validateTournamentRoundNotStarted(event: Event, round: number): void {
+        const startedCount = this.gameRepository.countStartedGamesByEventAndTournamentRound(event.id, round);
+        if (startedCount > 0) {
+            throw new TournamentRoundAlreadyPlayedError(event.name, round, startedCount);
+        }
+    }
+
+    private validateTournamentConfig(data: EventData, existingEvent?: Event): void {
+        if (data.type === 'TOURNAMENT') {
+            if (data.tournament === null || data.tournament === undefined) {
+                throw new TournamentConfigRequiredError();
+            }
+            this.validateTotalRoundsNotLessThanCurrentRound(
+                data.tournament.totalRounds,
+                existingEvent?.tournament?.currentRound ?? null
+            );
+            return;
+        }
+
+        if (data.tournament !== null && data.tournament !== undefined) {
+            throw new TournamentConfigOnlyForTournamentError();
+        }
+    }
+
+    private validateTotalRoundsNotLessThanCurrentRound(totalRounds: number, currentRound: number | null): void {
+        if (currentRound !== null && totalRounds < currentRound) {
+            throw new TournamentTotalRoundsLessThanCurrentRoundError(totalRounds, currentRound);
         }
     }
 
@@ -263,12 +474,48 @@ export class EventService {
             this.clubRepository.updateCurrentRatingEvent(newClubId, eventId, modifiedAt, modifiedBy);
         }
     }
+
+    private syncTournamentConfig(
+        existingEvent: Event | undefined,
+        eventId: number,
+        data: EventData,
+        modifiedBy: number,
+        modifiedAt: Date
+    ): void {
+        if (data.type === 'TOURNAMENT') {
+            if (existingEvent === undefined || existingEvent.tournament === null) {
+                this.tournamentRepository.createTournament(
+                    eventId,
+                    data.tournament!.totalRounds,
+                    modifiedAt,
+                    modifiedBy
+                );
+                return;
+            }
+
+            this.tournamentRepository.updateTournamentTotalRounds(
+                eventId,
+                data.tournament!.totalRounds,
+                modifiedAt,
+                modifiedBy
+            );
+            return;
+        }
+
+        if (existingEvent?.tournament !== null && existingEvent?.tournament !== undefined) {
+            this.tournamentRepository.deleteTournament(eventId);
+        }
+    }
+}
+
+export interface TournamentData {
+    totalRounds: number;
 }
 
 export interface EventData {
     name: string;
     description?: string | null | undefined;
-    type: string;
+    type: EventType;
     clubId?: number | null | undefined;
     isCurrentRating?: boolean | null | undefined;
     dateFrom?: Date | null | undefined;
@@ -279,5 +526,7 @@ export interface EventData {
     startingRating: number;
     minimumGamesForRating: number;
     info?: EventInfo | null | undefined;
+    config?: EventConfig | null | undefined;
     blockGameCreation?: boolean | undefined;
+    tournament?: TournamentData | null | undefined;
 }

@@ -69,7 +69,8 @@ describe('TournamentRoundImportService', () => {
             '2026-12-31T23:59:59.999Z',
             GAME_RULES_ID,
             TEST_CLUB_ID,
-            'TOURNAMENT'
+            'TOURNAMENT',
+            50
         );
         createCustomEvent(
             ENDED_TOURNAMENT_EVENT_ID,
@@ -78,7 +79,8 @@ describe('TournamentRoundImportService', () => {
             '2000-12-31T23:59:59.999Z',
             GAME_RULES_ID,
             TEST_CLUB_ID,
-            'TOURNAMENT'
+            'TOURNAMENT',
+            50
         );
 
         dbManager.db.prepare(
@@ -242,7 +244,8 @@ describe('TournamentRoundImportService', () => {
                 futureTo,
                 GAME_RULES_ID,
                 TEST_CLUB_ID,
-                'TOURNAMENT'
+                'TOURNAMENT',
+                10
             );
             for (const userId of [user1Id, user2Id, user3Id, user4Id]) {
                 insertApprovedRegistration(FUTURE_TOURNAMENT_EVENT_ID, userId);
@@ -255,6 +258,7 @@ describe('TournamentRoundImportService', () => {
             );
             dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(FUTURE_TOURNAMENT_EVENT_ID);
             dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId = ?').run(FUTURE_TOURNAMENT_EVENT_ID);
+            dbManager.db.prepare('DELETE FROM tournament WHERE eventId = ?').run(FUTURE_TOURNAMENT_EVENT_ID);
             dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(FUTURE_TOURNAMENT_EVENT_ID);
             dbManager.db.prepare('DELETE FROM clubMembership WHERE userId IN (?, ?)').run(
                 ADMIN_IMPORTER_USER_ID,
@@ -330,6 +334,8 @@ describe('POST /api/games/:gameId/start', () => {
         const text = `Round ${round}\n99101 99102 99103 99104`;
         const result = importService.parseAndImport(TOURNAMENT_EVENT_ID, round, text, SYSTEM_USER_ID);
         expect(result.imported).toBe(1);
+        dbManager.db.prepare('UPDATE tournament SET currentRound = ?, status = ? WHERE eventId = ?')
+            .run(round, 'IN_PROGRESS', TOURNAMENT_EVENT_ID);
         return result.games[0]!.id;
     }
 
@@ -435,6 +441,8 @@ describe('POST /api/games/:gameId/start', () => {
             1,
             '1'
         );
+        dbManager.db.prepare('UPDATE tournament SET currentRound = 1, status = ? WHERE eventId = ?')
+            .run('IN_PROGRESS', ENDED_TOURNAMENT_EVENT_ID);
 
         const response = await request(app)
             .post(`/api/games/${game.id}/start`)
@@ -470,6 +478,7 @@ describe('createTrackedGame options', () => {
             TOURNAMENT_EVENT_ID,
             TEST_EVENT_ID
         );
+        dbManager.db.prepare('DELETE FROM tournament WHERE eventId IN (?, ?)').run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
         dbManager.db.prepare('DELETE FROM event WHERE id IN (?, ?)').run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
         dbManager.closeDB();
         cleanupTestDatabase();

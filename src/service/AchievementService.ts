@@ -1,16 +1,17 @@
 import {
-    AchievementMetric,
+    type AchievementMetric,
     ACHIEVEMENTS,
     type AchievementDefinition,
     type AchievementValueUnit,
 } from '../data/achievementsCatalog.ts';
 import type { Event } from '../model/EventModels.ts';
 import { AchievementCriterion, type EventAchievementResult, type UserAchievement } from '../model/AchievementModels.ts';
-import { DetailedGame, GameStatus } from '../model/GameModels.ts';
+import { type DetailedGame, GameStatus } from '../model/GameModels.ts';
 import { AchievementRepository, type EventAchievementWinnerRow } from '../repository/AchievementRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { computeAchievements } from '../util/AchievementCalculator.ts';
 import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
+import { TournamentStatus } from '../model/TournamentModels.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
 
@@ -38,6 +39,19 @@ export class AchievementService {
         } catch (error) {
             LogService.logError(`Failed to compute achievements for event ${event.id}`, error);
         }
+    }
+
+    /**
+     * Recompute only when the tournament is already finished. Achievements are derived from a
+     * tournament's final results, so there is no point recomputing them on every game action
+     * (creation/update/deletion) while the tournament is still running — only a change to a
+     * finished tournament's games can affect its achievements.
+     */
+    recomputeEventAchievementsIfTournamentFinished(event: Event): void {
+        if (event.tournament?.status !== TournamentStatus.FINISHED) {
+            return;
+        }
+        this.recomputeEventAchievements(event);
     }
 
     /**

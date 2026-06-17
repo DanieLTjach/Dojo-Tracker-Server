@@ -44,7 +44,8 @@ export function createCustomEvent(
     dateTo?: string,
     gameRulesId: number = 2,
     clubId: number | null = 1,
-    type: 'SEASON' | 'TOURNAMENT' = 'SEASON'
+    type: 'SEASON' | 'TOURNAMENT' = 'SEASON',
+    totalRounds: number = 1
 ): void {
     const timestamp = '2024-01-01T00:00:00.000Z';
 
@@ -52,6 +53,13 @@ export function createCustomEvent(
         `INSERT INTO event (id, name, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(id, name, type, gameRulesId, clubId, dateFrom || null, dateTo || null, 0, 0, 0, timestamp, timestamp);
+
+    if (type === 'TOURNAMENT') {
+        dbManager.db.prepare(
+            `INSERT INTO tournament (eventId, status, totalRounds, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, ?, ?, ?, ?)`
+        ).run(id, 'CREATED', totalRounds, timestamp, timestamp, 0);
+    }
 }
 
 /**
@@ -73,6 +81,7 @@ export function createTestEvent(): void {
  */
 export function deleteEventById(eventId: number): void {
     dbManager.db.prepare('UPDATE club SET currentRatingEventId = NULL WHERE currentRatingEventId = ?').run(eventId);
+    dbManager.db.prepare('DELETE FROM tournament WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
 }
 

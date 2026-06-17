@@ -1,4 +1,5 @@
 import z from 'zod';
+import { EventType, PlayerNameDisplay } from '../model/EventModels.ts';
 import { dateSchema } from './CommonSchemas.ts';
 import { clubIdParamSchema, clubIdSchema } from './ClubSchemas.ts';
 
@@ -11,7 +12,19 @@ export const eventGetByIdSchema = z.object({
     }),
 });
 
-const eventTypeEnum = z.enum(['SEASON', 'TOURNAMENT']);
+const eventTypeEnum = z.enum(Object.values(EventType));
+
+const tournamentConfigSchema = z.strictObject({
+    totalRounds: z.number().int('totalRounds must be an integer').positive('totalRounds must be positive'),
+});
+
+const playerNameDisplayEnum = z.enum(Object.values(PlayerNameDisplay));
+
+const eventConfigSchema = z.strictObject({
+    playerNameDisplay: playerNameDisplayEnum.optional(),
+    minParticipants: z.number().int('minParticipants must be an integer').min(1, 'minParticipants must be at least 1')
+        .optional(),
+});
 
 const scheduleItemKindSchema = z.enum(['default', 'muted', 'milestone']);
 
@@ -88,6 +101,8 @@ const eventSchema = z.object({
     minimumGamesForRating: z.number().int('minimumGamesForRating must be an integer').min(0).default(0),
     blockGameCreation: z.boolean().default(false),
     info: eventInfoSchema.nullish(),
+    config: eventConfigSchema.nullish(),
+    tournament: tournamentConfigSchema.nullish(),
 }).refine(
     data => {
         if (data.dateFrom && data.dateTo) {
@@ -96,7 +111,43 @@ const eventSchema = z.object({
         return true;
     },
     { error: 'dateFrom must be before dateTo', path: ['dateTo'] }
-);
+).superRefine((data, ctx) => {
+    if (data.type === EventType.TOURNAMENT && data.tournament === undefined) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'Tournament config is required for TOURNAMENT events',
+            path: ['tournament'],
+        });
+    }
+    if (data.type !== EventType.TOURNAMENT && data.tournament !== undefined && data.tournament !== null) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'Tournament config is only allowed for TOURNAMENT events',
+            path: ['tournament'],
+        });
+    }
+
+    const minParticipants = data.config?.minParticipants;
+    if (minParticipants !== undefined) {
+        if (data.type !== EventType.TOURNAMENT) {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'minParticipants is only allowed for TOURNAMENT events',
+                path: ['config', 'minParticipants'],
+            });
+        }
+        if (
+            data.maxParticipants !== undefined && data.maxParticipants !== null &&
+            minParticipants > data.maxParticipants
+        ) {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'minParticipants must not exceed maxParticipants',
+                path: ['config', 'minParticipants'],
+            });
+        }
+    }
+});
 
 export const eventCreateSchema = z.object({
     body: eventSchema,
@@ -110,6 +161,46 @@ export const eventUpdateSchema = z.object({
 });
 
 export const eventDeleteSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema,
+    }),
+});
+
+export const tournamentRoundStartSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema,
+        roundId: z.coerce.number().int('Round ID must be an integer').positive('Round ID must be positive'),
+    }),
+});
+
+export const tournamentSeatingGenerateSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema,
+    }),
+    body: z.strictObject({
+        timeLimitMs: z.number().int('timeLimitMs must be an integer').min(100).max(30000).optional(),
+        candidateCount: z.number().int('candidateCount must be an integer').min(1).max(5).optional(),
+        seed: z.number().int('seed must be an integer').optional(),
+    }).optional(),
+});
+
+const seatingApplyRoundsSchema = z.array(
+    z.array(
+        z.array(z.number().int('Seat user id must be an integer').positive())
+            .length(4, 'Each table must have exactly 4 players')
+    ).min(1, 'Each round must have at least one table')
+).min(1, 'At least one round is required');
+
+export const tournamentSeatingApplySchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema,
+    }),
+    body: z.strictObject({
+        rounds: seatingApplyRoundsSchema,
+    }),
+});
+
+export const tournamentSeatingClearSchema = z.object({
     params: z.object({
         eventId: eventIdParamSchema,
     }),
