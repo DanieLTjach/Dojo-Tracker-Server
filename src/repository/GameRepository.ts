@@ -462,6 +462,11 @@ export class GameRepository {
             params.push(filters.eventId);
         }
 
+        if (filters.status !== undefined) {
+            conditions.push('g.status = ?');
+            params.push(filters.status);
+        }
+
         if (conditions.length > 0) {
             query += ' WHERE ' + conditions.join(' AND ');
         }
