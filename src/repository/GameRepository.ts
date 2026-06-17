@@ -597,6 +597,23 @@ export class GameRepository {
         return this.countUnfinishedGamesByEventAndTournamentRoundStatement().get({ eventId, tournamentRound })!.count;
     }
 
+    private countStartedGamesByEventAndTournamentRoundStatement(): Statement<{
+        eventId: number;
+        tournamentRound: number;
+    }, { count: number }> {
+        return dbManager.db.prepare(`
+            SELECT COUNT(*) as count
+            FROM game
+            WHERE eventId = :eventId
+              AND tournamentRound = :tournamentRound
+              AND status != 'CREATED'
+        `);
+    }
+
+    countStartedGamesByEventAndTournamentRound(eventId: number, tournamentRound: number): number {
+        return this.countStartedGamesByEventAndTournamentRoundStatement().get({ eventId, tournamentRound })!.count;
+    }
+
     private findGamesByEventIdStatement(): Statement<{ eventId: number }, GameDBEntity> {
         return dbManager.db.prepare(
             'SELECT * FROM game WHERE eventId = :eventId ORDER BY tournamentRound, tournamentTable, createdAt'

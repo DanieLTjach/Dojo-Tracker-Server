@@ -362,4 +362,170 @@ describe('Tournament management', () => {
         expect(startResponse.status).toBe(200);
         expect(startResponse.body.status).toBe('IN_PROGRESS');
     });
+
+    describe('cancel tournament round', () => {
+        async function startRound(round: number, authHeader = adminAuthHeader): Promise<void> {
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/${round}/start`)
+                .set('Authorization', authHeader)
+                .send({})
+                .expect(200);
+        }
+
+        test('cancels the current first round back to the un-started state', async () => {
+            importRound(1);
+            await startRound(1);
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/cancel`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            expect(response.status).toBe(200);
+            expect(response.body.tournament).toMatchObject({
+                status: 'CREATED',
+                currentRound: null,
+                totalRounds: 3,
+            });
+        });
+
+        test('cancels a later round back to the previous one', async () => {
+            importRound(1);
+            importRound(2);
+            await startRound(1);
+            markRoundFinished(1);
+            await startRound(2);
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/2/cancel`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            expect(response.status).toBe(200);
+            expect(response.body.tournament).toMatchObject({
+                status: 'IN_PROGRESS',
+                currentRound: 1,
+            });
+        });
+
+        test('rejects cancelling a round that is not the current one', async () => {
+            importRound(1);
+            await startRound(1);
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/2/cancel`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentRoundOutOfSequence');
+        });
+
+        test('rejects cancelling when nothing has been started', async () => {
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/cancel`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentRoundOutOfSequence');
+        });
+
+        test('rejects cancelling a round whose games are already finished', async () => {
+            importRound(1);
+            await startRound(1);
+            markRoundFinished(1);
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/cancel`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentRoundAlreadyPlayed');
+        });
+
+        test('rejects cancelling a round whose games are in progress', async () => {
+            const round1GameId = importRound(1);
+            await startRound(1);
+
+            await request(app)
+                .post(`/api/games/${round1GameId}/start`)
+                .set('Authorization', playerAuthHeader)
+                .send({})
+                .expect(200);
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/cancel`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentRoundAlreadyPlayed');
+        });
+
+        test('rejects cancelling a finished tournament', async () => {
+            dbManager.db.prepare('UPDATE tournament SET totalRounds = 1 WHERE eventId = ?').run(TOURNAMENT_EVENT_ID);
+            importRound(1);
+            await startRound(1);
+            markRoundFinished(1);
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/finish`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/cancel`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentAlreadyFinished');
+        });
+
+        test('allows a club moderator to cancel a round', async () => {
+            importRound(1);
+            await startRound(1);
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/cancel`)
+                .set('Authorization', moderatorAuthHeader)
+                .send({});
+
+            expect(response.status).toBe(200);
+            expect(response.body.tournament).toMatchObject({ status: 'CREATED', currentRound: null });
+        });
+
+        test('rejects a regular member cancelling a round', async () => {
+            importRound(1);
+            await startRound(1);
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/cancel`)
+                .set('Authorization', playerAuthHeader)
+                .send({});
+
+            expect(response.status).toBe(403);
+        });
+
+        test('lets a round be started again after cancelling (regenerate-seating flow)', async () => {
+            importRound(1);
+            await startRound(1);
+
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/cancel`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            const restart = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+                .set('Authorization', adminAuthHeader)
+                .send({});
+
+            expect(restart.status).toBe(200);
+            expect(restart.body.tournament).toMatchObject({ status: 'IN_PROGRESS', currentRound: 1 });
+        });
+    });
 });

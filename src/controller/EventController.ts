@@ -51,6 +51,13 @@ export class EventController {
         return res.status(StatusCodes.OK).json(event);
     }
 
+    cancelTournamentRound(req: Request, res: Response) {
+        const { params: { eventId, roundId } } = tournamentRoundStartSchema.parse(req);
+        const userId = req.user!.userId;
+        const event = this.eventService.cancelTournamentRound(eventId, roundId, userId);
+        return res.status(StatusCodes.OK).json(event);
+    }
+
     finishTournament(req: Request, res: Response) {
         const { params: { eventId } } = eventGetByIdSchema.parse(req);
         const userId = req.user!.userId;

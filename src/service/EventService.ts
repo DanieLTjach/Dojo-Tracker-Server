@@ -12,6 +12,7 @@ import {
     TournamentRoundGamesNotFinishedError,
     TournamentRoundOutOfSequenceError,
     TournamentHasNoMoreRoundsError,
+    TournamentRoundAlreadyPlayedError,
     TournamentAlreadyFinishedError,
     TournamentNotInLastRoundError,
     TournamentGameNotInCurrentRoundError,
@@ -223,6 +224,40 @@ export class EventService {
         return this.getEventById(eventId);
     }
 
+    /**
+     * Cancel (undo) the start of the current tournament round, stepping currentRound back one step.
+     * Only the round that is currently active can be cancelled, and only while none of its games have
+     * been played yet (all still CREATED) — so we never discard in-progress or finished results.
+     *
+     * Cancelling round N returns the tournament to round N-1's state (IN_PROGRESS), or to the
+     * un-started state (CREATED / currentRound = null) when N was the first round.
+     */
+    cancelTournamentRound(eventId: number, roundId: number, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.authorizeTournamentManagement(event, modifiedBy);
+        const tournament = event.tournament!;
+
+        if (tournament.status === TournamentStatus.FINISHED) {
+            throw new TournamentAlreadyFinishedError(event.name);
+        }
+
+        // Only the round that is actually current can be cancelled. A null currentRound (nothing
+        // started) or any other round id is treated as out of sequence.
+        if (tournament.currentRound !== roundId) {
+            throw new TournamentRoundOutOfSequenceError(event.name, tournament.currentRound ?? 0, roundId);
+        }
+
+        this.validateTournamentRoundNotStarted(event, roundId);
+
+        const previousRound = roundId - 1;
+        const newCurrentRound = previousRound >= 1 ? previousRound : null;
+        const newStatus = newCurrentRound === null ? TournamentStatus.CREATED : TournamentStatus.IN_PROGRESS;
+
+        this.tournamentRepository.updateTournamentState(eventId, newStatus, newCurrentRound, new Date(), modifiedBy);
+
+        return this.getEventById(eventId);
+    }
+
     finishTournament(eventId: number, modifiedBy: number): Event {
         const event = this.getTournamentEvent(eventId);
         this.authorizeTournamentManagement(event, modifiedBy);
@@ -379,6 +414,13 @@ export class EventService {
         const unfinishedCount = this.gameRepository.countUnfinishedGamesByEventAndTournamentRound(event.id, round);
         if (unfinishedCount > 0) {
             throw new TournamentRoundGamesNotFinishedError(event.name, round, unfinishedCount);
+        }
+    }
+
+    private validateTournamentRoundNotStarted(event: Event, round: number): void {
+        const startedCount = this.gameRepository.countStartedGamesByEventAndTournamentRound(event.id, round);
+        if (startedCount > 0) {
+            throw new TournamentRoundAlreadyPlayedError(event.name, round, startedCount);
         }
     }
 

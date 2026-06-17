@@ -135,6 +135,15 @@ export class TournamentHasNoMoreRoundsError extends BadRequestError {
     }
 }
 
+export class TournamentRoundAlreadyPlayedError extends BadRequestError {
+    constructor(eventName: string, round: number, startedCount: number) {
+        super(
+            `Не можна скасувати раунд ${round} турніру "${eventName}": ${startedCount} ігор вже розпочато або завершено`,
+            'tournamentRoundAlreadyPlayed'
+        );
+    }
+}
+
 export class TournamentAlreadyFinishedError extends BadRequestError {
     constructor(eventName: string) {
         super(`Турнір "${eventName}" вже завершено`, 'tournamentAlreadyFinished');

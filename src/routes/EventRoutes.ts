@@ -85,6 +85,20 @@ router.post(
 );
 
 /**
+ * POST /api/events/:eventId/tournament/rounds/:roundId/cancel
+ * Cancel (undo) the start of the current tournament round, stepping currentRound back one step.
+ * Only allowed for the round that is currently active and while none of its games have been played
+ * yet (all still CREATED). Lets a moderator roll back an accidental start or regenerate seating.
+ *
+ * Authentication: Required (Admin, Club Owner, or Club Moderator)
+ */
+router.post(
+    '/:eventId/tournament/rounds/:roundId/cancel',
+    requireAuth,
+    withTransaction((req, res) => eventController.cancelTournamentRound(req, res))
+);
+
+/**
  * POST /api/events/:eventId/tournament/finish
  * Finish a tournament after its final round games are complete
  *
