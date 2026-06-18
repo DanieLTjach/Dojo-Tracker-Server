@@ -630,14 +630,25 @@ function mergeEventInfo(base: EventInfo | null, patch: EventInfo | null): EventI
     return { ...base, ...patch };
 }
 
-function mergeEventConfig(base: EventConfig | null, patch: EventConfig | null): EventConfig | null {
+function mergeEventConfig(
+    base: EventConfig | null,
+    patch: NonNullable<EventPatchBody['config']> | null
+): EventConfig | null {
     if (patch === null) {
         return null;
     }
-    if (base === null) {
-        return patch;
+
+    const merged: EventConfig = { ...base };
+    for (const key of Object.keys(patch) as Array<keyof EventConfig>) {
+        const value = patch[key];
+        if (value === null) {
+            delete merged[key];
+        } else if (value !== undefined) {
+            Object.assign(merged, { [key]: value });
+        }
     }
-    return { ...base, ...patch };
+
+    return Object.keys(merged).length > 0 ? merged : null;
 }
 
 export interface TournamentData {

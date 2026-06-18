@@ -20,14 +20,24 @@ const tournamentConfigSchema = z.strictObject({
 });
 
 const playerNameDisplayEnum = z.enum(Object.values(PlayerNameDisplay));
+const minParticipantsSchema = z.number().int('minParticipants must be an integer')
+    .min(1, 'minParticipants must be at least 1');
+const maxParticipantsSchema = z.number().int('maxParticipants must be an integer')
+    .min(1, 'maxParticipants must be at least 1');
+const registrationDeadlineSchema = dateSchema.transform(date => date.toISOString());
 
 const eventConfigSchema = z.strictObject({
     playerNameDisplay: playerNameDisplayEnum.optional(),
-    minParticipants: z.number().int('minParticipants must be an integer').min(1, 'minParticipants must be at least 1')
-        .optional(),
-    maxParticipants: z.number().int('maxParticipants must be an integer').min(1, 'maxParticipants must be at least 1')
-        .optional(),
-    registrationDeadline: dateSchema.transform(date => date.toISOString()).optional(),
+    minParticipants: minParticipantsSchema.optional(),
+    maxParticipants: maxParticipantsSchema.optional(),
+    registrationDeadline: registrationDeadlineSchema.optional(),
+});
+
+const eventConfigPatchSchema = z.strictObject({
+    playerNameDisplay: playerNameDisplayEnum.nullish(),
+    minParticipants: minParticipantsSchema.nullish(),
+    maxParticipants: maxParticipantsSchema.nullish(),
+    registrationDeadline: registrationDeadlineSchema.nullish(),
 });
 
 const scheduleItemKindSchema = z.enum(['default', 'muted', 'milestone']);
@@ -188,7 +198,7 @@ export const eventPatchBodySchema = z.strictObject({
     minimumGamesForRating: z.number().int('minimumGamesForRating must be an integer').min(0).optional(),
     blockGameCreation: z.boolean().optional(),
     info: eventInfoSchema.nullish(),
-    config: eventConfigSchema.nullish(),
+    config: eventConfigPatchSchema.nullish(),
     tournament: tournamentConfigSchema.nullish(),
 });
 

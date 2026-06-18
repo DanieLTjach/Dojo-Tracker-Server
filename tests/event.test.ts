@@ -964,6 +964,42 @@ describe('Event API Endpoints', () => {
             expect(response.body.registrationDeadline).toBe('2026-05-20T18:00:00.000Z');
         });
 
+        test('removes one config field with null while preserving sibling settings', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ config: { maxParticipants: null } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toEqual({
+                playerNameDisplay: 'REAL_NAME',
+                registrationDeadline: '2026-05-20T18:00:00.000Z',
+            });
+            expect(response.body.maxParticipants).toBeNull();
+            expect(response.body.registrationDeadline).toBe('2026-05-20T18:00:00.000Z');
+        });
+
+        test('stores SQL null when removing the last config fields individually', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    config: {
+                        playerNameDisplay: null,
+                        maxParticipants: null,
+                        registrationDeadline: null,
+                    },
+                });
+
+            const row = dbManager.db.prepare('SELECT config FROM event WHERE id = ?').get(eventId) as {
+                config: string | null;
+            };
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toBeNull();
+            expect(row.config).toBeNull();
+        });
+
         test('clears config entirely with an explicit null', async () => {
             const response = await request(app)
                 .patch(`/api/events/${eventId}`)
