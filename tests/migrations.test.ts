@@ -508,35 +508,34 @@ describe('Database Migrations', () => {
         db.close();
     });
 
-    test('migration 10 moves legacy participant settings into event config', () => {
-        const db = createMigratedDb('9.sql');
+    test('migration 9 moves legacy participant settings into event config', () => {
+        const db = createMigratedDb('8.sql');
 
         db.prepare(`
       INSERT INTO event (
         id, name, description, type, gameRules, clubId, dateFrom, dateTo,
         maxParticipants, registrationDeadline, startingRating, minimumGamesForRating,
-        config, createdAt, modifiedAt, modifiedBy
+        createdAt, modifiedAt, modifiedBy
       )
       VALUES
         (
           10101, 'Configured Tournament', NULL, 'TOURNAMENT', 1, 1, NULL, NULL,
           24, '2026-06-01T18:00:00.000Z', 0, 0,
-          '{"playerNameDisplay":"REAL_NAME","minParticipants":8}',
           '2026-05-01T00:00:00.000Z', '2026-05-01T00:00:00.000Z', 0
         ),
         (
           10102, 'Unconfigured Tournament', NULL, 'TOURNAMENT', 1, 1, NULL, NULL,
-          16, NULL, 0, 0, NULL,
+          16, NULL, 0, 0,
           '2026-05-02T00:00:00.000Z', '2026-05-02T00:00:00.000Z', 0
         ),
         (
           10103, 'Season Without Registration Settings', NULL, 'SEASON', 1, 1, NULL, NULL,
-          NULL, NULL, 0, 0, NULL,
+          NULL, NULL, 0, 0,
           '2026-05-03T00:00:00.000Z', '2026-05-03T00:00:00.000Z', 0
         )
     `).run();
 
-        runMigration(db, '10.sql');
+        runMigration(db, '9.sql');
 
         const rows = db.prepare(`
       SELECT id, config
@@ -552,8 +551,6 @@ describe('Database Migrations', () => {
             {
                 id: 10101,
                 config: {
-                    playerNameDisplay: 'REAL_NAME',
-                    minParticipants: 8,
                     maxParticipants: 24,
                     registrationDeadline: '2026-06-01T18:00:00.000Z',
                 },
