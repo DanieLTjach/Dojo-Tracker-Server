@@ -508,6 +508,71 @@ describe('Database Migrations', () => {
         db.close();
     });
 
+    test('migration 10 moves legacy participant settings into event config', () => {
+        const db = createMigratedDb('9.sql');
+
+        db.prepare(`
+      INSERT INTO event (
+        id, name, description, type, gameRules, clubId, dateFrom, dateTo,
+        maxParticipants, registrationDeadline, startingRating, minimumGamesForRating,
+        config, createdAt, modifiedAt, modifiedBy
+      )
+      VALUES
+        (
+          10101, 'Configured Tournament', NULL, 'TOURNAMENT', 1, 1, NULL, NULL,
+          24, '2026-06-01T18:00:00.000Z', 0, 0,
+          '{"playerNameDisplay":"REAL_NAME","minParticipants":8}',
+          '2026-05-01T00:00:00.000Z', '2026-05-01T00:00:00.000Z', 0
+        ),
+        (
+          10102, 'Unconfigured Tournament', NULL, 'TOURNAMENT', 1, 1, NULL, NULL,
+          16, NULL, 0, 0, NULL,
+          '2026-05-02T00:00:00.000Z', '2026-05-02T00:00:00.000Z', 0
+        ),
+        (
+          10103, 'Season Without Registration Settings', NULL, 'SEASON', 1, 1, NULL, NULL,
+          NULL, NULL, 0, 0, NULL,
+          '2026-05-03T00:00:00.000Z', '2026-05-03T00:00:00.000Z', 0
+        )
+    `).run();
+
+        runMigration(db, '10.sql');
+
+        const rows = db.prepare(`
+      SELECT id, config
+      FROM event
+      WHERE id IN (10101, 10102, 10103)
+      ORDER BY id
+    `).all() as Array<{ id: number, config: string | null }>;
+
+        expect(rows.map(row => ({
+            id: row.id,
+            config: row.config === null ? null : JSON.parse(row.config),
+        }))).toEqual([
+            {
+                id: 10101,
+                config: {
+                    playerNameDisplay: 'REAL_NAME',
+                    minParticipants: 8,
+                    maxParticipants: 24,
+                    registrationDeadline: '2026-06-01T18:00:00.000Z',
+                },
+            },
+            {
+                id: 10102,
+                config: {
+                    maxParticipants: 16,
+                },
+            },
+            {
+                id: 10103,
+                config: null,
+            },
+        ]);
+
+        db.close();
+    });
+
     test('seeded game rules details parse against the current schema after all migrations', () => {
         const db = createMigratedDb(getMigrationFiles().at(-1)!);
 
