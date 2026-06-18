@@ -116,8 +116,6 @@ export class EventRepository {
         clubId: number | null;
         dateFrom: string | null;
         dateTo: string | null;
-        maxParticipants: number | null;
-        registrationDeadline: string | null;
         startingRating: number;
         minimumGamesForRating: number;
         info: string | null;
@@ -128,8 +126,8 @@ export class EventRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :maxParticipants, :registrationDeadline, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -139,7 +137,6 @@ export class EventRepository {
             ...params,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
-            registrationDeadline: params.registrationDeadline?.toISOString() ?? null,
             info: params.info !== null ? JSON.stringify(params.info) : null,
             config: params.config !== null ? JSON.stringify(params.config) : null,
             blockGameCreation: booleanToInteger(params.blockGameCreation),
@@ -158,8 +155,6 @@ export class EventRepository {
         clubId: number | null;
         dateFrom: string | null;
         dateTo: string | null;
-        maxParticipants: number | null;
-        registrationDeadline: string | null;
         startingRating: number;
         minimumGamesForRating: number;
         info: string | null;
@@ -177,8 +172,6 @@ export class EventRepository {
                 clubId = :clubId,
                 dateFrom = :dateFrom,
                 dateTo = :dateTo,
-                maxParticipants = :maxParticipants,
-                registrationDeadline = :registrationDeadline,
                 startingRating = :startingRating,
                 minimumGamesForRating = :minimumGamesForRating,
                 info = :info,
@@ -195,7 +188,6 @@ export class EventRepository {
             ...params,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
-            registrationDeadline: params.registrationDeadline?.toISOString() ?? null,
             info: params.info !== null ? JSON.stringify(params.info) : null,
             config: params.config !== null ? JSON.stringify(params.config) : null,
             blockGameCreation: booleanToInteger(params.blockGameCreation),
@@ -261,8 +253,6 @@ export interface EventCreateParams {
     clubId: number | null;
     dateFrom: Date | null;
     dateTo: Date | null;
-    maxParticipants: number | null;
-    registrationDeadline: Date | null;
     startingRating: number;
     minimumGamesForRating: number;
     info: EventInfo | null;
@@ -282,8 +272,6 @@ export interface EventUpdateParams {
     clubId: number | null;
     dateFrom: Date | null;
     dateTo: Date | null;
-    maxParticipants: number | null;
-    registrationDeadline: Date | null;
     startingRating: number;
     minimumGamesForRating: number;
     info: EventInfo | null;
@@ -305,8 +293,6 @@ interface EventWithGameRulesDBEntity {
     minimumGamesForRating: number;
     dateFrom: string | null;
     dateTo: string | null;
-    maxParticipants: number | null;
-    registrationDeadline: string | null;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
@@ -354,8 +340,10 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
-        maxParticipants: dbEntity.maxParticipants,
-        registrationDeadline: dbEntity.registrationDeadline !== null ? new Date(dbEntity.registrationDeadline) : null,
+        maxParticipants: config?.maxParticipants ?? null,
+        registrationDeadline: config?.registrationDeadline !== undefined
+            ? new Date(config.registrationDeadline)
+            : null,
         info: dbEntity.info !== null ? JSON.parse(dbEntity.info) as EventInfo : null,
         config,
         resolvedPlayerNameDisplay: resolvePlayerNameDisplay(config, eventType),

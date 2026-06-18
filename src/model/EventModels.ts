@@ -101,6 +101,8 @@ export type PlayerNameDisplay = typeof PlayerNameDisplay[keyof typeof PlayerName
 export interface EventConfig {
     playerNameDisplay?: PlayerNameDisplay | undefined;
     minParticipants?: number | undefined;
+    maxParticipants?: number | undefined;
+    registrationDeadline?: string | undefined;
 }
 
 /**

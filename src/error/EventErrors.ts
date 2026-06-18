@@ -93,6 +93,15 @@ export class MinParticipantsExceedsMaxError extends BadRequestError {
     }
 }
 
+export class ParticipantConfigOnlyForTournamentError extends BadRequestError {
+    constructor() {
+        super(
+            'Налаштування кількості учасників і терміну реєстрації можна вказувати лише для турнірів',
+            'participantConfigOnlyForTournament'
+        );
+    }
+}
+
 export class TournamentConfigOnlyForTournamentError extends BadRequestError {
     constructor() {
         super('Налаштування турніру можна вказувати лише для турнірів', 'tournamentConfigOnlyForTournament');

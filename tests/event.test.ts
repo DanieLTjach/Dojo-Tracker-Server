@@ -413,14 +413,34 @@ describe('Event API Endpoints', () => {
                     clubId: 1,
                     type: 'TOURNAMENT',
                     tournament: { totalRounds: 3 },
-                    maxParticipants: 16,
-                    config: { minParticipants: 8 },
+                    config: {
+                        minParticipants: 8,
+                        maxParticipants: 16,
+                        registrationDeadline: '2026-06-01T18:00:00.000Z',
+                    },
                 });
 
             createdEventId = response.body.id;
 
             expect(response.status).toBe(201);
-            expect(response.body.config).toMatchObject({ minParticipants: 8 });
+            expect(response.body.config).toEqual({
+                minParticipants: 8,
+                maxParticipants: 16,
+                registrationDeadline: '2026-06-01T18:00:00.000Z',
+            });
+            expect(response.body.maxParticipants).toBe(16);
+            expect(response.body.registrationDeadline).toBe('2026-06-01T18:00:00.000Z');
+
+            const legacyFields = dbManager.db.prepare(
+                'SELECT maxParticipants, registrationDeadline FROM event WHERE id = ?'
+            ).get(createdEventId) as {
+                maxParticipants: number | null;
+                registrationDeadline: string | null;
+            };
+            expect(legacyFields).toEqual({
+                maxParticipants: null,
+                registrationDeadline: null,
+            });
         });
 
         test('should reject minParticipants for a season event', async () => {
@@ -441,9 +461,17 @@ describe('Event API Endpoints', () => {
                     clubId: 1,
                     type: 'TOURNAMENT',
                     tournament: { totalRounds: 3 },
-                    maxParticipants: 4,
-                    config: { minParticipants: 8 },
+                    config: { minParticipants: 8, maxParticipants: 4 },
                 });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject maxParticipants for a season event', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, config: { maxParticipants: 16 } });
 
             expect(response.status).toBe(400);
         });
@@ -857,7 +885,7 @@ describe('Event API Endpoints', () => {
             gameRulesId: 1,
             dateFrom: '2026-05-23T00:00:00.000Z',
             dateTo: '2026-05-24T00:00:00.000Z',
-            maxParticipants: 32,
+            config: { maxParticipants: 32 },
             tournament: { totalRounds: 3 },
             info: seedInfo,
         };

@@ -24,6 +24,9 @@ const eventConfigSchema = z.strictObject({
     playerNameDisplay: playerNameDisplayEnum.optional(),
     minParticipants: z.number().int('minParticipants must be an integer').min(1, 'minParticipants must be at least 1')
         .optional(),
+    maxParticipants: z.number().int('maxParticipants must be an integer').min(1, 'maxParticipants must be at least 1')
+        .optional(),
+    registrationDeadline: dateSchema.transform(date => date.toISOString()).optional(),
 });
 
 const scheduleItemKindSchema = z.enum(['default', 'muted', 'milestone']);
@@ -94,9 +97,6 @@ const eventSchema = z.object({
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer'),
     clubId: clubIdSchema.nullish(),
-    maxParticipants: z.number().int('maxParticipants must be an integer').min(1, 'maxParticipants must be at least 1')
-        .nullish(),
-    registrationDeadline: dateSchema.nullish(),
     startingRating: z.number().int('startingRating must be an integer').default(0),
     minimumGamesForRating: z.number().int('minimumGamesForRating must be an integer').min(0).default(0),
     blockGameCreation: z.boolean().default(false),
@@ -127,25 +127,32 @@ const eventSchema = z.object({
         });
     }
 
+    const participantConfigFields = [
+        ['minParticipants', data.config?.minParticipants],
+        ['maxParticipants', data.config?.maxParticipants],
+        ['registrationDeadline', data.config?.registrationDeadline],
+    ] as const;
+    if (data.type !== EventType.TOURNAMENT) {
+        for (const [field, value] of participantConfigFields) {
+            if (value === undefined) {
+                continue;
+            }
+            ctx.addIssue({
+                code: 'custom',
+                message: `${field} is only allowed for TOURNAMENT events`,
+                path: ['config', field],
+            });
+        }
+    }
+
     const minParticipants = data.config?.minParticipants;
-    if (minParticipants !== undefined) {
-        if (data.type !== EventType.TOURNAMENT) {
-            ctx.addIssue({
-                code: 'custom',
-                message: 'minParticipants is only allowed for TOURNAMENT events',
-                path: ['config', 'minParticipants'],
-            });
-        }
-        if (
-            data.maxParticipants !== undefined && data.maxParticipants !== null &&
-            minParticipants > data.maxParticipants
-        ) {
-            ctx.addIssue({
-                code: 'custom',
-                message: 'minParticipants must not exceed maxParticipants',
-                path: ['config', 'minParticipants'],
-            });
-        }
+    const maxParticipants = data.config?.maxParticipants;
+    if (minParticipants !== undefined && maxParticipants !== undefined && minParticipants > maxParticipants) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'minParticipants must not exceed maxParticipants',
+            path: ['config', 'minParticipants'],
+        });
     }
 });
 
@@ -176,9 +183,6 @@ export const eventPatchBodySchema = z.strictObject({
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer').optional(),
     clubId: clubIdSchema.nullish(),
-    maxParticipants: z.number().int('maxParticipants must be an integer').min(1, 'maxParticipants must be at least 1')
-        .nullish(),
-    registrationDeadline: dateSchema.nullish(),
     startingRating: z.number().int('startingRating must be an integer').optional(),
     minimumGamesForRating: z.number().int('minimumGamesForRating must be an integer').min(0).optional(),
     blockGameCreation: z.boolean().optional(),

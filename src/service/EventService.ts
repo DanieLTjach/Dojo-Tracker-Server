@@ -6,6 +6,7 @@ import {
     CurrentRatingEventMustBeClubScopedError,
     InvalidEventDateRangeError,
     MinParticipantsExceedsMaxError,
+    ParticipantConfigOnlyForTournamentError,
     TournamentMustHaveClubError,
     TournamentConfigRequiredError,
     TournamentConfigOnlyForTournamentError,
@@ -108,8 +109,6 @@ export class EventService {
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
-            maxParticipants: data.maxParticipants ?? null,
-            registrationDeadline: data.registrationDeadline ?? null,
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
@@ -169,8 +168,6 @@ export class EventService {
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
-            maxParticipants: data.maxParticipants ?? null,
-            registrationDeadline: data.registrationDeadline ?? null,
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
@@ -477,10 +474,20 @@ export class EventService {
         }
 
         const minParticipants = data.config?.minParticipants;
+        const maxParticipants = data.config?.maxParticipants;
+        const registrationDeadline = data.config?.registrationDeadline;
+
+        if (
+            data.type !== 'TOURNAMENT' &&
+            (minParticipants !== undefined || maxParticipants !== undefined || registrationDeadline !== undefined)
+        ) {
+            throw new ParticipantConfigOnlyForTournamentError();
+        }
+
         if (
             minParticipants !== undefined &&
-            data.maxParticipants !== undefined && data.maxParticipants !== null &&
-            minParticipants > data.maxParticipants
+            maxParticipants !== undefined &&
+            minParticipants > maxParticipants
         ) {
             throw new MinParticipantsExceedsMaxError();
         }
@@ -559,8 +566,6 @@ export function projectEventToData(event: Event): EventData {
         isCurrentRating: event.isCurrentRating,
         dateFrom: event.dateFrom,
         dateTo: event.dateTo,
-        maxParticipants: event.maxParticipants,
-        registrationDeadline: event.registrationDeadline,
         gameRulesId: event.gameRules.id,
         startingRating: event.startingRating,
         minimumGamesForRating: event.minimumGamesForRating,
@@ -589,8 +594,6 @@ export function mergeEventData(base: EventData, patch: EventPatchBody): EventDat
     assignIfPresent(merged, patch, 'dateFrom');
     assignIfPresent(merged, patch, 'dateTo');
     assignIfPresent(merged, patch, 'clubId');
-    assignIfPresent(merged, patch, 'maxParticipants');
-    assignIfPresent(merged, patch, 'registrationDeadline');
     assignIfPresent(merged, patch, 'gameRulesId');
     assignIfPresent(merged, patch, 'startingRating');
     assignIfPresent(merged, patch, 'minimumGamesForRating');
@@ -639,8 +642,6 @@ export interface EventData {
     isCurrentRating?: boolean | null | undefined;
     dateFrom?: Date | null | undefined;
     dateTo?: Date | null | undefined;
-    maxParticipants?: number | null | undefined;
-    registrationDeadline?: Date | null | undefined;
     gameRulesId: number;
     startingRating: number;
     minimumGamesForRating: number;
