@@ -13,6 +13,7 @@ export const eventGetByIdSchema = z.object({
 });
 
 const eventTypeEnum = z.enum(Object.values(EventType));
+const eventDescriptionSchema = z.string().max(5000, 'Description must be 5000 characters or less');
 
 const tournamentConfigSchema = z.strictObject({
     totalRounds: z.number().int('totalRounds must be an integer').positive('totalRounds must be positive'),
@@ -90,7 +91,7 @@ export const eventInfoSchema = z.strictObject({
 
 const eventSchema = z.object({
     name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
-    description: z.string().max(500, 'Description must be 500 characters or less').nullish(),
+    description: eventDescriptionSchema.nullish(),
     type: eventTypeEnum,
     isCurrentRating: z.boolean().nullish(),
     dateFrom: dateSchema.nullish(),
@@ -176,7 +177,7 @@ export const eventUpdateSchema = z.object({
 // typos from silently no-op'ing.
 export const eventPatchBodySchema = z.strictObject({
     name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').optional(),
-    description: z.string().max(500, 'Description must be 500 characters or less').nullish(),
+    description: eventDescriptionSchema.nullish(),
     type: eventTypeEnum.optional(),
     isCurrentRating: z.boolean().nullish(),
     dateFrom: dateSchema.nullish(),

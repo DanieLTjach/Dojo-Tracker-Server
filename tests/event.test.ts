@@ -301,6 +301,28 @@ describe('Event API Endpoints', () => {
             expect(response.body.resolvedPlayerNameDisplay).toBe('NICKNAME');
         });
 
+        test('should accept a description up to 5000 characters', async () => {
+            const description = 'a'.repeat(5000);
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, description });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.description).toBe(description);
+        });
+
+        test('should reject a description longer than 5000 characters', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, description: 'a'.repeat(5001) });
+
+            expect(response.status).toBe(400);
+        });
+
         test('should create event with blockGameCreation when requested', async () => {
             const response = await request(app)
                 .post('/api/events')
