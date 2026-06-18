@@ -580,13 +580,10 @@ export function projectEventToData(event: Event): EventData {
 }
 
 // Merge a partial patch over a base EventData. Only keys present in the patch
-// override the base; `info` is merged one level deep so patching one sub-object
-// (e.g. `venue`) preserves the others (`schedule`, `links`, `pairings`).
+// override the base; JSON objects are merged one level deep so patching one
+// sub-key preserves its siblings.
 export function mergeEventData(base: EventData, patch: EventPatchBody): EventData {
     const merged: EventData = { ...base };
-    // `info` is handled separately (deep merge); for every other key that is
-    // actually present in the patch (even with an explicit null), it overrides
-    // the base. Keys omitted from the strict patch body keep the base value.
     assignIfPresent(merged, patch, 'name');
     assignIfPresent(merged, patch, 'description');
     assignIfPresent(merged, patch, 'type');
@@ -598,9 +595,12 @@ export function mergeEventData(base: EventData, patch: EventPatchBody): EventDat
     assignIfPresent(merged, patch, 'startingRating');
     assignIfPresent(merged, patch, 'minimumGamesForRating');
     assignIfPresent(merged, patch, 'blockGameCreation');
-    assignIfPresent(merged, patch, 'config');
+    assignIfPresent(merged, patch, 'tournament');
     if ('info' in patch) {
         merged.info = mergeEventInfo(base.info ?? null, patch.info ?? null);
+    }
+    if ('config' in patch) {
+        merged.config = mergeEventConfig(base.config ?? null, patch.config ?? null);
     }
     return merged;
 }
@@ -621,6 +621,16 @@ function assignIfPresent<K extends keyof EventPatchBody & keyof EventData>(
 // info entirely; otherwise each provided sub-key replaces the base sub-key while
 // untouched sub-keys are carried forward.
 function mergeEventInfo(base: EventInfo | null, patch: EventInfo | null): EventInfo | null {
+    if (patch === null) {
+        return null;
+    }
+    if (base === null) {
+        return patch;
+    }
+    return { ...base, ...patch };
+}
+
+function mergeEventConfig(base: EventConfig | null, patch: EventConfig | null): EventConfig | null {
     if (patch === null) {
         return null;
     }

@@ -885,7 +885,11 @@ describe('Event API Endpoints', () => {
             gameRulesId: 1,
             dateFrom: '2026-05-23T00:00:00.000Z',
             dateTo: '2026-05-24T00:00:00.000Z',
-            config: { maxParticipants: 32 },
+            config: {
+                playerNameDisplay: 'REAL_NAME' as const,
+                maxParticipants: 32,
+                registrationDeadline: '2026-05-20T18:00:00.000Z',
+            },
             tournament: { totalRounds: 3 },
             info: seedInfo,
         };
@@ -919,6 +923,45 @@ describe('Event API Endpoints', () => {
             expect(response.body.tournament).toMatchObject({ totalRounds: 3 });
             // info untouched entirely.
             expect(response.body.info).toEqual(seedInfo);
+        });
+
+        test('deep-merges config: patching minParticipants preserves sibling settings', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ config: { minParticipants: 12 } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toEqual({
+                playerNameDisplay: 'REAL_NAME',
+                minParticipants: 12,
+                maxParticipants: 32,
+                registrationDeadline: '2026-05-20T18:00:00.000Z',
+            });
+            expect(response.body.maxParticipants).toBe(32);
+            expect(response.body.registrationDeadline).toBe('2026-05-20T18:00:00.000Z');
+        });
+
+        test('clears config entirely with an explicit null', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ config: null });
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toBeNull();
+            expect(response.body.maxParticipants).toBeNull();
+            expect(response.body.registrationDeadline).toBeNull();
+        });
+
+        test('rejects changing a configured tournament into a season', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ type: 'SEASON', tournament: null });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('participantConfigOnlyForTournament');
         });
 
         test('deep-merges info: patching venue keeps schedule and links', async () => {
