@@ -72,6 +72,16 @@ router.post('/', requireAuth, withTransaction((req, res) => eventController.crea
 router.put('/:eventId', requireAuth, withTransaction((req, res) => eventController.updateEvent(req, res)));
 
 /**
+ * PATCH /api/events/:eventId
+ * Partially update an event. Only the provided fields change; `info` is merged one level
+ * deep (patching `venue` keeps `schedule`/`links`/`pairings`). The merged result is
+ * validated exactly like a full PUT.
+ *
+ * Authentication: Required (Admin or Club Owner — same as PUT)
+ */
+router.patch('/:eventId', requireAuth, withTransaction((req, res) => eventController.patchEvent(req, res)));
+
+/**
  * POST /api/events/:eventId/tournament/rounds/:roundId/start
  * Advance tournament state to the given round. Idempotent: including the round id makes a
  * duplicated request (double tap, retry on bad network) a no-op instead of skipping a round.

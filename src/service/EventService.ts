@@ -4,6 +4,8 @@ import {
     CannotDeleteEventWithGamesError,
     CannotDeleteEventWithRegistrationsError,
     CurrentRatingEventMustBeClubScopedError,
+    InvalidEventDateRangeError,
+    MinParticipantsExceedsMaxError,
     TournamentMustHaveClubError,
     TournamentConfigRequiredError,
     TournamentConfigOnlyForTournamentError,
@@ -32,6 +34,7 @@ import { ClubMembershipRepository } from '../repository/ClubMembershipRepository
 import { UserService } from './UserService.ts';
 import { TournamentRepository } from '../repository/TournamentRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
+import type { EventPatchBody } from '../schema/EventSchemas.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
@@ -145,6 +148,7 @@ export class EventService {
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
         this.validateTournamentConfig(data, existingEvent);
+        this.validateEventDataInvariants(data);
 
         const now = new Date();
         this.syncCurrentRatingEvent(
@@ -179,6 +183,19 @@ export class EventService {
         this.syncTournamentConfig(existingEvent, eventId, data, modifiedBy, now);
 
         return this.getEventById(eventId);
+    }
+
+    /**
+     * Partial update. Projects the existing event into the write-side EventData shape,
+     * merges the provided fields over it (info is merged one level deep so a patch that
+     * touches only `venue` doesn't wipe `schedule`/`links`/`pairings`), then runs the full
+     * `updateEvent` path so all authorization, validation, and sync logic is shared — the
+     * merged object is validated exactly as a full PUT would be.
+     */
+    patchEvent(eventId: number, patch: EventPatchBody, modifiedBy: number): Event {
+        const existingEvent = this.getEventById(eventId);
+        const merged = mergeEventData(projectEventToData(existingEvent), patch);
+        return this.updateEvent(eventId, merged, modifiedBy);
     }
 
     /**
@@ -448,6 +465,27 @@ export class EventService {
         }
     }
 
+    /**
+     * Cross-field invariants that previously lived only in the `eventSchema` zod refine.
+     * Lifted here so they also guard the PATCH path (which merges then writes without
+     * re-running the full create/update zod refinements). PUT keeps the zod refine too as
+     * defense in depth; this guard makes the rules apply uniformly.
+     */
+    private validateEventDataInvariants(data: EventData): void {
+        if (data.dateFrom && data.dateTo && data.dateFrom >= data.dateTo) {
+            throw new InvalidEventDateRangeError();
+        }
+
+        const minParticipants = data.config?.minParticipants;
+        if (
+            minParticipants !== undefined &&
+            data.maxParticipants !== undefined && data.maxParticipants !== null &&
+            minParticipants > data.maxParticipants
+        ) {
+            throw new MinParticipantsExceedsMaxError();
+        }
+    }
+
     private validateCurrentRatingEvent(data: EventData): void {
         if (!data.isCurrentRating) {
             return;
@@ -506,6 +544,87 @@ export class EventService {
             this.tournamentRepository.deleteTournament(eventId);
         }
     }
+}
+
+// Project a stored Event (read shape) into the write-side EventData. The two
+// shapes differ: Event holds the full `gameRules` object and a rich `tournament`
+// row, while EventData wants `gameRulesId` and a minimal `{ totalRounds }`. This
+// projection is the base a PATCH merges onto.
+export function projectEventToData(event: Event): EventData {
+    const base: EventData = {
+        name: event.name,
+        description: event.description,
+        type: event.type,
+        clubId: event.clubId,
+        isCurrentRating: event.isCurrentRating,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        maxParticipants: event.maxParticipants,
+        registrationDeadline: event.registrationDeadline,
+        gameRulesId: event.gameRules.id,
+        startingRating: event.startingRating,
+        minimumGamesForRating: event.minimumGamesForRating,
+        info: event.info,
+        config: event.config,
+        blockGameCreation: event.blockGameCreation,
+    };
+    if (event.tournament !== null) {
+        base.tournament = { totalRounds: event.tournament.totalRounds };
+    }
+    return base;
+}
+
+// Merge a partial patch over a base EventData. Only keys present in the patch
+// override the base; `info` is merged one level deep so patching one sub-object
+// (e.g. `venue`) preserves the others (`schedule`, `links`, `pairings`).
+export function mergeEventData(base: EventData, patch: EventPatchBody): EventData {
+    const merged: EventData = { ...base };
+    // `info` is handled separately (deep merge); for every other key that is
+    // actually present in the patch (even with an explicit null), it overrides
+    // the base. Keys omitted from the strict patch body keep the base value.
+    assignIfPresent(merged, patch, 'name');
+    assignIfPresent(merged, patch, 'description');
+    assignIfPresent(merged, patch, 'type');
+    assignIfPresent(merged, patch, 'isCurrentRating');
+    assignIfPresent(merged, patch, 'dateFrom');
+    assignIfPresent(merged, patch, 'dateTo');
+    assignIfPresent(merged, patch, 'clubId');
+    assignIfPresent(merged, patch, 'maxParticipants');
+    assignIfPresent(merged, patch, 'registrationDeadline');
+    assignIfPresent(merged, patch, 'gameRulesId');
+    assignIfPresent(merged, patch, 'startingRating');
+    assignIfPresent(merged, patch, 'minimumGamesForRating');
+    assignIfPresent(merged, patch, 'blockGameCreation');
+    assignIfPresent(merged, patch, 'config');
+    if ('info' in patch) {
+        merged.info = mergeEventInfo(base.info ?? null, patch.info ?? null);
+    }
+    return merged;
+}
+
+// Copy `key` from patch to target only when the patch actually carries it. The
+// shared key names between EventPatchBody and EventData make this type-safe.
+function assignIfPresent<K extends keyof EventPatchBody & keyof EventData>(
+    target: EventData,
+    patch: EventPatchBody,
+    key: K
+): void {
+    if (key in patch) {
+        target[key] = patch[key] as EventData[K];
+    }
+}
+
+// One-level-deep merge of the event `info` JSON column. A `null` patch clears
+// info entirely; otherwise each provided sub-key replaces the base sub-key while
+// untouched sub-keys are carried forward.
+function mergeEventInfo(base: EventInfo | null, patch: EventInfo | null): EventInfo | null {
+    if (patch === null) {
+        return null;
+    }
+    if (base === null) {
+        return patch;
+    }
+    return { ...base, ...patch };
 }
 
 export interface TournamentData {

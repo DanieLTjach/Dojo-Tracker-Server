@@ -160,6 +160,42 @@ export const eventUpdateSchema = z.object({
     body: eventSchema,
 });
 
+// Partial body for PATCH /api/events/:eventId. Every field is optional and
+// carries NO default — an omitted key means "leave the existing value", which is
+// the whole point of PATCH (the `.default()`s on the full schema would wrongly
+// reset startingRating / minimumGamesForRating / blockGameCreation). The merged
+// result is validated by the full `eventSchema` rules in the service, so the
+// only job here is to type-check the fields that ARE present. `.strict()` keeps
+// typos from silently no-op'ing.
+export const eventPatchBodySchema = z.strictObject({
+    name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').optional(),
+    description: z.string().max(500, 'Description must be 500 characters or less').nullish(),
+    type: eventTypeEnum.optional(),
+    isCurrentRating: z.boolean().nullish(),
+    dateFrom: dateSchema.nullish(),
+    dateTo: dateSchema.nullish(),
+    gameRulesId: z.number().int('gameRulesId must be an integer').optional(),
+    clubId: clubIdSchema.nullish(),
+    maxParticipants: z.number().int('maxParticipants must be an integer').min(1, 'maxParticipants must be at least 1')
+        .nullish(),
+    registrationDeadline: dateSchema.nullish(),
+    startingRating: z.number().int('startingRating must be an integer').optional(),
+    minimumGamesForRating: z.number().int('minimumGamesForRating must be an integer').min(0).optional(),
+    blockGameCreation: z.boolean().optional(),
+    info: eventInfoSchema.nullish(),
+    config: eventConfigSchema.nullish(),
+    tournament: tournamentConfigSchema.nullish(),
+});
+
+export const eventPatchSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema,
+    }),
+    body: eventPatchBodySchema,
+});
+
+export type EventPatchBody = z.infer<typeof eventPatchBodySchema>;
+
 export const eventDeleteSchema = z.object({
     params: z.object({
         eventId: eventIdParamSchema,

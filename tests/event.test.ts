@@ -841,6 +841,144 @@ describe('Event API Endpoints', () => {
         });
     });
 
+    describe('PATCH /api/events/:eventId - Partial Update', () => {
+        const seedInfo = {
+            schedule: [
+                { date: '2026-05-23T00:00:00.000Z', title: 'Day 1', items: [{ time: '10:00', title: 'Registration' }] },
+            ],
+            venue: { name: 'Old Venue', address: 'Old Street 1', city: 'Kyiv' },
+            links: { site: 'https://old.example.com' },
+        };
+        const seedPayload = {
+            name: 'Patch Base',
+            description: 'original description',
+            type: 'TOURNAMENT' as const,
+            clubId: 1,
+            gameRulesId: 1,
+            dateFrom: '2026-05-23T00:00:00.000Z',
+            dateTo: '2026-05-24T00:00:00.000Z',
+            maxParticipants: 32,
+            tournament: { totalRounds: 3 },
+            info: seedInfo,
+        };
+
+        let eventId: number;
+
+        beforeEach(async () => {
+            const created = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send(seedPayload);
+            eventId = created.body.id;
+        });
+
+        afterEach(() => {
+            deleteEventById(eventId);
+        });
+
+        test('updates only the provided top-level field, keeping the rest', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ description: 'patched description' });
+
+            expect(response.status).toBe(200);
+            expect(response.body.description).toBe('patched description');
+            // Untouched fields preserved.
+            expect(response.body.name).toBe('Patch Base');
+            expect(response.body.maxParticipants).toBe(32);
+            expect(response.body.gameRules.id).toBe(1);
+            expect(response.body.tournament).toMatchObject({ totalRounds: 3 });
+            // info untouched entirely.
+            expect(response.body.info).toEqual(seedInfo);
+        });
+
+        test('deep-merges info: patching venue keeps schedule and links', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { venue: { name: 'New Venue', address: 'New Street 9', city: 'Lviv' } } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.info.venue).toEqual({ name: 'New Venue', address: 'New Street 9', city: 'Lviv' });
+            // Sibling info sub-objects survive the partial update.
+            expect(response.body.info.schedule).toEqual(seedInfo.schedule);
+            expect(response.body.info.links).toEqual(seedInfo.links);
+        });
+
+        test('replaces a single info sub-object wholesale, not field-by-field', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { venue: { name: 'Only Name' } } });
+
+            expect(response.status).toBe(200);
+            // venue is replaced as a whole — old address/city are gone.
+            expect(response.body.info.venue).toEqual({ name: 'Only Name' });
+        });
+
+        test('clears info entirely with an explicit null', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: null });
+
+            expect(response.status).toBe(200);
+            expect(response.body.info).toBeNull();
+        });
+
+        test('does not reset un-patched defaulted fields', async () => {
+            // blockGameCreation / startingRating must survive a patch that omits them.
+            await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ blockGameCreation: true });
+
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ description: 'second patch' });
+
+            expect(response.status).toBe(200);
+            expect(response.body.blockGameCreation).toBe(true);
+        });
+
+        test('validates the merged result (dateFrom must precede dateTo)', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ dateFrom: '2026-06-01T00:00:00.000Z' }); // after seeded dateTo
+
+            expect(response.status).toBe(400);
+        });
+
+        test('rejects an unknown field (strict body)', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ bogusField: 1 });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('requires authentication', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .send({ description: 'no auth' });
+
+            expect(response.status).toBe(401);
+        });
+
+        test('forbids a non-admin without club permissions', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', nonAdminAuthHeader)
+                .send({ description: 'nope' });
+
+            expect(response.status).toBe(403);
+        });
+    });
+
     describe('DELETE /api/events/:eventId - Delete Event', () => {
         const deletableEventId = 2002;
         const clubOwnerUserId = 88001;
