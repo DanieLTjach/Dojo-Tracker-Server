@@ -69,6 +69,9 @@ const contactsSchema = z.strictObject({
     phone: z.string().trim().min(1).optional(),
     email: z.email('contacts.email must be a valid email').optional(),
     telegram: z.string().trim().min(1).optional(),
+    paymentInfo: z.string().trim().min(1)
+        .max(1000, 'contacts.paymentInfo must be 1000 characters or less')
+        .optional(),
 });
 
 const linksSchema = z.strictObject({

@@ -897,6 +897,7 @@ describe('Event API Endpoints', () => {
                 { date: '2026-05-23T00:00:00.000Z', title: 'Day 1', items: [{ time: '10:00', title: 'Registration' }] },
             ],
             venue: { name: 'Old Venue', address: 'Old Street 1', city: 'Kyiv' },
+            contacts: { phone: '+380501234567', paymentInfo: 'Old payment details' },
             links: { site: 'https://old.example.com' },
         };
         const seedPayload = {
@@ -1044,6 +1045,48 @@ describe('Event API Endpoints', () => {
             expect(response.status).toBe(200);
             // venue is replaced as a whole — old address/city are gone.
             expect(response.body.info.venue).toEqual({ name: 'Only Name' });
+        });
+
+        test('persists paymentInfo in contacts and returns it on the next GET', async () => {
+            const paymentInfo = '300 грн [Pay](https://pay.example/x)';
+            const patchResponse = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { contacts: { paymentInfo } } });
+
+            const getResponse = await request(app)
+                .get(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader);
+
+            expect(patchResponse.status).toBe(200);
+            expect(patchResponse.body.info.contacts).toEqual({ paymentInfo });
+            expect(getResponse.status).toBe(200);
+            expect(getResponse.body.info.contacts).toEqual({ paymentInfo });
+        });
+
+        test('rejects paymentInfo longer than 1000 characters', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { contacts: { paymentInfo: 'a'.repeat(1001) } } });
+
+            expect(response.status).toBe(400);
+            expect(response.body.details).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    message: 'contacts.paymentInfo must be 1000 characters or less',
+                }),
+            ]));
+        });
+
+        test('clears paymentInfo when a contacts patch omits it', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { contacts: { phone: '+380671234567' } } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.info.contacts).toEqual({ phone: '+380671234567' });
+            expect(response.body.info.contacts).not.toHaveProperty('paymentInfo');
         });
 
         test('clears info entirely with an explicit null', async () => {

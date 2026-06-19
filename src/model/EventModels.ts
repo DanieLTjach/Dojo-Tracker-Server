@@ -74,6 +74,7 @@ export interface EventInfoContacts {
     phone?: string | undefined;
     email?: string | undefined;
     telegram?: string | undefined;
+    paymentInfo?: string | undefined;
 }
 
 export interface EventInfoLinks {
