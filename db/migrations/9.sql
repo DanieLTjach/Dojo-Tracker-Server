@@ -53,8 +53,8 @@ GROUP BY e.id;
 -- small settings don't need new columns.
 ALTER TABLE event ADD COLUMN config TEXT;
 
--- Fold legacy tournament registration settings into config. Keep the old
--- columns for one release so rollback remains safe.
+-- Fold legacy tournament registration settings into config, then remove the
+-- superseded columns so config is the single source of truth.
 UPDATE event
 SET config = json_set(
     COALESCE(config, '{}'),
@@ -70,3 +70,6 @@ SET config = json_set(
     registrationDeadline
 )
 WHERE registrationDeadline IS NOT NULL;
+
+ALTER TABLE event DROP COLUMN maxParticipants;
+ALTER TABLE event DROP COLUMN registrationDeadline;

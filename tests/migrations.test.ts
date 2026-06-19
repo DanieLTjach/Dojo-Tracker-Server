@@ -501,6 +501,8 @@ describe('Database Migrations', () => {
         const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{ name: string, type: string }>;
         const configColumn = eventColumns.find(column => column.name === 'config');
         expect(configColumn).toMatchObject({ name: 'config', type: 'TEXT' });
+        expect(eventColumns.map(column => column.name)).not.toContain('maxParticipants');
+        expect(eventColumns.map(column => column.name)).not.toContain('registrationDeadline');
 
         const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
         expect(foreignKeyViolations).toEqual([]);

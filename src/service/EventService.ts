@@ -98,7 +98,7 @@ export class EventService {
 
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
-        this.validateTournamentConfig(data);
+        this.validateEventDataInvariants(data);
 
         const now = new Date();
         const eventId = this.eventRepository.createEvent({
@@ -146,8 +146,7 @@ export class EventService {
 
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
-        this.validateTournamentConfig(data, existingEvent);
-        this.validateEventDataInvariants(data);
+        this.validateEventDataInvariants(data, existingEvent);
 
         const now = new Date();
         this.syncCurrentRatingEvent(
@@ -468,7 +467,9 @@ export class EventService {
      * re-running the full create/update zod refinements). PUT keeps the zod refine too as
      * defense in depth; this guard makes the rules apply uniformly.
      */
-    private validateEventDataInvariants(data: EventData): void {
+    private validateEventDataInvariants(data: EventData, existingEvent?: Event): void {
+        this.validateTournamentConfig(data, existingEvent);
+
         if (data.dateFrom && data.dateTo && data.dateFrom >= data.dateTo) {
             throw new InvalidEventDateRangeError();
         }
@@ -638,17 +639,17 @@ function mergeEventConfig(
         return null;
     }
 
-    const merged: EventConfig = { ...base };
+    const merged: Partial<Record<keyof EventConfig, EventConfig[keyof EventConfig]>> = { ...base };
     for (const key of Object.keys(patch) as Array<keyof EventConfig>) {
         const value = patch[key];
         if (value === null) {
             delete merged[key];
         } else if (value !== undefined) {
-            Object.assign(merged, { [key]: value });
+            merged[key] = value;
         }
     }
 
-    return Object.keys(merged).length > 0 ? merged : null;
+    return Object.keys(merged).length > 0 ? merged as EventConfig : null;
 }
 
 export interface TournamentData {

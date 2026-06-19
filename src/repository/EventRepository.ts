@@ -138,7 +138,7 @@ export class EventRepository {
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             info: params.info !== null ? JSON.stringify(params.info) : null,
-            config: params.config !== null ? JSON.stringify(params.config) : null,
+            config: serializeEventConfig(params.config),
             blockGameCreation: booleanToInteger(params.blockGameCreation),
             createdAt: params.createdAt.toISOString(),
             modifiedAt: params.modifiedAt.toISOString(),
@@ -189,7 +189,7 @@ export class EventRepository {
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             info: params.info !== null ? JSON.stringify(params.info) : null,
-            config: params.config !== null ? JSON.stringify(params.config) : null,
+            config: serializeEventConfig(params.config),
             blockGameCreation: booleanToInteger(params.blockGameCreation),
             modifiedAt: params.modifiedAt.toISOString(),
         });
@@ -316,8 +316,41 @@ interface EventWithGameRulesDBEntity {
     gameCount: number;
 }
 
+type EventConfigDBEntity = Omit<EventConfig, 'registrationDeadline'> & {
+    registrationDeadline?: string | undefined;
+};
+
+function serializeEventConfig(config: EventConfig | null): string | null {
+    if (config === null) {
+        return null;
+    }
+
+    const { registrationDeadline, ...rest } = config;
+    const dbEntity: EventConfigDBEntity = {
+        ...rest,
+        ...(registrationDeadline !== undefined
+            ? { registrationDeadline: registrationDeadline.toISOString() }
+            : {}),
+    };
+    return JSON.stringify(dbEntity);
+}
+
+function parseEventConfig(value: string | null): EventConfig | null {
+    if (value === null) {
+        return null;
+    }
+
+    const { registrationDeadline, ...rest } = JSON.parse(value) as EventConfigDBEntity;
+    return {
+        ...rest,
+        ...(registrationDeadline !== undefined
+            ? { registrationDeadline: new Date(registrationDeadline) }
+            : {}),
+    };
+}
+
 function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): Event {
-    const config = dbEntity.config !== null ? JSON.parse(dbEntity.config) as EventConfig : null;
+    const config = parseEventConfig(dbEntity.config);
     const eventType = parseEventType(dbEntity.type);
     return {
         id: dbEntity.id,
@@ -341,9 +374,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
         maxParticipants: config?.maxParticipants ?? null,
-        registrationDeadline: config?.registrationDeadline !== undefined
-            ? new Date(config.registrationDeadline)
-            : null,
+        registrationDeadline: config?.registrationDeadline ?? null,
         info: dbEntity.info !== null ? JSON.parse(dbEntity.info) as EventInfo : null,
         config,
         resolvedPlayerNameDisplay: resolvePlayerNameDisplay(config, eventType),

@@ -103,7 +103,7 @@ export interface EventConfig {
     playerNameDisplay?: PlayerNameDisplay | undefined;
     minParticipants?: number | undefined;
     maxParticipants?: number | undefined;
-    registrationDeadline?: string | undefined;
+    registrationDeadline?: Date | undefined;
 }
 
 /**

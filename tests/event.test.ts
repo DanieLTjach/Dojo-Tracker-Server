@@ -7,6 +7,7 @@ import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createTestEvent, createCustomEvent, deleteEventById } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
+import { EventRepository } from '../src/repository/EventRepository.ts';
 
 const app = express();
 app.use(express.json());
@@ -453,16 +454,15 @@ describe('Event API Endpoints', () => {
             expect(response.body.maxParticipants).toBe(16);
             expect(response.body.registrationDeadline).toBe('2026-06-01T18:00:00.000Z');
 
-            const legacyFields = dbManager.db.prepare(
-                'SELECT maxParticipants, registrationDeadline FROM event WHERE id = ?'
-            ).get(createdEventId) as {
-                maxParticipants: number | null;
-                registrationDeadline: string | null;
-            };
-            expect(legacyFields).toEqual({
-                maxParticipants: null,
-                registrationDeadline: null,
+            const stored = dbManager.db.prepare('SELECT config FROM event WHERE id = ?')
+                .get(createdEventId) as { config: string };
+            expect(JSON.parse(stored.config)).toEqual({
+                minParticipants: 8,
+                maxParticipants: 16,
+                registrationDeadline: '2026-06-01T18:00:00.000Z',
             });
+            expect(new EventRepository().findEventById(createdEventId!)?.config?.registrationDeadline)
+                .toEqual(new Date('2026-06-01T18:00:00.000Z'));
         });
 
         test('should reject minParticipants for a season event', async () => {
@@ -1021,6 +1021,26 @@ describe('Event API Endpoints', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.errorCode).toBe('participantConfigOnlyForTournament');
+        });
+
+        test('rejects clearing tournament config from a tournament', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ tournament: null });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentConfigRequired');
+        });
+
+        test('rejects tournament config when changing the event to a season', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ type: 'SEASON', config: null });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentConfigOnlyForTournament');
         });
 
         test('deep-merges info: patching venue keeps schedule and links', async () => {

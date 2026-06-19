@@ -24,7 +24,7 @@ const minParticipantsSchema = z.number().int('minParticipants must be an integer
     .min(1, 'minParticipants must be at least 1');
 const maxParticipantsSchema = z.number().int('maxParticipants must be an integer')
     .min(1, 'maxParticipants must be at least 1');
-const registrationDeadlineSchema = dateSchema.transform(date => date.toISOString());
+const registrationDeadlineSchema = dateSchema;
 
 const eventConfigSchema = z.strictObject({
     playerNameDisplay: playerNameDisplayEnum.optional(),
