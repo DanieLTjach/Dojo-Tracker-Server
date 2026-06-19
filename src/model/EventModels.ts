@@ -74,6 +74,7 @@ export interface EventInfoContacts {
     phone?: string | undefined;
     email?: string | undefined;
     telegram?: string | undefined;
+    paymentInfo?: string | undefined;
 }
 
 export interface EventInfoLinks {
@@ -101,6 +102,8 @@ export type PlayerNameDisplay = typeof PlayerNameDisplay[keyof typeof PlayerName
 export interface EventConfig {
     playerNameDisplay?: PlayerNameDisplay | undefined;
     minParticipants?: number | undefined;
+    maxParticipants?: number | undefined;
+    registrationDeadline?: Date | undefined;
 }
 
 /**

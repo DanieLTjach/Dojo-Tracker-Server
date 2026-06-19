@@ -4,6 +4,7 @@ import { eventIdParamSchema, eventIdSchema } from './EventSchemas.ts';
 import { clubIdParamSchema } from './ClubSchemas.ts';
 import { dateSchema } from './CommonSchemas.ts';
 import { gameRoundResultWithoutPointsSchema } from './GameRoundResultSchemas.ts';
+import { GameStatus } from '../model/GameModels.ts';
 
 export const windSchema = z.enum(['EAST', 'WEST', 'NORTH', 'SOUTH']);
 
@@ -73,6 +74,7 @@ export const gameGetListSchema = z.object({
         userId: userIdParamSchema.optional(),
         eventId: eventIdParamSchema.optional(),
         clubId: clubIdParamSchema.optional(),
+        status: z.enum([GameStatus.CREATED, GameStatus.IN_PROGRESS, GameStatus.FINISHED]).optional(),
         sortOrder: z.enum(['asc', 'desc']).optional(),
         limit: z.coerce.number().int().positive().optional(),
         offset: z.coerce.number().int().nonnegative().optional(),

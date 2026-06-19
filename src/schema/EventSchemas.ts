@@ -13,17 +13,31 @@ export const eventGetByIdSchema = z.object({
 });
 
 const eventTypeEnum = z.enum(Object.values(EventType));
+const eventDescriptionSchema = z.string().max(5000, 'Description must be 5000 characters or less');
 
 const tournamentConfigSchema = z.strictObject({
     totalRounds: z.number().int('totalRounds must be an integer').positive('totalRounds must be positive'),
 });
 
 const playerNameDisplayEnum = z.enum(Object.values(PlayerNameDisplay));
+const minParticipantsSchema = z.number().int('minParticipants must be an integer')
+    .min(1, 'minParticipants must be at least 1');
+const maxParticipantsSchema = z.number().int('maxParticipants must be an integer')
+    .min(1, 'maxParticipants must be at least 1');
+const registrationDeadlineSchema = dateSchema;
 
 const eventConfigSchema = z.strictObject({
     playerNameDisplay: playerNameDisplayEnum.optional(),
-    minParticipants: z.number().int('minParticipants must be an integer').min(1, 'minParticipants must be at least 1')
-        .optional(),
+    minParticipants: minParticipantsSchema.optional(),
+    maxParticipants: maxParticipantsSchema.optional(),
+    registrationDeadline: registrationDeadlineSchema.optional(),
+});
+
+const eventConfigPatchSchema = z.strictObject({
+    playerNameDisplay: playerNameDisplayEnum.nullish(),
+    minParticipants: minParticipantsSchema.nullish(),
+    maxParticipants: maxParticipantsSchema.nullish(),
+    registrationDeadline: registrationDeadlineSchema.nullish(),
 });
 
 const scheduleItemKindSchema = z.enum(['default', 'muted', 'milestone']);
@@ -55,6 +69,9 @@ const contactsSchema = z.strictObject({
     phone: z.string().trim().min(1).optional(),
     email: z.email('contacts.email must be a valid email').optional(),
     telegram: z.string().trim().min(1).optional(),
+    paymentInfo: z.string().trim().min(1)
+        .max(1000, 'contacts.paymentInfo must be 1000 characters or less')
+        .optional(),
 });
 
 const linksSchema = z.strictObject({
@@ -87,16 +104,13 @@ export const eventInfoSchema = z.strictObject({
 
 const eventSchema = z.object({
     name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
-    description: z.string().max(500, 'Description must be 500 characters or less').nullish(),
+    description: eventDescriptionSchema.nullish(),
     type: eventTypeEnum,
     isCurrentRating: z.boolean().nullish(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer'),
     clubId: clubIdSchema.nullish(),
-    maxParticipants: z.number().int('maxParticipants must be an integer').min(1, 'maxParticipants must be at least 1')
-        .nullish(),
-    registrationDeadline: dateSchema.nullish(),
     startingRating: z.number().int('startingRating must be an integer').default(0),
     minimumGamesForRating: z.number().int('minimumGamesForRating must be an integer').min(0).default(0),
     blockGameCreation: z.boolean().default(false),
@@ -127,25 +141,32 @@ const eventSchema = z.object({
         });
     }
 
+    const participantConfigFields = [
+        ['minParticipants', data.config?.minParticipants],
+        ['maxParticipants', data.config?.maxParticipants],
+        ['registrationDeadline', data.config?.registrationDeadline],
+    ] as const;
+    if (data.type !== EventType.TOURNAMENT) {
+        for (const [field, value] of participantConfigFields) {
+            if (value === undefined) {
+                continue;
+            }
+            ctx.addIssue({
+                code: 'custom',
+                message: `${field} is only allowed for TOURNAMENT events`,
+                path: ['config', field],
+            });
+        }
+    }
+
     const minParticipants = data.config?.minParticipants;
-    if (minParticipants !== undefined) {
-        if (data.type !== EventType.TOURNAMENT) {
-            ctx.addIssue({
-                code: 'custom',
-                message: 'minParticipants is only allowed for TOURNAMENT events',
-                path: ['config', 'minParticipants'],
-            });
-        }
-        if (
-            data.maxParticipants !== undefined && data.maxParticipants !== null &&
-            minParticipants > data.maxParticipants
-        ) {
-            ctx.addIssue({
-                code: 'custom',
-                message: 'minParticipants must not exceed maxParticipants',
-                path: ['config', 'minParticipants'],
-            });
-        }
+    const maxParticipants = data.config?.maxParticipants;
+    if (minParticipants !== undefined && maxParticipants !== undefined && minParticipants > maxParticipants) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'minParticipants must not exceed maxParticipants',
+            path: ['config', 'minParticipants'],
+        });
     }
 });
 
@@ -159,6 +180,39 @@ export const eventUpdateSchema = z.object({
     }),
     body: eventSchema,
 });
+
+// Partial body for PATCH /api/events/:eventId. Every field is optional and
+// carries NO default — an omitted key means "leave the existing value", which is
+// the whole point of PATCH (the `.default()`s on the full schema would wrongly
+// reset startingRating / minimumGamesForRating / blockGameCreation). The merged
+// result is validated by the full `eventSchema` rules in the service, so the
+// only job here is to type-check the fields that ARE present. `.strict()` keeps
+// typos from silently no-op'ing.
+export const eventPatchBodySchema = z.strictObject({
+    name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').optional(),
+    description: eventDescriptionSchema.nullish(),
+    type: eventTypeEnum.optional(),
+    isCurrentRating: z.boolean().nullish(),
+    dateFrom: dateSchema.nullish(),
+    dateTo: dateSchema.nullish(),
+    gameRulesId: z.number().int('gameRulesId must be an integer').optional(),
+    clubId: clubIdSchema.nullish(),
+    startingRating: z.number().int('startingRating must be an integer').optional(),
+    minimumGamesForRating: z.number().int('minimumGamesForRating must be an integer').min(0).optional(),
+    blockGameCreation: z.boolean().optional(),
+    info: eventInfoSchema.nullish(),
+    config: eventConfigPatchSchema.nullish(),
+    tournament: tournamentConfigSchema.nullish(),
+});
+
+export const eventPatchSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema,
+    }),
+    body: eventPatchBodySchema,
+});
+
+export type EventPatchBody = z.infer<typeof eventPatchBodySchema>;
 
 export const eventDeleteSchema = z.object({
     params: z.object({

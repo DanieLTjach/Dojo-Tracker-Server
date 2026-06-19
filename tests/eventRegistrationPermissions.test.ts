@@ -148,8 +148,8 @@ describe('Event registration permissions matrix', () => {
         ).run(GAME_RULES_ID, TEST_CLUB_ID);
 
         dbManager.db.prepare(
-            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'EReg Tournament', NULL, 'TOURNAMENT', ?, ?, NULL, NULL, NULL, NULL, 0, 0, ?, ?, ?)`
+            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'EReg Tournament', NULL, 'TOURNAMENT', ?, ?, NULL, NULL, 0, 0, ?, ?, ?)`
         ).run(TOURNAMENT_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, nextTs(), nextTs(), SYSTEM_USER_ID);
 
         authHeaders.admin = createAuthHeader(ADMIN_USER_ID);
@@ -589,8 +589,8 @@ describe('Event registration permissions matrix', () => {
             const tempEventId = 97250;
             const ts = nextTs();
             dbManager.db.prepare(
-                `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, 'EReg Deletable', NULL, 'TOURNAMENT', ?, ?, NULL, NULL, NULL, NULL, 0, 0, ?, ?, ?)`
+                `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, 'EReg Deletable', NULL, 'TOURNAMENT', ?, ?, NULL, NULL, 0, 0, ?, ?, ?)`
             ).run(tempEventId, GAME_RULES_ID, TEST_CLUB_ID, ts, ts, SYSTEM_USER_ID);
 
             dbManager.db.prepare(

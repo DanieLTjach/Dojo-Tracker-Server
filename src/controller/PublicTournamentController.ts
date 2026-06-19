@@ -21,8 +21,16 @@ export class PublicTournamentController {
         }
 
         const club = event.clubId !== null ? this.clubService.getClubById(event.clubId) : null;
-        const approvedCount = this.registrationRepository.countApprovedByEventId(eventId);
+        const approved = this.registrationRepository.findRegistrationsByEventIdAndStatus(eventId, 'APPROVED');
+        const participants = approved.map(registration => ({
+            userId: registration.userId,
+            userName: registration.userName,
+            firstName: registration.hideProfile ? null : registration.firstName,
+            lastName: registration.hideProfile ? null : registration.lastName,
+            hideProfile: registration.hideProfile,
+        }));
+        const approvedCount = participants.length;
 
-        return res.status(StatusCodes.OK).json({ event, club, approvedCount });
+        return res.status(StatusCodes.OK).json({ event, club, approvedCount, participants });
     }
 }

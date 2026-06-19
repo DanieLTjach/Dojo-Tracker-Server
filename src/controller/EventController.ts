@@ -6,6 +6,7 @@ import {
     eventGetByIdSchema,
     eventCreateSchema,
     eventUpdateSchema,
+    eventPatchSchema,
     eventDeleteSchema,
     eventGetListSchema,
     tournamentRoundStartSchema,
@@ -41,6 +42,13 @@ export class EventController {
         const { params: { eventId }, body } = eventUpdateSchema.parse(req);
         const userId = req.user!.userId;
         const event = this.eventService.updateEvent(eventId, body, userId);
+        return res.status(StatusCodes.OK).json(event);
+    }
+
+    patchEvent(req: Request, res: Response) {
+        const { params: { eventId }, body } = eventPatchSchema.parse(req);
+        const userId = req.user!.userId;
+        const event = this.eventService.patchEvent(eventId, body, userId);
         return res.status(StatusCodes.OK).json(event);
     }
 

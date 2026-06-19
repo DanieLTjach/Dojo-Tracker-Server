@@ -4,6 +4,9 @@ import {
     CannotDeleteEventWithGamesError,
     CannotDeleteEventWithRegistrationsError,
     CurrentRatingEventMustBeClubScopedError,
+    InvalidEventDateRangeError,
+    MinParticipantsExceedsMaxError,
+    ParticipantConfigOnlyForTournamentError,
     TournamentMustHaveClubError,
     TournamentConfigRequiredError,
     TournamentConfigOnlyForTournamentError,
@@ -32,6 +35,7 @@ import { ClubMembershipRepository } from '../repository/ClubMembershipRepository
 import { UserService } from './UserService.ts';
 import { TournamentRepository } from '../repository/TournamentRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
+import type { EventPatchBody } from '../schema/EventSchemas.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
@@ -94,7 +98,7 @@ export class EventService {
 
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
-        this.validateTournamentConfig(data);
+        this.validateEventDataInvariants(data);
 
         const now = new Date();
         const eventId = this.eventRepository.createEvent({
@@ -105,8 +109,6 @@ export class EventService {
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
-            maxParticipants: data.maxParticipants ?? null,
-            registrationDeadline: data.registrationDeadline ?? null,
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
@@ -144,7 +146,7 @@ export class EventService {
 
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
-        this.validateTournamentConfig(data, existingEvent);
+        this.validateEventDataInvariants(data, existingEvent);
 
         const now = new Date();
         this.syncCurrentRatingEvent(
@@ -165,8 +167,6 @@ export class EventService {
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
-            maxParticipants: data.maxParticipants ?? null,
-            registrationDeadline: data.registrationDeadline ?? null,
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
@@ -179,6 +179,19 @@ export class EventService {
         this.syncTournamentConfig(existingEvent, eventId, data, modifiedBy, now);
 
         return this.getEventById(eventId);
+    }
+
+    /**
+     * Partial update. Projects the existing event into the write-side EventData shape,
+     * merges the provided fields over it (info is merged one level deep so a patch that
+     * touches only `venue` doesn't wipe `schedule`/`links`/`pairings`), then runs the full
+     * `updateEvent` path so all authorization, validation, and sync logic is shared — the
+     * merged object is validated exactly as a full PUT would be.
+     */
+    patchEvent(eventId: number, patch: EventPatchBody, modifiedBy: number): Event {
+        const existingEvent = this.getEventById(eventId);
+        const merged = mergeEventData(projectEventToData(existingEvent), patch);
+        return this.updateEvent(eventId, merged, modifiedBy);
     }
 
     /**
@@ -448,6 +461,39 @@ export class EventService {
         }
     }
 
+    /**
+     * Cross-field invariants that previously lived only in the `eventSchema` zod refine.
+     * Lifted here so they also guard the PATCH path (which merges then writes without
+     * re-running the full create/update zod refinements). PUT keeps the zod refine too as
+     * defense in depth; this guard makes the rules apply uniformly.
+     */
+    private validateEventDataInvariants(data: EventData, existingEvent?: Event): void {
+        this.validateTournamentConfig(data, existingEvent);
+
+        if (data.dateFrom && data.dateTo && data.dateFrom >= data.dateTo) {
+            throw new InvalidEventDateRangeError();
+        }
+
+        const minParticipants = data.config?.minParticipants;
+        const maxParticipants = data.config?.maxParticipants;
+        const registrationDeadline = data.config?.registrationDeadline;
+
+        if (
+            data.type !== 'TOURNAMENT' &&
+            (minParticipants !== undefined || maxParticipants !== undefined || registrationDeadline !== undefined)
+        ) {
+            throw new ParticipantConfigOnlyForTournamentError();
+        }
+
+        if (
+            minParticipants !== undefined &&
+            maxParticipants !== undefined &&
+            minParticipants > maxParticipants
+        ) {
+            throw new MinParticipantsExceedsMaxError();
+        }
+    }
+
     private validateCurrentRatingEvent(data: EventData): void {
         if (!data.isCurrentRating) {
             return;
@@ -508,6 +554,104 @@ export class EventService {
     }
 }
 
+// Project a stored Event (read shape) into the write-side EventData. The two
+// shapes differ: Event holds the full `gameRules` object and a rich `tournament`
+// row, while EventData wants `gameRulesId` and a minimal `{ totalRounds }`. This
+// projection is the base a PATCH merges onto.
+export function projectEventToData(event: Event): EventData {
+    const base: EventData = {
+        name: event.name,
+        description: event.description,
+        type: event.type,
+        clubId: event.clubId,
+        isCurrentRating: event.isCurrentRating,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        gameRulesId: event.gameRules.id,
+        startingRating: event.startingRating,
+        minimumGamesForRating: event.minimumGamesForRating,
+        info: event.info,
+        config: event.config,
+        blockGameCreation: event.blockGameCreation,
+    };
+    if (event.tournament !== null) {
+        base.tournament = { totalRounds: event.tournament.totalRounds };
+    }
+    return base;
+}
+
+// Merge a partial patch over a base EventData. Only keys present in the patch
+// override the base; JSON objects are merged one level deep so patching one
+// sub-key preserves its siblings.
+export function mergeEventData(base: EventData, patch: EventPatchBody): EventData {
+    const merged: EventData = { ...base };
+    assignIfPresent(merged, patch, 'name');
+    assignIfPresent(merged, patch, 'description');
+    assignIfPresent(merged, patch, 'type');
+    assignIfPresent(merged, patch, 'isCurrentRating');
+    assignIfPresent(merged, patch, 'dateFrom');
+    assignIfPresent(merged, patch, 'dateTo');
+    assignIfPresent(merged, patch, 'clubId');
+    assignIfPresent(merged, patch, 'gameRulesId');
+    assignIfPresent(merged, patch, 'startingRating');
+    assignIfPresent(merged, patch, 'minimumGamesForRating');
+    assignIfPresent(merged, patch, 'blockGameCreation');
+    assignIfPresent(merged, patch, 'tournament');
+    if ('info' in patch) {
+        merged.info = mergeEventInfo(base.info ?? null, patch.info ?? null);
+    }
+    if ('config' in patch) {
+        merged.config = mergeEventConfig(base.config ?? null, patch.config ?? null);
+    }
+    return merged;
+}
+
+// Copy `key` from patch to target only when the patch actually carries it. The
+// shared key names between EventPatchBody and EventData make this type-safe.
+function assignIfPresent<K extends keyof EventPatchBody & keyof EventData>(
+    target: EventData,
+    patch: EventPatchBody,
+    key: K
+): void {
+    if (key in patch) {
+        target[key] = patch[key] as EventData[K];
+    }
+}
+
+// One-level-deep merge of the event `info` JSON column. A `null` patch clears
+// info entirely; otherwise each provided sub-key replaces the base sub-key while
+// untouched sub-keys are carried forward.
+function mergeEventInfo(base: EventInfo | null, patch: EventInfo | null): EventInfo | null {
+    if (patch === null) {
+        return null;
+    }
+    if (base === null) {
+        return patch;
+    }
+    return { ...base, ...patch };
+}
+
+function mergeEventConfig(
+    base: EventConfig | null,
+    patch: NonNullable<EventPatchBody['config']> | null
+): EventConfig | null {
+    if (patch === null) {
+        return null;
+    }
+
+    const merged: Partial<Record<keyof EventConfig, EventConfig[keyof EventConfig]>> = { ...base };
+    for (const key of Object.keys(patch) as Array<keyof EventConfig>) {
+        const value = patch[key];
+        if (value === null) {
+            delete merged[key];
+        } else if (value !== undefined) {
+            merged[key] = value;
+        }
+    }
+
+    return Object.keys(merged).length > 0 ? merged as EventConfig : null;
+}
+
 export interface TournamentData {
     totalRounds: number;
 }
@@ -520,8 +664,6 @@ export interface EventData {
     isCurrentRating?: boolean | null | undefined;
     dateFrom?: Date | null | undefined;
     dateTo?: Date | null | undefined;
-    maxParticipants?: number | null | undefined;
-    registrationDeadline?: Date | null | undefined;
     gameRulesId: number;
     startingRating: number;
     minimumGamesForRating: number;

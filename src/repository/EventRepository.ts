@@ -116,8 +116,6 @@ export class EventRepository {
         clubId: number | null;
         dateFrom: string | null;
         dateTo: string | null;
-        maxParticipants: number | null;
-        registrationDeadline: string | null;
         startingRating: number;
         minimumGamesForRating: number;
         info: string | null;
@@ -128,8 +126,8 @@ export class EventRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :maxParticipants, :registrationDeadline, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -139,9 +137,8 @@ export class EventRepository {
             ...params,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
-            registrationDeadline: params.registrationDeadline?.toISOString() ?? null,
             info: params.info !== null ? JSON.stringify(params.info) : null,
-            config: params.config !== null ? JSON.stringify(params.config) : null,
+            config: serializeEventConfig(params.config),
             blockGameCreation: booleanToInteger(params.blockGameCreation),
             createdAt: params.createdAt.toISOString(),
             modifiedAt: params.modifiedAt.toISOString(),
@@ -158,8 +155,6 @@ export class EventRepository {
         clubId: number | null;
         dateFrom: string | null;
         dateTo: string | null;
-        maxParticipants: number | null;
-        registrationDeadline: string | null;
         startingRating: number;
         minimumGamesForRating: number;
         info: string | null;
@@ -177,8 +172,6 @@ export class EventRepository {
                 clubId = :clubId,
                 dateFrom = :dateFrom,
                 dateTo = :dateTo,
-                maxParticipants = :maxParticipants,
-                registrationDeadline = :registrationDeadline,
                 startingRating = :startingRating,
                 minimumGamesForRating = :minimumGamesForRating,
                 info = :info,
@@ -195,9 +188,8 @@ export class EventRepository {
             ...params,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
-            registrationDeadline: params.registrationDeadline?.toISOString() ?? null,
             info: params.info !== null ? JSON.stringify(params.info) : null,
-            config: params.config !== null ? JSON.stringify(params.config) : null,
+            config: serializeEventConfig(params.config),
             blockGameCreation: booleanToInteger(params.blockGameCreation),
             modifiedAt: params.modifiedAt.toISOString(),
         });
@@ -261,8 +253,6 @@ export interface EventCreateParams {
     clubId: number | null;
     dateFrom: Date | null;
     dateTo: Date | null;
-    maxParticipants: number | null;
-    registrationDeadline: Date | null;
     startingRating: number;
     minimumGamesForRating: number;
     info: EventInfo | null;
@@ -282,8 +272,6 @@ export interface EventUpdateParams {
     clubId: number | null;
     dateFrom: Date | null;
     dateTo: Date | null;
-    maxParticipants: number | null;
-    registrationDeadline: Date | null;
     startingRating: number;
     minimumGamesForRating: number;
     info: EventInfo | null;
@@ -305,8 +293,6 @@ interface EventWithGameRulesDBEntity {
     minimumGamesForRating: number;
     dateFrom: string | null;
     dateTo: string | null;
-    maxParticipants: number | null;
-    registrationDeadline: string | null;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
@@ -330,8 +316,41 @@ interface EventWithGameRulesDBEntity {
     gameCount: number;
 }
 
+type EventConfigDBEntity = Omit<EventConfig, 'registrationDeadline'> & {
+    registrationDeadline?: string | undefined;
+};
+
+function serializeEventConfig(config: EventConfig | null): string | null {
+    if (config === null) {
+        return null;
+    }
+
+    const { registrationDeadline, ...rest } = config;
+    const dbEntity: EventConfigDBEntity = {
+        ...rest,
+        ...(registrationDeadline !== undefined
+            ? { registrationDeadline: registrationDeadline.toISOString() }
+            : {}),
+    };
+    return JSON.stringify(dbEntity);
+}
+
+function parseEventConfig(value: string | null): EventConfig | null {
+    if (value === null) {
+        return null;
+    }
+
+    const { registrationDeadline, ...rest } = JSON.parse(value) as EventConfigDBEntity;
+    return {
+        ...rest,
+        ...(registrationDeadline !== undefined
+            ? { registrationDeadline: new Date(registrationDeadline) }
+            : {}),
+    };
+}
+
 function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): Event {
-    const config = dbEntity.config !== null ? JSON.parse(dbEntity.config) as EventConfig : null;
+    const config = parseEventConfig(dbEntity.config);
     const eventType = parseEventType(dbEntity.type);
     return {
         id: dbEntity.id,
@@ -354,8 +373,8 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
-        maxParticipants: dbEntity.maxParticipants,
-        registrationDeadline: dbEntity.registrationDeadline !== null ? new Date(dbEntity.registrationDeadline) : null,
+        maxParticipants: config?.maxParticipants ?? null,
+        registrationDeadline: config?.registrationDeadline ?? null,
         info: dbEntity.info !== null ? JSON.parse(dbEntity.info) as EventInfo : null,
         config,
         resolvedPlayerNameDisplay: resolvePlayerNameDisplay(config, eventType),

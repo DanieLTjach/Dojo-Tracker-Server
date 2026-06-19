@@ -2043,6 +2043,28 @@ describe('Game API Endpoints', () => {
             expect(response.body.message).toBe('Користувача з id 99999 не знайдено');
         });
 
+        test('should filter games by status', async () => {
+            const response = await request(app)
+                .get('/api/games?status=FINISHED')
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+            expect(response.body.length).toBeGreaterThan(0);
+            response.body.forEach((game: any) => {
+                expect(game.status).toBe('FINISHED');
+            });
+        });
+
+        test('should fail with invalid status value', async () => {
+            const response = await request(app)
+                .get('/api/games?status=NOPE')
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid request data');
+        });
+
         test('should fail with invalid dateFrom format', async () => {
             const response = await request(app)
                 .get('/api/games?dateFrom=invalid-date')

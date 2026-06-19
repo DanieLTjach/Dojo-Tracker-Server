@@ -49,6 +49,27 @@ LEFT JOIN game g ON g.eventId = e.id AND g.tournamentRound IS NOT NULL
 WHERE e.type = 'TOURNAMENT'
 GROUP BY e.id;
 
--- Generic per-event configuration (JSON). Holds event-type-specific tweaks such as
--- playerNameDisplay and minParticipants so small settings don't need new columns.
+-- Generic per-event configuration (JSON). Holds event-type-specific tweaks so
+-- small settings don't need new columns.
 ALTER TABLE event ADD COLUMN config TEXT;
+
+-- Fold legacy tournament registration settings into config, then remove the
+-- superseded columns so config is the single source of truth.
+UPDATE event
+SET config = json_set(
+    COALESCE(config, '{}'),
+    '$.maxParticipants',
+    maxParticipants
+)
+WHERE maxParticipants IS NOT NULL;
+
+UPDATE event
+SET config = json_set(
+    COALESCE(config, '{}'),
+    '$.registrationDeadline',
+    registrationDeadline
+)
+WHERE registrationDeadline IS NOT NULL;
+
+ALTER TABLE event DROP COLUMN maxParticipants;
+ALTER TABLE event DROP COLUMN registrationDeadline;

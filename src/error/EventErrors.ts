@@ -81,6 +81,27 @@ export class TournamentConfigRequiredError extends BadRequestError {
     }
 }
 
+export class InvalidEventDateRangeError extends BadRequestError {
+    constructor() {
+        super('Дата початку має бути раніше за дату завершення', 'invalidEventDateRange');
+    }
+}
+
+export class MinParticipantsExceedsMaxError extends BadRequestError {
+    constructor() {
+        super('Мінімальна кількість учасників не може перевищувати максимальну', 'minParticipantsExceedsMax');
+    }
+}
+
+export class ParticipantConfigOnlyForTournamentError extends BadRequestError {
+    constructor() {
+        super(
+            'Налаштування кількості учасників і терміну реєстрації можна вказувати лише для турнірів',
+            'participantConfigOnlyForTournament'
+        );
+    }
+}
+
 export class TournamentConfigOnlyForTournamentError extends BadRequestError {
     constructor() {
         super('Налаштування турніру можна вказувати лише для турнірів', 'tournamentConfigOnlyForTournament');

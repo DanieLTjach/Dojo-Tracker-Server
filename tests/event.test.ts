@@ -7,6 +7,7 @@ import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createTestEvent, createCustomEvent, deleteEventById } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
+import { EventRepository } from '../src/repository/EventRepository.ts';
 
 const app = express();
 app.use(express.json());
@@ -301,6 +302,28 @@ describe('Event API Endpoints', () => {
             expect(response.body.resolvedPlayerNameDisplay).toBe('NICKNAME');
         });
 
+        test('should accept a description up to 5000 characters', async () => {
+            const description = 'a'.repeat(5000);
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, description });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.description).toBe(description);
+        });
+
+        test('should reject a description longer than 5000 characters', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, description: 'a'.repeat(5001) });
+
+            expect(response.status).toBe(400);
+        });
+
         test('should create event with blockGameCreation when requested', async () => {
             const response = await request(app)
                 .post('/api/events')
@@ -413,14 +436,33 @@ describe('Event API Endpoints', () => {
                     clubId: 1,
                     type: 'TOURNAMENT',
                     tournament: { totalRounds: 3 },
-                    maxParticipants: 16,
-                    config: { minParticipants: 8 },
+                    config: {
+                        minParticipants: 8,
+                        maxParticipants: 16,
+                        registrationDeadline: '2026-06-01T18:00:00.000Z',
+                    },
                 });
 
             createdEventId = response.body.id;
 
             expect(response.status).toBe(201);
-            expect(response.body.config).toMatchObject({ minParticipants: 8 });
+            expect(response.body.config).toEqual({
+                minParticipants: 8,
+                maxParticipants: 16,
+                registrationDeadline: '2026-06-01T18:00:00.000Z',
+            });
+            expect(response.body.maxParticipants).toBe(16);
+            expect(response.body.registrationDeadline).toBe('2026-06-01T18:00:00.000Z');
+
+            const stored = dbManager.db.prepare('SELECT config FROM event WHERE id = ?')
+                .get(createdEventId) as { config: string };
+            expect(JSON.parse(stored.config)).toEqual({
+                minParticipants: 8,
+                maxParticipants: 16,
+                registrationDeadline: '2026-06-01T18:00:00.000Z',
+            });
+            expect(new EventRepository().findEventById(createdEventId!)?.config?.registrationDeadline)
+                .toEqual(new Date('2026-06-01T18:00:00.000Z'));
         });
 
         test('should reject minParticipants for a season event', async () => {
@@ -441,9 +483,17 @@ describe('Event API Endpoints', () => {
                     clubId: 1,
                     type: 'TOURNAMENT',
                     tournament: { totalRounds: 3 },
-                    maxParticipants: 4,
-                    config: { minParticipants: 8 },
+                    config: { minParticipants: 8, maxParticipants: 4 },
                 });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject maxParticipants for a season event', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, config: { maxParticipants: 16 } });
 
             expect(response.status).toBe(400);
         });
@@ -838,6 +888,286 @@ describe('Event API Endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({ ...basePayload, info: { links: { site: 'not-a-url' } } });
             expect(response.status).toBe(400);
+        });
+    });
+
+    describe('PATCH /api/events/:eventId - Partial Update', () => {
+        const seedInfo = {
+            schedule: [
+                { date: '2026-05-23T00:00:00.000Z', title: 'Day 1', items: [{ time: '10:00', title: 'Registration' }] },
+            ],
+            venue: { name: 'Old Venue', address: 'Old Street 1', city: 'Kyiv' },
+            contacts: { phone: '+380501234567', paymentInfo: 'Old payment details' },
+            links: { site: 'https://old.example.com' },
+        };
+        const seedPayload = {
+            name: 'Patch Base',
+            description: 'original description',
+            type: 'TOURNAMENT' as const,
+            clubId: 1,
+            gameRulesId: 1,
+            dateFrom: '2026-05-23T00:00:00.000Z',
+            dateTo: '2026-05-24T00:00:00.000Z',
+            config: {
+                playerNameDisplay: 'REAL_NAME' as const,
+                maxParticipants: 32,
+                registrationDeadline: '2026-05-20T18:00:00.000Z',
+            },
+            tournament: { totalRounds: 3 },
+            info: seedInfo,
+        };
+
+        let eventId: number;
+
+        beforeEach(async () => {
+            const created = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send(seedPayload);
+            eventId = created.body.id;
+        });
+
+        afterEach(() => {
+            deleteEventById(eventId);
+        });
+
+        test('updates only the provided top-level field, keeping the rest', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ description: 'patched description' });
+
+            expect(response.status).toBe(200);
+            expect(response.body.description).toBe('patched description');
+            // Untouched fields preserved.
+            expect(response.body.name).toBe('Patch Base');
+            expect(response.body.maxParticipants).toBe(32);
+            expect(response.body.gameRules.id).toBe(1);
+            expect(response.body.tournament).toMatchObject({ totalRounds: 3 });
+            // info untouched entirely.
+            expect(response.body.info).toEqual(seedInfo);
+        });
+
+        test('deep-merges config: patching minParticipants preserves sibling settings', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ config: { minParticipants: 12 } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toEqual({
+                playerNameDisplay: 'REAL_NAME',
+                minParticipants: 12,
+                maxParticipants: 32,
+                registrationDeadline: '2026-05-20T18:00:00.000Z',
+            });
+            expect(response.body.maxParticipants).toBe(32);
+            expect(response.body.registrationDeadline).toBe('2026-05-20T18:00:00.000Z');
+        });
+
+        test('removes one config field with null while preserving sibling settings', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ config: { maxParticipants: null } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toEqual({
+                playerNameDisplay: 'REAL_NAME',
+                registrationDeadline: '2026-05-20T18:00:00.000Z',
+            });
+            expect(response.body.maxParticipants).toBeNull();
+            expect(response.body.registrationDeadline).toBe('2026-05-20T18:00:00.000Z');
+        });
+
+        test('stores SQL null when removing the last config fields individually', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    config: {
+                        playerNameDisplay: null,
+                        maxParticipants: null,
+                        registrationDeadline: null,
+                    },
+                });
+
+            const row = dbManager.db.prepare('SELECT config FROM event WHERE id = ?').get(eventId) as {
+                config: string | null;
+            };
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toBeNull();
+            expect(row.config).toBeNull();
+        });
+
+        test('clears config entirely with an explicit null', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ config: null });
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toBeNull();
+            expect(response.body.maxParticipants).toBeNull();
+            expect(response.body.registrationDeadline).toBeNull();
+        });
+
+        test('rejects changing a configured tournament into a season', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ type: 'SEASON', tournament: null });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('participantConfigOnlyForTournament');
+        });
+
+        test('rejects clearing tournament config from a tournament', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ tournament: null });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentConfigRequired');
+        });
+
+        test('rejects tournament config when changing the event to a season', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ type: 'SEASON', config: null });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentConfigOnlyForTournament');
+        });
+
+        test('deep-merges info: patching venue keeps schedule and links', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { venue: { name: 'New Venue', address: 'New Street 9', city: 'Lviv' } } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.info.venue).toEqual({ name: 'New Venue', address: 'New Street 9', city: 'Lviv' });
+            // Sibling info sub-objects survive the partial update.
+            expect(response.body.info.schedule).toEqual(seedInfo.schedule);
+            expect(response.body.info.links).toEqual(seedInfo.links);
+        });
+
+        test('replaces a single info sub-object wholesale, not field-by-field', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { venue: { name: 'Only Name' } } });
+
+            expect(response.status).toBe(200);
+            // venue is replaced as a whole — old address/city are gone.
+            expect(response.body.info.venue).toEqual({ name: 'Only Name' });
+        });
+
+        test('persists paymentInfo in contacts and returns it on the next GET', async () => {
+            const paymentInfo = '300 грн [Pay](https://pay.example/x)';
+            const patchResponse = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { contacts: { paymentInfo } } });
+
+            const getResponse = await request(app)
+                .get(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader);
+
+            expect(patchResponse.status).toBe(200);
+            expect(patchResponse.body.info.contacts).toEqual({ paymentInfo });
+            expect(getResponse.status).toBe(200);
+            expect(getResponse.body.info.contacts).toEqual({ paymentInfo });
+        });
+
+        test('rejects paymentInfo longer than 1000 characters', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { contacts: { paymentInfo: 'a'.repeat(1001) } } });
+
+            expect(response.status).toBe(400);
+            expect(response.body.details).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    message: 'contacts.paymentInfo must be 1000 characters or less',
+                }),
+            ]));
+        });
+
+        test('clears paymentInfo when a contacts patch omits it', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { contacts: { phone: '+380671234567' } } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.info.contacts).toEqual({ phone: '+380671234567' });
+            expect(response.body.info.contacts).not.toHaveProperty('paymentInfo');
+        });
+
+        test('clears info entirely with an explicit null', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: null });
+
+            expect(response.status).toBe(200);
+            expect(response.body.info).toBeNull();
+        });
+
+        test('does not reset un-patched defaulted fields', async () => {
+            // blockGameCreation / startingRating must survive a patch that omits them.
+            await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ blockGameCreation: true });
+
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ description: 'second patch' });
+
+            expect(response.status).toBe(200);
+            expect(response.body.blockGameCreation).toBe(true);
+        });
+
+        test('validates the merged result (dateFrom must precede dateTo)', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ dateFrom: '2026-06-01T00:00:00.000Z' }); // after seeded dateTo
+
+            expect(response.status).toBe(400);
+        });
+
+        test('rejects an unknown field (strict body)', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ bogusField: 1 });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('requires authentication', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .send({ description: 'no auth' });
+
+            expect(response.status).toBe(401);
+        });
+
+        test('forbids a non-admin without club permissions', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', nonAdminAuthHeader)
+                .send({ description: 'nope' });
+
+            expect(response.status).toBe(403);
         });
     });
 

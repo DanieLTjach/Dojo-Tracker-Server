@@ -113,18 +113,18 @@ describe('EventRegistrationService', () => {
         ).run(GAME_RULES_ID, TEST_CLUB_ID);
 
         dbManager.db.prepare(
-            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'ERS Tournament', NULL, 'TOURNAMENT', ?, ?, NULL, NULL, NULL, NULL, 0, 0, ?, ?, ?)`
+            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'ERS Tournament', NULL, 'TOURNAMENT', ?, ?, NULL, NULL, 0, 0, ?, ?, ?)`
         ).run(TOURNAMENT_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, nextTs(), nextTs(), SYSTEM_USER_ID);
 
         dbManager.db.prepare(
-            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'ERS Tournament Capacity', NULL, 'TOURNAMENT', ?, ?, NULL, NULL, 1, NULL, 0, 0, ?, ?, ?)`
+            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, config, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'ERS Tournament Capacity', NULL, 'TOURNAMENT', ?, ?, NULL, NULL, 0, 0, '{"maxParticipants":1}', ?, ?, ?)`
         ).run(TOURNAMENT_LIMITED_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, nextTs(), nextTs(), SYSTEM_USER_ID);
 
         dbManager.db.prepare(
-            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'ERS Season', NULL, 'SEASON', ?, ?, NULL, NULL, NULL, NULL, 0, 0, ?, ?, ?)`
+            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'ERS Season', NULL, 'SEASON', ?, ?, NULL, NULL, 0, 0, ?, ?, ?)`
         ).run(SEASON_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, nextTs(), nextTs(), SYSTEM_USER_ID);
     });
 
