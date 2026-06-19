@@ -4,9 +4,10 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY .husky/install.mjs ./.husky/install.mjs
 
 # Install production dependencies only
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copy source code
 COPY src ./src
