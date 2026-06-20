@@ -392,6 +392,15 @@ describe('Event API Endpoints', () => {
             expect(response.status).toBe(400);
         });
 
+        test('should require totalRounds in tournament config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', tournament: {} });
+
+            expect(response.status).toBe(400);
+        });
+
         test('should reject season with tournament config', async () => {
             const response = await request(app)
                 .post('/api/events')

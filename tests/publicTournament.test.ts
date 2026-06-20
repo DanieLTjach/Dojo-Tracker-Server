@@ -75,8 +75,8 @@ describe('Public tournament endpoint', () => {
         ).run(GAME_RULES_ID, TEST_CLUB_ID);
 
         dbManager.db.prepare(
-            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, config, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Public Test Tournament', 'Tournament description', 'TOURNAMENT', ?, ?, NULL, NULL, 0, 0, '{"maxParticipants":8,"registrationDeadline":"2026-06-01T00:00:00.000Z"}', ?, ?, ?)`
+            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'Public Test Tournament', 'Tournament description', 'TOURNAMENT', ?, ?, NULL, NULL, 0, 0, '{"venue":{"name":"Public Dojo"},"pairings":[[[1,2,3,4]]]}', '{"maxParticipants":8,"registrationDeadline":"2026-06-01T00:00:00.000Z"}', ?, ?, ?)`
         ).run(TOURNAMENT_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, ts, ts, SYSTEM_USER_ID);
 
         dbManager.db.prepare(
@@ -119,6 +119,8 @@ describe('Public tournament endpoint', () => {
         expect(response.body.event.name).toBe('Public Test Tournament');
         expect(response.body.event.maxParticipants).toBe(8);
         expect(response.body.event.registrationDeadline).toBe('2026-06-01T00:00:00.000Z');
+        expect(response.body.event.info).toEqual({ venue: { name: 'Public Dojo' } });
+        expect(response.body.event.info).not.toHaveProperty('pairings');
         expect(response.body.club.id).toBe(TEST_CLUB_ID);
         expect(response.body.club.name).toBe('Public Test Club');
         expect(response.body.club.contactInfo).toBe('@test_contact');
