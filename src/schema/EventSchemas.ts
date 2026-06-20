@@ -80,26 +80,11 @@ const linksSchema = z.strictObject({
     googleMaps: z.url('links.googleMaps must be a valid URL').optional(),
 });
 
-const pairingsSchema = z.array(
-    z.array(
-        z.array(z.number().int('Pairing player id must be an integer'))
-            .length(4, 'Each table must have exactly 4 players')
-    )
-).refine(
-    rounds => {
-        if (rounds.length === 0) return true;
-        const firstTableCount = rounds[0]!.length;
-        return rounds.every(r => r.length === firstTableCount);
-    },
-    { error: 'All rounds must have the same number of tables' }
-);
-
 export const eventInfoSchema = z.strictObject({
     schedule: z.array(scheduleDaySchema).optional(),
     venue: venueSchema.optional(),
     contacts: contactsSchema.optional(),
     links: linksSchema.optional(),
-    pairings: pairingsSchema.optional(),
 });
 
 const eventSchema = z.object({

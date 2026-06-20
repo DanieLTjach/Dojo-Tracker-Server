@@ -74,7 +74,7 @@ router.put('/:eventId', requireAuth, withTransaction((req, res) => eventControll
 /**
  * PATCH /api/events/:eventId
  * Partially update an event. Only the provided fields change; `info` is merged one level
- * deep (patching `venue` keeps `schedule`/`links`/`pairings`). The merged result is
+ * deep (patching `venue` keeps `schedule`/`links`). The merged result is
  * validated exactly like a full PUT.
  *
  * Authentication: Required (Admin or Club Owner — same as PUT)

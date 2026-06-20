@@ -184,7 +184,7 @@ export class EventService {
     /**
      * Partial update. Projects the existing event into the write-side EventData shape,
      * merges the provided fields over it (info is merged one level deep so a patch that
-     * touches only `venue` doesn't wipe `schedule`/`links`/`pairings`), then runs the full
+     * touches only `venue` doesn't wipe `schedule`/`links`), then runs the full
      * `updateEvent` path so all authorization, validation, and sync logic is shared — the
      * merged object is validated exactly as a full PUT would be.
      */

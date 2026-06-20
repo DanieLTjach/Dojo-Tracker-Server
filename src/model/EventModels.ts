@@ -88,7 +88,6 @@ export interface EventInfo {
     venue?: EventInfoVenue | undefined;
     contacts?: EventInfoContacts | undefined;
     links?: EventInfoLinks | undefined;
-    pairings?: number[][][] | undefined;
 }
 
 export const PlayerNameDisplay = {
