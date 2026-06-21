@@ -10,7 +10,7 @@ export class UserStatsController {
         const {
             params: { userId, eventId },
         } = getUserEventStatsSchema.parse(req);
-        const stats = this.userStatsService.getUserEventStats(userId, eventId);
+        const stats = this.userStatsService.getUserEventStats(userId, eventId, req.user!.userId);
         if (stats === null) {
             return res.status(StatusCodes.NO_CONTENT).send();
         }

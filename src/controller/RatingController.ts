@@ -12,7 +12,7 @@ export class RatingController {
 
     getAllUsersCurrentRating(req: Request, res: Response) {
         const { params: { eventId } } = getAllUsersCurrentRatingSchema.parse(req);
-        const ratings = this.ratingService.getAllUsersCurrentRating(eventId);
+        const ratings = this.ratingService.getAllUsersCurrentRating(eventId, req.user!.userId);
         return res.status(StatusCodes.OK).json(ratings);
     }
 
@@ -24,14 +24,15 @@ export class RatingController {
         const ratingChanges = this.ratingService.getAllUsersTotalRatingChangeDuringPeriod(
             eventId,
             dateFrom,
-            dateTo
+            dateTo,
+            req.user!.userId
         );
         return res.status(StatusCodes.OK).json(ratingChanges);
     }
 
     getUserRatingHistory(req: Request, res: Response) {
         const { params: { userId, eventId } } = getUserRatingHistorySchema.parse(req);
-        const ratingHistory = this.ratingService.getUserRatingHistory(userId, eventId);
+        const ratingHistory = this.ratingService.getUserRatingHistory(userId, eventId, req.user!.userId);
         return res.status(StatusCodes.OK).json(ratingHistory);
     }
 }

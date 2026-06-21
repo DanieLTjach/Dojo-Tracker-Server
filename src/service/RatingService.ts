@@ -1,5 +1,5 @@
 import { booleanToInteger } from '../db/dbUtils.ts';
-import { PleaseProvideStartPlaceForAllPlayersToResolveTie } from '../error/RatingErrors.ts';
+import { PleaseProvideStartPlaceForAllPlayersToResolveTie, ResultsHiddenError } from '../error/RatingErrors.ts';
 import type { GameRules, UmaTieBreak } from '../model/EventModels.ts';
 import { WIND_ORDER, type GameWithPlayers, type PlayerData } from '../model/GameModels.ts';
 import type {
@@ -18,8 +18,11 @@ export class RatingService {
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
 
-    getAllUsersCurrentRating(eventId: number): UserRatingWithPlace[] {
-        this.eventService.validateEventExists(eventId);
+    getAllUsersCurrentRating(eventId: number, viewerUserId: number): UserRatingWithPlace[] {
+        const event = this.eventService.getEventById(eventId);
+        if (!this.eventService.viewerCanSeeResults(event, viewerUserId)) {
+            throw new ResultsHiddenError();
+        }
         const userRatings = this.ratingRepository.findAllUsersCurrentRating(eventId)
             .map(normalizeUserRating);
         const standingsMap = this.calculateStandingsMap(userRatings);
@@ -39,19 +42,27 @@ export class RatingService {
     getAllUsersTotalRatingChangeDuringPeriod(
         eventId: number,
         dateFrom: Date,
-        dateTo: Date
+        dateTo: Date,
+        viewerUserId: number
     ): UserRatingChangeShortDTO[] {
-        this.eventService.validateEventExists(eventId);
+        const event = this.eventService.getEventById(eventId);
+        if (!this.eventService.viewerCanSeeResults(event, viewerUserId)) {
+            throw new ResultsHiddenError();
+        }
         return this.ratingRepository.getAllUsersTotalRatingChangeDuringPeriod(eventId, dateFrom, dateTo)
             .map(normalizeUserRatingChange);
     }
 
     getUserRatingHistory(
         userId: number,
-        eventId: number
+        eventId: number,
+        viewerUserId: number
     ): RatingSnapshot[] {
         this.userService.validateUserExistsById(userId);
-        this.eventService.validateEventExists(eventId);
+        const event = this.eventService.getEventById(eventId);
+        if (!this.eventService.viewerCanSeeResults(event, viewerUserId)) {
+            throw new ResultsHiddenError();
+        }
         return this.ratingRepository.getUserRatingHistory(userId, eventId)
             .map(normalizeRatingSnapshot);
     }

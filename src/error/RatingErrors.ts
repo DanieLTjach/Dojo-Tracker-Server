@@ -1,4 +1,13 @@
-import { BadRequestError, InternalServerError } from './BaseErrors.ts';
+import { BadRequestError, ForbiddenError, InternalServerError } from './BaseErrors.ts';
+
+export class ResultsHiddenError extends ForbiddenError {
+    constructor() {
+        super(
+            'Результати цього турніру приховані організатором до офіційного оголошення',
+            'resultsHidden'
+        );
+    }
+}
 
 export class UserRatingChangeInGameNotFound extends InternalServerError {
     constructor(userId: number, gameId: number) {

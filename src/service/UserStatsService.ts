@@ -2,7 +2,7 @@ import type { UserEventStats, GameStatsData } from '../model/UserStatsModels.ts'
 import { UserStatsRepository } from '../repository/UserStatsRepository.ts';
 import { UserService } from './UserService.ts';
 import { EventService } from './EventService.ts';
-import { UserHasNoRatingDespiteHavingPlayedGames } from '../error/RatingErrors.ts';
+import { ResultsHiddenError, UserHasNoRatingDespiteHavingPlayedGames } from '../error/RatingErrors.ts';
 import { RATING_TO_POINTS_COEFFICIENT, RatingService } from './RatingService.ts';
 import type { Event } from '../model/EventModels.ts';
 
@@ -12,9 +12,12 @@ export class UserStatsService {
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
 
-    getUserEventStats(userId: number, eventId: number): UserEventStats | null {
+    getUserEventStats(userId: number, eventId: number, viewerUserId: number): UserEventStats | null {
         this.userService.getUserById(userId);
         const event = this.eventService.getEventById(eventId);
+        if (!this.eventService.viewerCanSeeResults(event, viewerUserId)) {
+            throw new ResultsHiddenError();
+        }
 
         // Get game stats data
         const gameStats = this.userStatsRepository.getUserGameStats(userId, eventId);
