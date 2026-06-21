@@ -1,10 +1,15 @@
 import type { ApiMethods } from 'telegraf/types';
+import config from '../../config/config.ts';
 import { TelegramTopicType } from '../model/TelegramTopic.ts';
 import type { TelegramTopic } from '../model/TelegramTopic.ts';
 import { telegramBot } from './TelegramBot.ts';
 
 class TelegramMessageService {
-    async sendMessage(message: string, topic: TelegramTopic) {
+    async sendMessage(message: string, topic: TelegramTopic): Promise<void> {
+        if (!config.telegramNotificationsEnabled) {
+            return;
+        }
+
         let sendingOptions = getSendingOptionsForTopicType(topic.type);
         if (topic.topicId !== undefined) {
             sendingOptions = {
@@ -21,6 +26,10 @@ class TelegramMessageService {
     }
 
     async sendDirectMessage(telegramId: number, message: string): Promise<void> {
+        if (!config.telegramNotificationsEnabled) {
+            return;
+        }
+
         try {
             await telegramBot.telegram.sendMessage(telegramId, message, { parse_mode: 'HTML' });
         } catch (error) {
