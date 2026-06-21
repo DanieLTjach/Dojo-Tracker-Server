@@ -54,6 +54,18 @@ function ratingUpdateLogCalls(spy: jest.SpiedFunction<typeof LogService.logInfo>
     );
 }
 
+function gameActionLogCalls(spy: jest.SpiedFunction<typeof LogService.logInfo>): unknown[][] {
+    return spy.mock.calls.filter(([message]) =>
+        typeof message === 'string' &&
+        message.includes('Game ID:')
+    );
+}
+
+function hideResults(eventId: number): void {
+    dbManager.db.prepare('UPDATE event SET config = ? WHERE id = ?')
+        .run(JSON.stringify({ resultsHidden: true }), eventId);
+}
+
 describe('Tournament rating update logs', () => {
     beforeAll(() => {
         const ts = '2024-01-01T00:00:00.000Z';
@@ -94,7 +106,7 @@ describe('Tournament rating update logs', () => {
         cleanupTestDatabase();
     });
 
-    test('emits rating update log before LAST_ROUND', async () => {
+    test('emits rating and game-action logs when results are visible', async () => {
         dbManager.db.prepare('UPDATE tournament SET currentRound = 1, status = ? WHERE eventId = ?')
             .run('IN_PROGRESS', TOURNAMENT_EVENT_ID);
         const logSpy = jest.spyOn(LogService, 'logInfo').mockImplementation(() => undefined);
@@ -103,9 +115,24 @@ describe('Tournament rating update logs', () => {
 
         expect(response.status).toBe(201);
         expect(ratingUpdateLogCalls(logSpy)).toHaveLength(1);
+        expect(gameActionLogCalls(logSpy).length).toBeGreaterThan(0);
     });
 
-    test('suppresses rating update log in LAST_ROUND', async () => {
+    test('suppresses both rating and game-action logs when results are hidden', async () => {
+        dbManager.db.prepare('UPDATE tournament SET currentRound = 1, status = ? WHERE eventId = ?')
+            .run('IN_PROGRESS', TOURNAMENT_EVENT_ID);
+        hideResults(TOURNAMENT_EVENT_ID);
+        const logSpy = jest.spyOn(LogService, 'logInfo').mockImplementation(() => undefined);
+
+        const response = await addScoreOnlyTournamentGame(1);
+
+        // The game is still recorded — only the result-bearing notifications are silenced.
+        expect(response.status).toBe(201);
+        expect(ratingUpdateLogCalls(logSpy)).toHaveLength(0);
+        expect(gameActionLogCalls(logSpy)).toHaveLength(0);
+    });
+
+    test('still emits logs in LAST_ROUND when results are not hidden', async () => {
         dbManager.db.prepare('UPDATE tournament SET currentRound = 2, status = ? WHERE eventId = ?')
             .run('LAST_ROUND', TOURNAMENT_EVENT_ID);
         const logSpy = jest.spyOn(LogService, 'logInfo').mockImplementation(() => undefined);
@@ -113,6 +140,6 @@ describe('Tournament rating update logs', () => {
         const response = await addScoreOnlyTournamentGame(2);
 
         expect(response.status).toBe(201);
-        expect(ratingUpdateLogCalls(logSpy)).toHaveLength(0);
+        expect(ratingUpdateLogCalls(logSpy)).toHaveLength(1);
     });
 });

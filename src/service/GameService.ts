@@ -30,6 +30,7 @@ import type {
 } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
+import { resolveResultsHidden } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
 import LogService from './LogService.ts';
 import dedent from 'dedent';
@@ -49,7 +50,6 @@ import { EventService } from './EventService.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { GameCreationBlockedError, TournamentGameNotInCurrentRoundError } from '../error/EventErrors.ts';
 import { AchievementService } from './AchievementService.ts';
-import { TournamentStatus } from '../model/TournamentModels.ts';
 
 export class GameService {
     private gameRepository: GameRepository = new GameRepository();
@@ -486,6 +486,12 @@ export class GameService {
         title: string,
         userLabel: string
     ): void {
+        // This log lists every player's points and rating delta — a results leak.
+        // Suppress it entirely while the organizer is hiding results.
+        if (resolveResultsHidden(event.config)) {
+            return;
+        }
+
         const user = this.userService.getUserById(userId);
         const message = dedent`
             <b>${title}</b>
@@ -538,7 +544,8 @@ export class GameService {
         standingsAfter: Map<number, number>,
         createdBy: number
     ): void {
-        if (event.tournament?.status === TournamentStatus.LAST_ROUND) {
+        // Don't broadcast standings while the organizer is hiding results.
+        if (resolveResultsHidden(event.config)) {
             return;
         }
 
