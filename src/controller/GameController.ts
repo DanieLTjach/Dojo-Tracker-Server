@@ -57,13 +57,15 @@ export class GameController {
     getGames(req: Request, res: Response) {
         const { query } = gameGetListSchema.parse(req);
         const games = this.gameService.getGames(query || {});
-        return res.status(StatusCodes.OK).json(games);
+        const masked = this.gameService.maskHiddenRatingDeltas(games, req.user!.userId);
+        return res.status(StatusCodes.OK).json(masked);
     }
 
     getGameById(req: Request, res: Response) {
         const { params: { gameId } } = gameGetByIdSchema.parse(req);
         const game = this.gameService.getDetailedGameById(gameId);
-        return res.status(StatusCodes.OK).json(game);
+        const [masked] = this.gameService.maskHiddenRatingDeltas([game], req.user!.userId);
+        return res.status(StatusCodes.OK).json(masked);
     }
 
     postRoundResult(req: Request, res: Response) {

@@ -9,7 +9,7 @@ export class AchievementController {
 
     getEventAchievements(req: Request, res: Response) {
         const { params: { eventId } } = getEventAchievementsSchema.parse(req);
-        const achievements = this.achievementService.getEventAchievements(eventId);
+        const achievements = this.achievementService.getEventAchievements(eventId, req.user!.userId);
         return res.status(StatusCodes.OK).json({ achievements });
     }
 

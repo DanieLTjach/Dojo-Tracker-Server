@@ -162,6 +162,32 @@ export class GameService {
         }));
     }
 
+    /**
+     * Blanks per-player rating deltas (`ratingChange → null`) on games whose
+     * event has results hidden from the given viewer. Points are preserved.
+     * Applied on the read path only (controllers) — never to the games handed to
+     * mutation/notification code, which need the real deltas. Events are looked
+     * up once each via a small cache to avoid N queries for a bulk games list.
+     */
+    maskHiddenRatingDeltas<T extends GameWithPlayers>(games: T[], viewerUserId: number): T[] {
+        const visibilityByEventId = new Map<number, boolean>();
+        const canSee = (eventId: number): boolean => {
+            let visible = visibilityByEventId.get(eventId);
+            if (visible === undefined) {
+                const event = this.eventService.getEventById(eventId);
+                visible = this.eventService.viewerCanSeeResults(event, viewerUserId);
+                visibilityByEventId.set(eventId, visible);
+            }
+            return visible;
+        };
+
+        return games.map(game =>
+            canSee(game.eventId)
+                ? game
+                : { ...game, players: game.players.map(p => ({ ...p, ratingChange: null })) }
+        );
+    }
+
     updateGame(
         gameId: number,
         eventId: number,
@@ -487,7 +513,10 @@ export class GameService {
     private printPlayersLog(players: GamePlayer[]): string {
         return players.map((p, index) => {
             const user = this.userService.getUserById(p.userId);
-            const ratingSign = p.ratingChange >= 0 ? '+' : '';
+            // ratingChange is only ever null on masked read DTOs; the games passed
+            // to notification builders carry real deltas. Guard defensively.
+            const ratingChange = p.ratingChange ?? 0;
+            const ratingSign = ratingChange >= 0 ? '+' : '';
 
             let userDescription = `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>`;
             userDescription += `\n   • Points: <b>${p.points}</b>`;
@@ -497,7 +526,7 @@ export class GameService {
             if (p.chomboCount > 0) {
                 userDescription += `\n   • Chombo Count: <b>${p.chomboCount}</b>`;
             }
-            userDescription += `\n   • Rating: <b>${ratingSign}${p.ratingChange}</b>`;
+            userDescription += `\n   • Rating: <b>${ratingSign}${ratingChange}</b>`;
             return userDescription;
         }).join('\n\n');
     }
@@ -518,7 +547,7 @@ export class GameService {
 
         const maxPlayerPointsStringLength = Math.max(...sortedPlayers.map(p => p.points.toString().length));
         const maxPlayerRatingChangeStringLength = Math.max(
-            ...sortedPlayers.map(p => this.signedNumberToString(p.ratingChange).length)
+            ...sortedPlayers.map(p => this.signedNumberToString(p.ratingChange ?? 0).length)
         );
         const padding = Math.max(maxPlayerPointsStringLength, maxPlayerRatingChangeStringLength) + 1;
 
@@ -540,7 +569,7 @@ export class GameService {
 
             return `<code>${index + 1}.${player.points.toString().padStart(padding, ' ')}</code>` +
                 ` | ${this.generateUserProfileLink(user)}\n` +
-                `<code>${this.signedNumberToString(player.ratingChange).padStart(padding + 2, ' ')}</code>` +
+                `<code>${this.signedNumberToString(player.ratingChange ?? 0).padStart(padding + 2, ' ')}</code>` +
                 (standingString ? ` | ${standingString}` : '');
         }).join('\n\n');
 

@@ -4,15 +4,17 @@ import ratingRoutes from '../src/routes/RatingRoutes.ts';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import userStatsRoutes from '../src/routes/UserStatsRoutes.ts';
+import eventRoutes from '../src/routes/EventRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createCustomEvent, createTelegramInitData } from './testHelpers.ts';
 
 // Verifies the resultsHidden config gate: when an organizer hides results, the
-// rating/standings and per-user stats endpoints return 403 (errorCode
-// resultsHidden) for regular participants, while managers (system admins and
-// club OWNER/MODERATOR) still get the data.
+// rating/standings, per-user stats and achievements endpoints return 403
+// (errorCode resultsHidden) for regular participants, the games endpoint blanks
+// per-player rating deltas (keeping points), and managers (system admins and
+// club OWNER/MODERATOR) still get everything.
 
 const app = express();
 app.use(express.json());
@@ -20,6 +22,7 @@ app.use('/api', ratingRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/events', userStatsRoutes);
+app.use('/api/events', eventRoutes);
 app.use(handleErrors);
 
 const SYSTEM_USER_ID = 0; // system admin → always a manager
@@ -156,6 +159,38 @@ describe('resultsHidden gate', () => {
                 .set('Authorization', adminAuthHeader);
             expect(res.status).toBe(200);
             expect(res.body.length).toBeGreaterThan(0);
+        });
+
+        test('blocks a regular participant from event achievements', async () => {
+            const res = await request(app)
+                .get(`/api/events/${EVENT_ID}/achievements`)
+                .set('Authorization', createAuthHeader(playerId));
+            expect(res.status).toBe(403);
+            expect(res.body.errorCode).toBe('resultsHidden');
+        });
+
+        test('blanks per-player rating deltas in games for a regular participant but keeps points', async () => {
+            const res = await request(app)
+                .get(`/api/games?eventId=${EVENT_ID}`)
+                .set('Authorization', createAuthHeader(playerId));
+            expect(res.status).toBe(200);
+            expect(res.body.length).toBeGreaterThan(0);
+            for (const game of res.body) {
+                for (const player of game.players) {
+                    expect(player.ratingChange).toBeNull();
+                    expect(typeof player.points).toBe('number');
+                }
+            }
+        });
+
+        test('keeps per-player rating deltas in games for a manager', async () => {
+            const res = await request(app)
+                .get(`/api/games?eventId=${EVENT_ID}`)
+                .set('Authorization', adminAuthHeader);
+            expect(res.status).toBe(200);
+            const someDelta = res.body.flatMap((g: { players: { ratingChange: number | null }[] }) => g.players)
+                .some((p: { ratingChange: number | null }) => p.ratingChange !== null);
+            expect(someDelta).toBe(true);
         });
     });
 });

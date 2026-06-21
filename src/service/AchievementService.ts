@@ -11,6 +11,7 @@ import { AchievementRepository, type EventAchievementWinnerRow } from '../reposi
 import { GameRepository } from '../repository/GameRepository.ts';
 import { computeAchievements } from '../util/AchievementCalculator.ts';
 import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
+import { ResultsHiddenError } from '../error/RatingErrors.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
@@ -96,8 +97,14 @@ export class AchievementService {
     }
 
     /** Achievements for the tournament page. Computes lazily on first read for historical tournaments. */
-    getEventAchievements(eventId: number): EventAchievementResult[] {
+    getEventAchievements(eventId: number, viewerUserId: number): EventAchievementResult[] {
         const event = this.eventService.getEventById(eventId);
+
+        // Achievements expose tournament winners + values — a results leak while
+        // hidden. Managers still see them; everyone else is blocked.
+        if (!this.eventService.viewerCanSeeResults(event, viewerUserId)) {
+            throw new ResultsHiddenError();
+        }
 
         if (!this.achievementRepository.areEventAchievementsComputed(eventId)) {
             this.recomputeEventAchievements(event);

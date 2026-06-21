@@ -103,7 +103,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
     });
 
     it('computes and returns tournament achievements with winners', () => {
-        const results = achievementService.getEventAchievements(EVENT_ID);
+        const results = achievementService.getEventAchievements(EVENT_ID, 0);
         expect(results).toHaveLength(21);
 
         const dealerWins = results.find(r => r.metric === 'dealer_wins')!;
@@ -127,7 +127,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
     });
 
     it('marks the event computed so a second read does not recompute from scratch', () => {
-        achievementService.getEventAchievements(EVENT_ID);
+        achievementService.getEventAchievements(EVENT_ID, 0);
         const computed = dbManager.db
             .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
             .get(EVENT_ID) as { achievementsComputedAt: string | null };

@@ -73,7 +73,10 @@ export interface GamePlayer {
     profileLastName: string | null;
     profileHidden: boolean;
     points: number;
-    ratingChange: number;
+    // null when the viewer is not allowed to see this game's rating impact
+    // (tournament with results hidden, viewed by a non-manager). Otherwise the
+    // signed rating delta for the player in this game.
+    ratingChange: number | null;
     startPlace: Wind | null;
     chomboCount: number;
     isSubstitutePlayer: boolean;
