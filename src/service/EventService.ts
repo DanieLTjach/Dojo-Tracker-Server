@@ -26,12 +26,14 @@ import { EventRegistrationRepository } from '../repository/EventRegistrationRepo
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { Event, EventConfig, EventInfo, EventType } from '../model/EventModels.ts';
+import { resolveResultsHidden } from '../model/EventModels.ts';
 import type { Game } from '../model/GameModels.ts';
 import { ClubRole } from '../model/ClubModels.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
+import { ClubMembershipService } from './ClubMembershipService.ts';
 import { UserService } from './UserService.ts';
 import { TournamentRepository } from '../repository/TournamentRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
@@ -45,6 +47,7 @@ export class EventService {
     private tournamentRepository: TournamentRepository = new TournamentRepository();
     private gameRepository: GameRepository = new GameRepository();
     private userService: UserService = new UserService();
+    private clubMembershipService: ClubMembershipService = new ClubMembershipService();
 
     getAllEvents(clubId?: number): Event[] {
         if (clubId !== undefined) {
@@ -83,6 +86,24 @@ export class EventService {
         if (!event) {
             throw new EventNotFoundError(eventId);
         }
+    }
+
+    /**
+     * Whether the given viewer may see this event's results (ratings / standings /
+     * per-player deltas). Results are visible to everyone unless the organizer has
+     * hidden them, in which case only managers (system admins and club
+     * OWNER/MODERATOR) may still see them. This is the single source of truth for
+     * every result-gating read path.
+     */
+    viewerCanSeeResults(event: Event, viewerUserId: number): boolean {
+        if (!resolveResultsHidden(event.config)) {
+            return true;
+        }
+        return this.clubMembershipService.userIsAdminOrHasClubRole(
+            event.clubId,
+            viewerUserId,
+            [ClubRole.OWNER, ClubRole.MODERATOR]
+        );
     }
 
     createEvent(data: EventData, modifiedBy: number): Event {

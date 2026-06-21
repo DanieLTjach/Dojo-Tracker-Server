@@ -5,7 +5,7 @@ import { parseUma } from '../util/UmaUtil.ts';
 import { parseEventType, parseTournamentStatus, parseUmaTieBreak } from '../util/EnumUtil.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
 import type { EventConfig, EventInfo } from '../model/EventModels.ts';
-import { resolvePlayerNameDisplay } from '../model/EventModels.ts';
+import { resolvePlayerNameDisplay, resolveResultsHidden } from '../model/EventModels.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
 import type { TournamentStatus } from '../model/TournamentModels.ts';
 
@@ -378,6 +378,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         info: dbEntity.info !== null ? JSON.parse(dbEntity.info) as EventInfo : null,
         config,
         resolvedPlayerNameDisplay: resolvePlayerNameDisplay(config, eventType),
+        resolvedResultsHidden: resolveResultsHidden(config),
         blockGameCreation: Boolean(dbEntity.blockGameCreation),
         tournament: dbEntity.tournament_status !== null
             ? {

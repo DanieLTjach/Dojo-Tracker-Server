@@ -31,6 +31,7 @@ const eventConfigSchema = z.strictObject({
     minParticipants: minParticipantsSchema.optional(),
     maxParticipants: maxParticipantsSchema.optional(),
     registrationDeadline: registrationDeadlineSchema.optional(),
+    resultsHidden: z.boolean().optional(),
 });
 
 const eventConfigPatchSchema = z.strictObject({
@@ -38,6 +39,7 @@ const eventConfigPatchSchema = z.strictObject({
     minParticipants: minParticipantsSchema.nullish(),
     maxParticipants: maxParticipantsSchema.nullish(),
     registrationDeadline: registrationDeadlineSchema.nullish(),
+    resultsHidden: z.boolean().nullish(),
 });
 
 const scheduleItemKindSchema = z.enum(['default', 'muted', 'milestone']);

@@ -104,6 +104,7 @@ export interface EventConfig {
     minParticipants?: number | undefined;
     maxParticipants?: number | undefined;
     registrationDeadline?: Date | undefined;
+    resultsHidden?: boolean | undefined;
 }
 
 /**
@@ -117,6 +118,14 @@ export function resolvePlayerNameDisplay(config: EventConfig | null, eventType: 
         return mode;
     }
     return eventType === EventType.TOURNAMENT ? PlayerNameDisplay.REAL_NAME : PlayerNameDisplay.NICKNAME;
+}
+
+/**
+ * Whether results (ratings / standings / per-player deltas) are currently hidden
+ * from non-managers. Driven solely by the organizer-controlled config flag.
+ */
+export function resolveResultsHidden(config: EventConfig | null): boolean {
+    return config?.resultsHidden === true;
 }
 
 export interface Event {
@@ -136,6 +145,7 @@ export interface Event {
     info: EventInfo | null;
     config: EventConfig | null;
     resolvedPlayerNameDisplay: PlayerNameDisplay;
+    resolvedResultsHidden: boolean;
     blockGameCreation: boolean;
     tournament: Tournament | null;
     gameCount: number;
