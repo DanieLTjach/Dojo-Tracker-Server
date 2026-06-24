@@ -6,7 +6,12 @@ import yaml from 'js-yaml';
 // Each src/i18n/locales/<locale>/*.yaml owns a distinct set of top-level sections.
 // We parse them at load time and shallow-merge into one catalog per locale.
 
-export type TranslationParamValue = string | number | boolean | null | undefined;
+export interface TranslationRef {
+    key: string;
+    params?: TranslationParams | undefined;
+}
+
+export type TranslationParamValue = string | number | boolean | TranslationRef | null | undefined;
 export type TranslationParams = Record<string, TranslationParamValue>;
 
 type Catalog = Record<string, unknown>;
@@ -46,9 +51,20 @@ function read(catalog: Catalog, path: string): unknown {
     );
 }
 
-function interpolate(template: string, params: TranslationParams): string {
+export function translationRef(key: string, params?: TranslationParams): TranslationRef {
+    return { key, params };
+}
+
+function isTranslationRef(value: TranslationParamValue): value is TranslationRef {
+    return value !== null && typeof value === 'object' && 'key' in value;
+}
+
+function interpolate(template: string, params: TranslationParams, locale: string): string {
     return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
         const value = params[key];
+        if (isTranslationRef(value)) {
+            return t(value.key, value.params, locale);
+        }
         return value === undefined || value === null ? '' : String(value);
     });
 }
@@ -76,5 +92,5 @@ export function t(key: string, params?: TranslationParams, locale?: string | nul
     if (typeof template !== 'string') {
         return key;
     }
-    return params ? interpolate(template, params) : template;
+    return params ? interpolate(template, params, normalizedLocale) : template;
 }

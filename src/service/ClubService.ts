@@ -7,6 +7,7 @@ import LogService from './LogService.ts';
 import dedent from 'dedent';
 import { UserRepository } from '../repository/UserRepository.ts';
 import { t } from '../i18n/index.ts';
+import { resolveEffectiveLocale } from '../util/LocaleResolver.ts';
 
 export class ClubService {
     private clubRepository: ClubRepository = new ClubRepository();
@@ -115,91 +116,97 @@ export class ClubService {
 
     private logCreatedClub(club: Club, createdBy: number): void {
         const creator = this.userRepository.findUserById(createdBy);
+        const locale = resolveEffectiveLocale(null, club);
+        const tr = (key: string) => t(key, undefined, locale);
         const message = dedent`
-            <b>${t('telegram.clubLog.createdTitle')}</b>
+            <b>${tr('telegram.clubLog.createdTitle')}</b>
 
-            <b>${t('telegram.clubLog.clubIdLabel')}</b> <code>${club.id}</code>
-            <b>${t('telegram.clubLog.nameLabel')}</b> ${club.name}
-            <b>${t('telegram.clubLog.cityLabel')}</b> ${club.city || t('telegram.clubLog.noValue')}
-            <b>${t('telegram.clubLog.countryLabel')}</b> ${club.country}
-            <b>${t('telegram.clubLog.localeLabel')}</b> ${club.locale}
-            <b>${t('telegram.clubLog.addressLabel')}</b> ${club.address || t('telegram.clubLog.noValue')}
-            <b>${t('telegram.clubLog.descriptionLabel')}</b> ${club.description || t('telegram.clubLog.noValue')}
-            <b>${t('telegram.clubLog.contactInfoLabel')}</b> ${club.contactInfo || t('telegram.clubLog.noValue')}
-            <b>${t('telegram.clubLog.createdByLabel')}</b> ${creator?.name} <code>(ID: ${creator?.id})</code>
+            <b>${tr('telegram.clubLog.clubIdLabel')}</b> <code>${club.id}</code>
+            <b>${tr('telegram.clubLog.nameLabel')}</b> ${club.name}
+            <b>${tr('telegram.clubLog.cityLabel')}</b> ${club.city || tr('telegram.clubLog.noValue')}
+            <b>${tr('telegram.clubLog.countryLabel')}</b> ${club.country}
+            <b>${tr('telegram.clubLog.localeLabel')}</b> ${club.locale}
+            <b>${tr('telegram.clubLog.addressLabel')}</b> ${club.address || tr('telegram.clubLog.noValue')}
+            <b>${tr('telegram.clubLog.descriptionLabel')}</b> ${club.description || tr('telegram.clubLog.noValue')}
+            <b>${tr('telegram.clubLog.contactInfoLabel')}</b> ${club.contactInfo || tr('telegram.clubLog.noValue')}
+            <b>${tr('telegram.clubLog.createdByLabel')}</b> ${creator?.name} <code>(ID: ${creator?.id})</code>
         `;
         this.logClubEvent(club.id, message);
     }
 
     private logEditedClub(oldClub: Club, newClub: Club, modifiedBy: number): void {
         const modifier = this.userRepository.findUserById(modifiedBy);
+        const locale = resolveEffectiveLocale(null, newClub);
+        const tr = (key: string) => t(key, undefined, locale);
         const changes: string[] = [];
 
         if (oldClub.name !== newClub.name) {
-            changes.push(`<b>${t('telegram.clubLog.nameLabel')}</b> ${oldClub.name} → ${newClub.name}`);
+            changes.push(`<b>${tr('telegram.clubLog.nameLabel')}</b> ${oldClub.name} → ${newClub.name}`);
         }
         if (oldClub.city !== newClub.city) {
             changes.push(
-                `<b>${t('telegram.clubLog.cityLabel')}</b> ${oldClub.city || t('telegram.clubLog.noValue')} → ${
-                    newClub.city || t('telegram.clubLog.noValue')
+                `<b>${tr('telegram.clubLog.cityLabel')}</b> ${oldClub.city || tr('telegram.clubLog.noValue')} → ${
+                    newClub.city || tr('telegram.clubLog.noValue')
                 }`
             );
         }
         if (oldClub.country !== newClub.country) {
-            changes.push(`<b>${t('telegram.clubLog.countryLabel')}</b> ${oldClub.country} → ${newClub.country}`);
+            changes.push(`<b>${tr('telegram.clubLog.countryLabel')}</b> ${oldClub.country} → ${newClub.country}`);
         }
         if (oldClub.locale !== newClub.locale) {
-            changes.push(`<b>${t('telegram.clubLog.localeLabel')}</b> ${oldClub.locale} → ${newClub.locale}`);
+            changes.push(`<b>${tr('telegram.clubLog.localeLabel')}</b> ${oldClub.locale} → ${newClub.locale}`);
         }
         if (oldClub.address !== newClub.address) {
             changes.push(
-                `<b>${t('telegram.clubLog.addressLabel')}</b> ${oldClub.address || t('telegram.clubLog.noValue')} → ${
-                    newClub.address || t('telegram.clubLog.noValue')
+                `<b>${tr('telegram.clubLog.addressLabel')}</b> ${oldClub.address || tr('telegram.clubLog.noValue')} → ${
+                    newClub.address || tr('telegram.clubLog.noValue')
                 }`
             );
         }
         if (oldClub.description !== newClub.description) {
             changes.push(
-                `<b>${t('telegram.clubLog.descriptionLabel')}</b> ${
-                    oldClub.description || t('telegram.clubLog.noValue')
-                } → ${newClub.description || t('telegram.clubLog.noValue')}`
+                `<b>${tr('telegram.clubLog.descriptionLabel')}</b> ${
+                    oldClub.description || tr('telegram.clubLog.noValue')
+                } → ${newClub.description || tr('telegram.clubLog.noValue')}`
             );
         }
         if (oldClub.contactInfo !== newClub.contactInfo) {
             changes.push(
-                `<b>${t('telegram.clubLog.contactInfoLabel')}</b> ${
-                    oldClub.contactInfo || t('telegram.clubLog.noValue')
-                } → ${newClub.contactInfo || t('telegram.clubLog.noValue')}`
+                `<b>${tr('telegram.clubLog.contactInfoLabel')}</b> ${
+                    oldClub.contactInfo || tr('telegram.clubLog.noValue')
+                } → ${newClub.contactInfo || tr('telegram.clubLog.noValue')}`
             );
         }
         if (oldClub.isActive !== newClub.isActive) {
-            changes.push(`<b>${t('telegram.clubLog.isActiveLabel')}</b> ${oldClub.isActive} → ${newClub.isActive}`);
+            changes.push(`<b>${tr('telegram.clubLog.isActiveLabel')}</b> ${oldClub.isActive} → ${newClub.isActive}`);
         }
 
         let message = dedent`
-            <b>${t('telegram.clubLog.editedTitle')}</b>
+            <b>${tr('telegram.clubLog.editedTitle')}</b>
 
-            <b>${t('telegram.clubLog.clubIdLabel')}</b> <code>${newClub.id}</code>
-            <b>${t('telegram.clubLog.nameLabel')}</b> ${newClub.name}
+            <b>${tr('telegram.clubLog.clubIdLabel')}</b> <code>${newClub.id}</code>
+            <b>${tr('telegram.clubLog.nameLabel')}</b> ${newClub.name}
         `;
         if (changes.length > 0) {
             message += '\n' + changes.join('\n');
         }
         message += `\n<b>${
-            t('telegram.clubLog.editedByLabel')
+            tr('telegram.clubLog.editedByLabel')
         }</b> ${modifier?.name} <code>(ID: ${modifier?.id})</code>`;
         this.logClubEvent(newClub.id, message);
     }
 
     private logDeletedClub(club: Club, deletedBy: number): void {
         const deleter = this.userRepository.findUserById(deletedBy);
+        const locale = resolveEffectiveLocale(null, club);
+        const tr = (key: string) => t(key, undefined, locale);
         const message = dedent`
-            <b>${t('telegram.clubLog.deletedTitle')}</b>
+            <b>${tr('telegram.clubLog.deletedTitle')}</b>
 
-            <b>${t('telegram.clubLog.clubIdLabel')}</b> <code>${club.id}</code>
-            <b>${t('telegram.clubLog.nameLabel')}</b> ${club.name}
-            <b>${t('telegram.clubLog.cityLabel')}</b> ${club.city || t('telegram.clubLog.noValue')}
-            <b>${t('telegram.clubLog.deletedByLabel')}</b> ${deleter?.name} <code>(ID: ${deleter?.id})</code>
+            <b>${tr('telegram.clubLog.clubIdLabel')}</b> <code>${club.id}</code>
+            <b>${tr('telegram.clubLog.nameLabel')}</b> ${club.name}
+            <b>${tr('telegram.clubLog.cityLabel')}</b> ${club.city || tr('telegram.clubLog.noValue')}
+            <b>${tr('telegram.clubLog.deletedByLabel')}</b> ${deleter?.name} <code>(ID: ${deleter?.id})</code>
         `;
         this.logClubEvent(club.id, message);
     }

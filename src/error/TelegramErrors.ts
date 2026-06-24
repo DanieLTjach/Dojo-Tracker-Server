@@ -1,4 +1,4 @@
-import { t } from "../i18n/index.ts";
+import { t } from '../i18n/index.ts';
 
 export class TelegramReplyError extends Error {
     constructor(message: string) {

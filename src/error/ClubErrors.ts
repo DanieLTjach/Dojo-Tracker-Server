@@ -1,5 +1,6 @@
 import { BadRequestError, ForbiddenError, NotFoundError } from './BaseErrors.ts';
 import type { ClubMembershipStatus, ClubRole } from '../model/ClubModels.ts';
+import type { TranslationParamValue } from '../i18n/index.ts';
 
 export class ClubNotFoundError extends NotFoundError {
     constructor(clubId: number) {
@@ -47,7 +48,11 @@ export class YouNeedToBeModeratorToCreateGamesWithNonClubMembersError extends Fo
 }
 
 export class InvalidClubMembershipStateError extends BadRequestError {
-    constructor(action: string, currentStatus: ClubMembershipStatus, allowedStatuses: ClubMembershipStatus[]) {
+    constructor(
+        action: TranslationParamValue,
+        currentStatus: ClubMembershipStatus,
+        allowedStatuses: ClubMembershipStatus[]
+    ) {
         super('invalidClubMembershipState', { action, currentStatus, allowedStatuses: allowedStatuses.join(', ') });
     }
 }

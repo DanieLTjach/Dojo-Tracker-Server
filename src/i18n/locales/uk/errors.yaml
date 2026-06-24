@@ -1,4 +1,8 @@
 errors:
+  invalidRequestData: Некоректні дані запиту
+  databaseError: "Помилка бази даних: {{message}}"
+  internalServerError: Внутрішня помилка сервера
+
   invalidInitData: "Невалідні дані автентифікації Telegram: {{reason}}"
   expiredAuthData: Термін дії даних автентифікації минув. Будь ласка, закрийте та відкрийте додаток заново.
   missingAuthToken: Необхідний токен автентифікації

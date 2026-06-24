@@ -1,5 +1,6 @@
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from './BaseErrors.ts';
 import type { EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
+import type { TranslationParamValue } from '../i18n/index.ts';
 
 export class EventRegistrationNotFoundError extends NotFoundError {
     constructor(eventName: string, userId: number) {
@@ -20,7 +21,11 @@ export class UserNotApprovedForTournamentError extends BadRequestError {
 }
 
 export class InvalidEventRegistrationStateError extends BadRequestError {
-    constructor(action: string, currentStatus: EventRegistrationStatus, allowedStatuses: EventRegistrationStatus[]) {
+    constructor(
+        action: TranslationParamValue,
+        currentStatus: EventRegistrationStatus,
+        allowedStatuses: EventRegistrationStatus[]
+    ) {
         super('invalidEventRegistrationState', {
             action,
             currentStatus,

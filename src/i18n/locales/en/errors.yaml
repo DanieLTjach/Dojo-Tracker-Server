@@ -1,4 +1,8 @@
 errors:
+  invalidRequestData: Invalid request data
+  databaseError: "Database error: {{message}}"
+  internalServerError: Internal Server Error
+
   invalidInitData: "Invalid Telegram authentication data: {{reason}}"
   expiredAuthData: Authentication data has expired. Please close and reopen the app.
   missingAuthToken: Authentication token is required

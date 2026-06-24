@@ -51,6 +51,7 @@ import { GameCreationBlockedError, TournamentGameNotInCurrentRoundError } from '
 import { AchievementService } from './AchievementService.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { t } from '../i18n/index.ts';
+import { resolveEventLocale } from '../util/LocaleResolver.ts';
 
 export class GameService {
     private gameRepository: GameRepository = new GameRepository();
@@ -546,13 +547,14 @@ export class GameService {
         }).join('\n\n');
 
         const createdByUser = this.userService.getUserById(createdBy);
+        const locale = resolveEventLocale(event);
         const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>` +
             '\n' + t('telegram.gameLog.addedBy', {
                 gameLink: `<a href="${config.botUrl}?startapp=game_${game.id}"><b>${
-                    t('telegram.gameLog.addedNewGame')
+                    t('telegram.gameLog.addedNewGame', undefined, locale)
                 }</b></a>`,
                 userLink: this.generateUserProfileLink(createdByUser),
-            }) + '\n\n' +
+            }, locale) + '\n\n' +
             `${playerLines}`;
 
         if (event.clubId !== null) {

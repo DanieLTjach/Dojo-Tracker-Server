@@ -5,10 +5,13 @@ import { ZodError } from 'zod';
 import { SqliteError } from 'better-sqlite3';
 import LogService from '../service/LogService.ts';
 import { UserService } from '../service/UserService.ts';
+import { t } from '../i18n/index.ts';
+import { resolveRequestLocale } from '../util/LocaleResolver.ts';
 
 const userService = new UserService();
 
 export const handleErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {
+    const locale = resolveRequestLocale(req);
     let userInfo = 'unknown';
     if (req.user?.userId) {
         try {
@@ -30,18 +33,26 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
     }
 
     if (err instanceof ZodError) {
-        res.status(StatusCodes.BAD_REQUEST).json({ error: 'Invalid request data', details: err.issues });
+        res.status(StatusCodes.BAD_REQUEST).json({
+            error: t('errors.invalidRequestData', undefined, locale),
+            details: err.issues,
+        });
         return;
     }
 
     if (err instanceof SqliteError) {
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Database error', details: err.message });
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            error: t('errors.databaseError', { message: err.message }, locale),
+            details: err.message,
+        });
         return;
     }
 
     const status = err instanceof ResponseStatusError ? err.statusCode : StatusCodes.INTERNAL_SERVER_ERROR;
     res.status(status).json({
         errorCode: err instanceof ResponseStatusError ? err.errorCode : undefined,
-        message: err.message || 'Internal Server Error',
+        message: err instanceof ResponseStatusError
+            ? err.getLocalizedMessage(locale)
+            : err.message || t('errors.internalServerError', undefined, locale),
     });
 };

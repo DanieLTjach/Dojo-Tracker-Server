@@ -59,14 +59,14 @@ export class AchievementService {
      * Admin-triggered recompute. Unlike the defensive recompute that runs on game
      * changes, this throws on bad data so the admin sees what went wrong.
      */
-    forceRecomputeEventAchievements(eventId: number): EventAchievementResult[] {
+    forceRecomputeEventAchievements(eventId: number, locale?: string | null): EventAchievementResult[] {
         const event = this.eventService.getEventById(eventId);
         if (event.type !== 'TOURNAMENT') {
             throw new AchievementsOnlyForTournamentsError();
         }
 
         this.computeAndPersist(event);
-        return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId));
+        return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 
     private computeAndPersist(event: Event): void {

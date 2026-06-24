@@ -14,7 +14,8 @@ import { UserService } from './UserService.ts';
 import TelegramMessageService from './TelegramMessageService.ts';
 import LogService from './LogService.ts';
 import { globalClubLogsTopic } from '../model/TelegramTopic.ts';
-import { t } from '../i18n/index.ts';
+import { t, translationRef } from '../i18n/index.ts';
+import { resolveEffectiveLocale } from '../util/LocaleResolver.ts';
 export class ClubMembershipService {
     private clubService: ClubService = new ClubService();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
@@ -125,7 +126,9 @@ export class ClubMembershipService {
 
         const membership = this.getMembership(clubId, userId);
         if (membership.status !== 'PENDING') {
-            throw new InvalidClubMembershipStateError(t('telegram.actions.activate'), membership.status, ['PENDING']);
+            throw new InvalidClubMembershipStateError(translationRef('telegram.actions.activate'), membership.status, [
+                'PENDING',
+            ]);
         }
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifiedBy);
@@ -185,9 +188,13 @@ export class ClubMembershipService {
 
         const oldMembership = this.getMembership(clubId, userId);
         if (oldMembership.status !== 'ACTIVE') {
-            throw new InvalidClubMembershipStateError(t('telegram.actions.changeRole'), oldMembership.status, [
-                'ACTIVE',
-            ]);
+            throw new InvalidClubMembershipStateError(
+                translationRef('telegram.actions.changeRole'),
+                oldMembership.status,
+                [
+                    'ACTIVE',
+                ]
+            );
         }
 
         this.membershipRepository.updateMembershipRole(clubId, userId, role, modifiedBy);
@@ -213,12 +220,13 @@ export class ClubMembershipService {
         if (user.telegramId === null) {
             return;
         }
+        const locale = resolveEffectiveLocale(user, club);
 
         const message = dedent`
-            <b>${t('telegram.notify.addedToClubTitle', { clubName: club.name })}</b>
+            <b>${t('telegram.notify.addedToClubTitle', { clubName: club.name }, locale)}</b>
 
-            ${t('telegram.notify.addedToClubBody')}
-            <a href="${config.botUrl}">${t('telegram.notify.openApp')}</a>
+            ${t('telegram.notify.addedToClubBody', undefined, locale)}
+            <a href="${config.botUrl}">${t('telegram.notify.openApp', undefined, locale)}</a>
         `;
         void TelegramMessageService.sendDirectMessage(user.telegramId!, message);
     }
