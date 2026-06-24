@@ -1,22 +1,25 @@
-import { readdirSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import yaml from 'js-yaml';
 
-// Each src/i18n/locales/<locale>/*.yaml owns a distinct set of top-level sections;
-// we parse them at load time with js-yaml and shallow-merge into one catalog per locale.
-// Adding a new locale file needs no change here — just drop it into the locale directory.
+// Each src/i18n/locales/<locale>/*.yaml owns a distinct set of top-level sections.
+// We parse them at load time and shallow-merge into one catalog per locale.
 
-export type TranslationParams = Record<string, string | number>;
+export type TranslationParamValue = string | number | boolean | null | undefined;
+export type TranslationParams = Record<string, TranslationParamValue>;
 
 type Catalog = Record<string, unknown>;
 
 const localesDir = join(dirname(fileURLToPath(import.meta.url)), 'locales');
 
-const DEFAULT_LOCALE = 'uk';
+export const DEFAULT_LOCALE = 'uk';
 
 function loadLocale(locale: string): Catalog {
     const dir = join(localesDir, locale);
+    if (!existsSync(dir)) {
+        return {};
+    }
     const files = readdirSync(dir).filter(file => file.endsWith('.yaml') || file.endsWith('.yml'));
     return files.reduce<Catalog>((catalog, file) => {
         const parsed = yaml.load(readFileSync(join(dir, file), 'utf8'));
@@ -24,36 +27,41 @@ function loadLocale(locale: string): Catalog {
     }, {});
 }
 
-const catalogs: Record<string, Catalog> = {
-    [DEFAULT_LOCALE]: loadLocale(DEFAULT_LOCALE),
-};
-
-let currentLocale = DEFAULT_LOCALE;
-
-function getCatalog(locale: string = currentLocale): Catalog {
-    return catalogs[locale] ?? catalogs[DEFAULT_LOCALE]!;
+function loadCatalogs(): Record<string, Catalog> {
+    const localeDirs = readdirSync(localesDir, { withFileTypes: true })
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name);
+    const locales = new Set([DEFAULT_LOCALE, ...localeDirs]);
+    return Object.fromEntries([...locales].map(locale => [locale, loadLocale(locale)]));
 }
 
-export function getCurrentLocale(): string {
-    return currentLocale;
-}
-
-export function setCurrentLocale(locale: string): void {
-    currentLocale = catalogs[locale] ? locale : DEFAULT_LOCALE;
-}
+const catalogs: Record<string, Catalog> = loadCatalogs();
+export const SUPPORTED_LOCALES = Object.freeze(Object.keys(catalogs).sort());
 
 function read(catalog: Catalog, path: string): unknown {
     return path.split('.').reduce<unknown>(
         (value, segment) => (value && typeof value === 'object' ? (value as Catalog)[segment] : undefined),
-        catalog,
+        catalog
     );
 }
 
 function interpolate(template: string, params: TranslationParams): string {
     return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
         const value = params[key];
-        return value === undefined ? '' : String(value);
+        return value === undefined || value === null ? '' : String(value);
     });
+}
+
+export function isSupportedLocale(locale: string): boolean {
+    return Object.hasOwn(catalogs, locale);
+}
+
+export function normalizeLocale(locale: string | null | undefined): string {
+    return locale !== undefined && locale !== null && isSupportedLocale(locale) ? locale : DEFAULT_LOCALE;
+}
+
+function getCatalog(locale?: string): Catalog {
+    return catalogs[normalizeLocale(locale)] ?? catalogs[DEFAULT_LOCALE]!;
 }
 
 /**
@@ -61,8 +69,8 @@ function interpolate(template: string, params: TranslationParams): string {
  * interpolating any `{{param}}` placeholders. Returns the key itself if it is missing from the
  * catalog, so a typo surfaces visibly instead of throwing.
  */
-export function t(key: string, params?: TranslationParams): string {
-    const template = read(getCatalog(), key);
+export function t(key: string, params?: TranslationParams, locale?: string | null): string {
+    const template = read(getCatalog(locale ?? undefined), key);
     if (typeof template !== 'string') {
         return key;
     }
