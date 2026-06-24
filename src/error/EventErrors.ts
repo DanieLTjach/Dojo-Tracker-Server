@@ -1,4 +1,5 @@
 import { NotFoundError, BadRequestError, InternalServerError } from './BaseErrors.ts';
+import { t } from '../i18n/index.ts';
 
 export class EventNotFoundError extends NotFoundError {
     constructor(eventId: number) {
@@ -116,11 +117,16 @@ export class TournamentRoundOutOfSequenceError extends BadRequestError {
 
 export class TournamentRoundNotCurrentError extends BadRequestError {
     constructor(eventName: string, currentRound: number | null, requestedRound: number) {
-        super(currentRound === null ? 'tournamentRoundNotStarted' : 'tournamentRoundNotCurrent', {
+        const params = {
             eventName,
             currentRound: currentRound ?? '',
             requestedRound,
-        });
+        };
+        super('tournamentRoundNotCurrent', params);
+        if (currentRound === null) {
+            this.translationKey = 'errors.tournamentRoundNotStarted';
+            this.message = t(this.translationKey, params);
+        }
     }
 }
 

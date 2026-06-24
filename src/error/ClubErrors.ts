@@ -29,7 +29,7 @@ export class ClubMembershipAlreadyExistsError extends BadRequestError {
 export class InsufficientClubPermissionsError extends ForbiddenError {
     constructor(requiredRoles: ClubRole | ClubRole[]) {
         const normalizedRoles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
-        const rolesText = normalizedRoles.join(', ');
+        const rolesText = normalizedRoles.join(' або ');
 
         super('insufficientClubPermissions', { rolesText });
     }

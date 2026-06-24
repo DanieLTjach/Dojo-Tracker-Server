@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { t } from '../src/i18n/index.ts';
 import { ResponseStatusError } from '../src/error/BaseErrors.ts';
 import * as AuthErrors from '../src/error/AuthErrors.ts';

@@ -103,7 +103,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
     });
 
     it('computes and returns tournament achievements with winners', () => {
-        const results = achievementService.getEventAchievements(EVENT_ID);
+        const results = achievementService.getEventAchievements(EVENT_ID, 'en');
         expect(results).toHaveLength(21);
 
         const dealerWins = results.find(r => r.metric === 'dealer_wins')!;

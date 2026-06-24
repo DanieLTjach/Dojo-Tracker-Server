@@ -47,6 +47,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
         expect(mockRes.json).toHaveBeenCalledWith({
             error: 'Invalid request data',
+            message: 'Некоректні дані запиту',
             details: zodError.issues,
         });
         expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
@@ -60,6 +61,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.INTERNAL_SERVER_ERROR);
         expect(mockRes.json).toHaveBeenCalledWith({
             error: 'Database error',
+            message: 'Помилка бази даних: UNIQUE constraint failed',
             details: sqliteError.message,
         });
     });
@@ -109,7 +111,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.INTERNAL_SERVER_ERROR);
         expect(mockRes.json).toHaveBeenCalledWith({
             errorCode: undefined,
-            message: 'Internal Server Error',
+            message: 'Внутрішня помилка сервера',
         });
     });
 

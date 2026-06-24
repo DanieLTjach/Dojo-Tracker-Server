@@ -119,6 +119,41 @@ describe('Club API Endpoints', () => {
             expect(typeof response.body.id).toBe('number');
             expect(response.body.name).toBe('Integration Club Create');
             expect(response.body.city).toBe('Kyiv');
+            expect(response.body.country).toBe('UA');
+            expect(response.body.locale).toBe('uk');
+        });
+
+        test('should create club with explicit country and locale', async () => {
+            const response = await request(app)
+                .post('/api/clubs')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Integration Club Locale Create',
+                    country: 'US',
+                    locale: 'en',
+                });
+
+            createdClubId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.country).toBe('US');
+            expect(response.body.locale).toBe('en');
+        });
+
+        test('should reject invalid country and locale values', async () => {
+            const invalidCountryResponse = await request(app)
+                .post('/api/clubs')
+                .set('Authorization', adminAuthHeader)
+                .send({ name: 'Invalid Country Club', country: 'ua' });
+
+            expect(invalidCountryResponse.status).toBe(400);
+
+            const invalidLocaleResponse = await request(app)
+                .post('/api/clubs')
+                .set('Authorization', adminAuthHeader)
+                .send({ name: 'Invalid Locale Club', locale: 'fr' });
+
+            expect(invalidLocaleResponse.status).toBe(400);
         });
 
         test('should reject when not admin', async () => {
@@ -399,6 +434,38 @@ describe('Club API Endpoints', () => {
                 expect(response.body.userId).toBe(memberId);
                 expect(response.body.status).toBe('PENDING');
                 expect(response.body.role).toBe('MEMBER');
+            });
+
+            test('should localize club-scoped API errors using club locale', async () => {
+                const createResponse = await request(app)
+                    .post('/api/clubs')
+                    .set('Authorization', adminAuthHeader)
+                    .send({
+                        name: 'Integration Club Localized Error',
+                        country: 'US',
+                        locale: 'en',
+                    });
+                const localizedClubId = createResponse.body.id;
+
+                try {
+                    await request(app)
+                        .post(`/api/clubs/${localizedClubId}/join`)
+                        .set('Authorization', memberAuthHeader)
+                        .expect(201);
+                    membershipService.activateMember(localizedClubId, memberId, SYSTEM_USER_ID);
+
+                    const response = await request(app)
+                        .post(`/api/clubs/${localizedClubId}/join`)
+                        .set('Authorization', memberAuthHeader);
+
+                    expect(response.status).toBe(400);
+                    expect(response.body.errorCode).toBe('clubMembershipAlreadyExists');
+                    expect(response.body.message).toBe(
+                        `User with id ${memberId} is already a member of club 'Integration Club Localized Error'`
+                    );
+                } finally {
+                    cleanupClub(localizedClubId);
+                }
             });
         });
 

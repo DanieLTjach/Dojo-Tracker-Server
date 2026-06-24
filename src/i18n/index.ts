@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 // Each src/i18n/locales/<locale>/*.yaml owns a distinct set of top-level sections.
 // We parse them at load time and shallow-merge into one catalog per locale.

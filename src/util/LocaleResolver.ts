@@ -64,19 +64,30 @@ function resolveRequestClubLocale(req: Request): string | null {
 }
 
 function findRequestId(req: Request, field: string): number | null {
+    const params = req.params ?? {};
+    const query = req.query ?? {};
     return [
-        numberFromUnknown(req.params[field]),
+        numberFromUnknown(params[field]),
         numberFromUnknown((req.body as Record<string, unknown> | undefined)?.[field]),
-        numberFromUnknown(req.query[field]),
+        numberFromUnknown(query[field]),
     ].find(value => value !== null) ?? null;
 }
 
 function findRouteResourceId(req: Request, resource: 'club' | 'event' | 'game'): number | null {
-    const path = `${req.baseUrl}${req.path}`;
+    const params = req.params ?? {};
+    const path = `${req.baseUrl ?? ''}${req.path ?? ''}`;
     if (!new RegExp(`/${resource}s?(?:/|$)`).test(path)) {
+        return findResourceIdInUrl(req.originalUrl ?? req.url, resource);
+    }
+    return numberFromUnknown(params['id']) ?? findResourceIdInUrl(req.originalUrl ?? req.url, resource);
+}
+
+function findResourceIdInUrl(url: string | undefined, resource: 'club' | 'event' | 'game'): number | null {
+    if (url === undefined) {
         return null;
     }
-    return numberFromUnknown(req.params['id']);
+    const match = new RegExp(`/${resource}s?/(\\d+)(?:/|$)`).exec(url);
+    return match?.[1] !== undefined ? numberFromUnknown(match[1]) : null;
 }
 
 function numberFromUnknown(value: unknown): number | null {
