@@ -5,5 +5,6 @@ export interface Profile {
     firstName: string | null;
     lastName: string | null;
     emaNumber: string | null;
+    locale: string | null;
     hideProfile: boolean;
 }

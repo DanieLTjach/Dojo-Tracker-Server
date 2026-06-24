@@ -11,6 +11,8 @@ export class ClubRepository {
                 name,
                 address,
                 city,
+                country,
+                locale,
                 description,
                 contactInfo,
                 isActive,
@@ -33,6 +35,8 @@ export class ClubRepository {
                 name,
                 address,
                 city,
+                country,
+                locale,
                 description,
                 contactInfo,
                 isActive,
@@ -56,6 +60,8 @@ export class ClubRepository {
                 name,
                 address,
                 city,
+                country,
+                locale,
                 description,
                 contactInfo,
                 isActive,
@@ -76,6 +82,8 @@ export class ClubRepository {
         name: string;
         address: string | null;
         city: string | null;
+        country: string;
+        locale: string;
         description: string | null;
         contactInfo: string | null;
         isActive: number;
@@ -84,8 +92,8 @@ export class ClubRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO club (name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :address, :city, :description, :contactInfo, :isActive, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO club (name, address, city, country, locale, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :address, :city, :country, :locale, :description, :contactInfo, :isActive, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -93,6 +101,8 @@ export class ClubRepository {
     createClub(params: ClubCreateParams): number {
         const result = this.createClubStatement().get({
             ...params,
+            country: params.country ?? 'UA',
+            locale: params.locale ?? 'uk',
             isActive: booleanToInteger(params.isActive),
             createdAt: params.createdAt.toISOString(),
             modifiedAt: params.createdAt.toISOString(),
@@ -106,6 +116,8 @@ export class ClubRepository {
         name: string;
         address: string | null;
         city: string | null;
+        country: string;
+        locale: string;
         description: string | null;
         contactInfo: string | null;
         isActive: number;
@@ -117,6 +129,8 @@ export class ClubRepository {
             SET name = :name,
                 address = :address,
                 city = :city,
+                country = :country,
+                locale = :locale,
                 description = :description,
                 contactInfo = :contactInfo,
                 isActive = :isActive,
@@ -129,6 +143,8 @@ export class ClubRepository {
     updateClub(params: ClubUpdateParams): void {
         this.updateClubStatement().run({
             ...params,
+            country: params.country ?? 'UA',
+            locale: params.locale ?? 'uk',
             isActive: booleanToInteger(params.isActive),
             modifiedAt: params.modifiedAt.toISOString(),
         });
@@ -260,6 +276,8 @@ export interface ClubCreateParams {
     name: string;
     address: string | null;
     city: string | null;
+    country?: string;
+    locale?: string;
     description: string | null;
     contactInfo: string | null;
     isActive: boolean;
@@ -272,6 +290,8 @@ export interface ClubUpdateParams {
     name: string;
     address: string | null;
     city: string | null;
+    country?: string;
+    locale?: string;
     description: string | null;
     contactInfo: string | null;
     isActive: boolean;
@@ -284,6 +304,8 @@ interface ClubDBEntity {
     name: string;
     address: string | null;
     city: string | null;
+    country: string;
+    locale: string;
     description: string | null;
     contactInfo: string | null;
     isActive: number;
@@ -310,6 +332,8 @@ function clubFromDBEntity(dbEntity: ClubDBEntity): Club {
         name: dbEntity.name,
         address: dbEntity.address,
         city: dbEntity.city,
+        country: dbEntity.country,
+        locale: dbEntity.locale,
         description: dbEntity.description,
         contactInfo: dbEntity.contactInfo,
         isActive: Boolean(dbEntity.isActive),

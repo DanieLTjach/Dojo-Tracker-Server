@@ -13,6 +13,7 @@ export class UserRepository {
                 p.firstName as p_firstName,
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
+                p.locale as p_locale,
                 p.hideProfile as p_hideProfile
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
@@ -39,6 +40,7 @@ export class UserRepository {
                 p.firstName as p_firstName,
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
+                p.locale as p_locale,
                 p.hideProfile as p_hideProfile
             FROM user
             JOIN clubMembership cm ON user.id = cm.userId
@@ -68,6 +70,7 @@ export class UserRepository {
                 p.firstName as p_firstName,
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
+                p.locale as p_locale,
                 p.hideProfile as p_hideProfile
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
@@ -87,6 +90,7 @@ export class UserRepository {
                 p.firstName as p_firstName,
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
+                p.locale as p_locale,
                 p.hideProfile as p_hideProfile
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
@@ -106,6 +110,7 @@ export class UserRepository {
                 p.firstName as p_firstName,
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
+                p.locale as p_locale,
                 p.hideProfile as p_hideProfile
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
@@ -125,6 +130,7 @@ export class UserRepository {
                 p.firstName as p_firstName,
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
+                p.locale as p_locale,
                 p.hideProfile as p_hideProfile
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
@@ -246,6 +252,7 @@ interface UserWithProfileDBEntity {
     p_firstName: string | null;
     p_lastName: string | null;
     p_emaNumber: string | null;
+    p_locale: string | null;
     p_hideProfile: number | null;
 }
 
@@ -266,6 +273,7 @@ function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
                 firstName: dbEntity.p_firstName,
                 lastName: dbEntity.p_lastName,
                 emaNumber: dbEntity.p_emaNumber,
+                locale: dbEntity.p_locale,
                 hideProfile: Boolean(dbEntity.p_hideProfile),
             }
             : null,

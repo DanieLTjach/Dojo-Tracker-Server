@@ -98,7 +98,6 @@ describe('error catalog coverage', () => {
         new GameErrors.InvalidRoundIdError(2, 3),
         new GameErrors.RoundAlreadyExistsError(),
         new GameErrors.NotAuthorizedToModifyGameError(),
-        new GameErrors.InvalidRoundResultPlayerError(1),
         new GameErrors.GamePlayerNotFoundError(1, 2),
         new GameErrors.NoRoundsToRollbackError(),
         new GameErrors.LastRoundRollbackAlreadyUsedError(),

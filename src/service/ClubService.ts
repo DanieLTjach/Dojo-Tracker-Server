@@ -42,6 +42,8 @@ export class ClubService {
             name: data.name,
             address: data.address ?? null,
             city: data.city ?? null,
+            country: data.country ?? 'UA',
+            locale: data.locale ?? 'uk',
             description: data.description ?? null,
             contactInfo: data.contactInfo ?? null,
             isActive: data.isActive ?? true,
@@ -68,6 +70,8 @@ export class ClubService {
             name: data.name,
             address: data.address ?? null,
             city: data.city ?? null,
+            country: data.country ?? oldClub.country,
+            locale: data.locale ?? oldClub.locale,
             description: data.description ?? null,
             contactInfo: data.contactInfo ?? null,
             isActive: data.isActive ?? true,
@@ -116,6 +120,8 @@ export class ClubService {
             <b>Club ID:</b> <code>${club.id}</code>
             <b>Name:</b> ${club.name}
             <b>City:</b> ${club.city || 'N/A'}
+            <b>Country:</b> ${club.country}
+            <b>Locale:</b> ${club.locale}
             <b>Address:</b> ${club.address || 'N/A'}
             <b>Description:</b> ${club.description || 'N/A'}
             <b>Contact Info:</b> ${club.contactInfo || 'N/A'}
@@ -131,6 +137,12 @@ export class ClubService {
         if (oldClub.name !== newClub.name) changes.push(`<b>Name:</b> ${oldClub.name} → ${newClub.name}`);
         if (oldClub.city !== newClub.city) {
             changes.push(`<b>City:</b> ${oldClub.city || 'N/A'} → ${newClub.city || 'N/A'}`);
+        }
+        if (oldClub.country !== newClub.country) {
+            changes.push(`<b>Country:</b> ${oldClub.country} → ${newClub.country}`);
+        }
+        if (oldClub.locale !== newClub.locale) {
+            changes.push(`<b>Locale:</b> ${oldClub.locale} → ${newClub.locale}`);
         }
         if (oldClub.address !== newClub.address) {
             changes.push(`<b>Address:</b> ${oldClub.address || 'N/A'} → ${newClub.address || 'N/A'}`);
@@ -216,6 +228,8 @@ export interface ClubData {
     name: string;
     address?: string | null | undefined;
     city?: string | null | undefined;
+    country?: string | undefined;
+    locale?: string | undefined;
     description?: string | null | undefined;
     contactInfo?: string | null | undefined;
     isActive?: boolean | null | undefined;

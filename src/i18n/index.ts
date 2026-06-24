@@ -14,6 +14,8 @@ type Catalog = Record<string, unknown>;
 const localesDir = join(dirname(fileURLToPath(import.meta.url)), 'locales');
 
 export const DEFAULT_LOCALE = 'uk';
+export const SUPPORTED_LOCALES = ['en', 'uk'] as const;
+export type SupportedLocale = typeof SUPPORTED_LOCALES[number];
 
 function loadLocale(locale: string): Catalog {
     const dir = join(localesDir, locale);
@@ -31,12 +33,11 @@ function loadCatalogs(): Record<string, Catalog> {
     const localeDirs = readdirSync(localesDir, { withFileTypes: true })
         .filter(entry => entry.isDirectory())
         .map(entry => entry.name);
-    const locales = new Set([DEFAULT_LOCALE, ...localeDirs]);
+    const locales = new Set([DEFAULT_LOCALE, ...SUPPORTED_LOCALES, ...localeDirs]);
     return Object.fromEntries([...locales].map(locale => [locale, loadLocale(locale)]));
 }
 
 const catalogs: Record<string, Catalog> = loadCatalogs();
-export const SUPPORTED_LOCALES = Object.freeze(Object.keys(catalogs).sort());
 
 function read(catalog: Catalog, path: string): unknown {
     return path.split('.').reduce<unknown>(
@@ -61,7 +62,7 @@ export function normalizeLocale(locale: string | null | undefined): string {
 }
 
 function getCatalog(locale?: string): Catalog {
-    return catalogs[normalizeLocale(locale)] ?? catalogs[DEFAULT_LOCALE]!;
+    return catalogs[normalizeLocale(locale)] ?? {};
 }
 
 /**
@@ -70,7 +71,8 @@ function getCatalog(locale?: string): Catalog {
  * catalog, so a typo surfaces visibly instead of throwing.
  */
 export function t(key: string, params?: TranslationParams, locale?: string | null): string {
-    const template = read(getCatalog(locale ?? undefined), key);
+    const normalizedLocale = normalizeLocale(locale);
+    const template = read(getCatalog(normalizedLocale), key) ?? read(getCatalog(DEFAULT_LOCALE), key);
     if (typeof template !== 'string') {
         return key;
     }

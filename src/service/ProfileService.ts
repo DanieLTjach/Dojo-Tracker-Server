@@ -15,7 +15,8 @@ export class ProfileService {
         lastName: string | null | undefined,
         emaNumber: string | null | undefined,
         hideProfile: boolean | undefined,
-        modifiedBy: number
+        modifiedBy: number,
+        locale?: string | null | undefined
     ): Profile {
         this.userService.validateUserExistsById(userId);
         this.validateProfileUpdatePermissions(
@@ -38,7 +39,8 @@ export class ProfileService {
             lastName !== undefined ? lastName : existing?.lastName ?? null,
             emaNumber !== undefined ? emaNumber : existing?.emaNumber ?? null,
             hideProfile !== undefined ? hideProfile : existing?.hideProfile ?? false,
-            modifiedBy
+            modifiedBy,
+            locale !== undefined ? locale : existing?.locale ?? null
         );
 
         return this.profileRepository.findProfileByUserId(userId)!;
@@ -60,7 +62,7 @@ export class ProfileService {
     }
 
     /**
-     * Non-admin users can only update hideProfile on their own profile.
+     * Non-admin users can only update their own public settings.
      * Admins can update all fields on any profile.
      */
     private validateProfileUpdatePermissions(
@@ -82,7 +84,7 @@ export class ProfileService {
             throw new InsufficientPermissionsError();
         }
 
-        // Non-admin can update hideProfile and own native-language firstName/lastName,
+        // Non-admin can update hideProfile, locale, and own native-language firstName/lastName,
         // but not EMA fields or emaNumber.
         if (firstNameEn !== undefined || lastNameEn !== undefined || emaNumber !== undefined) {
             throw new InsufficientPermissionsError();

@@ -22,6 +22,8 @@ export interface Club {
     name: string;
     address: string | null;
     city: string | null;
+    country: string;
+    locale: string;
     description: string | null;
     contactInfo: string | null;
     isActive: boolean;
