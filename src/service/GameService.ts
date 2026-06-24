@@ -50,6 +50,7 @@ import { GameRepository } from '../repository/GameRepository.ts';
 import { GameCreationBlockedError, TournamentGameNotInCurrentRoundError } from '../error/EventErrors.ts';
 import { AchievementService } from './AchievementService.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
+import { t } from '../i18n/index.ts';
 
 export class GameService {
     private gameRepository: GameRepository = new GameRepository();
@@ -546,8 +547,12 @@ export class GameService {
 
         const createdByUser = this.userService.getUserById(createdBy);
         const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>` +
-            `\nДодано <a href="${config.botUrl}?startapp=game_${game.id}"><b>нову гру</b></a>` +
-            ` користувачем ${this.generateUserProfileLink(createdByUser)}\n\n` +
+            '\n' + t('telegram.gameLog.addedBy', {
+                gameLink: `<a href="${config.botUrl}?startapp=game_${game.id}"><b>${
+                    t('telegram.gameLog.addedNewGame')
+                }</b></a>`,
+                userLink: this.generateUserProfileLink(createdByUser),
+            }) + '\n\n' +
             `${playerLines}`;
 
         if (event.clubId !== null) {

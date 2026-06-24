@@ -8,12 +8,12 @@ export class CsvParsingError extends BadRequestError {
 
 export class UserNotFoundByUsernameError extends BadRequestError {
     constructor(username: string) {
-        super(`Користувача з Telegram username ${username} не знайдено`, 'userNotFoundByUsername');
+        super('userNotFoundByUsername', { username });
     }
 }
 
 export class NoValidGamesInCsvError extends BadRequestError {
     constructor() {
-        super('У CSV файлі не знайдено жодної валідної гри', 'noValidGamesInCsv');
+        super('noValidGamesInCsv');
     }
 }

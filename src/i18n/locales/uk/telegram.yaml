@@ -220,7 +220,7 @@ telegram:
     registeredForTournament: 📝 Вас зареєстровано на турнір
     tournamentLabel: "Турнір:"
     openTournamentPage: Відкрити сторінку турніру
-    addedToClubTitle: Ваc додано до клубу {{clubName}}!
+    addedToClubTitle: "Ваc додано до клубу {{clubName}}!"
     addedToClubBody: Тепер ви є повноцінним членом клубу та можете додавати нові ігри.
     openApp: Відкрити додаток
 
@@ -241,6 +241,25 @@ telegram:
     updatedByLabel: "Оновив:"
     beforeLabel: "Було:"
     afterLabel: "Стало:"
+
+  # ── Club log posts (ClubService) ──
+  clubLog:
+    createdTitle: 🏛️ Створено новий клуб
+    editedTitle: ✏️ Клуб оновлено
+    deletedTitle: 🗑️ Клуб видалено (деактивовано)
+    clubIdLabel: "ID клубу:"
+    nameLabel: "Назва:"
+    cityLabel: "Місто:"
+    countryLabel: "Країна:"
+    localeLabel: "Локаль:"
+    addressLabel: "Адреса:"
+    descriptionLabel: "Опис:"
+    contactInfoLabel: "Контакти:"
+    isActiveLabel: "Активний:"
+    createdByLabel: "Створив:"
+    editedByLabel: "Оновив:"
+    deletedByLabel: "Видалив:"
+    noValue: Н/Д
 
   # ── New game rating post (GameService) ──
   gameLog:

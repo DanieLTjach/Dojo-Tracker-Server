@@ -2,48 +2,42 @@ import { BadRequestError, ForbiddenError, NotFoundError } from './BaseErrors.ts'
 
 export class NameAlreadyTakenByAnotherUser extends BadRequestError {
     constructor(name: string) {
-        super(`Ім'я '${name}' вже зайняте іншим користувачем`, 'nameAlreadyTakenByAnotherUser');
+        super('nameAlreadyTakenByAnotherUser', { name });
     }
 }
 
 export class TelegramUsernameAlreadyTakenByAnotherUser extends BadRequestError {
     constructor(telegramUsername: string) {
-        super(
-            `Telegram юзернейм '${telegramUsername}' вже зайнятий іншим користувачем`,
-            'telegramUsernameAlreadyTakenByAnotherUser'
-        );
+        super('telegramUsernameAlreadyTakenByAnotherUser', { telegramUsername });
     }
 }
 
 export class UserWithThisTelegramIdAlreadyExists extends BadRequestError {
     constructor(telegramId: number) {
-        super(`Користувач з Telegram id ${telegramId} вже існує`, 'userWithThisTelegramIdAlreadyExists');
+        super('userWithThisTelegramIdAlreadyExists', { telegramId });
     }
 }
 
 export class UserNotFoundById extends NotFoundError {
     constructor(id: number) {
-        super(`Користувача з id ${id} не знайдено`, 'userNotFoundById');
+        super('userNotFoundById', { id });
     }
 }
 
 export class UserNotFoundByTelegramId extends NotFoundError {
     constructor(telegramId: number) {
-        super(`Користувача з Telegram id ${telegramId} не знайдено`, 'userNotFoundByTelegramId');
+        super('userNotFoundByTelegramId', { telegramId });
     }
 }
 
 export class YouHaveToBeAdminToEditAnotherUser extends ForbiddenError {
     constructor() {
-        super(
-            'Щоб редагувати іншого користувача, ви повинні бути адміністратором',
-            'youHaveToBeAdminToEditAnotherUser'
-        );
+        super('youHaveToBeAdminToEditAnotherUser');
     }
 }
 
 export class UserIsNotActive extends ForbiddenError {
     constructor(id: number) {
-        super(`Користувач з id ${id} не активний`, 'userIsNotActive');
+        super('userIsNotActive', { id });
     }
 }

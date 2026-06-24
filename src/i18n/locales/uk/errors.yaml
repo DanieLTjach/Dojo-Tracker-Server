@@ -1,5 +1,4 @@
 errors:
-  # ── Auth (src/error/AuthErrors.ts) ──
   invalidInitData: "Невалідні дані автентифікації Telegram: {{reason}}"
   expiredAuthData: Термін дії даних автентифікації минув. Будь ласка, закрийте та відкрийте додаток заново.
   missingAuthToken: Необхідний токен автентифікації
@@ -8,7 +7,6 @@ errors:
   tokenExpired: Термін дії токена автентифікації минув. Перезайдіть в додаток
   invalidToken: Невалідний токен автентифікації. Перезайдіть в додаток
 
-  # ── Club (src/error/ClubErrors.ts) ──
   clubNotFound: Клуб з id {{clubId}} не знайдено
   clubMembershipNotFound: "Учасника з userId {{userId}} не знайдено в клубі '{{clubName}}'"
   clubNameAlreadyExists: "Клуб з назвою '{{name}}' вже існує"
@@ -23,7 +21,6 @@ errors:
   inviteExhausted: Це запрошення вичерпало ліміт використань
   nameRequiredForNewUser: Для реєстрації потрібно вказати імʼя
 
-  # ── Event (src/error/EventErrors.ts) ──
   eventNotFound: Подію з id {{eventId}} не знайдено
   gameRulesNotFound: Правила гри з id {{gameRulesId}} не знайдено
   cannotDeleteGameRulesInUse: 'Неможливо видалити правила "{{gameRulesName}}" — вони використовуються в {{eventCount}} подіях'
@@ -33,8 +30,35 @@ errors:
   currentRatingEventMustBeClubScoped: Поточний рейтинговий сезон можна встановити лише для клубної події
   tournamentMustHaveClub: Турнір повинен належати клубу
   gameCreationBlocked: 'Створення ігор для події "{{eventName}}" заблоковано'
+  achievementsOnlyForTournaments: Досягнення доступні лише для турнірів
+  tournamentConfigRequired: Для турніру потрібно вказати налаштування турніру
+  invalidEventDateRange: Дата початку має бути раніше за дату завершення
+  minParticipantsExceedsMax: Мінімальна кількість учасників не може перевищувати максимальну
+  participantConfigOnlyForTournament: Налаштування кількості учасників і терміну реєстрації можна вказувати лише для турнірів
+  tournamentConfigOnlyForTournament: Налаштування турніру можна вказувати лише для турнірів
+  eventIsNotTournament: 'Подія "{{eventName}}" не є турніром'
+  tournamentMisconfigured: Цей турнір був неправильно сконфігурований. Будь ласка, звʼяжіться з підтримкою
+  tournamentTotalRoundsLessThanCurrentRound: Кількість раундів ({{totalRounds}}) не може бути меншою за поточний раунд ({{currentRound}})
+  tournamentRoundOutOfSequence: 'Не можна розпочати раунд {{requestedRound}} турніру "{{eventName}}": наступний доступний раунд — {{expectedRound}}'
+  tournamentRoundNotStarted: 'Не можна скасувати раунд {{requestedRound}} турніру "{{eventName}}": жоден раунд не розпочато'
+  tournamentRoundNotCurrent: 'Не можна скасувати раунд {{requestedRound}} турніру "{{eventName}}": поточний раунд — {{currentRound}}'
+  tournamentRoundGamesNotFinished: 'У раунді {{round}} турніру "{{eventName}}" ще не завершено {{unfinishedCount}} ігор'
+  tournamentHasNoMoreRounds: 'У турнірі "{{eventName}}" більше немає раундів для запуску'
+  tournamentRoundAlreadyPlayed: 'Не можна скасувати раунд {{round}} турніру "{{eventName}}": {{startedCount}} ігор вже розпочато або завершено'
+  tournamentAlreadyFinished: 'Турнір "{{eventName}}" вже завершено'
+  tournamentNotInLastRound: 'Турнір "{{eventName}}" ще не знаходиться в останньому раунді'
+  tournamentGameNotInCurrentRound: "Цю гру не можна розпочати зараз. Поточний раунд турніру: {{currentRound}}, раунд гри: {{gameRound}}"
+  seatingNotEnoughParticipants: 'Для розсадки турніру "{{eventName}}" потрібно щонайменше {{required}} учасників (зараз {{actual}})'
+  seatingParticipantsNotMultipleOfTableSize: 'Кількість учасників турніру "{{eventName}}" ({{count}}) має ділитися на 4 для розсадки'
+  seatingGenerationFailed: 'Не вдалося згенерувати розсадку для турніру "{{eventName}}" за відведений час. Спробуйте ще раз'
+  seatingCannotBeModifiedAfterTournamentStarted: 'Розсадку турніру "{{eventName}}" не можна змінювати після початку турніру'
+  seatingAlreadyApplied: 'Для турніру "{{eventName}}" вже створено ігри. Очистіть розсадку перед повторною генерацією'
+  seatingRoundCountMismatch: 'Розсадка для турніру "{{eventName}}" має містити {{expected}} раундів (надіслано {{actual}})'
+  seatingTableSizeMismatch: 'Стіл {{table}} у раунді {{round}} турніру "{{eventName}}" має містити {{expected}} гравців (надіслано {{actual}})'
+  seatingInvalidParticipant: 'Учасник {{userId}} не є схваленим учасником турніру "{{eventName}}" (раунд {{round}})'
+  seatingDuplicateParticipantInRound: 'Учасник {{userId}} зустрічається в розсадці більше одного разу в раунді {{round}} турніру "{{eventName}}"'
+  seatingMissingParticipantsInRound: 'У раунді {{round}} турніру "{{eventName}}" мають бути всі {{expected}} учасників (надіслано {{actual}})'
 
-  # ── Event registration (src/error/EventRegistrationErrors.ts) ──
   eventRegistrationNotFound: "Реєстрацію користувача з id {{userId}} на подію '{{eventName}}' не знайдено"
   userNotRegisteredForTournament: 'Користувач {{userId}} не зареєстрований на турнір "{{eventName}}"'
   userNotApprovedForTournament: 'Користувач {{userId}} не схвалений для турніру "{{eventName}}" (статус реєстрації: {{status}})'
@@ -44,7 +68,6 @@ errors:
   eventCapacityReached: 'Турнір "{{eventName}}" вже досяг максимальної кількості учасників ({{maxParticipants}})'
   insufficientEventRegistrationManagementPermissions: Недостатньо прав для управління реєстраціями на цю подію. Потрібна роль адміна або OWNER/MODERATOR клубу події.
 
-  # ── Game (src/error/GameErrors.ts) ──
   gameNotFoundById: Гру з id {{id}} не знайдено
   tooManyGamesFound: Знайдено забагато ігор. Будь ласка, звузьте критерії пошуку.
   incorrectPlayerCount: Для гри потрібно {{requiredPlayers}} гравців
@@ -63,7 +86,6 @@ errors:
   invalidRoundId: Очікується раунд {{expectedRoundId}}, отримано {{actualRoundId}}
   roundAlreadyExists: Цей раунд вже завершено
   notAuthorizedToModifyGame: Лише гравці, модератори клубу та адміністратори можуть змінювати гру
-  invalidRoundResultPlayer: Гравець з id {{playerId}} не бере участі в цій грі
   gamePlayerNotFound: Гравець з id {{userId}} не знайдений у грі {{gameId}}
   noRoundsToRollback: У цій грі немає раундів для відкату
   lastRoundRollbackAlreadyUsed: Ви вже відкатували останній раунд у цій грі
@@ -74,11 +96,10 @@ errors:
   gameNotCreatedWhenStarting: Можна розпочати лише гру в статусі CREATED
   notGamePlayer: Лише гравці цієї гри можуть виконати цю дію
 
-  # ── Import (src/error/ImportErrors.ts) ──
+  csvParsingError: "{{message}}"
   userNotFoundByUsername: Користувача з Telegram username {{username}} не знайдено
   noValidGamesInCsv: У CSV файлі не знайдено жодної валідної гри
 
-  # ── Point calculation (src/error/PointCalculationErrors.ts) ──
   rulesetShouldContainDetailedRules: Для відстежуваної гри правила повинні містити детальні налаштування
   yakumanLiabilityRequiresYakuman: Відповідальність за якуман можна вказати лише для якуману
   noDoubleRonFirstWinsOnly: "Подвійний рон заборонено: перемагає лише перший, хто оголосив рон"
@@ -98,13 +119,12 @@ errors:
   cannotDeterminePlayerPlacement: "Не вдалося визначити місце гравця в грі: некоректний стан гри"
   invalidHonbaFormat: Некоректний формат значення хонби в правилах
   noPlayersInTheGame: Гра не має гравців
+  playerNotInGame: Гравець {{playerId}} відсутній у грі
 
-  # ── Rating (src/error/RatingErrors.ts) ──
   userRatingChangeInGameNotFound: Зміну рейтингу користувача {{userId}} в грі {{gameId}} не знайдено
   userHasNoRatingDespiteHavingPlayedGames: Користувач {{userId}} не має рейтингу в події {{eventId}} попри те, що має зіграні ігри
   pleaseProvideStartPlaceForAllPlayersToResolveTie: Будь ласка, вкажіть стартове місце (вітер) для всіх гравців, щоб розв'язати нічию
 
-  # ── User (src/error/UserErrors.ts) ──
   nameAlreadyTakenByAnotherUser: "Ім'я '{{name}}' вже зайняте іншим користувачем"
   telegramUsernameAlreadyTakenByAnotherUser: "Telegram юзернейм '{{telegramUsername}}' вже зайнятий іншим користувачем"
   userWithThisTelegramIdAlreadyExists: Користувач з Telegram id {{telegramId}} вже існує
@@ -113,5 +133,4 @@ errors:
   youHaveToBeAdminToEditAnotherUser: Щоб редагувати іншого користувача, ви повинні бути адміністратором
   userIsNotActive: Користувач з id {{id}} не активний
 
-  # ── Enum parsing (src/util/EnumUtil.ts) ──
   enumParsingError: "Неприпустиме значення '{{value}}' для enum {{enumName}}. Дозволені значення: {{allowedValues}}"

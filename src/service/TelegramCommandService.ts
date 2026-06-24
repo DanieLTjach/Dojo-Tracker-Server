@@ -31,6 +31,7 @@ import type { ClubPollConfig } from '../model/PollModels.ts';
 import PollSchedulerService from './PollSchedulerService.ts';
 import { EventService } from './EventService.ts';
 import { TournamentRoundImportService } from './TournamentRoundImportService.ts';
+import { t } from '../i18n/index.ts';
 
 type TelegramCommandContext = Context<{
     message: Update.New & Update.NonChannel & Message.TextMessage;
@@ -190,17 +191,17 @@ class TelegramCommandService {
         });
 
         telegramBot.telegram.setMyCommands([
-            { command: 'help', description: 'Показати список команд' },
-            { command: 'post_app_link', description: 'Опублікувати посилання на додаток' },
-            { command: 'set_topic', description: 'Налаштувати сповіщення в поточному топіку' },
-            { command: 'unset_topic', description: 'Видалити налаштування топіка' },
-            { command: 'diagnose_topics', description: 'Перевірити налаштування топіків' },
-            { command: 'setup_poll', description: 'Налаштувати опитування для клубу' },
-            { command: 'preview_poll', description: 'Попередній перегляд опитування' },
-            { command: 'send_poll', description: 'Відправити опитування зараз' },
-            { command: 'create_invite', description: 'Створити запрошення до клубу (посилання + QR)' },
-            { command: 'list_invites', description: 'Список запрошень клубу' },
-            { command: 'revoke_invite', description: 'Відкликати запрошення' },
+            { command: 'help', description: t('telegram.commands.help') },
+            { command: 'post_app_link', description: t('telegram.commands.postAppLink') },
+            { command: 'set_topic', description: t('telegram.commands.setTopic') },
+            { command: 'unset_topic', description: t('telegram.commands.unsetTopic') },
+            { command: 'diagnose_topics', description: t('telegram.commands.diagnoseTopics') },
+            { command: 'setup_poll', description: t('telegram.commands.setupPoll') },
+            { command: 'preview_poll', description: t('telegram.commands.previewPoll') },
+            { command: 'send_poll', description: t('telegram.commands.sendPoll') },
+            { command: 'create_invite', description: t('telegram.commands.createInvite') },
+            { command: 'list_invites', description: t('telegram.commands.listInvites') },
+            { command: 'revoke_invite', description: t('telegram.commands.revokeInvite') },
         ]);
 
         telegramBot.launch(() => {
@@ -214,45 +215,45 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         const isClubAdmin = this.isUserClubAdmin(user);
 
-        let text = `📋 <b>Доступні команди</b>\n` +
+        let text = `<b>${t('telegram.help.title')}</b>\n` +
             `\n` +
-            `<code>/help</code> — Показати список команд\n`;
+            `<code>/help</code> — ${t('telegram.help.cmdHelp')}\n`;
 
         if (isClubAdmin) {
             text += `\n` +
-                `<b>Адміністрування:</b>\n` +
-                `<code>/post_app_link</code> — Опублікувати посилання на додаток\n` +
+                `<b>${t('telegram.help.sectionAdmin')}:</b>\n` +
+                `<code>/post_app_link</code> — ${t('telegram.help.cmdPostAppLink')}\n` +
                 `\n` +
-                `<b>Опитування:</b>\n` +
-                `<code>/setup_poll</code> — Налаштувати опитування для клубу\n` +
-                `<code>/preview_poll</code> — Попередній перегляд опитування\n` +
-                `<code>/send_poll</code> — Відправити опитування зараз\n` +
+                `<b>${t('telegram.help.sectionPolls')}:</b>\n` +
+                `<code>/setup_poll</code> — ${t('telegram.help.cmdSetupPoll')}\n` +
+                `<code>/preview_poll</code> — ${t('telegram.help.cmdPreviewPoll')}\n` +
+                `<code>/send_poll</code> — ${t('telegram.help.cmdSendPoll')}\n` +
                 `\n` +
-                `<b>Запрошення:</b>\n` +
-                `<code>/create_invite</code> — Створити запрошення (посилання + QR)\n` +
-                `<code>/list_invites</code> — Список запрошень клубу\n` +
-                `<code>/revoke_invite</code> — Відкликати запрошення\n` +
+                `<b>${t('telegram.help.sectionInvites')}:</b>\n` +
+                `<code>/create_invite</code> — ${t('telegram.help.cmdCreateInvite')}\n` +
+                `<code>/list_invites</code> — ${t('telegram.help.cmdListInvites')}\n` +
+                `<code>/revoke_invite</code> — ${t('telegram.help.cmdRevokeInvite')}\n` +
                 `\n` +
-                `<b>Сповіщення:</b>\n` +
-                `<code>/set_topic</code> — Налаштувати сповіщення в поточному топіку\n` +
-                `<code>/unset_topic</code> — Скинути налаштування топіка\n` +
-                `<code>/diagnose_topics</code> — Перевірити налаштування топіків\n`;
+                `<b>${t('telegram.help.sectionNotifications')}:</b>\n` +
+                `<code>/set_topic</code> — ${t('telegram.help.cmdSetTopic')}\n` +
+                `<code>/unset_topic</code> — ${t('telegram.help.cmdUnsetTopic')}\n` +
+                `<code>/diagnose_topics</code> — ${t('telegram.help.cmdDiagnoseTopics')}\n`;
         }
 
         if (user.isAdmin) {
             text += `\n` +
-                `<b>Турнір:</b>\n` +
-                `<code>/import_tournament_round</code> — Імпорт розсадки раунду турніру\n`;
+                `<b>${t('telegram.help.sectionTournament')}:</b>\n` +
+                `<code>/import_tournament_round</code> — ${t('telegram.help.cmdImportTournamentRound')}\n`;
         }
 
         ctx.replyWithHTML(text);
     }
 
     private handlePostAppLinkCommand(ctx: TelegramCommandContext) {
-        ctx.replyWithHTML('🀄 <b>Japan Dojo Tracker</b>\nНатисніть кнопку, щоб відкрити додаток', {
+        ctx.replyWithHTML(`<b>${t('telegram.appLink.title')}</b>\n${t('telegram.appLink.body')}`, {
             reply_markup: {
                 inline_keyboard: [[{
-                    text: '📱 Відкрити',
+                    text: t('telegram.appLink.openButton'),
                     url: config.botUrl,
                 }]],
             },
@@ -264,7 +265,7 @@ class TelegramCommandService {
         const clubData = this.getUserOwnedClubData(user);
         const messageTopicId = this.getMessageTopicId(ctx.message);
 
-        ctx.reply('Виберіть клуб, для якого хочете встановити топік:', {
+        ctx.reply(t('telegram.topic.selectClubToSet'), {
             reply_markup: {
                 inline_keyboard: clubData.map(membership => [{
                     text: membership.clubName,
@@ -282,7 +283,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
 
-        ctx.reply('Виберіть, який топік ви хочете встановити:', {
+        ctx.reply(t('telegram.topic.selectTopicToSet'), {
             reply_markup: {
                 inline_keyboard: Object.values(ClubTelegramTopicType).map(topicType => [{
                     text: clubTelegramTopicDescription(topicType),
@@ -320,7 +321,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        ctx.reply('Виберіть клуб, для якого хочете скинути топік:', {
+        ctx.reply(t('telegram.topic.selectClubToUnset'), {
             reply_markup: {
                 inline_keyboard: clubData.map(c => [{
                     text: c.clubName,
@@ -341,11 +342,11 @@ class TelegramCommandService {
             .filter(t => getTopicByType(topics, t) !== null);
 
         if (setTypes.length === 0) {
-            ctx.reply('Для цього клубу не налаштовано жодного топіка.');
+            ctx.reply(t('telegram.topic.noTopicsConfigured'));
             return;
         }
 
-        ctx.reply('Виберіть топік, який хочете скинути:', {
+        ctx.reply(t('telegram.topic.selectTopicToUnset'), {
             reply_markup: {
                 inline_keyboard: setTypes.map(topicType => [{
                     text: clubTelegramTopicDescription(topicType),
@@ -380,7 +381,7 @@ class TelegramCommandService {
             return this.sendDiagnoseTopicsForClub(ctx, user, clubData[0]!.clubId);
         }
 
-        ctx.reply('Виберіть клуб для діагностики топіків:', {
+        ctx.reply(t('telegram.topic.diagnoseSelectClub'), {
             reply_markup: {
                 inline_keyboard: clubData.map(c => [{
                     text: c.clubName,
@@ -404,21 +405,21 @@ class TelegramCommandService {
         this.validateUserCanEditClub(user, clubId);
         const topics = this.clubService.getClubTelegramTopics(clubId);
 
-        const lines: string[] = ['🩺 <b>Діагностика топіків</b>', ''];
+        const lines: string[] = [`${t('telegram.topic.diagnoseTitle')}`, ''];
         const buttons: { text: string, callback_data: string }[][] = [];
 
         for (const topicType of Object.values(ClubTelegramTopicType) as ClubTelegramTopicType[]) {
             const topic = getTopicByType(topics, topicType);
             const label = clubTelegramTopicDescription(topicType);
             if (topic === null) {
-                lines.push(`${label}: ❌ не налаштовано`);
+                lines.push(`${label}: ${t('telegram.topic.diagnoseNotConfigured')}`);
             } else {
                 const topicSuffix = topic.topicId !== undefined
-                    ? ` / thread <code>${topic.topicId}</code>`
-                    : ' (general)';
+                    ? `${t('telegram.topic.diagnoseThread')} <code>${topic.topicId}</code>`
+                    : t('telegram.topic.diagnoseGeneral');
                 lines.push(`${label}: chat <code>${topic.chatId}</code>${topicSuffix}`);
                 buttons.push([{
-                    text: `📨 Тест: ${label}`,
+                    text: `${t('telegram.topic.testButton')} ${label}`,
                     callback_data: `test_topic_${topicType}_${clubId}`,
                 }]);
             }
@@ -438,17 +439,17 @@ class TelegramCommandService {
 
         const topic = getTopicByType(this.clubService.getClubTelegramTopics(clubId), topicType);
         if (topic === null) {
-            await ctx.answerCbQuery('Топік не налаштовано', { show_alert: true });
+            await ctx.answerCbQuery(t('telegram.topic.testNotConfigured'), { show_alert: true });
             return;
         }
 
         await TelegramMessageService.sendMessage(
-            `🧪 <b>Тестове повідомлення</b>\n` +
-                `Топік: ${clubTelegramTopicDescription(topicType)}\n` +
-                `Якщо ви бачите це повідомлення — топік налаштовано правильно.`,
+            `<b>${t('telegram.topic.testMessageTitle')}</b>\n` +
+                `${t('telegram.topic.testMessageTopic')} ${clubTelegramTopicDescription(topicType)}\n` +
+                t('telegram.topic.testMessageBody'),
             topic
         );
-        await ctx.answerCbQuery('Тестове повідомлення надіслано ✅');
+        await ctx.answerCbQuery(t('telegram.topic.testMessageSent'));
     }
 
     // ── Poll wizard handlers ──
@@ -457,7 +458,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        ctx.reply('📊 Налаштування опитування.\nВиберіть клуб:', {
+        ctx.reply(t('telegram.poll.setupIntro'), {
             reply_markup: {
                 inline_keyboard: clubData.map(club => [{
                     text: club.clubName,
@@ -482,22 +483,26 @@ class TelegramCommandService {
         const daysText = existingConfig.eventDays.map(d => DAY_NAMES_SHORT[d]).join(', ');
         const sendDayText = DAY_NAMES_SHORT[existingConfig.sendDay];
         ctx.reply(
-            `📊 Опитування для <b>${club.name}</b> вже налаштовано:\n\n` +
-                `📝 ${existingConfig.pollTitle}\n` +
-                `📅 Дні подій: ${daysText}\n` +
-                `📤 Відправка: ${sendDayText} о ${existingConfig.sendTime}\n` +
-                `📋 Додаткові: ${
-                    existingConfig.extraOptions.length > 0 ? existingConfig.extraOptions.join(', ') : 'немає'
+            `${t('telegram.poll.existingTitle', { clubName: club.name })}\n\n` +
+                `${t('telegram.poll.titleLabel')} ${existingConfig.pollTitle}\n` +
+                `${t('telegram.poll.eventDaysLabel')} ${daysText}\n` +
+                `${t('telegram.poll.sendLabel')} ${sendDayText} ${
+                    t('telegram.poll.sendAtConnector')
+                } ${existingConfig.sendTime}\n` +
+                `${t('telegram.poll.extrasLabel')} ${
+                    existingConfig.extraOptions.length > 0
+                        ? existingConfig.extraOptions.join(', ')
+                        : t('telegram.poll.none')
                 }\n` +
-                `${existingConfig.isActive ? '✅ Активне' : '❌ Вимкнене'}`,
+                `${existingConfig.isActive ? t('telegram.poll.statusActive') : t('telegram.poll.statusInactive')}`,
             {
                 parse_mode: 'HTML',
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: '🔄 Переналаштувати', callback_data: `poll_day_${clubId}_-1_` }],
+                        [{ text: t('telegram.poll.reconfigure'), callback_data: `poll_day_${clubId}_-1_` }],
                         existingConfig.isActive
-                            ? [{ text: '❌ Вимкнути', callback_data: `poll_toggle_${clubId}` }]
-                            : [{ text: '✅ Увімкнути', callback_data: `poll_toggle_${clubId}` }],
+                            ? [{ text: t('telegram.poll.disable'), callback_data: `poll_toggle_${clubId}` }]
+                            : [{ text: t('telegram.poll.enable'), callback_data: `poll_toggle_${clubId}` }],
                     ],
                 },
             }
@@ -537,11 +542,11 @@ class TelegramCommandService {
             dayButtons.slice(0, 4),
             dayButtons.slice(4, 7),
             ...(selectedDays.length > 0
-                ? [[{ text: '➡️ Далі', callback_data: `poll_days_done_${clubId}_${daysStr}` }]]
+                ? [[{ text: t('telegram.poll.next'), callback_data: `poll_days_done_${clubId}_${daysStr}` }]]
                 : []),
         ];
 
-        ctx.reply('Виберіть дні подій (натисніть щоб обрати/зняти):', {
+        ctx.reply(t('telegram.poll.selectEventDays'), {
             reply_markup: { inline_keyboard: keyboard },
         });
     }
@@ -558,7 +563,7 @@ class TelegramCommandService {
             callback_data: `poll_send_${clubId}_${daysStr}_${day}`,
         }]);
 
-        ctx.reply('В який день тижня відправляти опитування?', {
+        ctx.reply(t('telegram.poll.selectSendDay'), {
             reply_markup: { inline_keyboard: dayButtons },
         });
     }
@@ -577,7 +582,7 @@ class TelegramCommandService {
             callback_data: `poll_time_${clubId}_${daysStr}_${sendDay}_${time}`,
         }]);
 
-        ctx.reply('О котрій годині відправляти? (за київським часом)', {
+        ctx.reply(t('telegram.poll.selectSendTime'), {
             reply_markup: { inline_keyboard: timeButtons },
         });
     }
@@ -591,7 +596,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
 
-        // Only "Результати 👀" selected by default
+        // Only the "results" option is selected by default.
         this.showExtraOptionsSelector(ctx, clubId, daysStr, sendDay, sendTime, '0');
     }
 
@@ -631,12 +636,12 @@ class TelegramCommandService {
             callback_data: `poll_extra_${clubId}_${daysStr}_${sendDay}_${sendTime}_${index}_${extrasStr}`,
         }]);
 
-        ctx.reply('Виберіть додаткові варіанти для опитування:', {
+        ctx.reply(t('telegram.poll.selectExtraOptions'), {
             reply_markup: {
                 inline_keyboard: [
                     ...extraButtons,
                     [{
-                        text: '➡️ Зберегти',
+                        text: t('telegram.poll.saveAndContinue'),
                         callback_data: `poll_extras_done_${clubId}_${daysStr}_${sendDay}_${sendTime}_${extrasStr}`,
                     }],
                 ],
@@ -671,14 +676,16 @@ class TelegramCommandService {
         this.pollRepository.upsertConfig(pollConfig, user.id);
 
         const daysText = eventDays.map(d => DAY_NAMES_SHORT[d]).join(', ');
-        const extrasText = extraOptions.length > 0 ? extraOptions.join(', ') : 'немає';
+        const extrasText = extraOptions.length > 0 ? extraOptions.join(', ') : t('telegram.poll.none');
         ctx.reply(
-            `✅ Опитування налаштовано!\n\n` +
-                `📝 ${club.name}\n` +
-                `📅 Дні подій: ${daysText}\n` +
-                `📤 Відправка: ${DAY_NAMES_SHORT[sendDay]} о ${sendTime}\n` +
-                `📋 Додаткові: ${extrasText}\n\n` +
-                `Не забудьте встановити основний топік через /set_topic → 📌 Основний`
+            `${t('telegram.poll.savedTitle')}\n\n` +
+                `${t('telegram.poll.titleLabel')} ${club.name}\n` +
+                `${t('telegram.poll.eventDaysLabel')} ${daysText}\n` +
+                `${t('telegram.poll.sendLabel')} ${DAY_NAMES_SHORT[sendDay]} ${
+                    t('telegram.poll.sendAtConnector')
+                } ${sendTime}\n` +
+                `${t('telegram.poll.extrasLabel')} ${extrasText}\n\n` +
+                t('telegram.poll.savedReminder')
         );
     }
 
@@ -695,8 +702,8 @@ class TelegramCommandService {
 
         ctx.reply(
             newConfig.isActive
-                ? '✅ Опитування увімкнено!'
-                : '❌ Опитування вимкнено!'
+                ? t('telegram.poll.enabledNotice')
+                : t('telegram.poll.disabledNotice')
         );
     }
 
@@ -711,11 +718,11 @@ class TelegramCommandService {
         );
 
         if (clubsWithPolls.length === 0) {
-            ctx.reply('Немає налаштованих опитувань. Використайте /setup_poll');
+            ctx.reply(t('telegram.poll.noConfigsUseSetup'));
             return;
         }
 
-        ctx.reply('Попередній перегляд опитування:', {
+        ctx.reply(t('telegram.poll.previewIntro'), {
             reply_markup: {
                 inline_keyboard: clubsWithPolls.map(club => [{
                     text: `📊 ${club.clubName}`,
@@ -732,7 +739,7 @@ class TelegramCommandService {
 
         const pollConfig = this.pollRepository.findConfigByClubId(clubId);
         if (!pollConfig) {
-            ctx.reply('Опитування не налаштовано для цього клубу.');
+            ctx.reply(t('telegram.poll.notConfiguredForClub'));
             return;
         }
 
@@ -753,11 +760,11 @@ class TelegramCommandService {
         );
 
         if (clubsWithPolls.length === 0) {
-            ctx.reply('Немає налаштованих опитувань. Використайте /setup_poll');
+            ctx.reply(t('telegram.poll.noConfigsUseSetup'));
             return;
         }
 
-        ctx.reply('Відправити опитування зараз?', {
+        ctx.reply(t('telegram.poll.sendNowConfirm'), {
             reply_markup: {
                 inline_keyboard: clubsWithPolls.map(club => [{
                     text: `📊 ${club.clubName}`,
@@ -774,26 +781,26 @@ class TelegramCommandService {
 
         const pollConfig = this.pollRepository.findConfigByClubId(clubId);
         if (!pollConfig) {
-            ctx.reply('Опитування не налаштовано для цього клубу.');
+            ctx.reply(t('telegram.poll.notConfiguredForClub'));
             return;
         }
 
         const mainTopic = this.clubService.getClubTelegramTopics(clubId).main;
         if (mainTopic === null) {
-            ctx.reply('❌ Основний топік не встановлено. Використайте /set_topic → 📌 Основний');
+            ctx.reply(t('telegram.poll.mainTopicNotSet'));
             return;
         }
 
         const result = await PollSchedulerService.sendPollNow(pollConfig);
         if (result.messageId === null) {
-            ctx.reply('❌ Не вдалося відправити опитування. Перевірте, що бот має доступ до чату');
+            ctx.reply(t('telegram.poll.sendFailed'));
             return;
         }
 
         ctx.reply(
             result.pinned
-                ? '✅ Опитування відправлено і закріплено!'
-                : '✅ Опитування відправлено, але не вдалося закріпити. Перевірте, що бот має право закріплювати повідомлення.'
+                ? t('telegram.poll.sentAndPinned')
+                : t('telegram.poll.sentNotPinned')
         );
     }
 
@@ -803,7 +810,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        ctx.reply('Виберіть клуб, для якого хочете створити запрошення:', {
+        ctx.reply(t('telegram.invite.selectClubToCreate'), {
             reply_markup: {
                 inline_keyboard: clubData.map(club => [{
                     text: club.clubName,
@@ -818,7 +825,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
 
-        ctx.reply('Виберіть тип запрошення:', {
+        ctx.reply(t('telegram.invite.selectType'), {
             reply_markup: {
                 inline_keyboard: [
                     [{ text: inviteTypeLabel(ClubInviteType.JOIN_CLUB), callback_data: `inv_t_${clubId}_J` }],
@@ -834,7 +841,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
 
-        ctx.reply('Звідки прийде користувач (джерело)?', {
+        ctx.reply(t('telegram.invite.selectSource'), {
             reply_markup: {
                 inline_keyboard: INVITE_SOURCES.map((source, index) => [{
                     text: inviteSourceLabel(source),
@@ -852,7 +859,7 @@ class TelegramCommandService {
         this.validateUserCanEditClub(user, clubId);
 
         if (source === undefined) {
-            ctx.reply('Невідоме джерело запрошення.');
+            ctx.reply(t('telegram.invite.unknownSource'));
             return;
         }
 
@@ -867,12 +874,12 @@ class TelegramCommandService {
 
         const link = inviteDeepLink(invite.code);
         const caption = dedent`
-            <b>🎟 Запрошення створено</b>
+            <b>${t('telegram.invite.captionTitle')}</b>
 
-            <b>Клуб:</b> ${invite.clubName}
-            <b>Тип:</b> ${inviteTypeLabel(invite.type)}
-            <b>Джерело:</b> ${inviteSourceLabel(invite.source)}
-            <b>Код:</b> <code>${invite.code}</code>
+            <b>${t('telegram.invite.captionClub')}</b> ${invite.clubName}
+            <b>${t('telegram.invite.captionType')}</b> ${inviteTypeLabel(invite.type)}
+            <b>${t('telegram.invite.captionSource')}</b> ${inviteSourceLabel(invite.source)}
+            <b>${t('telegram.invite.captionCode')}</b> <code>${invite.code}</code>
 
             <a href="${link}">${link}</a>
         `;
@@ -885,7 +892,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        ctx.reply('Виберіть клуб для перегляду запрошень:', {
+        ctx.reply(t('telegram.invite.selectClubToList'), {
             reply_markup: {
                 inline_keyboard: clubData.map(club => [{
                     text: club.clubName,
@@ -902,19 +909,19 @@ class TelegramCommandService {
 
         const invites = this.clubInviteService.listInvites(clubId);
         if (invites.length === 0) {
-            ctx.reply('У цьому клубі ще немає запрошень.');
+            ctx.reply(t('telegram.invite.noInvites'));
             return;
         }
 
         const text = invites.map(formatInviteLine).join('\n\n');
-        ctx.replyWithHTML(`<b>Запрошення клубу</b>\n\n${text}`);
+        ctx.replyWithHTML(`<b>${t('telegram.invite.listTitle')}</b>\n\n${text}`);
     }
 
     private handleRevokeInviteCommand(ctx: TelegramCommandContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        ctx.reply('Виберіть клуб, у якому хочете відкликати запрошення:', {
+        ctx.reply(t('telegram.invite.selectClubToRevoke'), {
             reply_markup: {
                 inline_keyboard: clubData.map(club => [{
                     text: club.clubName,
@@ -934,7 +941,7 @@ class TelegramCommandService {
             throw new NoActiveInvitesTelegramError();
         }
 
-        ctx.reply('Виберіть запрошення для відкликання:', {
+        ctx.reply(t('telegram.invite.selectToRevoke'), {
             reply_markup: {
                 inline_keyboard: activeInvites.map(invite => [{
                     text: `${invite.code} · ${inviteTypeLabel(invite.type)}`,
@@ -950,9 +957,9 @@ class TelegramCommandService {
         const invite = this.clubInviteService.getInviteById(inviteId);
         this.validateUserCanEditClub(user, invite.clubId);
 
-        ctx.reply(`Відкликати запрошення ${invite.code}?`, {
+        ctx.reply(t('telegram.invite.revokeConfirmPrompt', { code: invite.code }), {
             reply_markup: {
-                inline_keyboard: [[{ text: '🚫 Відкликати', callback_data: `invr_x_${invite.id}` }]],
+                inline_keyboard: [[{ text: t('telegram.invite.revokeButton'), callback_data: `invr_x_${invite.id}` }]],
             },
         });
     }
@@ -964,7 +971,7 @@ class TelegramCommandService {
         this.validateUserCanEditClub(user, invite.clubId);
 
         const revoked = dbManager.db.transaction(() => this.clubInviteService.revokeInvite(inviteId, user.id))();
-        ctx.reply(`✅ Запрошення ${revoked.code} відкликано.`);
+        ctx.reply(t('telegram.invite.revoked', { code: revoked.code }));
     }
 
     private handleImportTournamentRoundCommand(ctx: TelegramCommandContext) {
@@ -977,11 +984,11 @@ class TelegramCommandService {
             .sort((a, b) => b.id - a.id);
 
         if (tournaments.length === 0) {
-            ctx.reply('Немає активних турнірів.');
+            ctx.reply(t('telegram.tournamentImport.noActiveTournaments'));
             return;
         }
 
-        ctx.reply('Виберіть турнір:', {
+        ctx.reply(t('telegram.tournamentImport.selectTournament'), {
             reply_markup: {
                 inline_keyboard: tournaments.map(event => [{
                     text: event.name,
@@ -998,11 +1005,11 @@ class TelegramCommandService {
         const eventId = parseInt(ctx.match[1]!);
         const event = this.eventService.getEventById(eventId);
         if (event.type !== 'TOURNAMENT') {
-            ctx.reply('Вибрана подія не є турніром.');
+            ctx.reply(t('telegram.tournamentImport.notTournament'));
             return;
         }
         if (this.eventService.hasEventEnded(event)) {
-            ctx.reply('Цей турнір вже закінчився.');
+            ctx.reply(t('telegram.tournamentImport.tournamentEnded'));
             return;
         }
 
@@ -1012,7 +1019,7 @@ class TelegramCommandService {
             updatedAt: Date.now(),
         });
 
-        ctx.reply('Надішліть номер раунду (наприклад, 3):');
+        ctx.reply(t('telegram.tournamentImport.sendRoundNumber'));
     }
 
     private handleTextMessage(ctx: TelegramCommandContext) {
@@ -1041,7 +1048,7 @@ class TelegramCommandService {
         if (pending.step === 'awaiting_round') {
             const round = Number(text.trim());
             if (!Number.isInteger(round) || round < 1) {
-                ctx.reply('Номер раунду має бути додатним цілим числом.');
+                ctx.reply(t('telegram.tournamentImport.roundMustBePositive'));
                 return;
             }
 
@@ -1052,12 +1059,7 @@ class TelegramCommandService {
                 updatedAt: Date.now(),
             });
 
-            ctx.reply(
-                `Надішліть розсадку одним повідомленням:\n` +
-                    `Round ${round}\n` +
-                    `<id1> <id2> <id3> <id4>\n` +
-                    `...`
-            );
+            ctx.reply(t('telegram.tournamentImport.sendSeating', { round }));
             return;
         }
 
@@ -1072,11 +1074,14 @@ class TelegramCommandService {
             this.clearTournamentImportPending(ctx.from.id);
 
             if (result.errors.length > 0) {
-                ctx.reply('❌ Помилки імпорту:\n' + result.errors.map(e => `• ${e}`).join('\n'));
+                ctx.reply(
+                    `${t('telegram.tournamentImport.importErrorsTitle')}\n` +
+                        result.errors.map(e => `• ${e}`).join('\n')
+                );
                 return;
             }
 
-            ctx.reply(`✅ Імпортовано ${result.imported} ігор`);
+            ctx.reply(t('telegram.tournamentImport.imported', { count: result.imported }));
         }
     }
 
@@ -1176,7 +1181,7 @@ class TelegramCommandService {
                 ctx.reply(e.message);
             } else {
                 LogService.logError('Unexpected error executing Telegram command: ', e);
-                ctx.reply('Сталася помилка при виконанні команди. Спробуйте ще раз пізніше.');
+                ctx.reply(t('telegram.genericCommandError'));
             }
         }
     }
@@ -1195,24 +1200,24 @@ const INVITE_SOURCES: ClubInviteSource[] = Object.values(ClubInviteSource);
 function inviteTypeLabel(type: ClubInviteType): string {
     switch (type) {
         case ClubInviteType.JOIN_CLUB:
-            return '✅ Авто-приєднання до клубу';
+            return t('telegram.invite.typeJoinClub');
         case ClubInviteType.REGISTRATION_ONLY:
-            return '📚 Лише реєстрація (туторіал)';
+            return t('telegram.invite.typeRegistrationOnly');
     }
 }
 
 function inviteSourceLabel(source: ClubInviteSource): string {
     switch (source) {
         case ClubInviteSource.PERSON:
-            return '🧑 Особа';
+            return t('telegram.invite.sourcePerson');
         case ClubInviteSource.TUTORIAL:
-            return '📚 Туторіал';
+            return t('telegram.invite.sourceTutorial');
         case ClubInviteSource.FESTIVAL:
-            return '🎪 Фестиваль';
+            return t('telegram.invite.sourceFestival');
         case ClubInviteSource.SOCIAL_NETWORK:
-            return '🌐 Соцмережа';
+            return t('telegram.invite.sourceSocialNetwork');
         case ClubInviteSource.OTHER:
-            return '❓ Інше';
+            return t('telegram.invite.sourceOther');
     }
 }
 
@@ -1229,13 +1234,14 @@ function formatInviteLine(invite: ClubInvite): string {
     const uses = invite.maxUses !== null ? `${invite.usesCount}/${invite.maxUses}` : `${invite.usesCount}`;
     const parts = [
         `${status} <code>${invite.code}</code> — ${inviteTypeLabel(invite.type)}`,
-        `Джерело: ${inviteSourceLabel(invite.source)} · Використань: ${uses}`,
+        `${t('telegram.invite.lineSource')} ${inviteSourceLabel(invite.source)} · ` +
+        `${t('telegram.invite.lineUses')} ${uses}`,
     ];
     if (invite.label !== null) {
-        parts.push(`Мітка: ${invite.label}`);
+        parts.push(`${t('telegram.invite.lineLabel')} ${invite.label}`);
     }
     if (invite.expiresAt !== null) {
-        parts.push(`Діє до: ${invite.expiresAt.toISOString()}`);
+        parts.push(`${t('telegram.invite.lineExpires')} ${invite.expiresAt.toISOString()}`);
     }
     return parts.join('\n');
 }
@@ -1243,45 +1249,45 @@ function formatInviteLine(invite: ClubInvite): string {
 function clubTelegramTopicDescription(topicType: ClubTelegramTopicType): string {
     switch (topicType) {
         case ClubTelegramTopicType.RATING:
-            return '📈 Рейтинг';
+            return t('telegram.topicType.rating');
         case ClubTelegramTopicType.USER_LOGS:
-            return '👤 Логи користувачів';
+            return t('telegram.topicType.userLogs');
         case ClubTelegramTopicType.GAME_LOGS:
-            return '🀄 Логи ігр';
+            return t('telegram.topicType.gameLogs');
         case ClubTelegramTopicType.CLUB_LOGS:
-            return '🏛️ Логи клубу';
+            return t('telegram.topicType.clubLogs');
         case ClubTelegramTopicType.MAIN:
-            return '📌 Основний';
+            return t('telegram.topicType.main');
     }
 }
 
 function clubTelegramTopicUpdatedSuccessfullyText(topicType: ClubTelegramTopicType): string {
     switch (topicType) {
         case ClubTelegramTopicType.RATING:
-            return 'Топік для рейтингу успішно встановлено!';
+            return t('telegram.topicSet.rating');
         case ClubTelegramTopicType.USER_LOGS:
-            return 'Топік для логів користувачів успішно встановлено!';
+            return t('telegram.topicSet.userLogs');
         case ClubTelegramTopicType.GAME_LOGS:
-            return 'Топік для логів ігр успішно встановлено!';
+            return t('telegram.topicSet.gameLogs');
         case ClubTelegramTopicType.CLUB_LOGS:
-            return 'Топік для логів клубу успішно встановлено!';
+            return t('telegram.topicSet.clubLogs');
         case ClubTelegramTopicType.MAIN:
-            return 'Основний топік успішно встановлено!';
+            return t('telegram.topicSet.main');
     }
 }
 
 function clubTelegramTopicUnsetSuccessfullyText(topicType: ClubTelegramTopicType): string {
     switch (topicType) {
         case ClubTelegramTopicType.RATING:
-            return 'Топік для рейтингу скинуто.';
+            return t('telegram.topicUnset.rating');
         case ClubTelegramTopicType.USER_LOGS:
-            return 'Топік для логів користувачів скинуто.';
+            return t('telegram.topicUnset.userLogs');
         case ClubTelegramTopicType.GAME_LOGS:
-            return 'Топік для логів ігр скинуто.';
+            return t('telegram.topicUnset.gameLogs');
         case ClubTelegramTopicType.CLUB_LOGS:
-            return 'Топік для логів клубу скинуто.';
+            return t('telegram.topicUnset.clubLogs');
         case ClubTelegramTopicType.MAIN:
-            return 'Основний топік скинуто.';
+            return t('telegram.topicUnset.main');
     }
 }
 
@@ -1303,20 +1309,20 @@ function getTopicByType(topics: ClubTelegramTopics, topicType: ClubTelegramTopic
 const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7]; // Mon-Sun
 
 const DAY_NAMES_SHORT: Record<number, string> = {
-    1: 'Пн',
-    2: 'Вт',
-    3: 'Ср',
-    4: 'Чт',
-    5: 'Пт',
-    6: 'Сб',
-    7: 'Нд',
+    1: t('telegram.daysShort.mon'),
+    2: t('telegram.daysShort.tue'),
+    3: t('telegram.daysShort.wed'),
+    4: t('telegram.daysShort.thu'),
+    5: t('telegram.daysShort.fri'),
+    6: t('telegram.daysShort.sat'),
+    7: t('telegram.daysShort.sun'),
 };
 
 const EXTRA_OPTION_PRESETS = [
-    'Результати 👀',
-    'У цей раз я пас 🙅',
-    'Під питанням 🤔',
-    'Запізнюся ⏰',
+    t('telegram.poll.extraResults'),
+    t('telegram.poll.extraPass'),
+    t('telegram.poll.extraMaybe'),
+    t('telegram.poll.extraLate'),
 ];
 
 export default new TelegramCommandService();

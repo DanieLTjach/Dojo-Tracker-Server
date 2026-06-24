@@ -3,6 +3,7 @@ import { EventService } from './EventService.ts';
 import { UserRepository } from '../repository/UserRepository.ts';
 import { CsvParsingError, NoValidGamesInCsvError } from '../error/ImportErrors.ts';
 import { dbManager } from '../db/dbInit.ts';
+import { t } from '../i18n/index.ts';
 import type { GameWithPlayers, PlayerData, Wind } from '../model/GameModels.ts';
 import type { Event } from '../model/EventModels.ts';
 
@@ -140,7 +141,7 @@ export class ImportService {
     private parseCsv(csvContent: string): { headers: string[], dataRows: string[][] } {
         const lines = csvContent.trim().split('\n');
         if (lines.length < 2) {
-            throw new CsvParsingError('CSV file must have a header row and at least one data row');
+            throw new CsvParsingError(t('import.csvMissingHeaderOrDataRow'));
         }
 
         const headers = lines[0]!.split(',').map(h => h.trim());
@@ -156,7 +157,7 @@ export class ImportService {
             for (const col of PLAYER_COLUMNS) {
                 const expected = `player${p}_${col}`;
                 if (!headers.includes(expected)) {
-                    throw new CsvParsingError(`Missing required column: ${expected}`);
+                    throw new CsvParsingError(t('import.csvMissingRequiredColumn', { column: expected }));
                 }
             }
         }
@@ -182,24 +183,28 @@ export class ImportService {
             const chomboStr = getValue(`player${p}_chombo`);
 
             if (!username) {
-                throw new Error(`Row ${rowNumber}: player${p}_username is empty`);
+                throw new Error(t('import.rowUsernameEmpty', { row: rowNumber, player: p }));
             }
 
             const user = this.userRepository.findUserByTelegramUsername(username);
             if (!user) {
-                throw new Error(`Row ${rowNumber}: user ${username} not found`);
+                throw new Error(t('import.rowUserNotFound', { row: rowNumber, username }));
             }
 
             const points = Number(pointsStr);
             if (isNaN(points) || !Number.isInteger(points)) {
-                throw new Error(`Row ${rowNumber}: player${p}_points must be an integer`);
+                throw new Error(t('import.rowPointsNotInteger', { row: rowNumber, player: p }));
             }
 
             let startPlace: Wind | undefined = undefined;
             if (startPlaceStr) {
                 if (!VALID_WINDS.includes(startPlaceStr as Wind)) {
                     throw new Error(
-                        `Row ${rowNumber}: player${p}_startPlace must be one of: ${VALID_WINDS.join(', ')}`
+                        t('import.rowInvalidStartPlace', {
+                            row: rowNumber,
+                            player: p,
+                            validWinds: VALID_WINDS.join(', '),
+                        })
                     );
                 }
                 startPlace = startPlaceStr as Wind;
@@ -207,7 +212,7 @@ export class ImportService {
 
             const chomboCount = chomboStr ? Number(chomboStr) : 0;
             if (isNaN(chomboCount) || !Number.isInteger(chomboCount) || chomboCount < 0) {
-                throw new Error(`Row ${rowNumber}: player${p}_chombo must be a non-negative integer`);
+                throw new Error(t('import.rowChomboNotNonNegativeInteger', { row: rowNumber, player: p }));
             }
 
             players.push({
@@ -223,7 +228,7 @@ export class ImportService {
         if (createdAtStr) {
             createdAt = new Date(createdAtStr);
             if (isNaN(createdAt.getTime())) {
-                throw new Error(`Row ${rowNumber}: createdAt is not a valid date`);
+                throw new Error(t('import.rowInvalidCreatedAt', { row: rowNumber }));
             }
         }
 
@@ -234,7 +239,7 @@ export class ImportService {
         const tournamentTable = tableStr || null;
 
         if (tournamentRound !== null && (isNaN(tournamentRound) || tournamentRound < 1)) {
-            throw new Error(`Row ${rowNumber}: tournamentRound must be a positive integer`);
+            throw new Error(t('import.rowTournamentRoundNotPositiveInteger', { row: rowNumber }));
         }
 
         return { players, createdAt, tournamentRound, tournamentTable };

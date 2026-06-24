@@ -14,6 +14,7 @@ import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
+import { t } from '../i18n/index.ts';
 
 const DEFINITION_BY_METRIC = new Map<AchievementMetric, AchievementDefinition>(
     ACHIEVEMENTS.map(definition => [definition.metric, definition])
@@ -96,18 +97,18 @@ export class AchievementService {
     }
 
     /** Achievements for the tournament page. Computes lazily on first read for historical tournaments. */
-    getEventAchievements(eventId: number): EventAchievementResult[] {
+    getEventAchievements(eventId: number, locale?: string | null): EventAchievementResult[] {
         const event = this.eventService.getEventById(eventId);
 
         if (!this.achievementRepository.areEventAchievementsComputed(eventId)) {
             this.recomputeEventAchievements(event);
         }
 
-        return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId));
+        return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 
     /** Achievements a user has won across all tournaments, for the profile page. */
-    getUserAchievements(userId: number): UserAchievement[] {
+    getUserAchievements(userId: number, locale?: string | null): UserAchievement[] {
         for (const eventId of this.achievementRepository.findUncomputedTournamentEventIdsForUser(userId)) {
             this.recomputeEventAchievements(this.eventService.getEventById(eventId));
         }
@@ -123,26 +124,29 @@ export class AchievementService {
                 eventName: row.eventName,
                 metric: row.metric,
                 name: definition.name,
-                description: definition.description,
+                description: achievementDescription(definition, locale),
                 valueUnit: definition.valueUnit,
                 value,
-                valueFormatted: formatValue(value, definition.valueUnit),
+                valueFormatted: formatValue(value, definition.valueUnit, locale),
             }];
         });
     }
 
-    private buildEventResults(winnerRows: EventAchievementWinnerRow[]): EventAchievementResult[] {
+    private buildEventResults(
+        winnerRows: EventAchievementWinnerRow[],
+        locale?: string | null
+    ): EventAchievementResult[] {
         return ACHIEVEMENTS.map(definition => {
             const winners = winnerRows.filter(row => row.metric === definition.metric);
             const value = winners[0]?.value ?? undefined;
             return {
                 metric: definition.metric,
                 name: definition.name,
-                description: definition.description,
+                description: achievementDescription(definition, locale),
                 criterion: definition.criterion,
                 valueUnit: definition.valueUnit,
                 value,
-                valueFormatted: formatValue(value, definition.valueUnit),
+                valueFormatted: formatValue(value, definition.valueUnit, locale),
                 tied: definition.criterion !== AchievementCriterion.AllQualifiers && winners.length > 1,
                 winners: winners.map(row => ({
                     userId: row.userId,
@@ -155,6 +159,17 @@ export class AchievementService {
     }
 }
 
-function formatValue(value: number | undefined, unit: AchievementValueUnit): string | undefined {
-    return value === undefined ? undefined : `${value.toLocaleString('en-US')} ${unit}`;
+function achievementDescription(definition: AchievementDefinition, locale?: string | null): string {
+    return t(`achievements.descriptions.${definition.metric}`, undefined, locale);
+}
+
+function formatValue(
+    value: number | undefined,
+    unit: AchievementValueUnit,
+    locale?: string | null
+): string | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+    return t(`achievements.units.${unit}`, { value: value.toLocaleString('en-US') }, locale);
 }

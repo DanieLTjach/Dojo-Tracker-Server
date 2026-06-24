@@ -1,0 +1,249 @@
+telegram:
+  genericCommandError: An error occurred while running the command. Please try again later.
+
+  errors:
+    userNotRegistered: You must be registered in the app to perform this action
+    userNotClubOwner: You must be a club owner to perform this action
+    userNotAdmin: This command is available to admins only
+    noActiveInvites: This club has no active invites
+
+  commands:
+    help: Show command list
+    postAppLink: Post app link
+    setTopic: Configure notifications in the current topic
+    unsetTopic: Remove topic configuration
+    diagnoseTopics: Check topic configuration
+    setupPoll: Configure a club poll
+    previewPoll: Preview poll
+    sendPoll: Send poll now
+    createInvite: Create a club invite (link + QR)
+    listInvites: List club invites
+    revokeInvite: Revoke invite
+
+  help:
+    title: 📋 Available commands
+    cmdHelp: Show command list
+    sectionAdmin: Administration
+    cmdPostAppLink: Post app link
+    sectionPolls: Polls
+    cmdSetupPoll: Configure a club poll
+    cmdPreviewPoll: Preview poll
+    cmdSendPoll: Send poll now
+    sectionInvites: Invites
+    cmdCreateInvite: Create invite (link + QR)
+    cmdListInvites: List club invites
+    cmdRevokeInvite: Revoke invite
+    sectionNotifications: Notifications
+    cmdSetTopic: Configure notifications in the current topic
+    cmdUnsetTopic: Clear topic configuration
+    cmdDiagnoseTopics: Check topic configuration
+    sectionTournament: Tournament
+    cmdImportTournamentRound: Import tournament round seating
+
+  appLink:
+    title: 🀄 Japan Dojo Tracker
+    body: Tap the button to open the app
+    openButton: 📱 Open
+
+  topic:
+    selectClubToSet: "Choose the club to set a topic for:"
+    selectTopicToSet: "Choose which topic to set:"
+    selectClubToUnset: "Choose the club to clear a topic for:"
+    selectTopicToUnset: "Choose the topic to clear:"
+    noTopicsConfigured: No topics are configured for this club.
+    diagnoseTitle: 🩺 Topic diagnostics
+    diagnoseSelectClub: "Choose a club for topic diagnostics:"
+    diagnoseNotConfigured: ❌ not configured
+    diagnoseGeneral: " (general)"
+    diagnoseThread: " / thread"
+    testButton: "📨 Test:"
+    testNotConfigured: Topic is not configured
+    testMessageTitle: 🧪 Test message
+    testMessageTopic: "Topic:"
+    testMessageBody: If you see this message, the topic is configured correctly.
+    testMessageSent: Test message sent ✅
+
+  topicType:
+    rating: 📈 Rating
+    userLogs: 👤 User logs
+    gameLogs: 🀄 Game logs
+    clubLogs: 🏛️ Club logs
+    main: 📌 Main
+
+  topicSet:
+    rating: Rating topic has been set successfully!
+    userLogs: User logs topic has been set successfully!
+    gameLogs: Game logs topic has been set successfully!
+    clubLogs: Club logs topic has been set successfully!
+    main: Main topic has been set successfully!
+  topicUnset:
+    rating: Rating topic has been cleared.
+    userLogs: User logs topic has been cleared.
+    gameLogs: Game logs topic has been cleared.
+    clubLogs: Club logs topic has been cleared.
+    main: Main topic has been cleared.
+
+  poll:
+    setupIntro: |-
+      📊 Poll setup.
+      Choose a club:
+    selectEventDays: "Choose event days (tap to select/unselect):"
+    selectSendDay: Which weekday should the poll be sent?
+    selectSendTime: What time should it be sent? (Kyiv time)
+    selectExtraOptions: "Choose extra poll options:"
+    next: ➡️ Next
+    saveAndContinue: ➡️ Save
+    reconfigure: 🔄 Reconfigure
+    enable: ✅ Enable
+    disable: ❌ Disable
+    enabledNotice: ✅ Poll enabled!
+    disabledNotice: ❌ Poll disabled!
+    existingTitle: "📊 Poll for <b>{{clubName}}</b> is already configured:"
+    titleLabel: "📝"
+    eventDaysLabel: "📅 Event days:"
+    sendLabel: "📤 Sending:"
+    sendAtConnector: at
+    extrasLabel: "📋 Extra options:"
+    statusActive: ✅ Active
+    statusInactive: ❌ Disabled
+    savedTitle: ✅ Poll configured!
+    savedReminder: Remember to set the main topic via /set_topic → 📌 Main
+    none: none
+    noConfigsUseSetup: No polls are configured. Use /setup_poll
+    previewIntro: "Poll preview:"
+    sendNowConfirm: Send poll now?
+    notConfiguredForClub: Poll is not configured for this club.
+    mainTopicNotSet: ❌ Main topic is not set. Use /set_topic → 📌 Main
+    sendFailed: ❌ Could not send poll. Check that the bot has access to the chat
+    sentAndPinned: ✅ Poll sent and pinned!
+    sentNotPinned: ✅ Poll sent, but it could not be pinned. Check that the bot can pin messages.
+    title: 🀄 Mahjong {{dates}}
+    extraResults: Results 👀
+    extraPass: I will pass this time 🙅
+    extraMaybe: Maybe 🤔
+    extraLate: I will be late ⏰
+
+  daysShort:
+    mon: Mon
+    tue: Tue
+    wed: Wed
+    thu: Thu
+    fri: Fri
+    sat: Sat
+    sun: Sun
+
+  invite:
+    selectClubToCreate: "Choose the club to create an invite for:"
+    selectType: "Choose invite type:"
+    selectSource: "Where will the user come from (source)?"
+    unknownSource: Unknown invite source.
+    selectClubToList: "Choose a club to view invites:"
+    noInvites: This club has no invites yet.
+    listTitle: Club invites
+    selectClubToRevoke: "Choose the club where you want to revoke an invite:"
+    selectToRevoke: "Choose an invite to revoke:"
+    revokeConfirmPrompt: Revoke invite {{code}}?
+    revokeButton: 🚫 Revoke
+    revoked: ✅ Invite {{code}} revoked.
+    captionTitle: 🎟 Invite created
+    captionClub: "Club:"
+    captionType: "Type:"
+    captionSource: "Source:"
+    captionCode: "Code:"
+    lineSource: "Source:"
+    lineUses: "Uses:"
+    lineLabel: "Label:"
+    lineExpires: "Expires:"
+    typeJoinClub: ✅ Auto-join club
+    typeRegistrationOnly: 📚 Registration only (tutorial)
+    sourcePerson: 🧑 Person
+    sourceTutorial: 📚 Tutorial
+    sourceFestival: 🎪 Festival
+    sourceSocialNetwork: 🌐 Social network
+    sourceOther: ❓ Other
+
+  tournamentImport:
+    noActiveTournaments: No active tournaments.
+    selectTournament: "Choose a tournament:"
+    notTournament: Selected event is not a tournament.
+    tournamentEnded: This tournament has already ended.
+    sendRoundNumber: "Send the round number (for example, 3):"
+    roundMustBePositive: Round number must be a positive integer.
+    sendSeating: |-
+      Send the seating in one message:
+      Round {{round}}
+      <id1> <id2> <id3> <id4>
+      ...
+    importErrorsTitle: "❌ Import errors:"
+    imported: ✅ Imported {{count}} games
+
+  importParse:
+    notTournament: Event is not a tournament
+    eventEnded: "{{eventName}} has already ended"
+    noPlayerRows: No player rows
+    expectHeaderAndRows: 'Expected a "Round N" header and at least one player row'
+    firstLineFormat: 'First line must be in "Round N" format (for example, Round 3)'
+    roundMismatch: Round number in the data ({{roundInPaste}}) does not match the entered round ({{expectedRound}})
+    rowWrongPlayerCount: "Row {{table}}: expected {{playerCount}} player ids, got {{actual}}"
+    rowInvalidUserId: 'Row {{table}}: "{{token}}" is not a valid user id'
+    rowPrefix: "Row {{table}}: {{message}}"
+    tablePrefix: "Table {{table}}: {{message}}"
+    tableGameExists: "Table {{table}}: game for round {{round}} already exists"
+    tablePlayerDuplicate: "Table {{table}}: player {{userId}} is duplicated"
+    playerOnMultipleTables: Player {{userId}} appears at multiple tables
+
+  actions:
+    withdraw: withdraw
+    approve: approve
+    reject: reject
+    activate: activate
+    changeRole: change role
+
+  notify:
+    registrationApproved: ✅ Your tournament application was approved
+    registrationRejected: ❌ Your tournament application was rejected
+    registeredForTournament: 📝 You have been registered for the tournament
+    tournamentLabel: "Tournament:"
+    openTournamentPage: Open tournament page
+    addedToClubTitle: "You were added to club {{clubName}}!"
+    addedToClubBody: You are now a full club member and can add new games.
+    openApp: Open app
+
+  registrationLog:
+    nameLabel: "Name:"
+    tournamentLabel: "Tournament:"
+    participantLabel: "Participant:"
+    titleApplied: 🔔 Tournament application
+    titleApproved: ✅ Tournament application approved
+    titleRejected: ❌ Tournament application rejected
+    titleWithdrawn: 🚪 Participant withdrew from tournament
+    titleManualRegistered: 📝 Participant added manually
+    titleProfileNamesUpdated: 📝 Participant name updated
+    approvedByLabel: "Approved by:"
+    rejectedByLabel: "Rejected by:"
+    addedByLabel: "Added by:"
+    beforeLabel: "Before:"
+    afterLabel: "After:"
+    updatedByLabel: "Updated by:"
+
+  clubLog:
+    createdTitle: 🏛️ New club created
+    editedTitle: ✏️ Club updated
+    deletedTitle: 🗑️ Club deleted (deactivated)
+    clubIdLabel: "Club ID:"
+    nameLabel: "Name:"
+    cityLabel: "City:"
+    countryLabel: "Country:"
+    localeLabel: "Locale:"
+    addressLabel: "Address:"
+    descriptionLabel: "Description:"
+    contactInfoLabel: "Contact info:"
+    isActiveLabel: "Active:"
+    createdByLabel: "Created by:"
+    editedByLabel: "Updated by:"
+    deletedByLabel: "Deleted by:"
+    noValue: N/A
+
+  gameLog:
+    addedNewGame: new game
+    addedBy: Added {{gameLink}} by {{userLink}}

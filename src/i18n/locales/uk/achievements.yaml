@@ -1,0 +1,32 @@
+achievements:
+  descriptions:
+    dealer_wins: Найбільше перемог на дилері
+    one_han_wins: Найбільше перемог в 1 хан
+    riichi_nomi_wins: Найбільше перемог ріічі-номі
+    mangan_plus_wins_except_yakumans: Найбільше перемог манган+ (окрім якуманів)
+    thirteen_plus_han_wins: Найбільше перемог з 13+ ханами
+    points_fed_to_dealer: Найбільша сума очок, відданих дилеру
+    lost_riichi_sticks: Найбільша кількість втрачених паличок ріічі
+    tsumo_wins: Найбільша кількість цумо
+    max_fu_hand: Рука з найбільшою кількістю фу
+    haneman_wins: Найбільша кількість ханеманів
+    points_lost_on_tsumo: Найбільша сума очок, втрачених через цумо
+    riichi_declarations: Найбільша кількість оголошених ріічі
+    baiman_wins: Найбільше байманів
+    saki_zero_after_uma_games: Нуль очок після уми
+    chiitoi_nomi_wins: Найбільше перемог 2 хан 25 фу
+    points_lost_on_ron: Найменше очок, втрачених на рон
+    best_game_points: Найбільше очок, отриманих за одну гру
+    yakuman_wins: Найбільше якуманів
+    best_hand_han_points: Найкраща рука (найбільша кількість хан)
+    chombo_count: Найбільша кількість чомбо
+    biggest_deal_in: Найбільший накид за турнір
+  units:
+    wins: "{{value}} перемог"
+    points: "{{value}} очок"
+    sticks: "{{value}} паличок"
+    fu: "{{value}} фу"
+    han: "{{value}} хан"
+    declarations: "{{value}} оголошень"
+    chombo: "{{value}} чомбо"
+    players: "{{value}} гравців"

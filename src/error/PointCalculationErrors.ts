@@ -117,6 +117,6 @@ export class NoPlayersInTheGameError extends InternalServerError {
 
 export class PlayerNotInGameError extends BadRequestError {
     constructor(playerId: number) {
-        super(`Гравець ${playerId} відсутній у грі`, 'playerNotInGame');
+        super('playerNotInGame', { playerId });
     }
 }
