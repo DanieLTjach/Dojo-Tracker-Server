@@ -1,169 +1,181 @@
-import { BadRequestError, ForbiddenError, NotFoundError } from "./BaseErrors.ts";
+import { BadRequestError, ForbiddenError, NotFoundError } from './BaseErrors.ts';
 
 export class GameNotFoundById extends NotFoundError {
     constructor(id: number) {
-        super('gameNotFoundById', { id });
+        super(`Гру з id ${id} не знайдено`, 'gameNotFoundById');
     }
 }
 
 export class TooManyGamesFoundError extends BadRequestError {
     constructor() {
-        super('tooManyGamesFound');
+        super(`Знайдено забагато ігор. Будь ласка, звузьте критерії пошуку.`, 'tooManyGamesFound');
     }
 }
 
 export class IncorrectPlayerCountError extends BadRequestError {
     constructor(requiredPlayers: number) {
-        super('incorrectPlayerCount', { requiredPlayers });
+        super(`Для гри потрібно ${requiredPlayers} гравців`, 'incorrectPlayerCount');
     }
 }
 
 export class DuplicatePlayerError extends BadRequestError {
     constructor(playerName: string) {
-        super('duplicatePlayer', { playerName });
+        super(`Гравець ${playerName} присутній більше одного разу в цій грі`, 'duplicatePlayer');
     }
 }
 
 export class DuplicateGameTimestampInEventError extends BadRequestError {
     constructor() {
-        super('duplicateGameTimestampInEvent');
+        super(
+            'Хтось намагається додати гру одночасно з вами. Будь ласка, спробуйте ще раз',
+            'duplicateGameTimestampInEvent'
+        );
     }
 }
 
 export class DuplicateTournamentRoundTableError extends BadRequestError {
     constructor(tournamentRound: number, tournamentTable: string) {
-        super('duplicateTournamentRoundTable', { tournamentRound, tournamentTable });
+        super(
+            `Гра для раунду ${tournamentRound} та столу ${tournamentTable} вже існує в цьому турнірі`,
+            'duplicateTournamentRoundTable'
+        );
     }
 }
 
 export class IncorrectTotalPointsError extends BadRequestError {
     constructor(expectedTotal: number, actualTotal: number) {
-        super('incorrectTotalPoints', { expectedTotal, actualTotal });
+        super(`Сума очок повинна дорівнювати ${expectedTotal}, у вас ${actualTotal}`, 'incorrectTotalPoints');
     }
 }
 
 export class PointsNotWithinRange extends BadRequestError {
     constructor(points: number, minPoints: number, maxPoints: number) {
-        super('invalidPoints', { points, minPoints, maxPoints });
+        super(`Очки гравця (${points}) повинні бути в діапазоні від ${minPoints} до ${maxPoints}`, 'invalidPoints');
     }
 }
 
 export class EventHasntStartedError extends BadRequestError {
     constructor(eventName: string) {
-        super('eventHasntStarted', { eventName });
+        super(`${eventName} ще не розпочався`, 'eventHasntStarted');
     }
 }
 
 export class EventHasEndedError extends BadRequestError {
     constructor(eventName: string) {
-        super('eventHasEnded', { eventName });
+        super(`${eventName} вже закінчився`, 'eventHasEnded');
     }
 }
 
 export class YouHaveToBeAdminToCreateGameWithCustomTime extends ForbiddenError {
     constructor() {
-        super('youHaveToBeAdminToCreateGameWithCustomTime');
+        super(
+            'Щоб створити гру з заданим часом, ви повинні бути адміністратором',
+            'youHaveToBeAdminToCreateGameWithCustomTime'
+        );
     }
 }
 
 export class YouHaveToBeAdminToHideNewGameMessage extends ForbiddenError {
     constructor() {
-        super('youHaveToBeAdminToHideNewGameMessage');
+        super(
+            'Щоб сховати повідомлення про нову гру, ви повинні бути адміністратором',
+            'youHaveToBeAdminToHideNewGameMessage'
+        );
     }
 }
 
 export class GameNotInProgressWhenAddingNewRoundError extends BadRequestError {
     constructor() {
-        super('gameNotInProgress');
+        super('Результат раунду можна додати лише до гри, що триває', 'gameNotInProgress');
     }
 }
 
 export class GameNotInProgressWhenDeletingRoundError extends BadRequestError {
     constructor() {
-        super('gameNotInProgressWhenDeletingRound');
+        super('Результат раунду можна видалити лише з гри, що триває', 'gameNotInProgressWhenDeletingRound');
     }
 }
 
 export class GameNotInProgressWhenFinishingError extends BadRequestError {
     constructor() {
-        super('gameNotInProgressWhenFinishing');
+        super('Можна завершити лише гру, що триває', 'gameNotInProgressWhenFinishing');
     }
 }
 
 export class InvalidRoundIdError extends BadRequestError {
     constructor(expectedRoundId: number, actualRoundId: number) {
-        super('invalidRoundId', { expectedRoundId, actualRoundId });
+        super(
+            `Очікується раунд ${expectedRoundId}, отримано ${actualRoundId}`,
+            'invalidRoundId'
+        );
     }
 }
 
 export class RoundAlreadyExistsError extends BadRequestError {
     constructor() {
-        super('roundAlreadyExists');
+        super(`Цей раунд вже завершено`, 'roundAlreadyExists');
     }
 }
 
 export class NotAuthorizedToModifyGameError extends ForbiddenError {
     constructor() {
-        super('notAuthorizedToModifyGame');
-    }
-}
-
-export class InvalidRoundResultPlayerError extends BadRequestError {
-    constructor(playerId: number) {
-        super('invalidRoundResultPlayer', { playerId });
+        super(
+            'Лише гравці, модератори клубу та адміністратори можуть змінювати гру',
+            'notAuthorizedToModifyGame'
+        );
     }
 }
 
 export class GamePlayerNotFoundError extends NotFoundError {
     constructor(gameId: number, userId: number) {
-        super('gamePlayerNotFound', { gameId, userId });
+        super(`Гравець з id ${userId} не знайдений у грі ${gameId}`, 'gamePlayerNotFound');
     }
 }
 
 export class NoRoundsToRollbackError extends BadRequestError {
     constructor() {
-        super('noRoundsToRollback');
+        super('У цій грі немає раундів для відкату', 'noRoundsToRollback');
     }
 }
 
 export class LastRoundRollbackAlreadyUsedError extends BadRequestError {
     constructor() {
-        super('lastRoundRollbackAlreadyUsed');
+        super('Ви вже відкатували останній раунд у цій грі', 'lastRoundRollbackAlreadyUsed');
     }
 }
 
 export class NoRoundsCompletedError extends BadRequestError {
     constructor() {
-        super('noRoundsCompleted');
+        super('Гру можна завершити лише після щонайменше одного раунду', 'noRoundsCompleted');
     }
 }
 
 export class GameNotFinishedWhenUpdatingError extends BadRequestError {
     constructor() {
-        super('gameNotFinishedWhenUpdating');
+        super('Гру можна редагувати лише після завершення', 'gameNotFinishedWhenUpdating');
     }
 }
 
 export class GameNotFinishedWhenUndoingFinishError extends BadRequestError {
     constructor() {
-        super('gameNotFinishedWhenUndoingFinish');
+        super('Скасувати завершення можна лише для завершеної гри', 'gameNotFinishedWhenUndoingFinish');
     }
 }
 
 export class CannotUndoFinishOnNonTrackedGameError extends BadRequestError {
     constructor() {
-        super('cannotUndoFinishOnNonTrackedGame');
+        super('Скасувати завершення можна лише для відстежуваної гри з раундами', 'cannotUndoFinishOnNonTrackedGame');
     }
 }
 
 export class GameNotCreatedWhenStartingError extends BadRequestError {
     constructor() {
-        super('gameNotCreatedWhenStarting');
+        super('Можна розпочати лише гру в статусі CREATED', 'gameNotCreatedWhenStarting');
     }
 }
 
 export class NotGamePlayerError extends ForbiddenError {
     constructor() {
-        super('notGamePlayer');
+        super('Лише гравці цієї гри можуть виконати цю дію', 'notGamePlayer');
     }
 }

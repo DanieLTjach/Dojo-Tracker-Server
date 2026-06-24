@@ -1,11 +1,19 @@
 import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
+import type { Tournament } from './TournamentModels.ts';
 
 export const UmaTieBreak = {
     WIND: 'WIND',
-    DIVIDE: 'DIVIDE'
+    DIVIDE: 'DIVIDE',
 } as const;
 
 export type UmaTieBreak = typeof UmaTieBreak[keyof typeof UmaTieBreak];
+
+export const EventType = {
+    SEASON: 'SEASON',
+    TOURNAMENT: 'TOURNAMENT',
+} as const;
+
+export type EventType = typeof EventType[keyof typeof EventType];
 
 export type RuleValue = boolean | number | string;
 
@@ -66,6 +74,7 @@ export interface EventInfoContacts {
     phone?: string | undefined;
     email?: string | undefined;
     telegram?: string | undefined;
+    paymentInfo?: string | undefined;
 }
 
 export interface EventInfoLinks {
@@ -82,11 +91,39 @@ export interface EventInfo {
     pairings?: number[][][] | undefined;
 }
 
+export const PlayerNameDisplay = {
+    DEFAULT: 'DEFAULT',
+    NICKNAME: 'NICKNAME',
+    REAL_NAME: 'REAL_NAME',
+} as const;
+
+export type PlayerNameDisplay = typeof PlayerNameDisplay[keyof typeof PlayerNameDisplay];
+
+export interface EventConfig {
+    playerNameDisplay?: PlayerNameDisplay | undefined;
+    minParticipants?: number | undefined;
+    maxParticipants?: number | undefined;
+    registrationDeadline?: Date | undefined;
+}
+
+/**
+ * Resolves the effective player name display mode for an event. When the config is
+ * unset or DEFAULT, falls back to the type-based default: tournaments show real names,
+ * seasons show nicknames. Always returns NICKNAME or REAL_NAME (never DEFAULT).
+ */
+export function resolvePlayerNameDisplay(config: EventConfig | null, eventType: EventType): PlayerNameDisplay {
+    const mode = config?.playerNameDisplay;
+    if (mode === PlayerNameDisplay.NICKNAME || mode === PlayerNameDisplay.REAL_NAME) {
+        return mode;
+    }
+    return eventType === EventType.TOURNAMENT ? PlayerNameDisplay.REAL_NAME : PlayerNameDisplay.NICKNAME;
+}
+
 export interface Event {
     id: number;
     name: string;
     description: string | null;
-    type: string;
+    type: EventType;
     clubId: number | null;
     isCurrentRating: boolean;
     gameRules: GameRules;
@@ -97,7 +134,10 @@ export interface Event {
     maxParticipants: number | null;
     registrationDeadline: Date | null;
     info: EventInfo | null;
+    config: EventConfig | null;
+    resolvedPlayerNameDisplay: PlayerNameDisplay;
     blockGameCreation: boolean;
+    tournament: Tournament | null;
     gameCount: number;
     createdAt: Date;
     modifiedAt: Date;

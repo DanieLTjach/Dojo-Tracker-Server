@@ -25,7 +25,6 @@ const ROUND_HEADER_PATTERN = /^Round\s+(\d+)$/i;
 class ImportRollbackError extends Error {}
 
 export class TournamentRoundImportService {
-
     private gameService: GameService = new GameService();
     private trackedGameService: TrackedGameService = new TrackedGameService();
     private eventService: EventService = new EventService();
@@ -45,7 +44,11 @@ export class TournamentRoundImportService {
             return { imported: 0, errors: [t('telegram.importParse.notTournament')], games: [] };
         }
         if (this.eventService.hasEventEnded(event)) {
-            return { imported: 0, errors: [t('telegram.importParse.eventEnded', { eventName: event.name })], games: [] };
+            return {
+                imported: 0,
+                errors: [t('telegram.importParse.eventEnded', { eventName: event.name })],
+                games: [],
+            };
         }
 
         const playerCount = event.gameRules.numberOfPlayers as 3 | 4;
@@ -145,7 +148,13 @@ export class TournamentRoundImportService {
 
             const tokens = line.split(/\s+/).filter(token => token.length > 0);
             if (tokens.length !== playerCount) {
-                errors.push(t('telegram.importParse.rowWrongPlayerCount', { table: tableNumber, playerCount, actual: tokens.length }));
+                errors.push(
+                    t('telegram.importParse.rowWrongPlayerCount', {
+                        table: tableNumber,
+                        playerCount,
+                        actual: tokens.length,
+                    })
+                );
                 continue;
             }
 
@@ -194,13 +203,20 @@ export class TournamentRoundImportService {
             const tableKey = String(table.tableNumber);
             const existing = this.gameService.findGameByEventRoundAndTable(eventId, tournamentRound, tableKey);
             if (existing !== undefined) {
-                errors.push(t('telegram.importParse.tableGameExists', { table: table.tableNumber, round: tournamentRound }));
+                errors.push(
+                    t('telegram.importParse.tableGameExists', { table: table.tableNumber, round: tournamentRound })
+                );
             }
 
             const tableUserIds = new Set<number>();
             for (const player of table.players) {
                 if (tableUserIds.has(player.userId)) {
-                    errors.push(t('telegram.importParse.tablePlayerDuplicate', { table: table.tableNumber, userId: player.userId }));
+                    errors.push(
+                        t('telegram.importParse.tablePlayerDuplicate', {
+                            table: table.tableNumber,
+                            userId: player.userId,
+                        })
+                    );
                 }
                 tableUserIds.add(player.userId);
 

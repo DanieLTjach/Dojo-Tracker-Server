@@ -1,0 +1,66 @@
+import type { AchievementValueUnit } from '../data/achievementsCatalog.ts';
+
+export const AchievementCriterion = {
+    Highest: 'highest',
+    Lowest: 'lowest',
+    AllQualifiers: 'all-qualifiers',
+} as const;
+
+export type AchievementCriterion = typeof AchievementCriterion[keyof typeof AchievementCriterion];
+
+/**
+ * Output of the pure calculator: winners (by user id) and the headline value for
+ * a metric. `value` is undefined for "all-qualifiers" achievements (and when no
+ * player qualified), where a single headline value makes no sense.
+ */
+export interface ComputedAchievement {
+    metric: string;
+    value: number | undefined;
+    winnerUserIds: number[];
+}
+
+/** A single persisted eventAchievement row. `value` is null for "all-qualifiers" achievements. */
+export interface EventAchievementRow {
+    eventId: number;
+    metric: string;
+    userId: number;
+    value: number | null;
+}
+
+export interface AchievementWinner {
+    userId: number;
+    name: string;
+    profileFirstName: string | null;
+    profileLastName: string | null;
+}
+
+/**
+ * One achievement as shown on the tournament page: catalog metadata joined with
+ * the computed winners. `winners` is empty when no player qualified.
+ */
+export interface EventAchievementResult {
+    metric: string;
+    name: string;
+    description: string;
+    criterion: AchievementCriterion;
+    valueUnit: AchievementValueUnit;
+    value: number | undefined;
+    valueFormatted: string | undefined;
+    tied: boolean;
+    winners: AchievementWinner[];
+}
+
+/**
+ * One achievement a user has won, as shown on their profile page. Includes the
+ * owning tournament so the frontend can group/link by event.
+ */
+export interface UserAchievement {
+    eventId: number;
+    eventName: string;
+    metric: string;
+    name: string;
+    description: string;
+    valueUnit: AchievementValueUnit;
+    value: number | undefined;
+    valueFormatted: string | undefined;
+}

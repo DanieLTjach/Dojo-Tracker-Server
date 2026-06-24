@@ -24,7 +24,7 @@ describe('AuthMiddleware', () => {
         userService = new UserService();
         const userRepository = new UserRepository();
         // Create test user
-        testUser = userService.registerUser("test_name", 'testuser', 123456789, 0);
+        testUser = userService.registerUser('test_name', 'testuser', 123456789, 0);
         // Activate the user for tests
         userRepository.updateUserStatus(testUser.id, true, 'ACTIVE', 0);
         // Refresh testUser to get updated isActive status
@@ -39,7 +39,7 @@ describe('AuthMiddleware', () => {
     beforeEach(() => {
         tokenService = new TokenService();
         mockReq = {
-            headers: {}
+            headers: {},
         };
         mockRes = {};
         mockNext = jest.fn();
@@ -49,7 +49,7 @@ describe('AuthMiddleware', () => {
         it('should successfully authenticate with valid token', () => {
             const { accessToken } = tokenService.createTokenPair(testUser);
             mockReq.headers = {
-                authorization: `Bearer ${accessToken}`
+                authorization: `Bearer ${accessToken}`,
             };
 
             requireAuth(mockReq as Request, mockRes as Response, mockNext);
@@ -70,7 +70,7 @@ describe('AuthMiddleware', () => {
         it('should throw error for invalid authorization header format (missing Bearer)', () => {
             const { accessToken } = tokenService.createTokenPair(testUser);
             mockReq.headers = {
-                authorization: accessToken // Missing "Bearer " prefix
+                authorization: accessToken, // Missing "Bearer " prefix
             };
 
             requireAuth(mockReq as Request, mockRes as Response, mockNext);
@@ -80,7 +80,7 @@ describe('AuthMiddleware', () => {
 
         it('should throw error for invalid authorization header format (wrong scheme)', () => {
             mockReq.headers = {
-                authorization: 'Basic some-token'
+                authorization: 'Basic some-token',
             };
 
             requireAuth(mockReq as Request, mockRes as Response, mockNext);
@@ -90,7 +90,7 @@ describe('AuthMiddleware', () => {
 
         it('should throw error for invalid token', () => {
             mockReq.headers = {
-                authorization: 'Bearer invalid-token-here'
+                authorization: 'Bearer invalid-token-here',
             };
 
             requireAuth(mockReq as Request, mockRes as Response, mockNext);
@@ -106,7 +106,7 @@ describe('AuthMiddleware', () => {
             mockReq.user = {
                 userId: SYSTEM_USER_ID,
                 iat: Math.floor(Date.now() / 1000),
-                exp: Math.floor(Date.now() / 1000) + 3600
+                exp: Math.floor(Date.now() / 1000) + 3600,
             };
 
             requireAdmin(mockReq as Request, mockRes as Response, mockNext);
@@ -126,7 +126,7 @@ describe('AuthMiddleware', () => {
             mockReq.user = {
                 userId: testUser.id,
                 iat: Math.floor(Date.now() / 1000),
-                exp: Math.floor(Date.now() / 1000) + 3600
+                exp: Math.floor(Date.now() / 1000) + 3600,
             };
 
             requireAdmin(mockReq as Request, mockRes as Response, mockNext);

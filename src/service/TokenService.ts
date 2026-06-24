@@ -6,7 +6,6 @@ import config from '../../config/config.ts';
 import { InvalidTokenError, TokenExpiredError } from '../error/AuthErrors.ts';
 
 export class TokenService {
-
     /**
      * Creates a JWT token pair for a user.
      * @param user - The user to create tokens for
@@ -15,7 +14,7 @@ export class TokenService {
     createTokenPair(user: User): TokenPair {
         const payload: DecodedToken = { userId: user.id };
         const accessToken = jwt.sign(payload, config.jwtSecret, {
-            expiresIn: config.jwtExpiry
+            expiresIn: config.jwtExpiry,
         } as SignOptions);
         return { accessToken };
     }

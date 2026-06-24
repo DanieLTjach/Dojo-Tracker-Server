@@ -57,7 +57,7 @@ export class ClubInviteRepository {
             isActive: booleanToInteger(params.isActive),
             createdAt: params.createdAt.toISOString(),
             modifiedAt: params.modifiedAt.toISOString(),
-            modifiedBy: params.modifiedBy
+            modifiedBy: params.modifiedBy,
         });
         return result!.id;
     }
@@ -96,7 +96,10 @@ export class ClubInviteRepository {
         return this.existsByCodeStatement().get({ code }) !== undefined;
     }
 
-    private setActiveStatement(): Statement<{ id: number; isActive: number; modifiedAt: string; modifiedBy: number }, void> {
+    private setActiveStatement(): Statement<
+        { id: number, isActive: number, modifiedAt: string, modifiedBy: number },
+        void
+    > {
         return dbManager.db.prepare(`
             UPDATE clubInvite
             SET isActive = :isActive,
@@ -111,11 +114,11 @@ export class ClubInviteRepository {
             id,
             isActive: booleanToInteger(isActive),
             modifiedAt: new Date().toISOString(),
-            modifiedBy
+            modifiedBy,
         });
     }
 
-    private incrementUsesStatement(): Statement<{ id: number; modifiedAt: string }, void> {
+    private incrementUsesStatement(): Statement<{ id: number, modifiedAt: string }, void> {
         return dbManager.db.prepare(`
             UPDATE clubInvite
             SET usesCount = usesCount + 1,
@@ -128,7 +131,7 @@ export class ClubInviteRepository {
         this.incrementUsesStatement().run({ id, modifiedAt: new Date().toISOString() });
     }
 
-    private recordRedemptionStatement(): Statement<{ inviteId: number; userId: number; redeemedAt: string }, void> {
+    private recordRedemptionStatement(): Statement<{ inviteId: number, userId: number, redeemedAt: string }, void> {
         return dbManager.db.prepare(`
             INSERT INTO clubInviteRedemption (inviteId, userId, redeemedAt)
             VALUES (:inviteId, :userId, :redeemedAt)
@@ -139,7 +142,7 @@ export class ClubInviteRepository {
         this.recordRedemptionStatement().run({ inviteId, userId, redeemedAt: redeemedAt.toISOString() });
     }
 
-    private findRedemptionStatement(): Statement<{ inviteId: number; userId: number }, { redeemedAt: string }> {
+    private findRedemptionStatement(): Statement<{ inviteId: number, userId: number }, { redeemedAt: string }> {
         return dbManager.db.prepare(`
             SELECT redeemedAt
             FROM clubInviteRedemption
@@ -199,6 +202,6 @@ function clubInviteFromDBEntity(dbEntity: ClubInviteDBEntity): ClubInvite {
         isActive: Boolean(dbEntity.isActive),
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
-        modifiedBy: dbEntity.modifiedBy
+        modifiedBy: dbEntity.modifiedBy,
     };
 }

@@ -18,7 +18,7 @@ export class ClubInviteController {
             clubId: preview.clubId,
             clubName: preview.clubName,
             label: preview.label,
-            isRedeemable: preview.isRedeemable
+            isRedeemable: preview.isRedeemable,
         });
     }
 

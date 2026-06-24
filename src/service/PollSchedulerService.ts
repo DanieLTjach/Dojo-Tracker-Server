@@ -96,16 +96,20 @@ class PollSchedulerService {
         return options;
     }
 
-    private async sendTelegramPoll(topic: TelegramTopic, question: string, options: string[]): Promise<TelegramPollSendResult> {
+    private async sendTelegramPoll(
+        topic: TelegramTopic,
+        question: string,
+        options: string[]
+    ): Promise<TelegramPollSendResult> {
         try {
             const pollMessage = await telegramBot.telegram.sendPoll(topic.chatId, question, options, {
                 is_anonymous: false,
                 allows_multiple_answers: true,
-                ...(topic.topicId !== undefined && { message_thread_id: topic.topicId })
+                ...(topic.topicId !== undefined && { message_thread_id: topic.topicId }),
             });
             return {
                 messageId: pollMessage.message_id,
-                pinned: await this.pinTelegramPoll(topic, pollMessage.message_id)
+                pinned: await this.pinTelegramPoll(topic, pollMessage.message_id),
             };
         } catch (error) {
             LogService.logError(`Error sending poll to chat ${topic.chatId} topic ${topic.topicId}`, error);
@@ -116,11 +120,14 @@ class PollSchedulerService {
     private async pinTelegramPoll(topic: TelegramTopic, messageId: number): Promise<boolean> {
         try {
             await telegramBot.telegram.pinChatMessage(topic.chatId, messageId, {
-                disable_notification: true
+                disable_notification: true,
             });
             return true;
         } catch (error) {
-            LogService.logError(`Error pinning poll message ${messageId} in chat ${topic.chatId} topic ${topic.topicId}`, error);
+            LogService.logError(
+                `Error pinning poll message ${messageId} in chat ${topic.chatId} topic ${topic.topicId}`,
+                error
+            );
             return false;
         }
     }

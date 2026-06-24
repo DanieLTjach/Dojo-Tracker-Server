@@ -1,10 +1,13 @@
 import type { Request, Response } from 'express';
-import { StatusCodes } from "http-status-codes";
-import { getAllUsersCurrentRatingSchema, getAllUsersTotalRatingChangeDuringPeriodSchema, getUserRatingHistorySchema } from "../schema/RatingSchemas.ts";
-import { RatingService } from "../service/RatingService.ts";
+import { StatusCodes } from 'http-status-codes';
+import {
+    getAllUsersCurrentRatingSchema,
+    getAllUsersTotalRatingChangeDuringPeriodSchema,
+    getUserRatingHistorySchema,
+} from '../schema/RatingSchemas.ts';
+import { RatingService } from '../service/RatingService.ts';
 
 export class RatingController {
-
     private ratingService: RatingService = new RatingService();
 
     getAllUsersCurrentRating(req: Request, res: Response) {
@@ -16,7 +19,7 @@ export class RatingController {
     getAllUsersTotalRatingChangeDuringPeriod(req: Request, res: Response) {
         const {
             params: { eventId },
-            query: { dateFrom, dateTo }
+            query: { dateFrom, dateTo },
         } = getAllUsersTotalRatingChangeDuringPeriodSchema.parse(req);
         const ratingChanges = this.ratingService.getAllUsersTotalRatingChangeDuringPeriod(
             eventId,

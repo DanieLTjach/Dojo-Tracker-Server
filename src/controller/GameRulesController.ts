@@ -7,7 +7,7 @@ import {
     gameRulesDetailsUpdateSchema,
     gameRulesGetByIdSchema,
     gameRulesGetListSchema,
-    gameRulesUpdateSchema
+    gameRulesUpdateSchema,
 } from '../schema/GameRulesSchemas.ts';
 import { gameRulesCatalog } from '../data/gameRulesCatalog.ts';
 import { gameRulesPresets } from '../data/gameRulesPresets.ts';
@@ -44,7 +44,7 @@ export class GameRulesController {
                         name,
                         extends: parentPreset,
                         rules,
-                        ownRules
+                        ownRules,
                     }))
             );
     }

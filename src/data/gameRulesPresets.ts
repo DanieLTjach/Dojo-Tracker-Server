@@ -48,7 +48,7 @@ const defaultDef: GameRulesPresetDef = {
         triple_ron: 'yes',
         two_han_minimum: false,
         ura_dora: true,
-    }
+    },
 };
 
 const ema2025Def: GameRulesPresetDef = {
@@ -80,7 +80,7 @@ const ema2025Def: GameRulesPresetDef = {
         substitute_player_uma: -15,
         west_round: false,
         yakuman_stacking: false,
-    }
+    },
 };
 
 const mahjongSoulDef: GameRulesPresetDef = {
@@ -104,7 +104,6 @@ const mahjongSoulDef: GameRulesPresetDef = {
         kan_dora_called_promoted_quad: 'after_discard',
         mangan_rounding_up: false,
         nagashi_mangan: true,
-        nagashi_mangan_count_as_a_win: false,
         noten_penalty: 3000,
         number_of_players: 4,
         red_fives: 'three_one_per_suit',
@@ -113,7 +112,7 @@ const mahjongSoulDef: GameRulesPresetDef = {
         starting_points: 25000,
         west_round: true,
         yakuman_stacking: true,
-    }
+    },
 };
 
 const mahjongSoulSanmaDef: GameRulesPresetDef = {
@@ -133,7 +132,7 @@ const mahjongSoulSanmaDef: GameRulesPresetDef = {
         rinshan_from_kita: true,
         ron_on_kita: 'yes_without_chankan',
         starting_points: 35000,
-    }
+    },
 };
 
 const gameRulesPresetDefs = [

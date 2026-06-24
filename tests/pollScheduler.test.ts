@@ -15,7 +15,7 @@ function makeConfig(overrides: Partial<ClubPollConfig> = {}): ClubPollConfig {
         sendTime: '10:00',
         extraOptions: ['Результати 👀'],
         isActive: true,
-        ...overrides
+        ...overrides,
     };
 }
 
@@ -139,7 +139,7 @@ describe('sendTelegramPoll', () => {
     const topic: TelegramTopic = {
         type: TelegramTopicType.MAIN,
         chatId: -100123456,
-        topicId: 789
+        topicId: 789,
     };
 
     type PollSender = {
@@ -147,7 +147,7 @@ describe('sendTelegramPoll', () => {
             topic: TelegramTopic,
             question: string,
             options: string[]
-        ): Promise<{ messageId: number | null; pinned: boolean }>;
+        ): Promise<{ messageId: number | null, pinned: boolean }>;
     };
 
     function pollSender(): PollSender {
@@ -165,10 +165,10 @@ describe('sendTelegramPoll', () => {
         expect(sendPollSpy).toHaveBeenCalledWith(topic.chatId, 'Poll question', ['Yes', 'No'], {
             is_anonymous: false,
             allows_multiple_answers: true,
-            message_thread_id: topic.topicId
+            message_thread_id: topic.topicId,
         });
         expect(pinChatMessageSpy).toHaveBeenCalledWith(topic.chatId, 321, {
-            disable_notification: true
+            disable_notification: true,
         });
         expect(result).toEqual({ messageId: 321, pinned: true });
     });

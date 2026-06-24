@@ -1,10 +1,10 @@
-import type { GameRoundResult } from "./GameRoundResultModels.ts";
+import type { GameRoundResult } from './GameRoundResultModels.ts';
 
 export const Wind = {
     EAST: 'EAST',
     SOUTH: 'SOUTH',
     WEST: 'WEST',
-    NORTH: 'NORTH'
+    NORTH: 'NORTH',
 } as const;
 
 export type Wind = typeof Wind[keyof typeof Wind];
@@ -20,7 +20,7 @@ export const WIND_ORDER: Record<Wind, number> = Object.fromEntries(
 export const GameStatus = {
     CREATED: 'CREATED',
     IN_PROGRESS: 'IN_PROGRESS',
-    FINISHED: 'FINISHED'
+    FINISHED: 'FINISHED',
 } as const;
 
 export type GameStatus = typeof GameStatus[keyof typeof GameStatus];
@@ -32,7 +32,7 @@ export const GameFinishReason = {
     AGARI_YAME: 'AGARI_YAME',
     REACHED_NORTH_ROUND: 'REACHED_NORTH_ROUND',
     PLAYED_ALL_ROUNDS: 'PLAYED_ALL_ROUNDS',
-    GOAL_EXCEEDED_IN_WEST_ROUND: 'GOAL_EXCEEDED_IN_WEST_ROUND'
+    GOAL_EXCEEDED_IN_WEST_ROUND: 'GOAL_EXCEEDED_IN_WEST_ROUND',
 } as const;
 
 export type GameFinishReason = typeof GameFinishReason[keyof typeof GameFinishReason];
@@ -108,6 +108,7 @@ export interface GameFilters {
     userId?: number | undefined;
     eventId?: number | undefined;
     clubId?: number | undefined;
+    status?: GameStatus | undefined;
     sortOrder?: 'asc' | 'desc' | undefined;
     limit?: number | undefined;
     offset?: number | undefined;

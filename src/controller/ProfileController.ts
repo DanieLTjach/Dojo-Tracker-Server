@@ -4,13 +4,12 @@ import { ProfileService } from '../service/ProfileService.ts';
 import { profileEditSchema } from '../schema/ProfileSchemas.ts';
 
 export class ProfileController {
-
     private profileService: ProfileService = new ProfileService();
 
     updateProfile(req: Request, res: Response) {
         const {
             params: { id },
-            body: { firstNameEn, lastNameEn, firstName, lastName, emaNumber, hideProfile }
+            body: { firstNameEn, lastNameEn, firstName, lastName, emaNumber, hideProfile },
         } = profileEditSchema.parse(req);
 
         const modifiedBy = req.user!.userId;

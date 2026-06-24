@@ -4,7 +4,7 @@ import { UserService } from '../service/UserService.ts';
 import {
     MissingAuthTokenError,
     InvalidAuthTokenError,
-    InsufficientPermissionsError
+    InsufficientPermissionsError,
 } from '../error/AuthErrors.ts';
 import type { DecodedToken } from '../model/AuthModels.ts';
 import config from '../../config/config.ts';
@@ -85,7 +85,7 @@ export const requireAdmin = (req: Request, _res: Response, next: NextFunction): 
 
         const user = userService.getUserById(req.user.userId);
         if (!user.isAdmin) {
-            throw new InsufficientPermissionsError(); 
+            throw new InsufficientPermissionsError();
         }
 
         next();

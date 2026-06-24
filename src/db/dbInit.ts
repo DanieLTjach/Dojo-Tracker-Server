@@ -14,7 +14,7 @@ if (!fs.existsSync(dbDir)) {
 }
 
 class DBManager {
-    db: BetterSqlite3Database = new Database(config.dbPath);;
+    db: BetterSqlite3Database = new Database(config.dbPath);
 
     constructor() {
         this.initDB();

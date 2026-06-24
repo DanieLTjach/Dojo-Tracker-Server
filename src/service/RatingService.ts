@@ -1,15 +1,19 @@
-import { booleanToInteger } from "../db/dbUtils.ts";
-import { PleaseProvideStartPlaceForAllPlayersToResolveTie } from "../error/RatingErrors.ts";
-import type { GameRules, UmaTieBreak } from "../model/EventModels.ts";
-import { WIND_ORDER, type GameWithPlayers, type PlayerData } from "../model/GameModels.ts";
-import type { RatingSnapshot, UserRating, UserRatingChangeShortDTO, UserRatingWithPlace } from "../model/RatingModels.ts";
-import { RatingRepository } from "../repository/RatingRepository.ts";
-import { EventService } from "./EventService.ts";
-import { UserService } from "./UserService.ts";
-import { getChomboHandling, getSubstitutePlayerPenaltyBeforeUma, getSubstitutePlayerUma } from "../util/RulesUtils.ts";
+import { booleanToInteger } from '../db/dbUtils.ts';
+import { PleaseProvideStartPlaceForAllPlayersToResolveTie } from '../error/RatingErrors.ts';
+import type { GameRules, UmaTieBreak } from '../model/EventModels.ts';
+import { WIND_ORDER, type GameWithPlayers, type PlayerData } from '../model/GameModels.ts';
+import type {
+    RatingSnapshot,
+    UserRating,
+    UserRatingChangeShortDTO,
+    UserRatingWithPlace,
+} from '../model/RatingModels.ts';
+import { RatingRepository } from '../repository/RatingRepository.ts';
+import { EventService } from './EventService.ts';
+import { UserService } from './UserService.ts';
+import { getChomboHandling, getSubstitutePlayerPenaltyBeforeUma, getSubstitutePlayerUma } from '../util/RulesUtils.ts';
 
 export class RatingService {
-
     private ratingRepository: RatingRepository = new RatingRepository();
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
@@ -22,12 +26,12 @@ export class RatingService {
 
         const result = userRatings.map(ur => ({
             ...ur,
-            place: standingsMap.get(ur.user.id) ?? null
+            place: standingsMap.get(ur.user.id) ?? null,
         }));
         result.sort((a, b) =>
-            (booleanToInteger(b.minimumGamesPlayed) - booleanToInteger(a.minimumGamesPlayed))
-            || (b.rating - a.rating)
-            || (a.user.name.localeCompare(b.user.name))
+            (booleanToInteger(b.minimumGamesPlayed) - booleanToInteger(a.minimumGamesPlayed)) ||
+            (b.rating - a.rating) ||
+            (a.user.name.localeCompare(b.user.name))
         );
         return result;
     }
@@ -66,15 +70,17 @@ export class RatingService {
 
         for (const [index, playerData] of players.entries()) {
             const latestRatingChange = this.ratingRepository.findUserLatestRatingChangeBeforeDate(
-                playerData.userId, eventId, gameTimestamp
+                playerData.userId,
+                eventId,
+                gameTimestamp
             );
             const currentRating = latestRatingChange?.rating ?? startingRating * RATING_TO_POINTS_COEFFICIENT;
 
             const detailedRules = gameRules.details?.rules;
             const gainedPoints = playerData.points - gameRules.startingPoints;
-            const ratingChange = gainedPoints
-                + uma[index]! * RATING_TO_POINTS_COEFFICIENT
-                - (getChomboHandling(detailedRules ?? {}) === "mangan" ? 0 : 20000) * (playerData.chomboCount ?? 0);
+            const ratingChange = gainedPoints +
+                uma[index]! * RATING_TO_POINTS_COEFFICIENT -
+                (getChomboHandling(detailedRules ?? {}) === 'mangan' ? 0 : 20000) * (playerData.chomboCount ?? 0);
             const newRating = currentRating + ratingChange;
 
             this.ratingRepository.addUserRatingChange({
@@ -83,7 +89,7 @@ export class RatingService {
                 gameId: gameId,
                 ratingChange,
                 rating: newRating,
-                timestamp: gameTimestamp
+                timestamp: gameTimestamp,
             });
             this.ratingRepository.updateUserRatingChangesAfterDate(
                 playerData.userId,
@@ -113,17 +119,13 @@ export class RatingService {
     private applySubstitutePenalty(playersData: PlayerData[], gameRules: GameRules): PlayerData[] {
         const detailedRules = gameRules.details?.rules;
         if (detailedRules === undefined) {
-            return playersData.map((player) => ({ ...player }));
+            return playersData.map(player => ({ ...player }));
         }
-    
+
         const penalty = getSubstitutePlayerPenaltyBeforeUma(detailedRules);
-        if (penalty === 0) {
-            return playersData.map((player) => ({ ...player }));
-        }
-    
-        return playersData.map((player) => ({
+        return playersData.map(player => ({
             ...player,
-            points: player.points - (player.isSubstitutePlayer ? penalty : 0)
+            points: player.points - (player.isSubstitutePlayer ? penalty : 0),
         }));
     }
 
@@ -204,9 +206,8 @@ export class RatingService {
         return (gameRules.uma as number[][])[nonNegativePointsCount - 1]!;
     }
 
-
     calculateStandings(eventId: number): Map<number, number> {
-        const userRatings = this.ratingRepository.findAllUsersCurrentRating(eventId)
+        const userRatings = this.ratingRepository.findAllUsersCurrentRating(eventId);
         return this.calculateStandingsMap(userRatings);
     }
 

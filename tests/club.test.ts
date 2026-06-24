@@ -110,7 +110,7 @@ describe('Club API Endpoints', () => {
                 .send({
                     name: 'Integration Club Create',
                     description: 'Created in tests',
-                    city: 'Kyiv'
+                    city: 'Kyiv',
                 });
 
             createdClubId = response.body.id;
@@ -212,8 +212,8 @@ describe('Club API Endpoints', () => {
                 status: 'PENDING',
                 permissions: {
                     canEditClub: false,
-                    canManageMembers: false
-                }
+                    canManageMembers: false,
+                },
             }]);
         });
 
@@ -233,8 +233,8 @@ describe('Club API Endpoints', () => {
                 status: 'ACTIVE',
                 permissions: {
                     canEditClub: true,
-                    canManageMembers: true
-                }
+                    canManageMembers: true,
+                },
             });
         });
 
@@ -258,8 +258,8 @@ describe('Club API Endpoints', () => {
                 status: 'ACTIVE',
                 permissions: {
                     canEditClub: false,
-                    canManageMembers: true
-                }
+                    canManageMembers: true,
+                },
             });
         });
 
@@ -282,8 +282,8 @@ describe('Club API Endpoints', () => {
                 status: 'ACTIVE',
                 permissions: {
                     canEditClub: false,
-                    canManageMembers: false
-                }
+                    canManageMembers: false,
+                },
             });
         });
 
@@ -309,8 +309,8 @@ describe('Club API Endpoints', () => {
                 status: 'INACTIVE',
                 permissions: {
                     canEditClub: false,
-                    canManageMembers: false
-                }
+                    canManageMembers: false,
+                },
             });
         });
 
@@ -341,7 +341,7 @@ describe('Club API Endpoints', () => {
                     city: 'Lviv',
                     description: 'Updated',
                     contactInfo: '+380...',
-                    isActive: true
+                    isActive: true,
                 });
 
             expect(response.status).toBe(200);
@@ -492,8 +492,16 @@ describe('Club API Endpoints', () => {
 
                 expect(response.status).toBe(200);
                 expect(Array.isArray(response.body)).toBe(true);
-                expect(response.body.some((membership: { userId: number; role: string }) => membership.userId === ownerId && membership.role === 'OWNER')).toBe(true);
-                expect(response.body.some((membership: { userId: number; status: string }) => membership.userId === memberId && membership.status === 'PENDING')).toBe(true);
+                expect(
+                    response.body.some((membership: { userId: number, role: string }) =>
+                        membership.userId === ownerId && membership.role === 'OWNER'
+                    )
+                ).toBe(true);
+                expect(
+                    response.body.some((membership: { userId: number, status: string }) =>
+                        membership.userId === memberId && membership.status === 'PENDING'
+                    )
+                ).toBe(true);
             });
         });
     });

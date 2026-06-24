@@ -1,5 +1,5 @@
-import { BadRequestError, InternalServerError } from "./BaseErrors.ts";
-import type { Wind } from "../model/GameModels.ts";
+import { BadRequestError, InternalServerError } from './BaseErrors.ts';
+import type { Wind } from '../model/GameModels.ts';
 
 export class RulesetShouldContainDetailedRulesError extends InternalServerError {
     constructor() {
@@ -112,5 +112,11 @@ export class InvalidHonbaFormatError extends InternalServerError {
 export class NoPlayersInTheGameError extends InternalServerError {
     constructor() {
         super('noPlayersInTheGame');
+    }
+}
+
+export class PlayerNotInGameError extends BadRequestError {
+    constructor(playerId: number) {
+        super(`Гравець ${playerId} відсутній у грі`, 'playerNotInGame');
     }
 }

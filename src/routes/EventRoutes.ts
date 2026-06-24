@@ -2,15 +2,17 @@ import { Router } from 'express';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { EventController } from '../controller/EventController.ts';
 import { EventRegistrationController } from '../controller/EventRegistrationController.ts';
-import { requireAuth } from '../middleware/AuthMiddleware.ts';
+import { AchievementController } from '../controller/AchievementController.ts';
+import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
 import {
     requireEventManagementRole,
-    requireEventManagementRoleOrApprovedFilter
+    requireEventManagementRoleOrApprovedFilter,
 } from '../middleware/EventManagementMiddleware.ts';
 
 const router = Router();
 const eventController = new EventController();
 const registrationController = new EventRegistrationController();
+const achievementController = new AchievementController();
 
 /**
  * GET /api/events
@@ -29,6 +31,31 @@ router.get('/', requireAuth, withTransaction((req, res) => eventController.getAl
 router.get('/:eventId', requireAuth, withTransaction((req, res) => eventController.getEventById(req, res)));
 
 /**
+ * GET /api/events/:eventId/achievements
+ * Per-tournament achievements (winners + values) for the tournament page
+ *
+ * Authentication: Required
+ */
+router.get(
+    '/:eventId/achievements',
+    requireAuth,
+    withTransaction((req, res) => achievementController.getEventAchievements(req, res))
+);
+
+/**
+ * POST /api/events/:eventId/achievements/recompute
+ * Force recompute of a tournament's achievements (e.g. after fixing bad data)
+ *
+ * Authentication: Required (Admin only)
+ */
+router.post(
+    '/:eventId/achievements/recompute',
+    requireAuth,
+    requireAdmin,
+    withTransaction((req, res) => achievementController.recomputeEventAchievements(req, res))
+);
+
+/**
  * POST /api/events
  * Create a new event
  *
@@ -43,6 +70,93 @@ router.post('/', requireAuth, withTransaction((req, res) => eventController.crea
  * Authentication: Required (Admin only)
  */
 router.put('/:eventId', requireAuth, withTransaction((req, res) => eventController.updateEvent(req, res)));
+
+/**
+ * PATCH /api/events/:eventId
+ * Partially update an event. Only the provided fields change; `info` is merged one level
+ * deep (patching `venue` keeps `schedule`/`links`/`pairings`). The merged result is
+ * validated exactly like a full PUT.
+ *
+ * Authentication: Required (Admin or Club Owner — same as PUT)
+ */
+router.patch('/:eventId', requireAuth, withTransaction((req, res) => eventController.patchEvent(req, res)));
+
+/**
+ * POST /api/events/:eventId/tournament/rounds/:roundId/start
+ * Advance tournament state to the given round. Idempotent: including the round id makes a
+ * duplicated request (double tap, retry on bad network) a no-op instead of skipping a round.
+ *
+ * Authentication: Required (Admin, Club Owner, or Club Moderator)
+ */
+router.post(
+    '/:eventId/tournament/rounds/:roundId/start',
+    requireAuth,
+    withTransaction((req, res) => eventController.startTournamentRound(req, res))
+);
+
+/**
+ * POST /api/events/:eventId/tournament/rounds/:roundId/cancel
+ * Cancel (undo) the start of the current tournament round, stepping currentRound back one step.
+ * Only allowed for the round that is currently active and while none of its games have been played
+ * yet (all still CREATED). Lets a moderator roll back an accidental start or regenerate seating.
+ *
+ * Authentication: Required (Admin, Club Owner, or Club Moderator)
+ */
+router.post(
+    '/:eventId/tournament/rounds/:roundId/cancel',
+    requireAuth,
+    withTransaction((req, res) => eventController.cancelTournamentRound(req, res))
+);
+
+/**
+ * POST /api/events/:eventId/tournament/finish
+ * Finish a tournament after its final round games are complete
+ *
+ * Authentication: Required (Admin, Club Owner, or Club Moderator)
+ */
+router.post(
+    '/:eventId/tournament/finish',
+    requireAuth,
+    withTransaction((req, res) => eventController.finishTournament(req, res))
+);
+
+/**
+ * POST /api/events/:eventId/tournament/seating/generate
+ * Generate candidate seatings from the tournament's approved participants and round count.
+ * Does not persist — returns options for a moderator to choose from.
+ *
+ * Authentication: Required (Admin, Club Owner, or Club Moderator)
+ */
+// Read-only and CPU-bound (runs in a worker thread): no DB transaction, handled asynchronously.
+router.post(
+    '/:eventId/tournament/seating/generate',
+    requireAuth,
+    (req, res, next) => eventController.generateTournamentSeating(req, res).catch(next)
+);
+
+/**
+ * POST /api/events/:eventId/tournament/seating/apply
+ * Persist a chosen seating by creating CREATED tournament games (only before start, clean slate).
+ *
+ * Authentication: Required (Admin, Club Owner, or Club Moderator)
+ */
+router.post(
+    '/:eventId/tournament/seating/apply',
+    requireAuth,
+    withTransaction((req, res) => eventController.applyTournamentSeating(req, res))
+);
+
+/**
+ * DELETE /api/events/:eventId/tournament/seating
+ * Delete all generated tournament games so a new seating can be produced (only before start).
+ *
+ * Authentication: Required (Admin, Club Owner, or Club Moderator)
+ */
+router.delete(
+    '/:eventId/tournament/seating',
+    requireAuth,
+    withTransaction((req, res) => eventController.clearTournamentSeating(req, res))
+);
 
 /**
  * DELETE /api/events/:eventId

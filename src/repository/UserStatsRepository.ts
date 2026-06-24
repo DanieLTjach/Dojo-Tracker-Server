@@ -5,7 +5,7 @@ import type { GameStatsData } from '../model/UserStatsModels.ts';
 export class UserStatsRepository {
     // Get all game data for a user in an event (points, placement, rating changes)
     private getUserGameStatsStatement(): Statement<
-        { userId: number; eventId: number },
+        { userId: number, eventId: number },
         GameStatsData
     > {
         return dbManager.db.prepare(`
@@ -23,8 +23,7 @@ export class UserStatsRepository {
              JOIN userToGame utg ON g.id = utg.gameId
              JOIN userRatingChange urc ON urc.gameId = g.id AND urc.userId = utg.userId
              WHERE g.eventId = :eventId AND utg.userId = :userId
-             ORDER BY g.createdAt`
-        );
+             ORDER BY g.createdAt`);
     }
 
     getUserGameStats(userId: number, eventId: number): GameStatsData[] {
@@ -33,7 +32,7 @@ export class UserStatsRepository {
 
     // Get current rating for a user in an event
     private getUserCurrentRatingStatement(): Statement<
-        { userId: number; eventId: number },
+        { userId: number, eventId: number },
         { rating: number }
     > {
         return dbManager.db.prepare(`
@@ -41,8 +40,7 @@ export class UserStatsRepository {
             FROM userRatingChange
             WHERE userId = :userId AND eventId = :eventId
             ORDER BY timestamp DESC
-            LIMIT 1`
-        );
+            LIMIT 1`);
     }
 
     getUserCurrentRating(userId: number, eventId: number): number | undefined {
@@ -55,8 +53,7 @@ export class UserStatsRepository {
         return dbManager.db.prepare(`
             SELECT COUNT(*) as totalGames
             FROM game
-            WHERE eventId = :eventId`
-        );
+            WHERE eventId = :eventId`);
     }
 
     getTotalGamesInEvent(eventId: number): number {

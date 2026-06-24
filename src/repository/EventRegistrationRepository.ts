@@ -27,8 +27,7 @@ const REGISTRATION_FROM_JOIN = `
 `;
 
 export class EventRegistrationRepository {
-
-    private findRegistrationStatement(): Statement<{ eventId: number; userId: number }, EventRegistrationDBEntity> {
+    private findRegistrationStatement(): Statement<{ eventId: number, userId: number }, EventRegistrationDBEntity> {
         return dbManager.db.prepare(`
             SELECT ${REGISTRATION_SELECT_COLUMNS}
             ${REGISTRATION_FROM_JOIN}
@@ -55,7 +54,10 @@ export class EventRegistrationRepository {
         return this.findRegistrationsByEventIdStatement().all({ eventId }).map(eventRegistrationFromDBEntity);
     }
 
-    private findRegistrationsByEventIdAndStatusStatement(): Statement<{ eventId: number; status: EventRegistrationStatus }, EventRegistrationDBEntity> {
+    private findRegistrationsByEventIdAndStatusStatement(): Statement<
+        { eventId: number, status: EventRegistrationStatus },
+        EventRegistrationDBEntity
+    > {
         return dbManager.db.prepare(`
             SELECT ${REGISTRATION_SELECT_COLUMNS}
             ${REGISTRATION_FROM_JOIN}
@@ -66,7 +68,9 @@ export class EventRegistrationRepository {
     }
 
     findRegistrationsByEventIdAndStatus(eventId: number, status: EventRegistrationStatus): EventRegistration[] {
-        return this.findRegistrationsByEventIdAndStatusStatement().all({ eventId, status }).map(eventRegistrationFromDBEntity);
+        return this.findRegistrationsByEventIdAndStatusStatement().all({ eventId, status }).map(
+            eventRegistrationFromDBEntity
+        );
     }
 
     private findRegistrationsByUserIdStatement(): Statement<{ userId: number }, EventRegistrationDBEntity> {
@@ -82,7 +86,10 @@ export class EventRegistrationRepository {
         return this.findRegistrationsByUserIdStatement().all({ userId }).map(eventRegistrationFromDBEntity);
     }
 
-    private findRegistrationsByUserIdAndStatusStatement(): Statement<{ userId: number; status: EventRegistrationStatus }, EventRegistrationDBEntity> {
+    private findRegistrationsByUserIdAndStatusStatement(): Statement<
+        { userId: number, status: EventRegistrationStatus },
+        EventRegistrationDBEntity
+    > {
         return dbManager.db.prepare(`
             SELECT ${REGISTRATION_SELECT_COLUMNS}
             ${REGISTRATION_FROM_JOIN}
@@ -93,7 +100,9 @@ export class EventRegistrationRepository {
     }
 
     findRegistrationsByUserIdAndStatus(userId: number, status: EventRegistrationStatus): EventRegistration[] {
-        return this.findRegistrationsByUserIdAndStatusStatement().all({ userId, status }).map(eventRegistrationFromDBEntity);
+        return this.findRegistrationsByUserIdAndStatusStatement().all({ userId, status }).map(
+            eventRegistrationFromDBEntity
+        );
     }
 
     private createRegistrationStatement(): Statement<{
@@ -116,7 +125,7 @@ export class EventRegistrationRepository {
             ...params,
             isFillerPlayer: booleanToInteger(params.isFillerPlayer ?? false),
             createdAt: params.createdAt.toISOString(),
-            modifiedAt: params.modifiedAt.toISOString()
+            modifiedAt: params.modifiedAt.toISOString(),
         });
     }
 
@@ -137,13 +146,18 @@ export class EventRegistrationRepository {
         `);
     }
 
-    updateRegistrationStatus(eventId: number, userId: number, status: EventRegistrationStatus, modifiedBy: number): void {
+    updateRegistrationStatus(
+        eventId: number,
+        userId: number,
+        status: EventRegistrationStatus,
+        modifiedBy: number
+    ): void {
         this.updateRegistrationStatusStatement().run({
             eventId,
             userId,
             status,
             modifiedAt: new Date().toISOString(),
-            modifiedBy
+            modifiedBy,
         });
     }
 
@@ -164,17 +178,22 @@ export class EventRegistrationRepository {
         `);
     }
 
-    updateRegistrationIsFillerPlayer(eventId: number, userId: number, isFillerPlayer: boolean, modifiedBy: number): void {
+    updateRegistrationIsFillerPlayer(
+        eventId: number,
+        userId: number,
+        isFillerPlayer: boolean,
+        modifiedBy: number
+    ): void {
         this.updateRegistrationIsFillerPlayerStatement().run({
             eventId,
             userId,
             isFillerPlayer: booleanToInteger(isFillerPlayer),
             modifiedAt: new Date().toISOString(),
-            modifiedBy
+            modifiedBy,
         });
     }
 
-    private deleteRegistrationStatement(): Statement<{ eventId: number; userId: number }, void> {
+    private deleteRegistrationStatement(): Statement<{ eventId: number, userId: number }, void> {
         return dbManager.db.prepare(`
             DELETE FROM eventRegistration
             WHERE eventId = :eventId
@@ -250,6 +269,6 @@ function eventRegistrationFromDBEntity(dbEntity: EventRegistrationDBEntity): Eve
         status: parseEventRegistrationStatus(dbEntity.status),
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
-        modifiedBy: dbEntity.modifiedBy
+        modifiedBy: dbEntity.modifiedBy,
     };
 }

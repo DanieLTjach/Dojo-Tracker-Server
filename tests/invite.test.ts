@@ -29,10 +29,15 @@ describe('Invite API Endpoints', () => {
     let clubId: number;
 
     function cleanup(): void {
-        dbManager.db.prepare('DELETE FROM clubInviteRedemption WHERE inviteId IN (SELECT id FROM clubInvite WHERE clubId = ?)').run(clubId);
+        dbManager.db.prepare(
+            'DELETE FROM clubInviteRedemption WHERE inviteId IN (SELECT id FROM clubInvite WHERE clubId = ?)'
+        ).run(clubId);
         dbManager.db.prepare('DELETE FROM clubInvite WHERE clubId = ?').run(clubId);
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(clubId);
-        dbManager.db.prepare('DELETE FROM user WHERE telegramId >= ? AND telegramId < ?').run(TELEGRAM_BASE, TELEGRAM_BASE + 100000);
+        dbManager.db.prepare('DELETE FROM user WHERE telegramId >= ? AND telegramId < ?').run(
+            TELEGRAM_BASE,
+            TELEGRAM_BASE + 100000
+        );
     }
 
     function createInvite(type: ClubInviteType) {
@@ -48,7 +53,7 @@ describe('Invite API Endpoints', () => {
             contactInfo: null,
             isActive: true,
             createdAt: new Date('2026-04-01T10:00:00.000Z'),
-            modifiedBy: SYSTEM_USER_ID
+            modifiedBy: SYSTEM_USER_ID,
         });
     });
 
@@ -70,7 +75,7 @@ describe('Invite API Endpoints', () => {
             type: 'JOIN_CLUB',
             clubId,
             clubName: 'Invite API Club',
-            isRedeemable: true
+            isRedeemable: true,
         });
     });
 

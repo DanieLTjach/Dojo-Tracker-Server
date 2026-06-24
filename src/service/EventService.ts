@@ -4,22 +4,46 @@ import {
     CannotDeleteEventWithGamesError,
     CannotDeleteEventWithRegistrationsError,
     CurrentRatingEventMustBeClubScopedError,
-    TournamentMustHaveClubError
+    InvalidEventDateRangeError,
+    MinParticipantsExceedsMaxError,
+    ParticipantConfigOnlyForTournamentError,
+    TournamentMustHaveClubError,
+    TournamentConfigRequiredError,
+    TournamentConfigOnlyForTournamentError,
+    EventIsNotTournamentError,
+    TournamentTotalRoundsLessThanCurrentRoundError,
+    TournamentRoundGamesNotFinishedError,
+    TournamentRoundOutOfSequenceError,
+    TournamentRoundNotCurrentError,
+    TournamentHasNoMoreRoundsError,
+    TournamentRoundAlreadyPlayedError,
+    TournamentAlreadyFinishedError,
+    TournamentNotInLastRoundError,
+    TournamentGameNotInCurrentRoundError,
+    TournamentMisconfigured,
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
-import type { Event, EventInfo } from '../model/EventModels.ts';
+import type { Event, EventConfig, EventInfo, EventType } from '../model/EventModels.ts';
+import type { Game } from '../model/GameModels.ts';
+import { ClubRole } from '../model/ClubModels.ts';
+import { TournamentStatus } from '../model/TournamentModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { UserService } from './UserService.ts';
+import { TournamentRepository } from '../repository/TournamentRepository.ts';
+import { GameRepository } from '../repository/GameRepository.ts';
+import type { EventPatchBody } from '../schema/EventSchemas.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
     private clubRepository: ClubRepository = new ClubRepository();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
     private eventRegistrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
+    private tournamentRepository: TournamentRepository = new TournamentRepository();
+    private gameRepository: GameRepository = new GameRepository();
     private userService: UserService = new UserService();
 
     getAllEvents(clubId?: number): Event[] {
@@ -74,6 +98,7 @@ export class EventService {
 
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
+        this.validateEventDataInvariants(data);
 
         const now = new Date();
         const eventId = this.eventRepository.createEvent({
@@ -84,18 +109,25 @@ export class EventService {
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
-            maxParticipants: data.maxParticipants ?? null,
-            registrationDeadline: data.registrationDeadline ?? null,
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
+            config: data.config ?? null,
             blockGameCreation: data.blockGameCreation ?? false,
             createdAt: now,
             modifiedAt: now,
-            modifiedBy
+            modifiedBy,
         });
 
-        this.syncCurrentRatingEvent(undefined, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
+        this.syncTournamentConfig(undefined, eventId, data, modifiedBy, now);
+        this.syncCurrentRatingEvent(
+            undefined,
+            data.clubId ?? null,
+            data.isCurrentRating ?? false,
+            eventId,
+            modifiedBy,
+            now
+        );
 
         return this.getEventById(eventId);
     }
@@ -114,9 +146,17 @@ export class EventService {
 
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
+        this.validateEventDataInvariants(data, existingEvent);
 
         const now = new Date();
-        this.syncCurrentRatingEvent(existingEvent, data.clubId ?? null, data.isCurrentRating ?? false, eventId, modifiedBy, now);
+        this.syncCurrentRatingEvent(
+            existingEvent,
+            data.clubId ?? null,
+            data.isCurrentRating ?? false,
+            eventId,
+            modifiedBy,
+            now
+        );
 
         this.eventRepository.updateEvent({
             id: eventId,
@@ -127,17 +167,148 @@ export class EventService {
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
             dateTo: data.dateTo ?? null,
-            maxParticipants: data.maxParticipants ?? null,
-            registrationDeadline: data.registrationDeadline ?? null,
             startingRating: data.startingRating,
             minimumGamesForRating: data.minimumGamesForRating,
             info: data.info ?? null,
+            config: data.config ?? null,
             blockGameCreation: data.blockGameCreation ?? false,
             modifiedAt: now,
-            modifiedBy
+            modifiedBy,
         });
 
+        this.syncTournamentConfig(existingEvent, eventId, data, modifiedBy, now);
+
         return this.getEventById(eventId);
+    }
+
+    /**
+     * Partial update. Projects the existing event into the write-side EventData shape,
+     * merges the provided fields over it (info is merged one level deep so a patch that
+     * touches only `venue` doesn't wipe `schedule`/`links`/`pairings`), then runs the full
+     * `updateEvent` path so all authorization, validation, and sync logic is shared — the
+     * merged object is validated exactly as a full PUT would be.
+     */
+    patchEvent(eventId: number, patch: EventPatchBody, modifiedBy: number): Event {
+        const existingEvent = this.getEventById(eventId);
+        const merged = mergeEventData(projectEventToData(existingEvent), patch);
+        return this.updateEvent(eventId, merged, modifiedBy);
+    }
+
+    /**
+     * Advance the tournament to `roundId`. Idempotent by design: the caller passes the round
+     * it wants to become current, so a duplicated request (double tap, retry on bad network)
+     * is a no-op rather than skipping a round.
+     *
+     * - roundId === currentRound          → no-op (already started).
+     * - roundId === (currentRound ?? 0)+1 → start that round.
+     * - anything else                     → rejected as out of sequence.
+     */
+    startTournamentRound(eventId: number, roundId: number, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.authorizeTournamentManagement(event, modifiedBy);
+        const tournament = event.tournament!;
+
+        // Already on the requested round: treat a duplicate request as a successful no-op.
+        if (tournament.currentRound === roundId) {
+            return event;
+        }
+
+        if (tournament.status === TournamentStatus.FINISHED) {
+            throw new TournamentAlreadyFinishedError(event.name);
+        }
+
+        const nextRound = (tournament.currentRound ?? 0) + 1;
+        if (roundId !== nextRound) {
+            throw new TournamentRoundOutOfSequenceError(event.name, nextRound, roundId);
+        }
+        if (nextRound > tournament.totalRounds) {
+            throw new TournamentHasNoMoreRoundsError(event.name);
+        }
+
+        if (tournament.currentRound !== null) {
+            this.validateTournamentRoundFinished(event, tournament.currentRound);
+        }
+
+        const status = nextRound === tournament.totalRounds
+            ? TournamentStatus.LAST_ROUND
+            : TournamentStatus.IN_PROGRESS;
+
+        this.tournamentRepository.updateTournamentState(eventId, status, nextRound, new Date(), modifiedBy);
+
+        return this.getEventById(eventId);
+    }
+
+    /**
+     * Cancel (undo) the start of the current tournament round, stepping currentRound back one step.
+     * Only the round that is currently active can be cancelled, and only while none of its games have
+     * been played yet (all still CREATED) — so we never discard in-progress or finished results.
+     *
+     * Cancelling round N returns the tournament to round N-1's state (IN_PROGRESS), or to the
+     * un-started state (CREATED / currentRound = null) when N was the first round.
+     */
+    cancelTournamentRound(eventId: number, roundId: number, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.authorizeTournamentManagement(event, modifiedBy);
+        const tournament = event.tournament!;
+
+        if (tournament.status === TournamentStatus.FINISHED) {
+            throw new TournamentAlreadyFinishedError(event.name);
+        }
+
+        // Only the round that is actually current can be cancelled. A null currentRound (nothing
+        // started) or any other round id is rejected.
+        if (tournament.currentRound !== roundId) {
+            throw new TournamentRoundNotCurrentError(event.name, tournament.currentRound, roundId);
+        }
+
+        this.validateTournamentRoundNotStarted(event, roundId);
+
+        const previousRound = roundId - 1;
+        const newCurrentRound = previousRound >= 1 ? previousRound : null;
+        const newStatus = newCurrentRound === null ? TournamentStatus.CREATED : TournamentStatus.IN_PROGRESS;
+
+        this.tournamentRepository.updateTournamentState(eventId, newStatus, newCurrentRound, new Date(), modifiedBy);
+
+        return this.getEventById(eventId);
+    }
+
+    finishTournament(eventId: number, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.authorizeTournamentManagement(event, modifiedBy);
+        const tournament = event.tournament!;
+
+        if (tournament.status === TournamentStatus.FINISHED) {
+            throw new TournamentAlreadyFinishedError(event.name);
+        }
+
+        if (tournament.currentRound !== tournament.totalRounds) {
+            throw new TournamentNotInLastRoundError(event.name);
+        }
+
+        this.validateTournamentRoundFinished(event, tournament.currentRound);
+
+        this.tournamentRepository.updateTournamentState(
+            eventId,
+            TournamentStatus.FINISHED,
+            tournament.currentRound,
+            new Date(),
+            modifiedBy
+        );
+
+        return this.getEventById(eventId);
+    }
+
+    validateTournamentGameCanStart(event: Event, game: Game): void {
+        if (event.type !== 'TOURNAMENT') {
+            return;
+        }
+
+        if (event.tournament === null || game.tournamentRound !== event.tournament.currentRound) {
+            throw new TournamentGameNotInCurrentRoundError(
+                event.tournament?.currentRound ?? null,
+                game.tournamentRound
+            );
+        }
     }
 
     private authorizeEventCreation(clubId: number | null | undefined, userId: number): void {
@@ -156,7 +327,11 @@ export class EventService {
         }
     }
 
-    private authorizeEventUpdate(existingEvent: Event, requestedClubId: number | null | undefined, userId: number): void {
+    private authorizeEventUpdate(
+        existingEvent: Event,
+        requestedClubId: number | null | undefined,
+        userId: number
+    ): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
             return;
@@ -194,6 +369,9 @@ export class EventService {
             this.clubRepository.updateCurrentRatingEvent(event.clubId, null, new Date(), modifiedBy);
         }
 
+        if (event.tournament !== null) {
+            this.tournamentRepository.deleteTournament(eventId);
+        }
         this.eventRepository.deleteEvent(eventId);
     }
 
@@ -216,6 +394,103 @@ export class EventService {
     private validateTournamentClub(data: EventData): void {
         if (data.type === 'TOURNAMENT' && (data.clubId === null || data.clubId === undefined)) {
             throw new TournamentMustHaveClubError();
+        }
+    }
+
+    getTournamentEvent(eventId: number): Event {
+        const event = this.getEventById(eventId);
+        if (event.type !== 'TOURNAMENT') {
+            throw new EventIsNotTournamentError(event.name);
+        }
+        if (event.tournament === null) {
+            throw new TournamentMisconfigured();
+        }
+        return event;
+    }
+
+    private authorizeTournamentManagement(event: Event, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        if (user.isAdmin) {
+            return;
+        }
+
+        if (event.clubId === null) {
+            throw new InsufficientPermissionsError();
+        }
+
+        const role = this.membershipRepository.getUserClubRole(event.clubId, userId);
+        if (role !== ClubRole.OWNER && role !== ClubRole.MODERATOR) {
+            throw new InsufficientClubPermissionsError([ClubRole.OWNER, ClubRole.MODERATOR]);
+        }
+    }
+
+    private validateTournamentRoundFinished(event: Event, round: number): void {
+        const unfinishedCount = this.gameRepository.countUnfinishedGamesByEventAndTournamentRound(event.id, round);
+        if (unfinishedCount > 0) {
+            throw new TournamentRoundGamesNotFinishedError(event.name, round, unfinishedCount);
+        }
+    }
+
+    private validateTournamentRoundNotStarted(event: Event, round: number): void {
+        const startedCount = this.gameRepository.countStartedGamesByEventAndTournamentRound(event.id, round);
+        if (startedCount > 0) {
+            throw new TournamentRoundAlreadyPlayedError(event.name, round, startedCount);
+        }
+    }
+
+    private validateTournamentConfig(data: EventData, existingEvent?: Event): void {
+        if (data.type === 'TOURNAMENT') {
+            if (data.tournament === null || data.tournament === undefined) {
+                throw new TournamentConfigRequiredError();
+            }
+            this.validateTotalRoundsNotLessThanCurrentRound(
+                data.tournament.totalRounds,
+                existingEvent?.tournament?.currentRound ?? null
+            );
+            return;
+        }
+
+        if (data.tournament !== null && data.tournament !== undefined) {
+            throw new TournamentConfigOnlyForTournamentError();
+        }
+    }
+
+    private validateTotalRoundsNotLessThanCurrentRound(totalRounds: number, currentRound: number | null): void {
+        if (currentRound !== null && totalRounds < currentRound) {
+            throw new TournamentTotalRoundsLessThanCurrentRoundError(totalRounds, currentRound);
+        }
+    }
+
+    /**
+     * Cross-field invariants that previously lived only in the `eventSchema` zod refine.
+     * Lifted here so they also guard the PATCH path (which merges then writes without
+     * re-running the full create/update zod refinements). PUT keeps the zod refine too as
+     * defense in depth; this guard makes the rules apply uniformly.
+     */
+    private validateEventDataInvariants(data: EventData, existingEvent?: Event): void {
+        this.validateTournamentConfig(data, existingEvent);
+
+        if (data.dateFrom && data.dateTo && data.dateFrom >= data.dateTo) {
+            throw new InvalidEventDateRangeError();
+        }
+
+        const minParticipants = data.config?.minParticipants;
+        const maxParticipants = data.config?.maxParticipants;
+        const registrationDeadline = data.config?.registrationDeadline;
+
+        if (
+            data.type !== 'TOURNAMENT' &&
+            (minParticipants !== undefined || maxParticipants !== undefined || registrationDeadline !== undefined)
+        ) {
+            throw new ParticipantConfigOnlyForTournamentError();
+        }
+
+        if (
+            minParticipants !== undefined &&
+            maxParticipants !== undefined &&
+            minParticipants > maxParticipants
+        ) {
+            throw new MinParticipantsExceedsMaxError();
         }
     }
 
@@ -245,21 +520,155 @@ export class EventService {
             this.clubRepository.updateCurrentRatingEvent(newClubId, eventId, modifiedAt, modifiedBy);
         }
     }
+
+    private syncTournamentConfig(
+        existingEvent: Event | undefined,
+        eventId: number,
+        data: EventData,
+        modifiedBy: number,
+        modifiedAt: Date
+    ): void {
+        if (data.type === 'TOURNAMENT') {
+            if (existingEvent === undefined || existingEvent.tournament === null) {
+                this.tournamentRepository.createTournament(
+                    eventId,
+                    data.tournament!.totalRounds,
+                    modifiedAt,
+                    modifiedBy
+                );
+                return;
+            }
+
+            this.tournamentRepository.updateTournamentTotalRounds(
+                eventId,
+                data.tournament!.totalRounds,
+                modifiedAt,
+                modifiedBy
+            );
+            return;
+        }
+
+        if (existingEvent?.tournament !== null && existingEvent?.tournament !== undefined) {
+            this.tournamentRepository.deleteTournament(eventId);
+        }
+    }
+}
+
+// Project a stored Event (read shape) into the write-side EventData. The two
+// shapes differ: Event holds the full `gameRules` object and a rich `tournament`
+// row, while EventData wants `gameRulesId` and a minimal `{ totalRounds }`. This
+// projection is the base a PATCH merges onto.
+export function projectEventToData(event: Event): EventData {
+    const base: EventData = {
+        name: event.name,
+        description: event.description,
+        type: event.type,
+        clubId: event.clubId,
+        isCurrentRating: event.isCurrentRating,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        gameRulesId: event.gameRules.id,
+        startingRating: event.startingRating,
+        minimumGamesForRating: event.minimumGamesForRating,
+        info: event.info,
+        config: event.config,
+        blockGameCreation: event.blockGameCreation,
+    };
+    if (event.tournament !== null) {
+        base.tournament = { totalRounds: event.tournament.totalRounds };
+    }
+    return base;
+}
+
+// Merge a partial patch over a base EventData. Only keys present in the patch
+// override the base; JSON objects are merged one level deep so patching one
+// sub-key preserves its siblings.
+export function mergeEventData(base: EventData, patch: EventPatchBody): EventData {
+    const merged: EventData = { ...base };
+    assignIfPresent(merged, patch, 'name');
+    assignIfPresent(merged, patch, 'description');
+    assignIfPresent(merged, patch, 'type');
+    assignIfPresent(merged, patch, 'isCurrentRating');
+    assignIfPresent(merged, patch, 'dateFrom');
+    assignIfPresent(merged, patch, 'dateTo');
+    assignIfPresent(merged, patch, 'clubId');
+    assignIfPresent(merged, patch, 'gameRulesId');
+    assignIfPresent(merged, patch, 'startingRating');
+    assignIfPresent(merged, patch, 'minimumGamesForRating');
+    assignIfPresent(merged, patch, 'blockGameCreation');
+    assignIfPresent(merged, patch, 'tournament');
+    if ('info' in patch) {
+        merged.info = mergeEventInfo(base.info ?? null, patch.info ?? null);
+    }
+    if ('config' in patch) {
+        merged.config = mergeEventConfig(base.config ?? null, patch.config ?? null);
+    }
+    return merged;
+}
+
+// Copy `key` from patch to target only when the patch actually carries it. The
+// shared key names between EventPatchBody and EventData make this type-safe.
+function assignIfPresent<K extends keyof EventPatchBody & keyof EventData>(
+    target: EventData,
+    patch: EventPatchBody,
+    key: K
+): void {
+    if (key in patch) {
+        target[key] = patch[key] as EventData[K];
+    }
+}
+
+// One-level-deep merge of the event `info` JSON column. A `null` patch clears
+// info entirely; otherwise each provided sub-key replaces the base sub-key while
+// untouched sub-keys are carried forward.
+function mergeEventInfo(base: EventInfo | null, patch: EventInfo | null): EventInfo | null {
+    if (patch === null) {
+        return null;
+    }
+    if (base === null) {
+        return patch;
+    }
+    return { ...base, ...patch };
+}
+
+function mergeEventConfig(
+    base: EventConfig | null,
+    patch: NonNullable<EventPatchBody['config']> | null
+): EventConfig | null {
+    if (patch === null) {
+        return null;
+    }
+
+    const merged: Partial<Record<keyof EventConfig, EventConfig[keyof EventConfig]>> = { ...base };
+    for (const key of Object.keys(patch) as Array<keyof EventConfig>) {
+        const value = patch[key];
+        if (value === null) {
+            delete merged[key];
+        } else if (value !== undefined) {
+            merged[key] = value;
+        }
+    }
+
+    return Object.keys(merged).length > 0 ? merged as EventConfig : null;
+}
+
+export interface TournamentData {
+    totalRounds: number;
 }
 
 export interface EventData {
     name: string;
     description?: string | null | undefined;
-    type: string;
+    type: EventType;
     clubId?: number | null | undefined;
     isCurrentRating?: boolean | null | undefined;
     dateFrom?: Date | null | undefined;
     dateTo?: Date | null | undefined;
-    maxParticipants?: number | null | undefined;
-    registrationDeadline?: Date | null | undefined;
     gameRulesId: number;
     startingRating: number;
     minimumGamesForRating: number;
     info?: EventInfo | null | undefined;
+    config?: EventConfig | null | undefined;
     blockGameCreation?: boolean | undefined;
+    tournament?: TournamentData | null | undefined;
 }

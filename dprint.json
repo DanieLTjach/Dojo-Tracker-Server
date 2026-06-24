@@ -1,0 +1,40 @@
+{
+    "typescript": {
+        "indentWidth": 4,
+        "useTabs": false,
+        "lineWidth": 120,
+        "quoteStyle": "preferSingle",
+        "trailingCommas": "onlyMultiLine",
+        "arguments.trailingCommas": "never",
+        "parameters.trailingCommas": "never",
+        "arrowFunction.useParentheses": "preferNone",
+        "preferSingleLine": false,
+        "module.sortImportDeclarations": "maintain",
+        "importDeclaration.sortNamedImports": "maintain",
+        "exportDeclaration.sortNamedExports": "maintain",
+        "typeLiteral.separatorKind.singleLine": "comma",
+        "binaryExpression.operatorPosition": "sameLine"
+    },
+    "json": {
+        "indentWidth": 4
+    },
+    "yaml": {
+        "indentWidth": 2
+    },
+    "excludes": [
+        "**/node_modules",
+        "**/*.md",
+        "coverage",
+        "graphify-out",
+        "db/data",
+        "package-lock.json",
+        "**/*.db",
+        "dist",
+        "build"
+    ],
+    "plugins": [
+        "https://plugins.dprint.dev/typescript-0.93.0.wasm",
+        "https://plugins.dprint.dev/json-0.19.4.wasm",
+        "https://plugins.dprint.dev/g-plane/pretty_yaml-v0.5.0.wasm"
+    ]
+}

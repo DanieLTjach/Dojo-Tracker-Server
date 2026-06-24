@@ -4,15 +4,14 @@ import {
     clubGetByIdSchema,
     clubMembershipActivateSchema,
     clubMembershipRequestJoinSchema,
-    clubMembershipUpdateSchema
+    clubMembershipUpdateSchema,
 } from '../src/schema/ClubSchemas.ts';
 import {
     ClubMembershipAlreadyExistsError,
     ClubNotFoundError,
     InsufficientClubPermissionsError,
-    InvalidClubMembershipStateError
+    InvalidClubMembershipStateError,
 } from '../src/error/ClubErrors.ts';
-import { t } from '../src/i18n/index.ts';
 
 describe('ClubSchemas', () => {
     it('coerces club route params and trims club body fields', () => {
@@ -23,14 +22,14 @@ describe('ClubSchemas', () => {
                 city: '  Kyiv  ',
                 description: '  Test club  ',
                 contactInfo: '  @dojo  ',
-                isActive: true
-            }
+                isActive: true,
+            },
         });
 
         const params = clubGetByIdSchema.parse({
             params: {
-                clubId: '7'
-            }
+                clubId: '7',
+            },
         });
 
         expect(parsed.body).toEqual({
@@ -39,7 +38,7 @@ describe('ClubSchemas', () => {
             city: 'Kyiv',
             description: 'Test club',
             contactInfo: '@dojo',
-            isActive: true
+            isActive: true,
         });
         expect(params.params.clubId).toBe(7);
     });
@@ -47,15 +46,15 @@ describe('ClubSchemas', () => {
     it('coerces membership route params', () => {
         const joinRequest = clubMembershipRequestJoinSchema.parse({
             params: {
-                clubId: '3'
-            }
+                clubId: '3',
+            },
         });
 
         const activated = clubMembershipActivateSchema.parse({
             params: {
                 clubId: '3',
-                userId: '11'
-            }
+                userId: '11',
+            },
         });
 
         expect(joinRequest.params).toEqual({ clubId: 3 });
@@ -67,11 +66,11 @@ describe('ClubSchemas', () => {
             clubMembershipUpdateSchema.parse({
                 params: {
                     clubId: '2',
-                    userId: '9'
+                    userId: '9',
                 },
                 body: {
-                    role: 'ADMIN'
-                }
+                    role: 'ADMIN',
+                },
             });
         }).toThrow(ZodError);
     });
@@ -82,25 +81,21 @@ describe('ClubErrors', () => {
         expect(new ClubNotFoundError(42)).toMatchObject({
             statusCode: 404,
             errorCode: 'clubNotFound',
-            message: t('errors.clubNotFound', { clubId: 42 })
+            message: 'Клуб з id 42 не знайдено',
         });
 
         expect(new ClubMembershipAlreadyExistsError('Test Club', 8)).toMatchObject({
             statusCode: 400,
             errorCode: 'clubMembershipAlreadyExists',
-            message: t('errors.clubMembershipAlreadyExists', { clubName: 'Test Club', userId: 8 })
+            message: "Користувач з id 8 вже є учасником клубу 'Test Club'",
         });
     });
 
     it('formats permission and invalid state messages for later club flows', () => {
         expect(new InsufficientClubPermissionsError(['OWNER', 'MODERATOR']).message)
-            .toBe(t('errors.insufficientClubPermissions', { rolesText: ['OWNER', 'MODERATOR'].join(t('common.orSeparator')) }));
+            .toBe('Недостатньо прав для виконання цієї дії. Потрібна роль: OWNER або MODERATOR');
 
-        expect(new InvalidClubMembershipStateError(t('telegram.actions.activate'), 'INACTIVE', ['PENDING']).message)
-            .toBe(t('errors.invalidClubMembershipState', {
-                action: t('telegram.actions.activate'),
-                currentStatus: 'INACTIVE',
-                allowedStatuses: 'PENDING',
-            }));
+        expect(new InvalidClubMembershipStateError('активувати', 'INACTIVE', ['PENDING']).message)
+            .toBe('Неможливо активувати учасника клубу зі статусом INACTIVE. Дозволені статуси: PENDING');
     });
 });

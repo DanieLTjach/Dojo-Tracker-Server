@@ -6,7 +6,7 @@ import {
     UserIsNotActive,
     NameAlreadyTakenByAnotherUser,
     TelegramUsernameAlreadyTakenByAnotherUser,
-    YouHaveToBeAdminToEditAnotherUser
+    YouHaveToBeAdminToEditAnotherUser,
 } from '../error/UserErrors.ts';
 import type { User, UserStatus } from '../model/UserModels.ts';
 import { ResponseStatusError } from '../error/BaseErrors.ts';
@@ -19,7 +19,6 @@ import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
 
 export class UserService {
-
     private userRepository: UserRepository = new UserRepository();
     private clubMembershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
     private clubService: ClubService = new ClubService();
@@ -124,7 +123,7 @@ export class UserService {
         const targetMemberships = this.clubMembershipRepository.findActiveMembershipsByUserId(targetUserId);
         const allowedRoles: ClubRole[] = isActive ? ['OWNER', 'MODERATOR'] : ['OWNER'];
 
-        const hasRequiredRoleInSharedClub = targetMemberships.some((membership) => {
+        const hasRequiredRoleInSharedClub = targetMemberships.some(membership => {
             const roleInClub = this.clubMembershipRepository.getUserClubRole(membership.clubId, actingUserId);
             return roleInClub !== undefined && allowedRoles.includes(roleInClub);
         });
@@ -227,7 +226,9 @@ export class UserService {
             changes.push(`<b>Name:</b> ${oldUser.name} → ${newUser.name}`);
         }
         if (oldUser.telegramUsername !== newUser.telegramUsername) {
-            changes.push(`<b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}`);
+            changes.push(
+                `<b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}`
+            );
         }
 
         let message = dedent`

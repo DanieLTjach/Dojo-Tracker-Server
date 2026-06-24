@@ -6,7 +6,7 @@ import {
     InvalidEventRegistrationStateError,
     MissingProfileNamesForTournamentRegistrationError,
     UserNotApprovedForTournamentError,
-    UserNotRegisteredForTournamentError
+    UserNotRegisteredForTournamentError,
 } from '../error/EventRegistrationErrors.ts';
 import { BadRequestError } from '../error/BaseErrors.ts';
 import type { Event } from '../model/EventModels.ts';
@@ -59,7 +59,7 @@ export class EventRegistrationService {
                 status: 'PENDING',
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy: applicantId
+                modifiedBy: applicantId,
             });
         }
 
@@ -77,7 +77,10 @@ export class EventRegistrationService {
             throw new EventRegistrationNotFoundError(event.name, applicantId);
         }
         if (registration.status !== 'PENDING' && registration.status !== 'APPROVED') {
-            throw new InvalidEventRegistrationStateError(t('telegram.actions.withdraw'), registration.status, ['PENDING', 'APPROVED']);
+            throw new InvalidEventRegistrationStateError(t('telegram.actions.withdraw'), registration.status, [
+                'PENDING',
+                'APPROVED',
+            ]);
         }
 
         this.registrationRepository.deleteRegistration(eventId, applicantId);
@@ -96,7 +99,9 @@ export class EventRegistrationService {
             throw new EventRegistrationNotFoundError(event.name, targetUserId);
         }
         if (registration.status !== 'PENDING') {
-            throw new InvalidEventRegistrationStateError(t('telegram.actions.approve'), registration.status, ['PENDING']);
+            throw new InvalidEventRegistrationStateError(t('telegram.actions.approve'), registration.status, [
+                'PENDING',
+            ]);
         }
 
         this.enforceCapacity(event);
@@ -124,7 +129,10 @@ export class EventRegistrationService {
             throw new EventRegistrationNotFoundError(event.name, targetUserId);
         }
         if (registration.status !== 'PENDING' && registration.status !== 'APPROVED') {
-            throw new InvalidEventRegistrationStateError(t('telegram.actions.reject'), registration.status, ['PENDING', 'APPROVED']);
+            throw new InvalidEventRegistrationStateError(t('telegram.actions.reject'), registration.status, [
+                'PENDING',
+                'APPROVED',
+            ]);
         }
 
         this.registrationRepository.updateRegistrationStatus(eventId, targetUserId, 'REJECTED', modifierId);
@@ -139,7 +147,7 @@ export class EventRegistrationService {
         eventId: number,
         targetUserId: number,
         modifierId: number,
-        profileNames?: { firstName: string; lastName: string },
+        profileNames?: { firstName: string, lastName: string },
         isFillerPlayer?: boolean
     ): EventRegistration {
         const event = this.eventService.getEventById(eventId);
@@ -172,14 +180,19 @@ export class EventRegistrationService {
                 isFillerPlayer: isFillerPlayer ?? false,
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy: modifierId
+                modifiedBy: modifierId,
             });
         } else {
             if (existing.status !== 'APPROVED') {
                 this.registrationRepository.updateRegistrationStatus(eventId, targetUserId, 'APPROVED', modifierId);
             }
             if (isFillerPlayer !== undefined) {
-                this.registrationRepository.updateRegistrationIsFillerPlayer(eventId, targetUserId, isFillerPlayer, modifierId);
+                this.registrationRepository.updateRegistrationIsFillerPlayer(
+                    eventId,
+                    targetUserId,
+                    isFillerPlayer,
+                    modifierId
+                );
             }
         }
 
@@ -313,7 +326,7 @@ export class EventRegistrationService {
                 status: 'PENDING',
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy: userId
+                modifiedBy: userId,
             });
             return;
         }
@@ -334,7 +347,7 @@ export class EventRegistrationService {
                 status: 'ACTIVE',
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy: modifierId
+                modifiedBy: modifierId,
             });
             return;
         }
@@ -358,7 +371,7 @@ export class EventRegistrationService {
                 status: 'ACTIVE',
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy: modifierId
+                modifiedBy: modifierId,
             });
             return;
         }
@@ -394,7 +407,9 @@ export class EventRegistrationService {
         const profile = this.profileService.getProfileByUserId(user.id);
         const firstName = profile?.firstName ?? '—';
         const lastName = profile?.lastName ?? '—';
-        return `${user.name} <code>(ID: ${user.id})</code>\n<b>${t('telegram.registrationLog.nameLabel')}</b> ${firstName} ${lastName}`;
+        return `${user.name} <code>(ID: ${user.id})</code>\n<b>${
+            t('telegram.registrationLog.nameLabel')
+        }</b> ${firstName} ${lastName}`;
     }
 
     private logApplied(event: Event, applicant: User): void {
@@ -454,8 +469,8 @@ export class EventRegistrationService {
         event: Event,
         target: User,
         modifier: User,
-        before: { firstName: string | null; lastName: string | null },
-        after: { firstName: string | null; lastName: string | null }
+        before: { firstName: string | null, lastName: string | null },
+        after: { firstName: string | null, lastName: string | null }
     ): void {
         const fmt = (n: string | null): string => n ?? '—';
         const message = dedent`

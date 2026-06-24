@@ -1,10 +1,10 @@
-import type { GameFinishReason, GameState } from "./GameModels.ts";
+import type { GameFinishReason, GameState } from './GameModels.ts';
 
 export type GameRoundResult = GameRoundResultInputDTO & {
     playerPointChanges: PlayerPointChange[];
     nextState: GameState | undefined;
     gameFinishReason: GameFinishReason | undefined;
-}
+};
 
 export type GameRoundResultInputDTO = Tsumo | Ron | ExhaustiveDraw | AbortiveDraw | Chombo;
 
@@ -52,7 +52,7 @@ export const AbortiveDrawType = {
     FOUR_WINDS: 'FOUR_WINDS',
     FOUR_KANS: 'FOUR_KANS',
     FOUR_RIICHI: 'FOUR_RIICHI',
-    TRIPLE_RON: 'TRIPLE_RON'
+    TRIPLE_RON: 'TRIPLE_RON',
 } as const;
 
 export type AbortiveDrawType = typeof AbortiveDrawType[keyof typeof AbortiveDrawType];

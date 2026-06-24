@@ -1,19 +1,25 @@
-import { BadRequestError, InternalServerError } from "./BaseErrors.ts";
+import { BadRequestError, InternalServerError } from './BaseErrors.ts';
 
 export class UserRatingChangeInGameNotFound extends InternalServerError {
     constructor(userId: number, gameId: number) {
-        super('userRatingChangeInGameNotFound', { userId, gameId });
+        super(`Зміну рейтингу користувача ${userId} в грі ${gameId} не знайдено`, 'userRatingChangeInGameNotFound');
     }
 }
 
 export class UserHasNoRatingDespiteHavingPlayedGames extends InternalServerError {
     constructor(userId: number, eventId: number) {
-        super('userHasNoRatingDespiteHavingPlayedGames', { userId, eventId });
+        super(
+            `Користувач ${userId} не має рейтингу в події ${eventId} попри те, що має зіграні ігри`,
+            'userHasNoRatingDespiteHavingPlayedGames'
+        );
     }
 }
 
 export class PleaseProvideStartPlaceForAllPlayersToResolveTie extends BadRequestError {
     constructor() {
-        super('pleaseProvideStartPlaceForAllPlayersToResolveTie');
+        super(
+            `Будь ласка, вкажіть стартове місце (вітер) для всіх гравців, щоб розв'язати нічию`,
+            'pleaseProvideStartPlaceForAllPlayersToResolveTie'
+        );
     }
 }

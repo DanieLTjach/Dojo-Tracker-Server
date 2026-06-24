@@ -7,6 +7,7 @@ import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createTestEvent, createCustomEvent, deleteEventById } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
+import { EventRepository } from '../src/repository/EventRepository.ts';
 
 const app = express();
 app.use(express.json());
@@ -64,6 +65,9 @@ describe('Event API Endpoints', () => {
             expect(event).toHaveProperty('gameCount');
             expect(event).toHaveProperty('blockGameCreation');
             expect(typeof event.blockGameCreation).toBe('boolean');
+            expect(event).toHaveProperty('tournament');
+            expect(event).toHaveProperty('config');
+            expect(event).toHaveProperty('resolvedPlayerNameDisplay');
             expect(event).toHaveProperty('createdAt');
             expect(event).toHaveProperty('modifiedAt');
             expect(event).toHaveProperty('modifiedBy');
@@ -200,7 +204,7 @@ describe('Event API Endpoints', () => {
 
             expect(response.status).toBe(200);
             expect(response.body.gameRules.details).toMatchObject({
-                preset: 'ema_2025'
+                preset: 'ema_2025',
             });
             expect(response.body.gameRules.details.rules.number_of_players).toBe(4);
             expect(response.body.gameRules.details.rules.open_tanyao).toBe(true);
@@ -265,7 +269,7 @@ describe('Event API Endpoints', () => {
             type: 'SEASON',
             gameRulesId: 1,
             dateFrom: '2026-01-01T00:00:00.000Z',
-            dateTo: '2026-01-31T00:00:00.000Z'
+            dateTo: '2026-01-31T00:00:00.000Z',
         };
 
         let createdEventId: number | undefined;
@@ -293,6 +297,31 @@ describe('Event API Endpoints', () => {
             expect(response.body.clubId).toBeNull();
             expect(response.body.isCurrentRating).toBe(false);
             expect(response.body.blockGameCreation).toBe(false);
+            expect(response.body.tournament).toBeNull();
+            expect(response.body.config).toBeNull();
+            expect(response.body.resolvedPlayerNameDisplay).toBe('NICKNAME');
+        });
+
+        test('should accept a description up to 5000 characters', async () => {
+            const description = 'a'.repeat(5000);
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, description });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.description).toBe(description);
+        });
+
+        test('should reject a description longer than 5000 characters', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, description: 'a'.repeat(5001) });
+
+            expect(response.status).toBe(400);
         });
 
         test('should create event with blockGameCreation when requested', async () => {
@@ -334,13 +363,139 @@ describe('Event API Endpoints', () => {
             const response = await request(app)
                 .post('/api/events')
                 .set('Authorization', adminAuthHeader)
-                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', isCurrentRating: true });
+                .send({
+                    ...createPayload,
+                    clubId: 1,
+                    type: 'TOURNAMENT',
+                    tournament: { totalRounds: 5 },
+                    isCurrentRating: true,
+                });
 
             createdEventId = response.body.id;
 
             expect(response.status).toBe(201);
             expect(response.body.type).toBe('TOURNAMENT');
             expect(response.body.isCurrentRating).toBe(true);
+            expect(response.body.tournament).toMatchObject({
+                status: 'CREATED',
+                currentRound: null,
+                totalRounds: 5,
+            });
+        });
+
+        test('should reject tournament without tournament config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT' });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject season with tournament config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, tournament: { totalRounds: 3 } });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should persist config and resolve playerNameDisplay override', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, config: { playerNameDisplay: 'REAL_NAME' } });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.config).toEqual({ playerNameDisplay: 'REAL_NAME' });
+            expect(response.body.resolvedPlayerNameDisplay).toBe('REAL_NAME');
+        });
+
+        test('should resolve playerNameDisplay default per type when config unset', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', tournament: { totalRounds: 3 } });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.config).toBeNull();
+            expect(response.body.resolvedPlayerNameDisplay).toBe('REAL_NAME');
+        });
+
+        test('should persist tournament minParticipants in config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...createPayload,
+                    clubId: 1,
+                    type: 'TOURNAMENT',
+                    tournament: { totalRounds: 3 },
+                    config: {
+                        minParticipants: 8,
+                        maxParticipants: 16,
+                        registrationDeadline: '2026-06-01T18:00:00.000Z',
+                    },
+                });
+
+            createdEventId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.config).toEqual({
+                minParticipants: 8,
+                maxParticipants: 16,
+                registrationDeadline: '2026-06-01T18:00:00.000Z',
+            });
+            expect(response.body.maxParticipants).toBe(16);
+            expect(response.body.registrationDeadline).toBe('2026-06-01T18:00:00.000Z');
+
+            const stored = dbManager.db.prepare('SELECT config FROM event WHERE id = ?')
+                .get(createdEventId) as { config: string };
+            expect(JSON.parse(stored.config)).toEqual({
+                minParticipants: 8,
+                maxParticipants: 16,
+                registrationDeadline: '2026-06-01T18:00:00.000Z',
+            });
+            expect(new EventRepository().findEventById(createdEventId!)?.config?.registrationDeadline)
+                .toEqual(new Date('2026-06-01T18:00:00.000Z'));
+        });
+
+        test('should reject minParticipants for a season event', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, config: { minParticipants: 4 } });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject minParticipants greater than maxParticipants', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...createPayload,
+                    clubId: 1,
+                    type: 'TOURNAMENT',
+                    tournament: { totalRounds: 3 },
+                    config: { minParticipants: 8, maxParticipants: 4 },
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject maxParticipants for a season event', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, config: { maxParticipants: 16 } });
+
+            expect(response.status).toBe(400);
         });
 
         test('should replace previous current rating season in same club on create', async () => {
@@ -354,7 +509,9 @@ describe('Event API Endpoints', () => {
 
             createdEventId = response.body.id;
 
-            const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+            const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(
+                1
+            ) as { currentRatingEventId: number | null };
 
             deleteEventById(2104);
 
@@ -411,7 +568,8 @@ describe('Event API Endpoints', () => {
             clubId: 1,
             gameRulesId: 1,
             dateFrom: '2026-04-01T00:00:00.000Z',
-            dateTo: '2026-05-01T00:00:00.000Z'
+            dateTo: '2026-05-01T00:00:00.000Z',
+            tournament: { totalRounds: 4 },
         };
 
         beforeEach(() => {
@@ -436,6 +594,11 @@ describe('Event API Endpoints', () => {
             expect(response.body.clubId).toBe(updatePayload.clubId);
             expect(response.body.isCurrentRating).toBe(false);
             expect(response.body.blockGameCreation).toBe(false);
+            expect(response.body.tournament).toMatchObject({
+                status: 'CREATED',
+                currentRound: null,
+                totalRounds: 4,
+            });
         });
 
         test('should update blockGameCreation flag', async () => {
@@ -452,7 +615,7 @@ describe('Event API Endpoints', () => {
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', adminAuthHeader)
-                .send({ ...updatePayload, type: 'SEASON', isCurrentRating: true });
+                .send({ ...updatePayload, type: 'SEASON', tournament: undefined, isCurrentRating: true });
 
             expect(response.status).toBe(200);
             expect(response.body.isCurrentRating).toBe(true);
@@ -465,9 +628,11 @@ describe('Event API Endpoints', () => {
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', adminAuthHeader)
-                .send({ ...updatePayload, type: 'SEASON', isCurrentRating: true });
+                .send({ ...updatePayload, type: 'SEASON', tournament: undefined, isCurrentRating: true });
 
-            const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+            const currentRatingEventId = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(
+                1
+            ) as { currentRatingEventId: number | null };
 
             deleteEventById(2105);
 
@@ -482,9 +647,11 @@ describe('Event API Endpoints', () => {
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', adminAuthHeader)
-                .send({ ...updatePayload, type: 'SEASON', isCurrentRating: false });
+                .send({ ...updatePayload, type: 'SEASON', tournament: undefined, isCurrentRating: false });
 
-            const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+            const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as {
+                currentRatingEventId: number | null;
+            };
 
             expect(response.status).toBe(200);
             expect(response.body.isCurrentRating).toBe(false);
@@ -505,10 +672,14 @@ describe('Event API Endpoints', () => {
             const response = await request(app)
                 .put(`/api/events/${baseEventId}`)
                 .set('Authorization', adminAuthHeader)
-                .send({ ...updatePayload, clubId: 2, type: 'SEASON', isCurrentRating: true });
+                .send({ ...updatePayload, clubId: 2, type: 'SEASON', tournament: undefined, isCurrentRating: true });
 
-            const club1 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
-            const club2 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(2) as { currentRatingEventId: number | null };
+            const club1 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as {
+                currentRatingEventId: number | null;
+            };
+            const club2 = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(2) as {
+                currentRatingEventId: number | null;
+            };
 
             dbManager.db.prepare('UPDATE club SET currentRatingEventId = NULL WHERE id = ?').run(2);
             dbManager.db.prepare('UPDATE event SET clubId = 1 WHERE id = ?').run(baseEventId);
@@ -568,7 +739,8 @@ describe('Event API Endpoints', () => {
             clubId: 1,
             gameRulesId: 1,
             dateFrom: '2026-05-23T00:00:00.000Z',
-            dateTo: '2026-05-24T00:00:00.000Z'
+            dateTo: '2026-05-24T00:00:00.000Z',
+            tournament: { totalRounds: 2 },
         };
 
         const fullInfo = {
@@ -578,9 +750,9 @@ describe('Event API Endpoints', () => {
                     title: 'Перший день, субота, 23 травня',
                     items: [
                         { time: '10:00', title: 'Початок реєстрації' },
-                        { time: '10:30–12:00', title: 'Перший ханчан', kind: 'milestone' }
-                    ]
-                }
+                        { time: '10:30–12:00', title: 'Перший ханчан', kind: 'milestone' },
+                    ],
+                },
             ],
             venue: {
                 name: 'Shogi Dojo',
@@ -589,18 +761,18 @@ describe('Event API Endpoints', () => {
                 latitude: 50.45,
                 longitude: 30.52,
                 mapUrl: 'https://maps.google.com/?q=50.45,30.52',
-                contactTelegram: 'shogidojo'
+                contactTelegram: 'shogidojo',
             },
             contacts: { phone: '+380501112233', email: 'info@example.com', telegram: 'organizer' },
             links: {
                 site: 'https://example.com',
                 registrationForm: 'https://forms.example.com/x',
-                googleMaps: 'https://maps.google.com/?q=Kyiv'
+                googleMaps: 'https://maps.google.com/?q=Kyiv',
             },
             pairings: [
-                [[12,29,38,39], [1,6,9,25], [2,7,20,43]],
-                [[4,25,26,29], [11,18,42,43], [14,16,23,40]]
-            ]
+                [[12, 29, 38, 39], [1, 6, 9, 25], [2, 7, 20, 43]],
+                [[4, 25, 26, 29], [11, 18, 42, 43], [14, 16, 23, 40]],
+            ],
         };
 
         let createdEventId: number | undefined;
@@ -688,9 +860,9 @@ describe('Event API Endpoints', () => {
                     info: {
                         pairings: [
                             [[1, 2, 3, 4], [5, 6, 7, 8]],
-                            [[9, 10, 11, 12]]
-                        ]
-                    }
+                            [[9, 10, 11, 12]],
+                        ],
+                    },
                 });
             expect(response.status).toBe(400);
         });
@@ -703,9 +875,9 @@ describe('Event API Endpoints', () => {
                     ...basePayload,
                     info: {
                         schedule: [
-                            { date: '2026-05-23T00:00:00.000Z', items: [{ title: 'No time' }] }
-                        ]
-                    }
+                            { date: '2026-05-23T00:00:00.000Z', items: [{ title: 'No time' }] },
+                        ],
+                    },
                 });
             expect(response.status).toBe(400);
         });
@@ -719,6 +891,286 @@ describe('Event API Endpoints', () => {
         });
     });
 
+    describe('PATCH /api/events/:eventId - Partial Update', () => {
+        const seedInfo = {
+            schedule: [
+                { date: '2026-05-23T00:00:00.000Z', title: 'Day 1', items: [{ time: '10:00', title: 'Registration' }] },
+            ],
+            venue: { name: 'Old Venue', address: 'Old Street 1', city: 'Kyiv' },
+            contacts: { phone: '+380501234567', paymentInfo: 'Old payment details' },
+            links: { site: 'https://old.example.com' },
+        };
+        const seedPayload = {
+            name: 'Patch Base',
+            description: 'original description',
+            type: 'TOURNAMENT' as const,
+            clubId: 1,
+            gameRulesId: 1,
+            dateFrom: '2026-05-23T00:00:00.000Z',
+            dateTo: '2026-05-24T00:00:00.000Z',
+            config: {
+                playerNameDisplay: 'REAL_NAME' as const,
+                maxParticipants: 32,
+                registrationDeadline: '2026-05-20T18:00:00.000Z',
+            },
+            tournament: { totalRounds: 3 },
+            info: seedInfo,
+        };
+
+        let eventId: number;
+
+        beforeEach(async () => {
+            const created = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send(seedPayload);
+            eventId = created.body.id;
+        });
+
+        afterEach(() => {
+            deleteEventById(eventId);
+        });
+
+        test('updates only the provided top-level field, keeping the rest', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ description: 'patched description' });
+
+            expect(response.status).toBe(200);
+            expect(response.body.description).toBe('patched description');
+            // Untouched fields preserved.
+            expect(response.body.name).toBe('Patch Base');
+            expect(response.body.maxParticipants).toBe(32);
+            expect(response.body.gameRules.id).toBe(1);
+            expect(response.body.tournament).toMatchObject({ totalRounds: 3 });
+            // info untouched entirely.
+            expect(response.body.info).toEqual(seedInfo);
+        });
+
+        test('deep-merges config: patching minParticipants preserves sibling settings', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ config: { minParticipants: 12 } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toEqual({
+                playerNameDisplay: 'REAL_NAME',
+                minParticipants: 12,
+                maxParticipants: 32,
+                registrationDeadline: '2026-05-20T18:00:00.000Z',
+            });
+            expect(response.body.maxParticipants).toBe(32);
+            expect(response.body.registrationDeadline).toBe('2026-05-20T18:00:00.000Z');
+        });
+
+        test('removes one config field with null while preserving sibling settings', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ config: { maxParticipants: null } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toEqual({
+                playerNameDisplay: 'REAL_NAME',
+                registrationDeadline: '2026-05-20T18:00:00.000Z',
+            });
+            expect(response.body.maxParticipants).toBeNull();
+            expect(response.body.registrationDeadline).toBe('2026-05-20T18:00:00.000Z');
+        });
+
+        test('stores SQL null when removing the last config fields individually', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    config: {
+                        playerNameDisplay: null,
+                        maxParticipants: null,
+                        registrationDeadline: null,
+                    },
+                });
+
+            const row = dbManager.db.prepare('SELECT config FROM event WHERE id = ?').get(eventId) as {
+                config: string | null;
+            };
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toBeNull();
+            expect(row.config).toBeNull();
+        });
+
+        test('clears config entirely with an explicit null', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ config: null });
+
+            expect(response.status).toBe(200);
+            expect(response.body.config).toBeNull();
+            expect(response.body.maxParticipants).toBeNull();
+            expect(response.body.registrationDeadline).toBeNull();
+        });
+
+        test('rejects changing a configured tournament into a season', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ type: 'SEASON', tournament: null });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('participantConfigOnlyForTournament');
+        });
+
+        test('rejects clearing tournament config from a tournament', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ tournament: null });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentConfigRequired');
+        });
+
+        test('rejects tournament config when changing the event to a season', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ type: 'SEASON', config: null });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('tournamentConfigOnlyForTournament');
+        });
+
+        test('deep-merges info: patching venue keeps schedule and links', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { venue: { name: 'New Venue', address: 'New Street 9', city: 'Lviv' } } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.info.venue).toEqual({ name: 'New Venue', address: 'New Street 9', city: 'Lviv' });
+            // Sibling info sub-objects survive the partial update.
+            expect(response.body.info.schedule).toEqual(seedInfo.schedule);
+            expect(response.body.info.links).toEqual(seedInfo.links);
+        });
+
+        test('replaces a single info sub-object wholesale, not field-by-field', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { venue: { name: 'Only Name' } } });
+
+            expect(response.status).toBe(200);
+            // venue is replaced as a whole — old address/city are gone.
+            expect(response.body.info.venue).toEqual({ name: 'Only Name' });
+        });
+
+        test('persists paymentInfo in contacts and returns it on the next GET', async () => {
+            const paymentInfo = '300 грн [Pay](https://pay.example/x)';
+            const patchResponse = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { contacts: { paymentInfo } } });
+
+            const getResponse = await request(app)
+                .get(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader);
+
+            expect(patchResponse.status).toBe(200);
+            expect(patchResponse.body.info.contacts).toEqual({ paymentInfo });
+            expect(getResponse.status).toBe(200);
+            expect(getResponse.body.info.contacts).toEqual({ paymentInfo });
+        });
+
+        test('rejects paymentInfo longer than 1000 characters', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { contacts: { paymentInfo: 'a'.repeat(1001) } } });
+
+            expect(response.status).toBe(400);
+            expect(response.body.details).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    message: 'contacts.paymentInfo must be 1000 characters or less',
+                }),
+            ]));
+        });
+
+        test('clears paymentInfo when a contacts patch omits it', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: { contacts: { phone: '+380671234567' } } });
+
+            expect(response.status).toBe(200);
+            expect(response.body.info.contacts).toEqual({ phone: '+380671234567' });
+            expect(response.body.info.contacts).not.toHaveProperty('paymentInfo');
+        });
+
+        test('clears info entirely with an explicit null', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ info: null });
+
+            expect(response.status).toBe(200);
+            expect(response.body.info).toBeNull();
+        });
+
+        test('does not reset un-patched defaulted fields', async () => {
+            // blockGameCreation / startingRating must survive a patch that omits them.
+            await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ blockGameCreation: true });
+
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ description: 'second patch' });
+
+            expect(response.status).toBe(200);
+            expect(response.body.blockGameCreation).toBe(true);
+        });
+
+        test('validates the merged result (dateFrom must precede dateTo)', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ dateFrom: '2026-06-01T00:00:00.000Z' }); // after seeded dateTo
+
+            expect(response.status).toBe(400);
+        });
+
+        test('rejects an unknown field (strict body)', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({ bogusField: 1 });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('requires authentication', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .send({ description: 'no auth' });
+
+            expect(response.status).toBe(401);
+        });
+
+        test('forbids a non-admin without club permissions', async () => {
+            const response = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Authorization', nonAdminAuthHeader)
+                .send({ description: 'nope' });
+
+            expect(response.status).toBe(403);
+        });
+    });
+
     describe('DELETE /api/events/:eventId - Delete Event', () => {
         const deletableEventId = 2002;
         const clubOwnerUserId = 88001;
@@ -729,7 +1181,18 @@ describe('Event API Endpoints', () => {
             dbManager.db.prepare(
                 `INSERT INTO user (id, telegramUsername, telegramId, name, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(clubOwnerUserId, '@clubowner_event', 88888801, 'ClubOwnerEventUser', timestamp, timestamp, 0, 1, 0, 'ACTIVE');
+            ).run(
+                clubOwnerUserId,
+                '@clubowner_event',
+                88888801,
+                'ClubOwnerEventUser',
+                timestamp,
+                timestamp,
+                0,
+                1,
+                0,
+                'ACTIVE'
+            );
             dbManager.db.prepare(
                 `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -825,7 +1288,9 @@ describe('Event API Endpoints', () => {
                 .delete(`/api/events/${deletableEventId}`)
                 .set('Authorization', adminAuthHeader);
 
-            const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as { currentRatingEventId: number | null };
+            const club = dbManager.db.prepare('SELECT currentRatingEventId FROM club WHERE id = ?').get(1) as {
+                currentRatingEventId: number | null;
+            };
 
             expect(response.status).toBe(204);
             expect(club.currentRatingEventId).toBeNull();

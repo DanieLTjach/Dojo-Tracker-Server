@@ -18,6 +18,8 @@ describe('Public tournament endpoint', () => {
     const TOURNAMENT_EVENT_ID = 98200;
     const SEASON_EVENT_ID = 98201;
     const PARTICIPANT_USER_ID = 98300;
+    const HIDDEN_PARTICIPANT_USER_ID = 98301;
+    const PENDING_PARTICIPANT_USER_ID = 98302;
 
     let timestampOffset = 0;
     function nextTs(): string {
@@ -29,8 +31,38 @@ describe('Public tournament endpoint', () => {
         const ts = nextTs();
         dbManager.db.prepare(
             `INSERT INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Public Test User', NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?)`
-        ).run(PARTICIPANT_USER_ID, ts, ts, SYSTEM_USER_ID);
+             VALUES
+                (?, 'Public Test User', NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?),
+                (?, 'Public Hidden User', NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?),
+                (?, 'Public Pending User', NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?)`
+        ).run(
+            PARTICIPANT_USER_ID,
+            ts,
+            ts,
+            SYSTEM_USER_ID,
+            HIDDEN_PARTICIPANT_USER_ID,
+            ts,
+            ts,
+            SYSTEM_USER_ID,
+            PENDING_PARTICIPANT_USER_ID,
+            ts,
+            ts,
+            SYSTEM_USER_ID
+        );
+
+        dbManager.db.prepare(
+            `INSERT INTO profile (userId, firstName, lastName, hideProfile, modifiedAt, modifiedBy)
+             VALUES
+                (?, 'Visible', 'Participant', 0, ?, ?),
+                (?, 'Hidden', 'Participant', 1, ?, ?)`
+        ).run(
+            PARTICIPANT_USER_ID,
+            ts,
+            SYSTEM_USER_ID,
+            HIDDEN_PARTICIPANT_USER_ID,
+            ts,
+            SYSTEM_USER_ID
+        );
 
         dbManager.db.prepare(
             `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
@@ -43,22 +75,33 @@ describe('Public tournament endpoint', () => {
         ).run(GAME_RULES_ID, TEST_CLUB_ID);
 
         dbManager.db.prepare(
-            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Public Test Tournament', 'Tournament description', 'TOURNAMENT', ?, ?, NULL, NULL, 8, '2026-06-01T00:00:00.000Z', 0, 0, ?, ?, ?)`
+            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, config, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'Public Test Tournament', 'Tournament description', 'TOURNAMENT', ?, ?, NULL, NULL, 0, 0, '{"maxParticipants":8,"registrationDeadline":"2026-06-01T00:00:00.000Z"}', ?, ?, ?)`
         ).run(TOURNAMENT_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, ts, ts, SYSTEM_USER_ID);
 
         dbManager.db.prepare(
-            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, maxParticipants, registrationDeadline, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Public Test Season', NULL, 'SEASON', ?, ?, NULL, NULL, NULL, NULL, 0, 0, ?, ?, ?)`
+            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'Public Test Season', NULL, 'SEASON', ?, ?, NULL, NULL, 0, 0, ?, ?, ?)`
         ).run(SEASON_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, ts, ts, SYSTEM_USER_ID);
     });
 
     afterAll(() => {
-        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?)').run(TOURNAMENT_EVENT_ID, SEASON_EVENT_ID);
+        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?)').run(
+            TOURNAMENT_EVENT_ID,
+            SEASON_EVENT_ID
+        );
         dbManager.db.prepare('DELETE FROM event WHERE id IN (?, ?)').run(TOURNAMENT_EVENT_ID, SEASON_EVENT_ID);
         dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(GAME_RULES_ID);
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(TEST_CLUB_ID);
-        dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(PARTICIPANT_USER_ID);
+        dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?)').run(
+            PARTICIPANT_USER_ID,
+            HIDDEN_PARTICIPANT_USER_ID
+        );
+        dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?, ?)').run(
+            PARTICIPANT_USER_ID,
+            HIDDEN_PARTICIPANT_USER_ID,
+            PENDING_PARTICIPANT_USER_ID
+        );
         dbManager.closeDB();
         cleanupTestDatabase();
     });
@@ -80,21 +123,63 @@ describe('Public tournament endpoint', () => {
         expect(response.body.club.name).toBe('Public Test Club');
         expect(response.body.club.contactInfo).toBe('@test_contact');
         expect(response.body.approvedCount).toBe(0);
+        expect(response.body.participants).toEqual([]);
     });
 
-    it('counts only APPROVED registrations', async () => {
-        const ts = nextTs();
-        // Insert one APPROVED and one PENDING registration; only APPROVED counts.
+    it('returns only approved participants and hides private profile names', async () => {
         dbManager.db.prepare(
             `INSERT INTO eventRegistration (eventId, userId, status, createdAt, modifiedAt, modifiedBy)
              VALUES (?, ?, 'APPROVED', ?, ?, ?)`
-        ).run(TOURNAMENT_EVENT_ID, PARTICIPANT_USER_ID, ts, ts, SYSTEM_USER_ID);
+        ).run(
+            TOURNAMENT_EVENT_ID,
+            PARTICIPANT_USER_ID,
+            nextTs(),
+            nextTs(),
+            SYSTEM_USER_ID
+        );
+        dbManager.db.prepare(
+            `INSERT INTO eventRegistration (eventId, userId, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, 'APPROVED', ?, ?, ?)`
+        ).run(
+            TOURNAMENT_EVENT_ID,
+            HIDDEN_PARTICIPANT_USER_ID,
+            nextTs(),
+            nextTs(),
+            SYSTEM_USER_ID
+        );
+        dbManager.db.prepare(
+            `INSERT INTO eventRegistration (eventId, userId, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, 'PENDING', ?, ?, ?)`
+        ).run(
+            TOURNAMENT_EVENT_ID,
+            PENDING_PARTICIPANT_USER_ID,
+            nextTs(),
+            nextTs(),
+            SYSTEM_USER_ID
+        );
 
         const response = await request(app)
             .get(`/api/public/tournaments/${TOURNAMENT_EVENT_ID}`)
             .expect(200);
 
-        expect(response.body.approvedCount).toBe(1);
+        expect(response.body.approvedCount).toBe(2);
+        expect(response.body.participants).toEqual([
+            {
+                userId: PARTICIPANT_USER_ID,
+                userName: 'Public Test User',
+                firstName: 'Visible',
+                lastName: 'Participant',
+                hideProfile: false,
+            },
+            {
+                userId: HIDDEN_PARTICIPANT_USER_ID,
+                userName: 'Public Hidden User',
+                firstName: null,
+                lastName: null,
+                hideProfile: true,
+            },
+        ]);
+        expect(response.body.participants).toHaveLength(response.body.approvedCount);
     });
 
     it('returns 404 for SEASON events to avoid leaking non-tournament details', async () => {

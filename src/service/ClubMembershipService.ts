@@ -4,14 +4,15 @@ import {
     ClubMembershipAlreadyExistsError,
     ClubMembershipNotFoundError,
     InsufficientClubPermissionsError,
-    InvalidClubMembershipStateError
+    InvalidClubMembershipStateError,
 } from '../error/ClubErrors.ts';
 import type { Club, ClubMembership, ClubRole, UserClubMembership } from '../model/ClubModels.ts';
 import type { User } from '../model/UserModels.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
-import TelegramMessageService from './TelegramMessageService.ts'; import LogService from './LogService.ts';
+import TelegramMessageService from './TelegramMessageService.ts';
+import LogService from './LogService.ts';
 import { globalClubLogsTopic } from '../model/TelegramTopic.ts';
 import { t } from '../i18n/index.ts';
 export class ClubMembershipService {
@@ -72,7 +73,7 @@ export class ClubMembershipService {
         const user = this.userService.getUserById(userId);
         const memberships = this.membershipRepository.findMembershipsByUserId(userId);
 
-        return memberships.map((membership) => buildUserClubMembership(membership, user));
+        return memberships.map(membership => buildUserClubMembership(membership, user));
     }
 
     requestJoin(clubId: number, userId: number, modifiedBy: number): ClubMembership {
@@ -100,7 +101,7 @@ export class ClubMembershipService {
             status: 'PENDING',
             createdAt: now,
             modifiedAt: now,
-            modifiedBy
+            modifiedBy,
         });
 
         const newMembership = this.getMembership(clubId, userId);
@@ -159,7 +160,7 @@ export class ClubMembershipService {
                 status: 'ACTIVE',
                 createdAt: now,
                 modifiedAt: now,
-                modifiedBy
+                modifiedBy,
             });
         }
 
@@ -184,7 +185,9 @@ export class ClubMembershipService {
 
         const oldMembership = this.getMembership(clubId, userId);
         if (oldMembership.status !== 'ACTIVE') {
-            throw new InvalidClubMembershipStateError(t('telegram.actions.changeRole'), oldMembership.status, ['ACTIVE']);
+            throw new InvalidClubMembershipStateError(t('telegram.actions.changeRole'), oldMembership.status, [
+                'ACTIVE',
+            ]);
         }
 
         this.membershipRepository.updateMembershipRole(clubId, userId, role, modifiedBy);
@@ -280,7 +283,11 @@ export class ClubMembershipService {
         this.logClubEvent(membership.clubId, message);
     }
 
-    private logMemberRoleChanged(oldMembership: ClubMembership, newMembership: ClubMembership, modifiedBy: number): void {
+    private logMemberRoleChanged(
+        oldMembership: ClubMembership,
+        newMembership: ClubMembership,
+        modifiedBy: number
+    ): void {
         const user = this.userService.getUserById(newMembership.userId);
         const modifier = this.userService.getUserById(modifiedBy);
         const message = dedent`
@@ -296,7 +303,8 @@ export class ClubMembershipService {
 }
 
 function buildUserClubMembership(membership: ClubMembership, user: User): UserClubMembership {
-    const isClubManager = membership.status === 'ACTIVE' && (membership.role === 'OWNER' || membership.role === 'MODERATOR');
+    const isClubManager = membership.status === 'ACTIVE' &&
+        (membership.role === 'OWNER' || membership.role === 'MODERATOR');
 
     return {
         clubId: membership.clubId,
@@ -305,7 +313,7 @@ function buildUserClubMembership(membership: ClubMembership, user: User): UserCl
         status: membership.status,
         permissions: {
             canEditClub: user.isAdmin || (membership.status === 'ACTIVE' && membership.role === 'OWNER'),
-            canManageMembers: user.isAdmin || isClubManager
-        }
+            canManageMembers: user.isAdmin || isClubManager,
+        },
     };
 }

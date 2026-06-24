@@ -12,8 +12,18 @@ const membershipController = new ClubMembershipController();
 router.get('/', withTransaction((req, res) => clubController.getAllClubs(req, res)));
 router.get('/:clubId', withTransaction((req, res) => clubController.getClubById(req, res)));
 router.post('/', requireAuth, requireAdmin, withTransaction((req, res) => clubController.createClub(req, res)));
-router.put('/:clubId', requireAuth, requireClubRole('OWNER'), withTransaction((req, res) => clubController.updateClub(req, res)));
-router.delete('/:clubId', requireAuth, requireAdmin, withTransaction((req, res) => clubController.deleteClub(req, res)));
+router.put(
+    '/:clubId',
+    requireAuth,
+    requireClubRole('OWNER'),
+    withTransaction((req, res) => clubController.updateClub(req, res))
+);
+router.delete(
+    '/:clubId',
+    requireAuth,
+    requireAdmin,
+    withTransaction((req, res) => clubController.deleteClub(req, res))
+);
 
 router.get(
     '/:clubId/members',
@@ -21,7 +31,11 @@ router.get(
     requireClubRole('OWNER', 'MODERATOR'),
     withTransaction((req, res) => membershipController.getMembers(req, res))
 );
-router.get('/:clubId/members/active', requireAuth, withTransaction((req, res) => membershipController.getActiveMembers(req, res)));
+router.get(
+    '/:clubId/members/active',
+    requireAuth,
+    withTransaction((req, res) => membershipController.getActiveMembers(req, res))
+);
 router.get(
     '/:clubId/members/pending',
     requireAuth,
