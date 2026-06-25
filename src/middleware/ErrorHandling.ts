@@ -7,6 +7,15 @@ import LogService from '../service/LogService.ts';
 import { UserService } from '../service/UserService.ts';
 
 const userService = new UserService();
+const sensitiveRequestBodyKeys = new Set([
+    'credential',
+    'idToken',
+    'id_token',
+    'access_token',
+    'refresh_token',
+    'g_csrf_token',
+    'code_verifier',
+]);
 
 export const handleErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {
     let userInfo = 'unknown';
@@ -20,7 +29,7 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
     }
     LogService.logError(
         `Error while processing request ${req.method} ${req.url} from user ${userInfo} with body ${
-            JSON.stringify(req.body)
+            JSON.stringify(redactSensitiveRequestBody(req.body))
         }`,
         err
     );
@@ -45,3 +54,18 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
         message: err.message || 'Internal Server Error',
     });
 };
+
+function redactSensitiveRequestBody(value: unknown): unknown {
+    if (Array.isArray(value)) {
+        return value.map(redactSensitiveRequestBody);
+    }
+    if (value !== null && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, nestedValue]) => [
+                key,
+                sensitiveRequestBodyKeys.has(key) ? '[REDACTED]' : redactSensitiveRequestBody(nestedValue),
+            ])
+        );
+    }
+    return value;
+}

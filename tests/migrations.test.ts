@@ -572,6 +572,91 @@ describe('Database Migrations', () => {
         db.close();
     });
 
+    test('migration 10 creates external auth identities and backfills Telegram users', () => {
+        const db = createMigratedDb('9.sql');
+
+        db.prepare(`
+      INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+      VALUES
+        (501, 'Telegram Linked', '@telegram_linked', 501501, '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z', 0, 1, 0, 'ACTIVE'),
+        (502, 'Google Only Later', NULL, NULL, '2026-06-02T00:00:00.000Z', '2026-06-02T00:00:00.000Z', 0, 1, 0, 'ACTIVE')
+    `).run();
+
+        runMigration(db, '10.sql');
+        db.pragma('foreign_keys = ON');
+
+        const providers = db.prepare('SELECT provider FROM authProvider ORDER BY provider').all() as Array<
+            { provider: string }
+        >;
+        expect(providers.map(row => row.provider)).toEqual(['GOOGLE', 'TELEGRAM']);
+
+        const identityColumns = (db.prepare('PRAGMA table_info(authProviderIdentity)').all() as Array<
+            { name: string, type: string, notnull: number, dflt_value: string | null }
+        >).map(({ name, type, notnull, dflt_value }) => ({ name, type, notnull, dflt_value }));
+        expect(identityColumns).toEqual([
+            { name: 'id', type: 'INTEGER', notnull: 0, dflt_value: null },
+            { name: 'userId', type: 'INTEGER', notnull: 1, dflt_value: null },
+            { name: 'provider', type: 'TEXT', notnull: 1, dflt_value: null },
+            { name: 'providerUserId', type: 'TEXT', notnull: 1, dflt_value: null },
+            { name: 'displayName', type: 'TEXT', notnull: 0, dflt_value: null },
+            { name: 'email', type: 'TEXT', notnull: 0, dflt_value: null },
+            { name: 'username', type: 'TEXT', notnull: 0, dflt_value: null },
+            { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+            { name: 'modifiedAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+        ]);
+
+        const identities = db.prepare(`
+      SELECT userId, provider, providerUserId, displayName, email, username, createdAt, modifiedAt
+      FROM authProviderIdentity
+      ORDER BY userId
+    `).all() as Array<Record<string, unknown>>;
+        expect(identities).toEqual([
+            {
+                userId: 501,
+                provider: 'TELEGRAM',
+                providerUserId: '501501',
+                displayName: 'Telegram Linked',
+                email: null,
+                username: '@telegram_linked',
+                createdAt: '2026-06-01T00:00:00.000Z',
+                modifiedAt: '2026-06-01T00:00:00.000Z',
+            },
+        ]);
+
+        db.prepare(`
+      INSERT INTO authProviderIdentity (
+        userId, provider, providerUserId, displayName, email, username, createdAt, modifiedAt
+      )
+      VALUES (
+        502, 'GOOGLE', 'google-502', 'Google Only Later', 'google@example.com', NULL,
+        '2026-06-03T00:00:00.000Z', '2026-06-03T00:00:00.000Z'
+      )
+    `).run();
+
+        expect(() =>
+            db.prepare(`
+      INSERT INTO authProviderIdentity (
+        userId, provider, providerUserId, createdAt, modifiedAt
+      )
+      VALUES (501, 'GOOGLE', 'google-502', '2026-06-04T00:00:00.000Z', '2026-06-04T00:00:00.000Z')
+    `).run()
+        ).toThrow();
+
+        expect(() =>
+            db.prepare(`
+      INSERT INTO authProviderIdentity (
+        userId, provider, providerUserId, createdAt, modifiedAt
+      )
+      VALUES (502, 'GOOGLE', 'google-other', '2026-06-05T00:00:00.000Z', '2026-06-05T00:00:00.000Z')
+    `).run()
+        ).toThrow();
+
+        const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+        expect(foreignKeyViolations).toEqual([]);
+
+        db.close();
+    });
+
     test('seeded game rules details parse against the current schema after all migrations', () => {
         const db = createMigratedDb(getMigrationFiles().at(-1)!);
 

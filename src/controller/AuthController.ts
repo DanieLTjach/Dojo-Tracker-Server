@@ -1,9 +1,14 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { AuthService } from '../service/AuthService.ts';
+import { googleAuthSchema, telegramBrowserAuthSchema } from '../schema/AuthSchemas.ts';
 
 export class AuthController {
-    private authService: AuthService = new AuthService();
+    private authService: AuthService;
+
+    constructor(authService: AuthService = new AuthService()) {
+        this.authService = authService;
+    }
 
     /**
      * Authenticates a user using Telegram Mini App initData.
@@ -18,6 +23,35 @@ export class AuthController {
     authenticate(req: Request, res: Response) {
         const initDataParams = req.query as Record<string, string>;
         const result = this.authService.authenticate(initDataParams);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    async authenticateGoogle(req: Request, res: Response) {
+        const { body: { credential, name } } = googleAuthSchema.parse(req);
+        const result = await this.authService.authenticateGoogle(credential, name);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    async authenticateTelegram(req: Request, res: Response) {
+        const { body: { idToken, name } } = telegramBrowserAuthSchema.parse(req);
+        const result = await this.authService.authenticateTelegram(idToken, name);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    async linkGoogle(req: Request, res: Response) {
+        const { body: { credential } } = googleAuthSchema.parse(req);
+        const result = await this.authService.linkGoogle(req.user!.userId, credential);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    async linkTelegram(req: Request, res: Response) {
+        const { body: { idToken } } = telegramBrowserAuthSchema.parse(req);
+        const result = await this.authService.linkTelegram(req.user!.userId, idToken);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    getLinkedProviders(req: Request, res: Response) {
+        const result = this.authService.getLinkedProviders(req.user!.userId);
         return res.status(StatusCodes.OK).json(result);
     }
 }

@@ -14,7 +14,7 @@ import LogService from './LogService.ts';
 import dedent from 'dedent';
 import { globalUserLogsTopic } from '../model/TelegramTopic.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
-import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
+import { InsufficientPermissionsError, TelegramAccountAlreadyUsedError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
 
@@ -26,13 +26,13 @@ export class UserService {
     registerUser(
         userName: string,
         userTelegramUsername: string | undefined,
-        userTelegramId: number,
+        userTelegramId: number | undefined,
         createdBy: number
     ): User {
         if (this.userExistsByName(userName)) {
             throw new NameAlreadyTakenByAnotherUser(userName);
         }
-        if (this.userExistsByTelegramId(userTelegramId)) {
+        if (userTelegramId !== undefined && this.userExistsByTelegramId(userTelegramId)) {
             throw new UserWithThisTelegramIdAlreadyExists(userTelegramId);
         }
         if (userTelegramUsername !== undefined && this.userExistsByTelegramUsername(userTelegramUsername)) {
@@ -42,6 +42,22 @@ export class UserService {
         const newUserId = this.userRepository.registerUser(userName, userTelegramUsername, userTelegramId, createdBy);
         const newUser = this.getUserById(newUserId);
         this.logRegisteredUser(newUser, createdBy);
+        return newUser;
+    }
+
+    setUserTelegramId(userId: number, telegramId: number, modifiedBy: number): User {
+        const oldUser = this.getUserById(userId);
+        const existingUser = this.userRepository.findUserByTelegramId(telegramId);
+        if (existingUser !== undefined && existingUser.id !== userId) {
+            throw new TelegramAccountAlreadyUsedError();
+        }
+        if (oldUser.telegramId === telegramId) {
+            return oldUser;
+        }
+
+        this.userRepository.updateUserTelegramId(userId, telegramId, modifiedBy);
+        const newUser = this.getUserById(userId);
+        this.logEditedUser(oldUser, newUser, modifiedBy);
         return newUser;
     }
 
@@ -229,6 +245,9 @@ export class UserService {
             changes.push(
                 `<b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}`
             );
+        }
+        if (oldUser.telegramId !== newUser.telegramId) {
+            changes.push(`<b>Telegram ID:</b> ${oldUser.telegramId || 'N/A'} → ${newUser.telegramId || 'N/A'}`);
         }
 
         let message = dedent`

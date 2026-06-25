@@ -134,4 +134,24 @@ describe('ErrorHandling Middleware', () => {
             error
         );
     });
+
+    it('should redact auth tokens from logged request body', () => {
+        const error = new Error('Test error');
+        mockReq.body = {
+            credential: 'google.jwt',
+            idToken: 'telegram.jwt',
+            nested: {
+                access_token: 'access',
+                normal: 'visible',
+            },
+        };
+
+        handleErrors(error, mockReq as Request, mockRes as Response, mockNext);
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            'Error while processing request GET /test from user (ID: 123) with body ' +
+                '{"credential":"[REDACTED]","idToken":"[REDACTED]","nested":{"access_token":"[REDACTED]","normal":"visible"}}',
+            error
+        );
+    });
 });

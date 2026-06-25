@@ -1,6 +1,6 @@
 import request from 'supertest';
 import express from 'express';
-import authRoutes from '../src/routes/AuthRoutes.ts';
+import authRoutes, { createAuthRouter } from '../src/routes/AuthRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
@@ -8,11 +8,46 @@ import { HashUtil } from '../src/util/HashUtil.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
 import config from '../config/config.ts';
+import { AuthProvider, type VerifiedExternalProfile } from '../src/model/AuthProviderModels.ts';
+import type { ExternalAuthTokenVerifier } from '../src/service/ExternalAuthTokenVerifier.ts';
+import { AuthService } from '../src/service/AuthService.ts';
+import { AuthController } from '../src/controller/AuthController.ts';
+import { AuthProviderIdentityRepository } from '../src/repository/AuthProviderIdentityRepository.ts';
+import { createAuthHeader } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
 app.use('/api', authRoutes);
 app.use(handleErrors);
+
+class FakeExternalAuthTokenVerifier implements ExternalAuthTokenVerifier {
+    private googleProfiles: Record<string, VerifiedExternalProfile>;
+    private telegramProfiles: Record<string, VerifiedExternalProfile>;
+
+    constructor(
+        googleProfiles: Record<string, VerifiedExternalProfile>,
+        telegramProfiles: Record<string, VerifiedExternalProfile>
+    ) {
+        this.googleProfiles = googleProfiles;
+        this.telegramProfiles = telegramProfiles;
+    }
+
+    async verifyGoogleCredential(credential: string): Promise<VerifiedExternalProfile> {
+        return this.googleProfiles[credential]!;
+    }
+
+    async verifyTelegramIdToken(idToken: string): Promise<VerifiedExternalProfile> {
+        return this.telegramProfiles[idToken]!;
+    }
+}
+
+function createExternalAuthApp(verifier: ExternalAuthTokenVerifier) {
+    const externalAuthApp = express();
+    externalAuthApp.use(express.json());
+    externalAuthApp.use('/api', createAuthRouter(new AuthController(new AuthService(verifier))));
+    externalAuthApp.use(handleErrors);
+    return externalAuthApp;
+}
 
 describe('Authentication API Endpoints', () => {
     const BOT_TOKEN = config.botToken;
@@ -20,6 +55,7 @@ describe('Authentication API Endpoints', () => {
     const TEST_USERNAME = 'testuser';
     const userService = new UserService();
     const userRepository = new UserRepository();
+    const authProviderIdentityRepository = new AuthProviderIdentityRepository();
 
     beforeAll(() => {
         // Create test user before running auth tests
@@ -217,6 +253,247 @@ describe('Authentication API Endpoints', () => {
                 .expect(403);
 
             expect(response.body).toHaveProperty('errorCode', 'userIsNotActive');
+        });
+    });
+
+    describe('external browser auth', () => {
+        it('authenticates an existing Google identity', async () => {
+            const user = userService.registerUser('Existing Google User', undefined, undefined, 0);
+            authProviderIdentityRepository.createIdentity(user.id, {
+                provider: AuthProvider.GOOGLE,
+                providerUserId: 'google-existing',
+                displayName: 'Existing Google User',
+                email: 'existing@example.com',
+            });
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-existing-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-existing',
+                        displayName: 'Existing Google User',
+                        email: 'existing@example.com',
+                    },
+                }, {})
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-existing-token' })
+                .expect(200);
+
+            expect(response.body).toHaveProperty('accessToken');
+        });
+
+        it('requires explicit registration for an unknown Google identity', async () => {
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-new-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-new',
+                        displayName: 'Google New',
+                        email: 'new@example.com',
+                    },
+                }, {})
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-new-token' })
+                .expect(200);
+
+            expect(response.body).toEqual({
+                registrationRequired: true,
+                provider: 'GOOGLE',
+                suggestedName: 'Google New',
+                profile: {
+                    displayName: 'Google New',
+                    email: 'new@example.com',
+                    username: null,
+                },
+            });
+        });
+
+        it('creates a Google-only user after explicit registration', async () => {
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-register-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-register',
+                        displayName: 'Google Registered',
+                        email: 'registered@example.com',
+                    },
+                }, {})
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-register-token', name: 'Google Registered' })
+                .expect(200);
+
+            const user = userRepository.findUserByName('Google Registered')!;
+            const identity = authProviderIdentityRepository.findIdentity(AuthProvider.GOOGLE, 'google-register')!;
+            expect(response.body).toHaveProperty('accessToken');
+            expect(user.telegramId).toBeNull();
+            expect(identity.userId).toBe(user.id);
+            expect(identity.email).toBe('registered@example.com');
+        });
+
+        it('does not auto-link Google users by display name or email', async () => {
+            userService.registerUser('Existing Display Name', undefined, undefined, 0);
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-name-collision-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-name-collision',
+                        displayName: 'Existing Display Name',
+                        email: 'existing-name@example.com',
+                    },
+                }, {})
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-name-collision-token' })
+                .expect(200);
+
+            expect(response.body).toHaveProperty('registrationRequired', true);
+            expect(authProviderIdentityRepository.findIdentity(AuthProvider.GOOGLE, 'google-name-collision'))
+                .toBeUndefined();
+        });
+
+        it('backfills and authenticates an existing Telegram user by telegramId', async () => {
+            const legacyUser = userService.registerUser('Legacy Telegram User', 'legacy_telegram', 888777666, 0);
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({}, {
+                    'telegram-legacy-token': {
+                        provider: AuthProvider.TELEGRAM,
+                        providerUserId: '888777666',
+                        telegramId: 888777666,
+                        displayName: 'Legacy Telegram User',
+                        username: '@legacy_telegram',
+                    },
+                })
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/telegram')
+                .send({ idToken: 'telegram-legacy-token' })
+                .expect(200);
+
+            const identity = authProviderIdentityRepository.findIdentity(AuthProvider.TELEGRAM, '888777666')!;
+            expect(response.body).toHaveProperty('accessToken');
+            expect(identity.userId).toBe(legacyUser.id);
+        });
+
+        it('creates an unknown Telegram user with telegramId for notifications', async () => {
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({}, {
+                    'telegram-new-token': {
+                        provider: AuthProvider.TELEGRAM,
+                        providerUserId: '998877665',
+                        telegramId: 998877665,
+                        displayName: 'Telegram New',
+                        username: '@telegram_new',
+                    },
+                })
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/telegram')
+                .send({ idToken: 'telegram-new-token', name: 'Telegram New' })
+                .expect(200);
+
+            const user = userRepository.findUserByName('Telegram New')!;
+            expect(response.body).toHaveProperty('accessToken');
+            expect(user.telegramId).toBe(998877665);
+            expect(user.telegramUsername).toBe('@telegram_new');
+        });
+
+        it('rejects login for an inactive linked user', async () => {
+            const user = userService.registerUser('Inactive Google User', undefined, undefined, 0);
+            userRepository.updateUserStatus(user.id, false, 'INACTIVE', 0);
+            authProviderIdentityRepository.createIdentity(user.id, {
+                provider: AuthProvider.GOOGLE,
+                providerUserId: 'google-inactive',
+                displayName: 'Inactive Google User',
+            });
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-inactive-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-inactive',
+                        displayName: 'Inactive Google User',
+                    },
+                }, {})
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-inactive-token' })
+                .expect(403);
+
+            expect(response.body).toHaveProperty('errorCode', 'userIsNotActive');
+        });
+
+        it('links Google for the current user and lists providers without provider ids', async () => {
+            const user = userService.registerUser('Link Google User', undefined, undefined, 0);
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-link-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-link',
+                        displayName: 'Link Google User',
+                        email: 'link@example.com',
+                    },
+                }, {})
+            );
+
+            const linkResponse = await request(externalAuthApp)
+                .post('/api/auth/link/google')
+                .set('Authorization', createAuthHeader(user.id))
+                .send({ credential: 'google-link-token' })
+                .expect(200);
+            const providersResponse = await request(externalAuthApp)
+                .get('/api/auth/providers')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+
+            expect(linkResponse.body).toEqual({
+                provider: 'GOOGLE',
+                displayName: 'Link Google User',
+                email: 'link@example.com',
+                username: null,
+                linkedAt: expect.any(String),
+            });
+            expect(providersResponse.body).toEqual([linkResponse.body]);
+            expect(JSON.stringify(providersResponse.body)).not.toContain('google-link');
+        });
+
+        it('rejects linking a provider identity already linked to another user', async () => {
+            const owner = userService.registerUser('Provider Owner', undefined, undefined, 0);
+            const target = userService.registerUser('Provider Target', undefined, undefined, 0);
+            authProviderIdentityRepository.createIdentity(owner.id, {
+                provider: AuthProvider.GOOGLE,
+                providerUserId: 'google-owned',
+                displayName: 'Provider Owner',
+            });
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-owned-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-owned',
+                        displayName: 'Provider Owner',
+                    },
+                }, {})
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/link/google')
+                .set('Authorization', createAuthHeader(target.id))
+                .send({ credential: 'google-owned-token' })
+                .expect(409);
+
+            expect(response.body).toHaveProperty('errorCode', 'authProviderIdentityAlreadyLinked');
         });
     });
 });

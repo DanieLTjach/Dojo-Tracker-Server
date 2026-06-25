@@ -1,4 +1,5 @@
-import { UnauthorizedError, ForbiddenError } from './BaseErrors.ts';
+import type { AuthProvider } from '../model/AuthProviderModels.ts';
+import { UnauthorizedError, ForbiddenError, ConflictError, InternalServerError } from './BaseErrors.ts';
 
 export class InvalidInitDataError extends UnauthorizedError {
     constructor(reason: string) {
@@ -42,5 +43,38 @@ export class TokenExpiredError extends UnauthorizedError {
 export class InvalidTokenError extends UnauthorizedError {
     constructor() {
         super('Невалідний токен автентифікації. Перезайдіть в додаток', 'invalidToken');
+    }
+}
+
+export class AuthProviderNotConfiguredError extends InternalServerError {
+    constructor(provider: AuthProvider) {
+        super(`Провайдер автентифікації ${provider} не налаштований`, 'authProviderNotConfigured');
+    }
+}
+
+export class InvalidExternalAuthTokenError extends UnauthorizedError {
+    constructor(provider: AuthProvider) {
+        super(`Невалідний токен автентифікації ${provider}`, 'invalidExternalAuthToken');
+    }
+}
+
+export class AuthProviderIdentityAlreadyLinkedError extends ConflictError {
+    constructor(provider: AuthProvider) {
+        super(
+            `Обліковий запис ${provider} вже прив'язаний до іншого користувача`,
+            'authProviderIdentityAlreadyLinked'
+        );
+    }
+}
+
+export class UserAlreadyHasAuthProviderError extends ConflictError {
+    constructor(provider: AuthProvider) {
+        super(`Користувач вже має прив'язаний обліковий запис ${provider}`, 'userAlreadyHasAuthProvider');
+    }
+}
+
+export class TelegramAccountAlreadyUsedError extends ConflictError {
+    constructor() {
+        super('Цей Telegram акаунт вже належить іншому користувачу', 'telegramAccountAlreadyUsed');
     }
 }

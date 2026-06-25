@@ -138,8 +138,8 @@ export class UserRepository {
 
     private registerUserStatement(): Statement<{
         name: string;
-        telegramUsername: string | undefined;
-        telegramId: number | undefined;
+        telegramUsername: string | null;
+        telegramId: number | null;
         modifiedBy: number;
         isActive: number;
         status: UserStatus;
@@ -159,8 +159,8 @@ export class UserRepository {
         return Number(
             this.registerUserStatement().run({
                 name,
-                telegramUsername,
-                telegramId,
+                telegramUsername: telegramUsername ?? null,
+                telegramId: telegramId ?? null,
                 modifiedBy: createdBy,
                 isActive: booleanToInteger(true),
                 status: 'ACTIVE',
@@ -200,6 +200,27 @@ export class UserRepository {
     updateUserTelegramUsername(userId: number, telegramUsername: string, modifiedBy: number) {
         this.updateUserTelegramUsernameStatement().run({
             telegramUsername,
+            modifiedBy,
+            id: userId,
+            timestamp: new Date().toISOString(),
+        });
+    }
+
+    private updateUserTelegramIdStatement(): Statement<{
+        telegramId: number;
+        modifiedBy: number;
+        id: number;
+        timestamp: string;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE user
+            SET telegramId = :telegramId, modifiedBy = :modifiedBy, modifiedAt = :timestamp
+            WHERE id = :id`);
+    }
+
+    updateUserTelegramId(userId: number, telegramId: number, modifiedBy: number) {
+        this.updateUserTelegramIdStatement().run({
+            telegramId,
             modifiedBy,
             id: userId,
             timestamp: new Date().toISOString(),
