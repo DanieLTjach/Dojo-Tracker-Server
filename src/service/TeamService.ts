@@ -16,13 +16,14 @@ import { ClubRole } from '../model/ClubModels.ts';
 import { EventFormat } from '../model/EventModels.ts';
 import type { Event } from '../model/EventModels.ts';
 import { EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
-import type { PlayerTeamMap, Team } from '../model/TeamModels.ts';
+import type { PlayerTeamMap, Team, TeamStanding } from '../model/TeamModels.ts';
 import { TeamRole } from '../model/TeamModels.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { TeamRepository } from '../repository/TeamRepository.ts';
 import { EventService } from './EventService.ts';
+import { RATING_TO_POINTS_COEFFICIENT } from './RatingService.ts';
 import { UserService } from './UserService.ts';
 
 export class TeamService {
@@ -48,6 +49,30 @@ export class TeamService {
     getAvailablePlayers(eventId: number): ReturnType<TeamRepository['findUnteamedApprovedPlayers']> {
         this.eventService.validateEventExists(eventId);
         return this.teamRepository.findUnteamedApprovedPlayers(eventId);
+    }
+
+    /**
+     * Team standings: each team's total = sum of members' teamRating for the event,
+     * normalized to rating units. Ordered best-first; tied totals share a place.
+     */
+    getTeamStandings(eventId: number): TeamStanding[] {
+        this.eventService.validateEventExists(eventId);
+        const rows = this.teamRepository.findTeamStandings(eventId);
+
+        let place = 0;
+        let prevTotal: number | undefined;
+        return rows.map((row, index) => {
+            if (prevTotal === undefined || row.totalTeamRating !== prevTotal) {
+                place = index + 1;
+                prevTotal = row.totalTeamRating;
+            }
+            return {
+                team: { id: row.teamId, name: row.teamName },
+                totalTeamRating: row.totalTeamRating / RATING_TO_POINTS_COEFFICIENT,
+                gamesCounted: row.gamesCounted,
+                place,
+            };
+        });
     }
 
     /**

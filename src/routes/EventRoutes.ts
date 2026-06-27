@@ -231,6 +231,11 @@ router.get(
     requireAuth,
     withTransaction((req, res) => teamController.availablePlayers(req, res))
 );
+router.get(
+    '/:eventId/teams/standings',
+    requireAuth,
+    withTransaction((req, res) => teamController.standings(req, res))
+);
 router.post(
     '/:eventId/teams',
     requireAuth,

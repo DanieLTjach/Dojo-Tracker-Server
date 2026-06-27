@@ -243,6 +243,33 @@ export class TeamRepository {
     ): { userId: number, name: string, profileFirstName: string | null, profileLastName: string | null }[] {
         return this.findUnteamedApprovedPlayersStatement().all({ eventId });
     }
+
+    private findTeamStandingsStatement(): Statement<
+        { eventId: number },
+        { teamId: number, teamName: string, totalTeamRating: number, gamesCounted: number }
+    > {
+        // Sum the team attribution frozen on each member's rating change. teamRating is
+        // joined by the team the player was on AT scoring time (urc.teamId), so roster edits
+        // after a game don't retroactively move points. COALESCE keeps empty teams at 0.
+        return dbManager.db.prepare(`
+            SELECT t.id as teamId,
+                   t.name as teamName,
+                   COALESCE(SUM(urc.teamRating), 0) as totalTeamRating,
+                   COUNT(urc.gameId) as gamesCounted
+            FROM team t
+            LEFT JOIN userRatingChange urc
+                   ON urc.teamId = t.id AND urc.eventId = t.eventId
+            WHERE t.eventId = :eventId
+            GROUP BY t.id, t.name
+            ORDER BY totalTeamRating DESC, t.name
+        `);
+    }
+
+    findTeamStandings(
+        eventId: number
+    ): { teamId: number, teamName: string, totalTeamRating: number, gamesCounted: number }[] {
+        return this.findTeamStandingsStatement().all({ eventId });
+    }
 }
 
 interface TeamRowDBEntity {

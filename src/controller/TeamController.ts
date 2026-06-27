@@ -10,6 +10,7 @@ import {
     teamListSchema,
     teamRemoveMemberSchema,
     teamRenameSchema,
+    teamStandingsSchema,
 } from '../schema/TeamSchemas.ts';
 import { TeamService } from '../service/TeamService.ts';
 
@@ -29,6 +30,11 @@ export class TeamController {
     availablePlayers(req: Request, res: Response) {
         const { params: { eventId } } = teamAvailablePlayersSchema.parse(req);
         return res.status(StatusCodes.OK).json(this.teamService.getAvailablePlayers(eventId));
+    }
+
+    standings(req: Request, res: Response) {
+        const { params: { eventId } } = teamStandingsSchema.parse(req);
+        return res.status(StatusCodes.OK).json(this.teamService.getTeamStandings(eventId));
     }
 
     create(req: Request, res: Response) {

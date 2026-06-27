@@ -55,3 +55,7 @@ export const teamRemoveMemberSchema = z.object({
 export const startDraftSchema = z.object({
     params: z.object({ eventId: eventIdParamSchema }),
 });
+
+export const teamStandingsSchema = z.object({
+    params: z.object({ eventId: eventIdParamSchema }),
+});

@@ -9,12 +9,14 @@ import type {
     UserRatingWithPlace,
 } from '../model/RatingModels.ts';
 import { RatingRepository } from '../repository/RatingRepository.ts';
+import { TeamRepository } from '../repository/TeamRepository.ts';
 import { EventService } from './EventService.ts';
 import { UserService } from './UserService.ts';
 import { getChomboHandling, getSubstitutePlayerPenaltyBeforeUma, getSubstitutePlayerUma } from '../util/RulesUtils.ts';
 
 export class RatingService {
     private ratingRepository: RatingRepository = new RatingRepository();
+    private teamRepository: TeamRepository = new TeamRepository();
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
 
@@ -68,6 +70,12 @@ export class RatingService {
         this.sortPlayersData(players, gameRules.umaTieBreak);
         const uma = this.calculateUma(players, gameRules);
 
+        // Team attribution, frozen at scoring time. For a team tournament two players of
+        // the same team never share a table, so every game counts: teamRating == ratingChange.
+        // Players without a team for this event get teamId/teamRating null. (Future team
+        // seasons can refine teamRating per game without changing this storage.)
+        const playerTeamMap = this.buildPlayerTeamMap(eventId);
+
         for (const [index, playerData] of players.entries()) {
             const latestRatingChange = this.ratingRepository.findUserLatestRatingChangeBeforeDate(
                 playerData.userId,
@@ -83,6 +91,7 @@ export class RatingService {
                 (getChomboHandling(detailedRules ?? {}) === 'mangan' ? 0 : 20000) * (playerData.chomboCount ?? 0);
             const newRating = currentRating + ratingChange;
 
+            const teamId = playerTeamMap.get(playerData.userId) ?? null;
             this.ratingRepository.addUserRatingChange({
                 userId: playerData.userId,
                 eventId: eventId,
@@ -90,6 +99,8 @@ export class RatingService {
                 ratingChange,
                 rating: newRating,
                 timestamp: gameTimestamp,
+                teamId,
+                teamRating: teamId !== null ? ratingChange : null,
             });
             this.ratingRepository.updateUserRatingChangesAfterDate(
                 playerData.userId,
@@ -114,6 +125,14 @@ export class RatingService {
             );
         }
         this.ratingRepository.deleteRatingChangesFromGame(game.id);
+    }
+
+    private buildPlayerTeamMap(eventId: number): Map<number, number> {
+        const map = new Map<number, number>();
+        for (const { userId, teamId } of this.teamRepository.findPlayerTeamMapForEvent(eventId)) {
+            map.set(userId, teamId);
+        }
+        return map;
     }
 
     private applySubstitutePenalty(playersData: PlayerData[], gameRules: GameRules): PlayerData[] {

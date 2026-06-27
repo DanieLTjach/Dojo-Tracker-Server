@@ -1,7 +1,10 @@
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { TeamService } from '../src/service/TeamService.ts';
+import { RatingService } from '../src/service/RatingService.ts';
+import { RatingRepository } from '../src/repository/RatingRepository.ts';
 import { TournamentStatus } from '../src/model/TournamentModels.ts';
+import type { GameRules } from '../src/model/EventModels.ts';
 import {
     DraftNotStartableError,
     InsufficientTeamPermissionsError,
@@ -284,6 +287,119 @@ describe('TeamService', () => {
             setTournamentStatus(TEAM_TOURNAMENT_ID, 'IN_PROGRESS');
             expect(() => service.addMember(TEAM_TOURNAMENT_ID, team.id, PLAYER_1, OWNER_ID))
                 .toThrow(TeamCompositionLockedError);
+        });
+    });
+
+    describe('getTeamStandings', () => {
+        function insertGame(gameId: number): void {
+            const t = nextTs();
+            dbManager.db.prepare(
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, lastRoundWasDeleted)
+                 VALUES (?, ?, ?, ?, ?, 'FINISHED', 0)`
+            ).run(gameId, TEAM_TOURNAMENT_ID, t, t, SYSTEM_USER_ID);
+        }
+        function insertRatingChange(userId: number, gameId: number, teamId: number, teamRating: number): void {
+            dbManager.db.prepare(
+                `INSERT INTO userRatingChange (userId, eventId, gameId, ratingChange, rating, timestamp, teamId, teamRating)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(userId, TEAM_TOURNAMENT_ID, gameId, teamRating, teamRating, nextTs(), teamId, teamRating);
+        }
+
+        afterEach(() => {
+            dbManager.db.prepare('DELETE FROM userRatingChange WHERE eventId = ?').run(TEAM_TOURNAMENT_ID);
+            dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(TEAM_TOURNAMENT_ID);
+        });
+
+        it('sums members teamRating per team, normalizes, and assigns places', () => {
+            const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'Alpha', CAPTAIN_A, CAPTAIN_A);
+            service.addMember(TEAM_TOURNAMENT_ID, teamA.id, PLAYER_1, CAPTAIN_A);
+            const teamB = service.createTeam(TEAM_TOURNAMENT_ID, 'Beta', CAPTAIN_B, CAPTAIN_B);
+            service.addMember(TEAM_TOURNAMENT_ID, teamB.id, PLAYER_2, CAPTAIN_B);
+
+            insertGame(98001);
+            // Team A: captain +23000, player +7000 => 30000 raw => 30.0 normalized.
+            insertRatingChange(CAPTAIN_A, 98001, teamA.id, 23000);
+            insertRatingChange(PLAYER_1, 98001, teamA.id, 7000);
+            // Team B: -10000 + -30000 => -40000 => -40.0.
+            insertRatingChange(CAPTAIN_B, 98001, teamB.id, -10000);
+            insertRatingChange(PLAYER_2, 98001, teamB.id, -30000);
+
+            const standings = service.getTeamStandings(TEAM_TOURNAMENT_ID);
+            expect(standings).toEqual([
+                { team: { id: teamA.id, name: 'Alpha' }, totalTeamRating: 30, gamesCounted: 2, place: 1 },
+                { team: { id: teamB.id, name: 'Beta' }, totalTeamRating: -40, gamesCounted: 2, place: 2 },
+            ]);
+        });
+
+        it('returns empty teams at 0 and lets equal totals share a place', () => {
+            const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'Alpha', CAPTAIN_A, CAPTAIN_A);
+            const teamB = service.createTeam(TEAM_TOURNAMENT_ID, 'Beta', CAPTAIN_B, CAPTAIN_B);
+
+            const standings = service.getTeamStandings(TEAM_TOURNAMENT_ID);
+            expect(standings).toHaveLength(2);
+            expect(standings.every(s => s.totalTeamRating === 0 && s.gamesCounted === 0)).toBe(true);
+            // Equal totals share place 1.
+            expect(standings.map(s => s.place)).toEqual([1, 1]);
+        });
+    });
+
+    describe('rating attribution (addRatingChangesFromGame)', () => {
+        const ratingService = new RatingService();
+        const ratingRepo = new RatingRepository();
+
+        const gameRules: GameRules = {
+            id: GAME_RULES_ID,
+            name: 'Team Rules',
+            clubId: CLUB_ID,
+            numberOfPlayers: 4,
+            uma: [15, 5, -5, -15],
+            startingPoints: 30000,
+            umaTieBreak: 'DIVIDE',
+            details: null,
+        };
+
+        afterEach(() => {
+            dbManager.db.prepare('DELETE FROM userRatingChange WHERE eventId = ?').run(TEAM_TOURNAMENT_ID);
+            dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(TEAM_TOURNAMENT_ID);
+        });
+
+        it('freezes teamId and teamRating (= ratingChange) for teamed players', () => {
+            // Two teams, one player each drafted, all four seated (the other two unteamed).
+            const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'Alpha', CAPTAIN_A, CAPTAIN_A);
+            const teamB = service.createTeam(TEAM_TOURNAMENT_ID, 'Beta', CAPTAIN_B, CAPTAIN_B);
+
+            const t = nextTs();
+            dbManager.db.prepare(
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, lastRoundWasDeleted)
+                 VALUES (?, ?, ?, ?, ?, 'FINISHED', 0)`
+            ).run(98100, TEAM_TOURNAMENT_ID, t, t, SYSTEM_USER_ID);
+
+            ratingService.addRatingChangesFromGame(
+                98100,
+                new Date(t),
+                [
+                    { userId: CAPTAIN_A, points: 40000 },
+                    { userId: CAPTAIN_B, points: 30000 },
+                    { userId: PLAYER_1, points: 20000 }, // unteamed in this test
+                    { userId: PLAYER_2, points: 10000 }, // unteamed in this test
+                ],
+                TEAM_TOURNAMENT_ID,
+                gameRules,
+                0
+            );
+
+            const captainAChange = ratingRepo.findUserRatingChangeInGame(CAPTAIN_A, 98100)!;
+            expect(captainAChange.teamId).toBe(teamA.id);
+            expect(captainAChange.teamRating).toBe(captainAChange.ratingChange);
+
+            const captainBChange = ratingRepo.findUserRatingChangeInGame(CAPTAIN_B, 98100)!;
+            expect(captainBChange.teamId).toBe(teamB.id);
+            expect(captainBChange.teamRating).toBe(captainBChange.ratingChange);
+
+            // Unteamed players have null attribution.
+            const player1Change = ratingRepo.findUserRatingChangeInGame(PLAYER_1, 98100)!;
+            expect(player1Change.teamId).toBeNull();
+            expect(player1Change.teamRating).toBeNull();
         });
     });
 

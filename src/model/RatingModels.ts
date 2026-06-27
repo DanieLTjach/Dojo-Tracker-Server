@@ -7,6 +7,9 @@ export interface UserRatingChange {
     ratingChange: number;
     rating: number;
     timestamp: Date;
+    // Team attribution, frozen at game-finish time. null for non-team games / players.
+    teamId?: number | null | undefined;
+    teamRating?: number | null | undefined;
 }
 
 export interface UserRating {

@@ -119,8 +119,8 @@ export class RatingRepository {
 
     private addUserRatingChangeStatement(): Statement<UserRatingChangeDBEntity, void> {
         return dbManager.db.prepare(`
-            INSERT INTO userRatingChange (userId, eventId, gameId, ratingChange, rating, timestamp)
-            VALUES (:userId, :eventId, :gameId, :ratingChange, :rating, :timestamp)`);
+            INSERT INTO userRatingChange (userId, eventId, gameId, ratingChange, rating, timestamp, teamId, teamRating)
+            VALUES (:userId, :eventId, :gameId, :ratingChange, :rating, :timestamp, :teamId, :teamRating)`);
     }
 
     addUserRatingChange(userRatingChange: UserRatingChange): void {
@@ -173,14 +173,26 @@ interface UserRatingChangeDBEntity {
     ratingChange: number;
     rating: number;
     timestamp: string;
+    teamId: number | null;
+    teamRating: number | null;
 }
 
 function userRatingChangeToDBEntity(userRatingChange: UserRatingChange): UserRatingChangeDBEntity {
-    return { ...userRatingChange, timestamp: userRatingChange.timestamp.toISOString() };
+    return {
+        ...userRatingChange,
+        timestamp: userRatingChange.timestamp.toISOString(),
+        teamId: userRatingChange.teamId ?? null,
+        teamRating: userRatingChange.teamRating ?? null,
+    };
 }
 
 function userRatingChangeFromDBEntity(dbEntity: UserRatingChangeDBEntity): UserRatingChange {
-    return { ...dbEntity, timestamp: new Date(dbEntity.timestamp) };
+    return {
+        ...dbEntity,
+        timestamp: new Date(dbEntity.timestamp),
+        teamId: dbEntity.teamId,
+        teamRating: dbEntity.teamRating,
+    };
 }
 
 interface UserRatingDBEntity {
