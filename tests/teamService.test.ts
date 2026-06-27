@@ -332,8 +332,8 @@ describe('TeamService', () => {
         });
 
         it('returns empty teams at 0 and lets equal totals share a place', () => {
-            const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'Alpha', CAPTAIN_A, CAPTAIN_A);
-            const teamB = service.createTeam(TEAM_TOURNAMENT_ID, 'Beta', CAPTAIN_B, CAPTAIN_B);
+            service.createTeam(TEAM_TOURNAMENT_ID, 'Alpha', CAPTAIN_A, CAPTAIN_A);
+            service.createTeam(TEAM_TOURNAMENT_ID, 'Beta', CAPTAIN_B, CAPTAIN_B);
 
             const standings = service.getTeamStandings(TEAM_TOURNAMENT_ID);
             expect(standings).toHaveLength(2);
