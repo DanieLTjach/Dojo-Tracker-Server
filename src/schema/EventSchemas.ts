@@ -1,5 +1,5 @@
 import z from 'zod';
-import { EventType, PlayerNameDisplay } from '../model/EventModels.ts';
+import { EventFormat, EventType, PlayerNameDisplay } from '../model/EventModels.ts';
 import { dateSchema } from './CommonSchemas.ts';
 import { clubIdParamSchema, clubIdSchema } from './ClubSchemas.ts';
 
@@ -13,7 +13,13 @@ export const eventGetByIdSchema = z.object({
 });
 
 const eventTypeEnum = z.enum(Object.values(EventType));
+const eventFormatEnum = z.enum(Object.values(EventFormat));
 const eventDescriptionSchema = z.string().max(5000, 'Description must be 5000 characters or less');
+
+const teamConfigSchema = z.strictObject({
+    teamSize: z.number().int('teamSize must be an integer').positive('teamSize must be positive'),
+    teamCount: z.number().int('teamCount must be an integer').positive('teamCount must be positive'),
+});
 
 const tournamentConfigSchema = z.strictObject({
     totalRounds: z.number().int('totalRounds must be an integer').positive('totalRounds must be positive'),
@@ -31,6 +37,7 @@ const eventConfigSchema = z.strictObject({
     minParticipants: minParticipantsSchema.optional(),
     maxParticipants: maxParticipantsSchema.optional(),
     registrationDeadline: registrationDeadlineSchema.optional(),
+    teamConfig: teamConfigSchema.optional(),
 });
 
 const eventConfigPatchSchema = z.strictObject({
@@ -38,6 +45,7 @@ const eventConfigPatchSchema = z.strictObject({
     minParticipants: minParticipantsSchema.nullish(),
     maxParticipants: maxParticipantsSchema.nullish(),
     registrationDeadline: registrationDeadlineSchema.nullish(),
+    teamConfig: teamConfigSchema.nullish(),
 });
 
 const scheduleItemKindSchema = z.enum(['default', 'muted', 'milestone']);
@@ -106,6 +114,7 @@ const eventSchema = z.object({
     name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
     description: eventDescriptionSchema.nullish(),
     type: eventTypeEnum,
+    format: eventFormatEnum.default(EventFormat.INDIVIDUAL),
     isCurrentRating: z.boolean().nullish(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
@@ -192,6 +201,7 @@ export const eventPatchBodySchema = z.strictObject({
     name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').optional(),
     description: eventDescriptionSchema.nullish(),
     type: eventTypeEnum.optional(),
+    format: eventFormatEnum.optional(),
     isCurrentRating: z.boolean().nullish(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),

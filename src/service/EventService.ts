@@ -21,11 +21,16 @@ import {
     TournamentNotInLastRoundError,
     TournamentGameNotInCurrentRoundError,
     TournamentMisconfigured,
+    InvalidEventFormatForTypeError,
+    TeamConfigOnlyForTeamTournamentError,
+    TeamConfigRequiredError,
+    InvalidTeamConfigError,
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { Event, EventConfig, EventInfo, EventType } from '../model/EventModels.ts';
+import { EventFormat } from '../model/EventModels.ts';
 import type { Game } from '../model/GameModels.ts';
 import { ClubRole } from '../model/ClubModels.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
@@ -105,6 +110,7 @@ export class EventService {
             name: data.name,
             description: data.description ?? null,
             type: data.type,
+            format: data.format ?? EventFormat.INDIVIDUAL,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
@@ -163,6 +169,7 @@ export class EventService {
             name: data.name,
             description: data.description ?? null,
             type: data.type,
+            format: data.format ?? EventFormat.INDIVIDUAL,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
@@ -469,6 +476,7 @@ export class EventService {
      */
     private validateEventDataInvariants(data: EventData, existingEvent?: Event): void {
         this.validateTournamentConfig(data, existingEvent);
+        this.validateEventFormat(data);
 
         if (data.dateFrom && data.dateTo && data.dateFrom >= data.dateTo) {
             throw new InvalidEventDateRangeError();
@@ -492,6 +500,62 @@ export class EventService {
         ) {
             throw new MinParticipantsExceedsMaxError();
         }
+    }
+
+    /**
+     * Validates the event format against its type and, for TEAM tournaments, the
+     * teamConfig sizing. v1 supports TEAM only for tournaments (HYBRID is reserved
+     * for future team seasons and rejected here). teamConfig is required for TEAM
+     * tournaments and forbidden otherwise; it must satisfy:
+     *   teamCount % 4 === 0  (a table seats one player from four distinct teams), and
+     *   minParticipants === teamSize * teamCount  (the draft minimum reuses minParticipants).
+     */
+    private validateEventFormat(data: EventData): void {
+        const format = data.format ?? EventFormat.INDIVIDUAL;
+        const allowed = this.allowedFormatsForType(data.type);
+        if (!allowed.includes(format)) {
+            throw new InvalidEventFormatForTypeError(data.type, format);
+        }
+
+        const isTeamTournament = data.type === 'TOURNAMENT' && format === EventFormat.TEAM;
+        const teamConfig = data.config?.teamConfig;
+
+        if (!isTeamTournament) {
+            if (teamConfig !== undefined) {
+                throw new TeamConfigOnlyForTeamTournamentError();
+            }
+            return;
+        }
+
+        if (teamConfig === undefined) {
+            throw new TeamConfigRequiredError();
+        }
+        if (!Number.isInteger(teamConfig.teamSize) || teamConfig.teamSize < 1) {
+            throw new InvalidTeamConfigError('teamSize має бути цілим числом ≥ 1');
+        }
+        if (!Number.isInteger(teamConfig.teamCount) || teamConfig.teamCount < 1) {
+            throw new InvalidTeamConfigError('teamCount має бути цілим числом ≥ 1');
+        }
+        if (teamConfig.teamCount % 4 !== 0) {
+            throw new InvalidTeamConfigError('teamCount має ділитися на 4');
+        }
+        const minParticipants = data.config?.minParticipants;
+        const expected = teamConfig.teamSize * teamConfig.teamCount;
+        if (minParticipants === undefined) {
+            throw new InvalidTeamConfigError(`вкажіть minParticipants = teamSize * teamCount (${expected})`);
+        }
+        if (minParticipants !== expected) {
+            throw new InvalidTeamConfigError(
+                `minParticipants (${minParticipants}) має дорівнювати teamSize * teamCount (${expected})`
+            );
+        }
+    }
+
+    private allowedFormatsForType(type: EventType): EventFormat[] {
+        // v1: TEAM only for tournaments; seasons stay INDIVIDUAL (team seasons / HYBRID later).
+        return type === 'TOURNAMENT'
+            ? [EventFormat.INDIVIDUAL, EventFormat.TEAM]
+            : [EventFormat.INDIVIDUAL];
     }
 
     private validateCurrentRatingEvent(data: EventData): void {
@@ -563,6 +627,7 @@ export function projectEventToData(event: Event): EventData {
         name: event.name,
         description: event.description,
         type: event.type,
+        format: event.format,
         clubId: event.clubId,
         isCurrentRating: event.isCurrentRating,
         dateFrom: event.dateFrom,
@@ -588,6 +653,7 @@ export function mergeEventData(base: EventData, patch: EventPatchBody): EventDat
     assignIfPresent(merged, patch, 'name');
     assignIfPresent(merged, patch, 'description');
     assignIfPresent(merged, patch, 'type');
+    assignIfPresent(merged, patch, 'format');
     assignIfPresent(merged, patch, 'isCurrentRating');
     assignIfPresent(merged, patch, 'dateFrom');
     assignIfPresent(merged, patch, 'dateTo');
@@ -660,6 +726,7 @@ export interface EventData {
     name: string;
     description?: string | null | undefined;
     type: EventType;
+    format?: EventFormat | null | undefined;
     clubId?: number | null | undefined;
     isCurrentRating?: boolean | null | undefined;
     dateFrom?: Date | null | undefined;

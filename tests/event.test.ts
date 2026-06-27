@@ -559,6 +559,116 @@ describe('Event API Endpoints', () => {
         });
     });
 
+    describe('POST /api/events - team format validation', () => {
+        const teamTournamentPayload = {
+            name: 'Team Tournament',
+            type: 'TOURNAMENT',
+            format: 'TEAM',
+            gameRulesId: 1,
+            clubId: 1,
+            tournament: { totalRounds: 4 },
+            config: { minParticipants: 16, teamConfig: { teamSize: 4, teamCount: 4 } },
+        };
+
+        let createdEventId: number | undefined;
+        afterEach(() => {
+            if (createdEventId) {
+                deleteEventById(createdEventId);
+                createdEventId = undefined;
+            }
+        });
+
+        test('defaults format to INDIVIDUAL when omitted', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ name: 'Plain Season', type: 'SEASON', gameRulesId: 1 });
+            createdEventId = response.body.id;
+            expect(response.status).toBe(201);
+            expect(response.body.format).toBe('INDIVIDUAL');
+        });
+
+        test('creates a valid TEAM tournament', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send(teamTournamentPayload);
+            createdEventId = response.body.id;
+            expect(response.status).toBe(201);
+            expect(response.body.format).toBe('TEAM');
+            expect(response.body.config.teamConfig).toEqual({ teamSize: 4, teamCount: 4 });
+        });
+
+        test('rejects TEAM format for a season', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ name: 'Team Season', type: 'SEASON', format: 'TEAM', gameRulesId: 1, clubId: 1 });
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('invalidEventFormatForType');
+        });
+
+        test('rejects HYBRID format in v1', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ name: 'Hybrid Season', type: 'SEASON', format: 'HYBRID', gameRulesId: 1, clubId: 1 });
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('invalidEventFormatForType');
+        });
+
+        test('rejects TEAM tournament without teamConfig', async () => {
+            const { config, ...rest } = teamTournamentPayload;
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...rest, config: { minParticipants: 16 } });
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('teamConfigRequired');
+        });
+
+        test('rejects teamConfig on a non-team tournament', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Individual Tournament',
+                    type: 'TOURNAMENT',
+                    format: 'INDIVIDUAL',
+                    gameRulesId: 1,
+                    clubId: 1,
+                    tournament: { totalRounds: 4 },
+                    config: { teamConfig: { teamSize: 4, teamCount: 4 } },
+                });
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('teamConfigOnlyForTeamTournament');
+        });
+
+        test('rejects teamCount not divisible by 4', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...teamTournamentPayload,
+                    config: { minParticipants: 6, teamConfig: { teamSize: 2, teamCount: 3 } },
+                });
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('invalidTeamConfig');
+        });
+
+        test('rejects minParticipants that does not equal teamSize * teamCount', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...teamTournamentPayload,
+                    config: { minParticipants: 20, teamConfig: { teamSize: 4, teamCount: 4 } },
+                });
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('invalidTeamConfig');
+        });
+    });
+
     describe('PUT /api/events/:eventId - Update Event (admin only)', () => {
         const baseEventId = 2001;
         const updatePayload = {
