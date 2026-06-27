@@ -204,7 +204,10 @@ export class TournamentSeatingService {
     }
 
     private assertTournamentHasNotStarted(event: Event): void {
-        if (event.tournament!.status !== TournamentStatus.CREATED) {
+        // Seating is editable before the first round starts: CREATED (individual) or
+        // DRAFT (team tournament, registration closed and teams being formed).
+        const status = event.tournament!.status;
+        if (status !== TournamentStatus.CREATED && status !== TournamentStatus.DRAFT) {
             throw new SeatingCannotBeModifiedAfterTournamentStartedError(event.name);
         }
     }

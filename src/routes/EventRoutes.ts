@@ -3,6 +3,7 @@ import { withTransaction } from '../db/TransactionManagement.ts';
 import { EventController } from '../controller/EventController.ts';
 import { EventRegistrationController } from '../controller/EventRegistrationController.ts';
 import { AchievementController } from '../controller/AchievementController.ts';
+import { TeamController } from '../controller/TeamController.ts';
 import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
 import {
     requireEventManagementRole,
@@ -13,6 +14,7 @@ const router = Router();
 const eventController = new EventController();
 const registrationController = new EventRegistrationController();
 const achievementController = new AchievementController();
+const teamController = new TeamController();
 
 /**
  * GET /api/events
@@ -212,6 +214,58 @@ router.patch(
     requireAuth,
     requireEventManagementRole,
     withTransaction((req, res) => registrationController.setFillerPlayer(req, res))
+);
+
+// Teams (only valid for events with a team format). The captain-vs-manager
+// authorization split is enforced inside TeamService; manager-only actions
+// (close registration / start draft) additionally use requireEventManagementRole.
+// Static sub-paths are declared before the ':teamId' param route so they aren't
+// captured as a team id.
+router.get(
+    '/:eventId/teams',
+    requireAuth,
+    withTransaction((req, res) => teamController.list(req, res))
+);
+router.get(
+    '/:eventId/teams/available-players',
+    requireAuth,
+    withTransaction((req, res) => teamController.availablePlayers(req, res))
+);
+router.post(
+    '/:eventId/teams',
+    requireAuth,
+    withTransaction((req, res) => teamController.create(req, res))
+);
+router.post(
+    '/:eventId/teams/start-draft',
+    requireAuth,
+    requireEventManagementRole,
+    withTransaction((req, res) => teamController.startDraft(req, res))
+);
+router.get(
+    '/:eventId/teams/:teamId',
+    requireAuth,
+    withTransaction((req, res) => teamController.get(req, res))
+);
+router.patch(
+    '/:eventId/teams/:teamId',
+    requireAuth,
+    withTransaction((req, res) => teamController.rename(req, res))
+);
+router.delete(
+    '/:eventId/teams/:teamId',
+    requireAuth,
+    withTransaction((req, res) => teamController.remove(req, res))
+);
+router.post(
+    '/:eventId/teams/:teamId/members',
+    requireAuth,
+    withTransaction((req, res) => teamController.addMember(req, res))
+);
+router.delete(
+    '/:eventId/teams/:teamId/members/:userId',
+    requireAuth,
+    withTransaction((req, res) => teamController.removeMember(req, res))
 );
 
 export default router;

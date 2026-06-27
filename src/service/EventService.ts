@@ -272,7 +272,13 @@ export class EventService {
 
         const previousRound = roundId - 1;
         const newCurrentRound = previousRound >= 1 ? previousRound : null;
-        const newStatus = newCurrentRound === null ? TournamentStatus.CREATED : TournamentStatus.IN_PROGRESS;
+        // Stepping back before round 1 returns to the pre-start state: DRAFT for a
+        // team tournament (teams already formed, registration closed) or CREATED
+        // for an individual tournament.
+        const preStartStatus = event.format === EventFormat.TEAM
+            ? TournamentStatus.DRAFT
+            : TournamentStatus.CREATED;
+        const newStatus = newCurrentRound === null ? preStartStatus : TournamentStatus.IN_PROGRESS;
 
         this.tournamentRepository.updateTournamentState(eventId, newStatus, newCurrentRound, new Date(), modifiedBy);
 
@@ -413,6 +419,23 @@ export class EventService {
             throw new TournamentMisconfigured();
         }
         return event;
+    }
+
+    /**
+     * Set the tournament status, preserving currentRound. Authorization is the
+     * caller's responsibility (e.g. TeamService.startDraft already checks club
+     * management). Used by the team draft flow (CREATED -> DRAFT).
+     */
+    setTournamentStatus(eventId: number, status: TournamentStatus, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.tournamentRepository.updateTournamentState(
+            eventId,
+            status,
+            event.tournament!.currentRound,
+            new Date(),
+            modifiedBy
+        );
+        return this.getEventById(eventId);
     }
 
     private authorizeTournamentManagement(event: Event, userId: number): void {
