@@ -289,6 +289,15 @@ export class SeatingMissingParticipantsInRoundError extends BadRequestError {
     }
 }
 
+export class SeatingSameTeamAtTableError extends BadRequestError {
+    constructor(eventName: string, round: number, table: number) {
+        super(
+            `У раунді ${round} турніру "${eventName}" за столом ${table} опинились двоє гравців однієї команди`,
+            'seatingSameTeamAtTable'
+        );
+    }
+}
+
 export class InvalidEventFormatForTypeError extends BadRequestError {
     constructor(type: string, format: string) {
         super(
