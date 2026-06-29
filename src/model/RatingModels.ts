@@ -28,6 +28,8 @@ export interface UserRatingChangeShortDTO {
     ratingChange: number;
 }
 
+export const RATING_TO_POINTS_COEFFICIENT: number = 1000;
+
 export interface RatingSnapshot {
     timestamp: Date;
     rating: number;

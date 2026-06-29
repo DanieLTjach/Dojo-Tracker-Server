@@ -77,3 +77,27 @@ export class DraftNotStartableError extends BadRequestError {
         super(`Драфт турніру "${eventName}" не можна розпочати з поточного стану`, 'draftNotStartable');
     }
 }
+
+export class TeamDraftHasUnteamedPlayersError extends BadRequestError {
+    constructor(eventName: string, unteamedCount: number) {
+        super(
+            `У командному турнірі "${eventName}" є ${unteamedCount} схвалених учасників без команди`,
+            'teamDraftHasUnteamedPlayers'
+        );
+    }
+}
+
+export class TeamDraftUnevenTeamsError extends BadRequestError {
+    constructor(eventName: string) {
+        super(`У командному турнірі "${eventName}" команди мають різну кількість учасників`, 'teamDraftUnevenTeams');
+    }
+}
+
+export class TeamCountMustBeDivisibleByFourError extends BadRequestError {
+    constructor(eventName: string, teamCount: number) {
+        super(
+            `Кількість команд у турнірі "${eventName}" (${teamCount}) має ділитися на 4`,
+            'teamCountMustBeDivisibleByFour'
+        );
+    }
+}

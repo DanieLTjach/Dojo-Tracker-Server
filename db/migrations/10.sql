@@ -61,13 +61,11 @@ CREATE TABLE teamMembership (
 CREATE INDEX idx_teamMembership_eventId ON teamMembership(eventId);
 CREATE INDEX idx_teamMembership_userId ON teamMembership(userId);
 
--- Team attribution on each rating change, frozen at game-finish time.
--- teamId    = the player's team at the moment the game was scored (NULL if none).
--- teamRating = this game's contribution to the team rating (= ratingChange when
---              the game counts for the team, NULL/0 otherwise). For tournaments
---              two teammates never share a table, so every game counts and
---              teamRating == ratingChange. The columns let future season modes
---              count only some of a player's games without a schema change.
+-- Team rating snapshot on each rating change, frozen at game-finish time.
+-- teamId     = the player's team at the moment the game was scored (NULL if none).
+-- teamRating = the team's current rating after this game, mirroring userRatingChange.rating
+--              for individual ratings. It lets team standings read the latest row for a
+--              team instead of summing historical deltas.
 ALTER TABLE userRatingChange ADD COLUMN teamId INTEGER REFERENCES team(id);
 ALTER TABLE userRatingChange ADD COLUMN teamRating INTEGER;
 CREATE INDEX idx_userRatingChange_teamId ON userRatingChange(teamId);

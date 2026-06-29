@@ -90,6 +90,7 @@ export class TournamentSeatingService {
         const participantIds = this.getApprovedParticipantIds(eventId);
         const tables = this.resolveTableCount(event, participantIds.length);
         const rounds = event.tournament!.totalRounds;
+        this.eventService.validateTeamTournamentComposition(event, true);
 
         // For a team tournament, forbid two players of the same team at a table. The team
         // ids are aligned to the participant index order the generator works in, so the
@@ -157,6 +158,7 @@ export class TournamentSeatingService {
         const event = this.getTournamentEventForManagement(eventId, userId);
         this.assertTournamentHasNotStarted(event);
         this.assertNoExistingGames(event);
+        this.eventService.validateTeamTournamentComposition(event, true);
         this.validateSeatingShape(event, seatingRounds);
 
         // Atomicity is provided by the route's withTransaction wrapper.

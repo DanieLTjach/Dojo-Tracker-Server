@@ -1,7 +1,5 @@
 import {
-    DraftNotStartableError,
     InsufficientTeamPermissionsError,
-    NotEnoughApprovedForDraftError,
     TeamCompositionLockedError,
     TeamCountLimitReachedError,
     TeamFullError,
@@ -16,14 +14,14 @@ import { ClubRole } from '../model/ClubModels.ts';
 import { EventFormat } from '../model/EventModels.ts';
 import type { Event } from '../model/EventModels.ts';
 import { EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
-import type { PlayerTeamMap, Team, TeamStanding } from '../model/TeamModels.ts';
+import { RATING_TO_POINTS_COEFFICIENT } from '../model/RatingModels.ts';
+import type { PlayerTeamMap, Team, TeamAvailablePlayerDTO, TeamStanding } from '../model/TeamModels.ts';
 import { TeamRole } from '../model/TeamModels.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { TeamRepository } from '../repository/TeamRepository.ts';
 import { EventService } from './EventService.ts';
-import { RATING_TO_POINTS_COEFFICIENT } from './RatingService.ts';
 import { UserService } from './UserService.ts';
 
 export class TeamService {
@@ -46,14 +44,14 @@ export class TeamService {
         return team;
     }
 
-    getAvailablePlayers(eventId: number): ReturnType<TeamRepository['findUnteamedApprovedPlayers']> {
+    getAvailablePlayers(eventId: number): TeamAvailablePlayerDTO[] {
         this.eventService.validateEventExists(eventId);
         return this.teamRepository.findUnteamedApprovedPlayers(eventId);
     }
 
     /**
-     * Team standings: each team's total = sum of members' teamRating for the event,
-     * normalized to rating units. Ordered best-first; tied totals share a place.
+     * Team standings use the latest teamRating for the event, normalized to rating
+     * units. Ordered best-first; tied totals share a place.
      */
     getTeamStandings(eventId: number): TeamStanding[] {
         this.eventService.validateEventExists(eventId);
@@ -124,7 +122,7 @@ export class TeamService {
 
     deleteTeam(eventId: number, teamId: number, actingUserId: number): void {
         const event = this.getTeamEvent(eventId);
-        this.getTeamInEvent(eventId, teamId);
+        this.validateTeamIsInEvent(eventId, teamId);
         this.assertCompositionEditable(event);
         this.authorizeTeamManagement(event, teamId, actingUserId);
         this.teamRepository.deleteTeam(teamId);
@@ -157,30 +155,6 @@ export class TeamService {
         return this.getTeam(teamId);
     }
 
-    /**
-     * Close registration and move the team tournament into the DRAFT phase. Only a
-     * club manager/admin may do this, only while still in CREATED (registration
-     * open), and only once at least minParticipants are APPROVED. Pending
-     * applicants are left untouched (they can still be approved later as fillers).
-     */
-    startDraft(eventId: number, actingUserId: number): Event {
-        const event = this.getTeamEvent(eventId);
-        if (!this.isClubManagerOrAdmin(event.clubId, actingUserId)) {
-            throw new InsufficientTeamPermissionsError(event.name);
-        }
-        if (event.tournament!.status !== TournamentStatus.CREATED) {
-            throw new DraftNotStartableError(event.name);
-        }
-
-        const required = this.requiredDraftMinimum(event);
-        const approved = this.registrationRepository.countApprovedByEventId(eventId);
-        if (approved < required) {
-            throw new NotEnoughApprovedForDraftError(event.name, required, approved);
-        }
-
-        return this.eventService.setTournamentStatus(eventId, TournamentStatus.DRAFT, actingUserId);
-    }
-
     // --- helpers ---
 
     private getTeamEvent(eventId: number): Event {
@@ -193,10 +167,19 @@ export class TeamService {
 
     private getTeamInEvent(eventId: number, teamId: number): Team {
         const team = this.getTeam(teamId);
-        if (team.eventId !== eventId) {
-            throw new TeamNotInEventError(teamId, eventId);
-        }
+        this.assertTeamIsInEvent(team, eventId);
         return team;
+    }
+
+    private validateTeamIsInEvent(eventId: number, teamId: number): void {
+        const team = this.getTeam(teamId);
+        this.assertTeamIsInEvent(team, eventId);
+    }
+
+    private assertTeamIsInEvent(team: Team, eventId: number): void {
+        if (team.eventId !== eventId) {
+            throw new TeamNotInEventError(team.id, eventId);
+        }
     }
 
     /**
@@ -227,11 +210,10 @@ export class TeamService {
     }
 
     private assertCompositionEditable(event: Event): void {
-        // Only tournaments have a lifecycle that locks composition; team seasons
-        // (future) stay editable. For tournaments, composition is editable while
-        // the tournament has not yet started its rounds (CREATED or DRAFT).
+        // Team tournament composition is editable only after registration is closed
+        // and the event is in DRAFT. Future team seasons have no tournament lifecycle.
         const status = event.tournament?.status;
-        if (status !== undefined && status !== TournamentStatus.CREATED && status !== TournamentStatus.DRAFT) {
+        if (status !== undefined && status !== TournamentStatus.DRAFT) {
             throw new TeamCompositionLockedError(event.name);
         }
     }
@@ -272,14 +254,5 @@ export class TeamService {
         if (this.teamRepository.findTeamMembership(eventId, userId) !== undefined) {
             throw new UserAlreadyInTeamForEventError(userId);
         }
-    }
-
-    private requiredDraftMinimum(event: Event): number {
-        const config = event.config;
-        if (config?.minParticipants !== undefined) {
-            return config.minParticipants;
-        }
-        const teamConfig = config?.teamConfig;
-        return teamConfig !== undefined ? teamConfig.teamSize * teamConfig.teamCount : 0;
     }
 }

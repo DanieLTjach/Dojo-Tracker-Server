@@ -1,6 +1,13 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
-import type { Team, TeamMember, TeamRole } from '../model/TeamModels.ts';
+import type {
+    Team,
+    TeamAvailablePlayerDTO,
+    TeamMember,
+    TeamMemberCountDTO,
+    TeamRole,
+    TeamStandingRowDTO,
+} from '../model/TeamModels.ts';
 import { parseTeamRole } from '../util/EnumUtil.ts';
 
 const TEAM_SELECT_COLUMNS = `
@@ -14,7 +21,8 @@ const TEAM_SELECT_COLUMNS = `
     tm.role,
     u.name as userName,
     p.firstName as profileFirstName,
-    p.lastName as profileLastName
+    p.lastName as profileLastName,
+    p.hideProfile as profileHidden
 `;
 
 const TEAM_FROM_JOIN = `
@@ -24,8 +32,7 @@ const TEAM_FROM_JOIN = `
     LEFT JOIN profile p ON p.userId = tm.userId
 `;
 
-// CAPTAIN sorts before MEMBER, then by name, so members[0] is always the captain.
-const TEAM_ORDER_BY = `ORDER BY t.id, CASE tm.role WHEN 'CAPTAIN' THEN 0 ELSE 1 END, u.name`;
+const TEAM_ORDER_BY = `ORDER BY t.id, tm.createdAt`;
 
 export class TeamRepository {
     private findTeamsByEventIdStatement(): Statement<{ eventId: number }, TeamRowDBEntity> {
@@ -153,30 +160,6 @@ export class TeamRepository {
         this.removeMemberStatement().run({ teamId, userId });
     }
 
-    private setMemberRoleStatement(): Statement<{
-        teamId: number;
-        userId: number;
-        role: string;
-        modifiedAt: string;
-        modifiedBy: number;
-    }, void> {
-        return dbManager.db.prepare(`
-            UPDATE teamMembership
-            SET role = :role, modifiedAt = :modifiedAt, modifiedBy = :modifiedBy
-            WHERE teamId = :teamId AND userId = :userId
-        `);
-    }
-
-    setMemberRole(teamId: number, userId: number, role: TeamRole, modifiedBy: number): void {
-        this.setMemberRoleStatement().run({
-            teamId,
-            userId,
-            role,
-            modifiedAt: new Date().toISOString(),
-            modifiedBy,
-        });
-    }
-
     private findPlayerTeamMapStatement(): Statement<{ eventId: number }, { userId: number, teamId: number }> {
         return dbManager.db.prepare(`
             SELECT userId, teamId FROM teamMembership WHERE eventId = :eventId
@@ -221,55 +204,117 @@ export class TeamRepository {
         return this.countTeamsByEventIdStatement().get({ eventId })!.count;
     }
 
+    private countUnteamedApprovedPlayersStatement(): Statement<{ eventId: number }, { count: number }> {
+        return dbManager.db.prepare(`
+            SELECT COUNT(*) as count
+            FROM eventRegistration er
+            WHERE er.eventId = :eventId
+              AND er.status = 'APPROVED'
+              AND NOT EXISTS (
+                  SELECT 1 FROM teamMembership tm
+                  WHERE tm.eventId = er.eventId AND tm.userId = er.userId
+              )
+        `);
+    }
+
+    countUnteamedApprovedPlayers(eventId: number): number {
+        return this.countUnteamedApprovedPlayersStatement().get({ eventId })!.count;
+    }
+
+    private findTeamMemberCountsStatement(): Statement<{ eventId: number }, TeamMemberCountDTO> {
+        return dbManager.db.prepare(`
+            SELECT t.id as teamId, COUNT(tm.userId) as memberCount
+            FROM team t
+            LEFT JOIN teamMembership tm ON tm.teamId = t.id
+            WHERE t.eventId = :eventId
+            GROUP BY t.id
+            ORDER BY t.id
+        `);
+    }
+
+    findTeamMemberCountsByEventId(eventId: number): TeamMemberCountDTO[] {
+        return this.findTeamMemberCountsStatement().all({ eventId });
+    }
+
     private findUnteamedApprovedPlayersStatement(): Statement<
         { eventId: number },
-        { userId: number, name: string, profileFirstName: string | null, profileLastName: string | null }
+        TeamAvailablePlayerDBEntity
     > {
         return dbManager.db.prepare(`
-            SELECT er.userId, u.name, p.firstName as profileFirstName, p.lastName as profileLastName
+            SELECT er.userId,
+                   u.name,
+                   p.firstName as profileFirstName,
+                   p.lastName as profileLastName,
+                   p.hideProfile as profileHidden
             FROM eventRegistration er
             JOIN user u ON u.id = er.userId
             LEFT JOIN profile p ON p.userId = er.userId
             WHERE er.eventId = :eventId
               AND er.status = 'APPROVED'
-              AND er.userId NOT IN (SELECT userId FROM teamMembership WHERE eventId = :eventId)
+              AND NOT EXISTS (
+                  SELECT 1 FROM teamMembership tm
+                  WHERE tm.eventId = er.eventId AND tm.userId = er.userId
+              )
             ORDER BY u.name
         `);
     }
 
     /** Approved registrations for the event that are not yet on any team (the draft pool). */
-    findUnteamedApprovedPlayers(
-        eventId: number
-    ): { userId: number, name: string, profileFirstName: string | null, profileLastName: string | null }[] {
-        return this.findUnteamedApprovedPlayersStatement().all({ eventId });
+    findUnteamedApprovedPlayers(eventId: number): TeamAvailablePlayerDTO[] {
+        return this.findUnteamedApprovedPlayersStatement()
+            .all({ eventId })
+            .map(teamAvailablePlayerFromDBEntity);
     }
 
     private findTeamStandingsStatement(): Statement<
         { eventId: number },
-        { teamId: number, teamName: string, totalTeamRating: number, gamesCounted: number }
+        TeamStandingRowDTO
     > {
-        // Sum the team attribution frozen on each member's rating change. teamRating is
-        // joined by the team the player was on AT scoring time (urc.teamId), so roster edits
-        // after a game don't retroactively move points. COALESCE keeps empty teams at 0.
+        // teamRating stores the team's rating after each counted game. Current standings
+        // are therefore the latest teamRating per team, with empty teams at 0.
         return dbManager.db.prepare(`
             SELECT t.id as teamId,
                    t.name as teamName,
-                   COALESCE(SUM(urc.teamRating), 0) as totalTeamRating,
-                   COUNT(urc.gameId) as gamesCounted
+                   COALESCE(latest.teamRating, 0) as totalTeamRating,
+                   COALESCE(counts.gamesCounted, 0) as gamesCounted
             FROM team t
-            LEFT JOIN userRatingChange urc
-                   ON urc.teamId = t.id AND urc.eventId = t.eventId
+            LEFT JOIN (
+                SELECT teamId, teamRating
+                FROM (
+                    SELECT teamId,
+                           teamRating,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY teamId
+                               ORDER BY timestamp DESC, gameId DESC, userId DESC
+                           ) as rn
+                    FROM userRatingChange
+                    WHERE eventId = :eventId AND teamId IS NOT NULL AND teamRating IS NOT NULL
+                )
+                WHERE rn = 1
+            ) latest ON latest.teamId = t.id
+            LEFT JOIN (
+                SELECT teamId, COUNT(gameId) as gamesCounted
+                FROM userRatingChange
+                WHERE eventId = :eventId AND teamId IS NOT NULL AND teamRating IS NOT NULL
+                GROUP BY teamId
+            ) counts ON counts.teamId = t.id
             WHERE t.eventId = :eventId
             GROUP BY t.id, t.name
             ORDER BY totalTeamRating DESC, t.name
         `);
     }
 
-    findTeamStandings(
-        eventId: number
-    ): { teamId: number, teamName: string, totalTeamRating: number, gamesCounted: number }[] {
+    findTeamStandings(eventId: number): TeamStandingRowDTO[] {
         return this.findTeamStandingsStatement().all({ eventId });
     }
+}
+
+interface TeamAvailablePlayerDBEntity {
+    userId: number;
+    name: string;
+    profileFirstName: string | null;
+    profileLastName: string | null;
+    profileHidden: number | null;
 }
 
 interface TeamRowDBEntity {
@@ -285,6 +330,7 @@ interface TeamRowDBEntity {
     userName: string | null;
     profileFirstName: string | null;
     profileLastName: string | null;
+    profileHidden: number | null;
 }
 
 // Collapse the flat (team x member) join into Team objects with a members array,
@@ -310,12 +356,24 @@ function groupTeamRows(rows: TeamRowDBEntity[]): Team[] {
             const member: TeamMember = {
                 userId: row.userId,
                 name: row.userName ?? '',
-                profileFirstName: row.profileFirstName,
-                profileLastName: row.profileLastName,
+                profileFirstName: row.profileHidden ? null : row.profileFirstName,
+                profileLastName: row.profileHidden ? null : row.profileLastName,
+                profileHidden: Boolean(row.profileHidden),
                 role: parseTeamRole(row.role),
             };
             team.members.push(member);
         }
     }
     return [...byId.values()];
+}
+
+function teamAvailablePlayerFromDBEntity(dbEntity: TeamAvailablePlayerDBEntity): TeamAvailablePlayerDTO {
+    const profileHidden = Boolean(dbEntity.profileHidden);
+    return {
+        userId: dbEntity.userId,
+        name: dbEntity.name,
+        profileFirstName: profileHidden ? null : dbEntity.profileFirstName,
+        profileLastName: profileHidden ? null : dbEntity.profileLastName,
+        profileHidden,
+    };
 }

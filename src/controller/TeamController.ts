@@ -13,9 +13,11 @@ import {
     teamStandingsSchema,
 } from '../schema/TeamSchemas.ts';
 import { TeamService } from '../service/TeamService.ts';
+import { EventService } from '../service/EventService.ts';
 
 export class TeamController {
     private teamService: TeamService = new TeamService();
+    private eventService: EventService = new EventService();
 
     list(req: Request, res: Response) {
         const { params: { eventId } } = teamListSchema.parse(req);
@@ -71,7 +73,7 @@ export class TeamController {
 
     startDraft(req: Request, res: Response) {
         const { params: { eventId } } = startDraftSchema.parse(req);
-        const event = this.teamService.startDraft(eventId, req.user!.userId);
+        const event = this.eventService.startDraft(eventId, req.user!.userId);
         return res.status(StatusCodes.OK).json(event);
     }
 }

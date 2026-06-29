@@ -37,10 +37,18 @@ import { TournamentStatus } from '../model/TournamentModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
+import { TeamRepository } from '../repository/TeamRepository.ts';
 import { UserService } from './UserService.ts';
 import { TournamentRepository } from '../repository/TournamentRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import type { EventPatchBody } from '../schema/EventSchemas.ts';
+import {
+    DraftNotStartableError,
+    NotEnoughApprovedForDraftError,
+    TeamCountMustBeDivisibleByFourError,
+    TeamDraftHasUnteamedPlayersError,
+    TeamDraftUnevenTeamsError,
+} from '../error/TeamErrors.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
@@ -49,6 +57,7 @@ export class EventService {
     private eventRegistrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
     private tournamentRepository: TournamentRepository = new TournamentRepository();
     private gameRepository: GameRepository = new GameRepository();
+    private teamRepository: TeamRepository = new TeamRepository();
     private userService: UserService = new UserService();
 
     getAllEvents(clubId?: number): Event[] {
@@ -110,7 +119,7 @@ export class EventService {
             name: data.name,
             description: data.description ?? null,
             type: data.type,
-            format: data.format ?? EventFormat.INDIVIDUAL,
+            format: data.format,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
@@ -169,7 +178,7 @@ export class EventService {
             name: data.name,
             description: data.description ?? null,
             type: data.type,
-            format: data.format ?? EventFormat.INDIVIDUAL,
+            format: data.format,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
@@ -231,6 +240,9 @@ export class EventService {
         if (nextRound > tournament.totalRounds) {
             throw new TournamentHasNoMoreRoundsError(event.name);
         }
+        if (nextRound === 1) {
+            this.validateTeamTournamentComposition(event, false);
+        }
 
         if (tournament.currentRound !== null) {
             this.validateTournamentRoundFinished(event, tournament.currentRound);
@@ -275,9 +287,9 @@ export class EventService {
         // Stepping back before round 1 returns to the pre-start state: DRAFT for a
         // team tournament (teams already formed, registration closed) or CREATED
         // for an individual tournament.
-        const preStartStatus = event.format === EventFormat.TEAM
-            ? TournamentStatus.DRAFT
-            : TournamentStatus.CREATED;
+        const preStartStatus = event.format === EventFormat.INDIVIDUAL
+            ? TournamentStatus.CREATED
+            : TournamentStatus.DRAFT;
         const newStatus = newCurrentRound === null ? preStartStatus : TournamentStatus.IN_PROGRESS;
 
         this.tournamentRepository.updateTournamentState(eventId, newStatus, newCurrentRound, new Date(), modifiedBy);
@@ -421,12 +433,26 @@ export class EventService {
         return event;
     }
 
-    /**
-     * Set the tournament status, preserving currentRound. Authorization is the
-     * caller's responsibility (e.g. TeamService.startDraft already checks club
-     * management). Used by the team draft flow (CREATED -> DRAFT).
-     */
-    setTournamentStatus(eventId: number, status: TournamentStatus, modifiedBy: number): Event {
+    startDraft(eventId: number, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.authorizeTournamentManagement(event, modifiedBy);
+        if (event.format !== EventFormat.TEAM) {
+            throw new InvalidEventFormatForTypeError(event.type, event.format);
+        }
+        if (event.tournament!.status !== TournamentStatus.CREATED) {
+            throw new DraftNotStartableError(event.name);
+        }
+
+        const required = this.requiredDraftMinimum(event);
+        const approved = this.eventRegistrationRepository.countApprovedByEventId(eventId);
+        if (approved < required) {
+            throw new NotEnoughApprovedForDraftError(event.name, required, approved);
+        }
+
+        return this.setTournamentStatus(eventId, TournamentStatus.DRAFT, modifiedBy);
+    }
+
+    private setTournamentStatus(eventId: number, status: TournamentStatus, modifiedBy: number): Event {
         const event = this.getTournamentEvent(eventId);
         this.tournamentRepository.updateTournamentState(
             eventId,
@@ -451,6 +477,27 @@ export class EventService {
         const role = this.membershipRepository.getUserClubRole(event.clubId, userId);
         if (role !== ClubRole.OWNER && role !== ClubRole.MODERATOR) {
             throw new InsufficientClubPermissionsError([ClubRole.OWNER, ClubRole.MODERATOR]);
+        }
+    }
+
+    validateTeamTournamentComposition(event: Event, requireTeamCountDivisibleByFour: boolean): void {
+        if (event.format !== EventFormat.TEAM) {
+            return;
+        }
+
+        const unteamedCount = this.teamRepository.countUnteamedApprovedPlayers(event.id);
+        if (unteamedCount > 0) {
+            throw new TeamDraftHasUnteamedPlayersError(event.name, unteamedCount);
+        }
+
+        const teamMemberCounts = this.teamRepository.findTeamMemberCountsByEventId(event.id);
+        const expectedMemberCount = teamMemberCounts[0]?.memberCount ?? 0;
+        if (teamMemberCounts.some(team => team.memberCount !== expectedMemberCount)) {
+            throw new TeamDraftUnevenTeamsError(event.name);
+        }
+
+        if (requireTeamCountDivisibleByFour && teamMemberCounts.length % 4 !== 0) {
+            throw new TeamCountMustBeDivisibleByFourError(event.name, teamMemberCounts.length);
         }
     }
 
@@ -534,7 +581,7 @@ export class EventService {
      *   minParticipants === teamSize * teamCount  (the draft minimum reuses minParticipants).
      */
     private validateEventFormat(data: EventData): void {
-        const format = data.format ?? EventFormat.INDIVIDUAL;
+        const format = data.format;
         const allowed = this.allowedFormatsForType(data.type);
         if (!allowed.includes(format)) {
             throw new InvalidEventFormatForTypeError(data.type, format);
@@ -579,6 +626,15 @@ export class EventService {
         return type === 'TOURNAMENT'
             ? [EventFormat.INDIVIDUAL, EventFormat.TEAM]
             : [EventFormat.INDIVIDUAL];
+    }
+
+    private requiredDraftMinimum(event: Event): number {
+        const config = event.config;
+        if (config?.minParticipants !== undefined) {
+            return config.minParticipants;
+        }
+        const teamConfig = config?.teamConfig;
+        return teamConfig !== undefined ? teamConfig.teamSize * teamConfig.teamCount : 0;
     }
 
     private validateCurrentRatingEvent(data: EventData): void {
@@ -749,7 +805,7 @@ export interface EventData {
     name: string;
     description?: string | null | undefined;
     type: EventType;
-    format?: EventFormat | null | undefined;
+    format: EventFormat;
     clubId?: number | null | undefined;
     isCurrentRating?: boolean | null | undefined;
     dateFrom?: Date | null | undefined;

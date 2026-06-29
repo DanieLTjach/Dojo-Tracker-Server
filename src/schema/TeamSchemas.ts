@@ -1,5 +1,6 @@
 import z from 'zod';
 import { eventIdParamSchema } from './EventSchemas.ts';
+import { userIdSchema } from './UserSchemas.ts';
 
 const teamIdParamSchema = z.coerce.number().int('Team ID must be an integer').positive();
 const userIdParamSchema = z.coerce.number().int('User ID must be an integer').positive();
@@ -26,7 +27,7 @@ export const teamCreateSchema = z.object({
         name: teamNameSchema,
         // Optional: managers can create a team for another captain; when omitted the
         // acting user becomes the captain.
-        captainUserId: z.number().int('captainUserId must be an integer').positive().optional(),
+        captainUserId: userIdSchema.positive().optional(),
     }),
 });
 
@@ -41,7 +42,7 @@ export const teamDeleteSchema = z.object({
 
 export const teamAddMemberSchema = z.object({
     params: z.object({ eventId: eventIdParamSchema, teamId: teamIdParamSchema }),
-    body: z.strictObject({ userId: z.number().int('userId must be an integer').positive() }),
+    body: z.strictObject({ userId: userIdSchema.positive() }),
 });
 
 export const teamRemoveMemberSchema = z.object({

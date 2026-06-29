@@ -3,14 +3,19 @@ import { cleanupTestDatabase } from './setup.ts';
 import { TeamService } from '../src/service/TeamService.ts';
 import { RatingService } from '../src/service/RatingService.ts';
 import { RatingRepository } from '../src/repository/RatingRepository.ts';
+import { EventService } from '../src/service/EventService.ts';
 import { TournamentStatus } from '../src/model/TournamentModels.ts';
 import type { GameRules } from '../src/model/EventModels.ts';
+import { InsufficientClubPermissionsError } from '../src/error/ClubErrors.ts';
 import {
-    DraftNotStartableError,
     InsufficientTeamPermissionsError,
     NotEnoughApprovedForDraftError,
+    DraftNotStartableError,
+    TeamCountMustBeDivisibleByFourError,
     TeamCompositionLockedError,
     TeamCountLimitReachedError,
+    TeamDraftHasUnteamedPlayersError,
+    TeamDraftUnevenTeamsError,
     TeamFullError,
     TeamsNotAllowedForFormatError,
     UserAlreadyInTeamForEventError,
@@ -21,6 +26,7 @@ const SYSTEM_USER_ID = 0;
 
 describe('TeamService', () => {
     const service = new TeamService();
+    const eventService = new EventService();
 
     const CLUB_ID = 97100;
     const OWNER_ID = 97201;
@@ -59,6 +65,10 @@ describe('TeamService', () => {
 
     function setTournamentStatus(eventId: number, status: string): void {
         dbManager.db.prepare('UPDATE tournament SET status = ? WHERE eventId = ?').run(status, eventId);
+    }
+
+    function moveTeamTournamentToDraft(): void {
+        setTournamentStatus(TEAM_TOURNAMENT_ID, 'DRAFT');
     }
 
     beforeAll(() => {
@@ -163,10 +173,25 @@ describe('TeamService', () => {
             TEAM_TOURNAMENT_ID,
             INDIVIDUAL_TOURNAMENT_ID
         );
+        dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?, ?, ?, ?, ?, ?)').run(
+            OWNER_ID,
+            CAPTAIN_A,
+            CAPTAIN_B,
+            PLAYER_1,
+            PLAYER_2,
+            OUTSIDER,
+            PENDING_PLAYER
+        );
+        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId = ? AND userId = ?')
+            .run(TEAM_TOURNAMENT_ID, OUTSIDER);
+        dbManager.db.prepare('UPDATE eventRegistration SET status = ? WHERE eventId = ? AND userId = ?')
+            .run('PENDING', TEAM_TOURNAMENT_ID, PENDING_PLAYER);
         setTournamentStatus(TEAM_TOURNAMENT_ID, 'CREATED');
     });
 
     describe('createTeam', () => {
+        beforeEach(moveTeamTournamentToDraft);
+
         it('lets a captain create their own team and become CAPTAIN', () => {
             const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Dragons', CAPTAIN_A, CAPTAIN_A);
             expect(team.name).toBe('Dragons');
@@ -218,6 +243,8 @@ describe('TeamService', () => {
     });
 
     describe('members', () => {
+        beforeEach(moveTeamTournamentToDraft);
+
         it('adds a member up to teamSize and then rejects', () => {
             const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Dragons', CAPTAIN_A, CAPTAIN_A);
             const withMember = service.addMember(TEAM_TOURNAMENT_ID, team.id, PLAYER_1, CAPTAIN_A);
@@ -245,12 +272,36 @@ describe('TeamService', () => {
             expect(available).not.toContain(CAPTAIN_A);
             expect(available).not.toContain(PLAYER_1);
         });
+
+        it('hides native profile names when hideProfile is true', () => {
+            const t = nextTs();
+            dbManager.db.prepare(
+                `INSERT INTO profile (userId, firstName, lastName, hideProfile, modifiedAt, modifiedBy)
+                 VALUES (?, 'Secret', 'Captain', 1, ?, ?), (?, 'Visible', 'Player', 0, ?, ?)`
+            ).run(CAPTAIN_A, t, SYSTEM_USER_ID, PLAYER_1, t, SYSTEM_USER_ID);
+
+            const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Hidden', CAPTAIN_A, CAPTAIN_A);
+            expect(team.members[0]).toMatchObject({
+                userId: CAPTAIN_A,
+                profileFirstName: null,
+                profileLastName: null,
+                profileHidden: true,
+            });
+
+            const availablePlayer = service.getAvailablePlayers(TEAM_TOURNAMENT_ID)
+                .find(player => player.userId === PLAYER_1);
+            expect(availablePlayer).toMatchObject({
+                profileFirstName: 'Visible',
+                profileLastName: 'Player',
+                profileHidden: false,
+            });
+        });
     });
 
     describe('startDraft', () => {
         it('moves a team tournament from CREATED to DRAFT once minParticipants approved', () => {
             // 4 approved (< 8 min) -> should fail.
-            expect(() => service.startDraft(TEAM_TOURNAMENT_ID, OWNER_ID))
+            expect(() => eventService.startDraft(TEAM_TOURNAMENT_ID, OWNER_ID))
                 .toThrow(NotEnoughApprovedForDraftError);
 
             // Approve up to 8.
@@ -263,25 +314,34 @@ describe('TeamService', () => {
             }
             insertExtraApproved();
 
-            const event = service.startDraft(TEAM_TOURNAMENT_ID, OWNER_ID);
+            const event = eventService.startDraft(TEAM_TOURNAMENT_ID, OWNER_ID);
             expect(event.tournament!.status).toBe(TournamentStatus.DRAFT);
 
             cleanupExtraApproved();
         });
 
         it('forbids non-managers from starting the draft', () => {
-            expect(() => service.startDraft(TEAM_TOURNAMENT_ID, CAPTAIN_A))
-                .toThrow(InsufficientTeamPermissionsError);
+            expect(() => eventService.startDraft(TEAM_TOURNAMENT_ID, CAPTAIN_A))
+                .toThrow(InsufficientClubPermissionsError);
         });
 
         it('rejects starting the draft when not in CREATED', () => {
             setTournamentStatus(TEAM_TOURNAMENT_ID, 'IN_PROGRESS');
-            expect(() => service.startDraft(TEAM_TOURNAMENT_ID, OWNER_ID))
+            expect(() => eventService.startDraft(TEAM_TOURNAMENT_ID, OWNER_ID))
                 .toThrow(DraftNotStartableError);
         });
     });
 
     describe('composition lock', () => {
+        beforeEach(moveTeamTournamentToDraft);
+
+        it('blocks team changes while registration is still CREATED', () => {
+            const team = service.createTeam(TEAM_TOURNAMENT_ID, 'A', CAPTAIN_A, CAPTAIN_A);
+            setTournamentStatus(TEAM_TOURNAMENT_ID, 'CREATED');
+            expect(() => service.addMember(TEAM_TOURNAMENT_ID, team.id, PLAYER_1, OWNER_ID))
+                .toThrow(TeamCompositionLockedError);
+        });
+
         it('blocks team changes once the tournament is in progress', () => {
             const team = service.createTeam(TEAM_TOURNAMENT_ID, 'A', CAPTAIN_A, CAPTAIN_A);
             setTournamentStatus(TEAM_TOURNAMENT_ID, 'IN_PROGRESS');
@@ -290,7 +350,41 @@ describe('TeamService', () => {
         });
     });
 
+    describe('team tournament composition validation', () => {
+        beforeEach(moveTeamTournamentToDraft);
+
+        it('rejects a team tournament with approved players who are not on a team', () => {
+            const event = eventService.getEventById(TEAM_TOURNAMENT_ID);
+            expect(() => eventService.validateTeamTournamentComposition(event, true))
+                .toThrow(TeamDraftHasUnteamedPlayersError);
+        });
+
+        it('rejects teams with uneven member counts before starting round 1', () => {
+            const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'A', CAPTAIN_A, CAPTAIN_A);
+            service.addMember(TEAM_TOURNAMENT_ID, teamA.id, PLAYER_1, CAPTAIN_A);
+            service.createTeam(TEAM_TOURNAMENT_ID, 'B', CAPTAIN_B, CAPTAIN_B);
+            service.createTeam(TEAM_TOURNAMENT_ID, 'C', PLAYER_2, OWNER_ID);
+
+            const event = eventService.getEventById(TEAM_TOURNAMENT_ID);
+            expect(() => eventService.validateTeamTournamentComposition(event, false))
+                .toThrow(TeamDraftUnevenTeamsError);
+        });
+
+        it('requires the team count to be divisible by 4 for seating generation', () => {
+            const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'A', CAPTAIN_A, CAPTAIN_A);
+            service.addMember(TEAM_TOURNAMENT_ID, teamA.id, PLAYER_1, CAPTAIN_A);
+            const teamB = service.createTeam(TEAM_TOURNAMENT_ID, 'B', CAPTAIN_B, CAPTAIN_B);
+            service.addMember(TEAM_TOURNAMENT_ID, teamB.id, PLAYER_2, CAPTAIN_B);
+
+            const event = eventService.getEventById(TEAM_TOURNAMENT_ID);
+            expect(() => eventService.validateTeamTournamentComposition(event, true))
+                .toThrow(TeamCountMustBeDivisibleByFourError);
+        });
+    });
+
     describe('getTeamStandings', () => {
+        beforeEach(moveTeamTournamentToDraft);
+
         function insertGame(gameId: number): void {
             const t = nextTs();
             dbManager.db.prepare(
@@ -298,11 +392,17 @@ describe('TeamService', () => {
                  VALUES (?, ?, ?, ?, ?, 'FINISHED', 0)`
             ).run(gameId, TEAM_TOURNAMENT_ID, t, t, SYSTEM_USER_ID);
         }
-        function insertRatingChange(userId: number, gameId: number, teamId: number, teamRating: number): void {
+        function insertRatingChange(
+            userId: number,
+            gameId: number,
+            teamId: number,
+            ratingChange: number,
+            teamRating: number
+        ): void {
             dbManager.db.prepare(
                 `INSERT INTO userRatingChange (userId, eventId, gameId, ratingChange, rating, timestamp, teamId, teamRating)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(userId, TEAM_TOURNAMENT_ID, gameId, teamRating, teamRating, nextTs(), teamId, teamRating);
+            ).run(userId, TEAM_TOURNAMENT_ID, gameId, ratingChange, teamRating, nextTs(), teamId, teamRating);
         }
 
         afterEach(() => {
@@ -310,19 +410,19 @@ describe('TeamService', () => {
             dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(TEAM_TOURNAMENT_ID);
         });
 
-        it('sums members teamRating per team, normalizes, and assigns places', () => {
+        it('uses the latest teamRating per team, normalizes, and assigns places', () => {
             const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'Alpha', CAPTAIN_A, CAPTAIN_A);
             service.addMember(TEAM_TOURNAMENT_ID, teamA.id, PLAYER_1, CAPTAIN_A);
             const teamB = service.createTeam(TEAM_TOURNAMENT_ID, 'Beta', CAPTAIN_B, CAPTAIN_B);
             service.addMember(TEAM_TOURNAMENT_ID, teamB.id, PLAYER_2, CAPTAIN_B);
 
             insertGame(98001);
-            // Team A: captain +23000, player +7000 => 30000 raw => 30.0 normalized.
-            insertRatingChange(CAPTAIN_A, 98001, teamA.id, 23000);
-            insertRatingChange(PLAYER_1, 98001, teamA.id, 7000);
-            // Team B: -10000 + -30000 => -40000 => -40.0.
-            insertRatingChange(CAPTAIN_B, 98001, teamB.id, -10000);
-            insertRatingChange(PLAYER_2, 98001, teamB.id, -30000);
+            // Team A latest current rating is 30000 raw => 30.0 normalized.
+            insertRatingChange(CAPTAIN_A, 98001, teamA.id, 23000, 23000);
+            insertRatingChange(PLAYER_1, 98001, teamA.id, 7000, 30000);
+            // Team B latest current rating is -40000 raw => -40.0.
+            insertRatingChange(CAPTAIN_B, 98001, teamB.id, -10000, -10000);
+            insertRatingChange(PLAYER_2, 98001, teamB.id, -30000, -40000);
 
             const standings = service.getTeamStandings(TEAM_TOURNAMENT_ID);
             expect(standings).toEqual([
@@ -344,6 +444,8 @@ describe('TeamService', () => {
     });
 
     describe('rating attribution (addRatingChangesFromGame)', () => {
+        beforeEach(moveTeamTournamentToDraft);
+
         const ratingService = new RatingService();
         const ratingRepo = new RatingRepository();
 
@@ -363,7 +465,7 @@ describe('TeamService', () => {
             dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(TEAM_TOURNAMENT_ID);
         });
 
-        it('freezes teamId and teamRating (= ratingChange) for teamed players', () => {
+        it('freezes teamId and current teamRating for teamed players', () => {
             // Two teams, one player each drafted, all four seated (the other two unteamed).
             const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'Alpha', CAPTAIN_A, CAPTAIN_A);
             const teamB = service.createTeam(TEAM_TOURNAMENT_ID, 'Beta', CAPTAIN_B, CAPTAIN_B);
@@ -400,6 +502,31 @@ describe('TeamService', () => {
             const player1Change = ratingRepo.findUserRatingChangeInGame(PLAYER_1, 98100)!;
             expect(player1Change.teamId).toBeNull();
             expect(player1Change.teamRating).toBeNull();
+
+            const secondTimestamp = nextTs();
+            dbManager.db.prepare(
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, lastRoundWasDeleted)
+                 VALUES (?, ?, ?, ?, ?, 'FINISHED', 0)`
+            ).run(98101, TEAM_TOURNAMENT_ID, secondTimestamp, secondTimestamp, SYSTEM_USER_ID);
+
+            ratingService.addRatingChangesFromGame(
+                98101,
+                new Date(secondTimestamp),
+                [
+                    { userId: CAPTAIN_A, points: 35000 },
+                    { userId: CAPTAIN_B, points: 25000 },
+                    { userId: PLAYER_1, points: 25000 },
+                    { userId: PLAYER_2, points: 15000 },
+                ],
+                TEAM_TOURNAMENT_ID,
+                gameRules,
+                0
+            );
+
+            const secondCaptainAChange = ratingRepo.findUserRatingChangeInGame(CAPTAIN_A, 98101)!;
+            expect(secondCaptainAChange.teamRating).toBe(
+                captainAChange.teamRating! + secondCaptainAChange.ratingChange
+            );
         });
     });
 

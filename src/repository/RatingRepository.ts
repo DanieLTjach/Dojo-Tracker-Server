@@ -42,6 +42,33 @@ export class RatingRepository {
             : undefined;
     }
 
+    private findTeamLatestRatingChangeBeforeDateStatement(): Statement<{
+        teamId: number;
+        eventId: number;
+        beforeDate: string;
+    }, UserRatingChangeDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT * FROM userRatingChange
+            WHERE teamId = :teamId
+              AND eventId = :eventId
+              AND teamRating IS NOT NULL
+              AND timestamp < :beforeDate
+            ORDER BY timestamp DESC, gameId DESC, userId DESC
+            LIMIT 1`);
+    }
+
+    findTeamLatestRatingChangeBeforeDate(
+        teamId: number,
+        eventId: number,
+        beforeDate: Date
+    ): UserRatingChange | undefined {
+        const userRatingChangeDBEntity = this.findTeamLatestRatingChangeBeforeDateStatement()
+            .get({ teamId, eventId, beforeDate: beforeDate.toISOString() });
+        return userRatingChangeDBEntity !== undefined
+            ? userRatingChangeFromDBEntity(userRatingChangeDBEntity)
+            : undefined;
+    }
+
     private findAllUsersCurrentRatingStatement(): Statement<{ eventId: number }, UserRatingDBEntity> {
         return dbManager.db.prepare(`
             SELECT u.id as userId, u.name as userName, urc.rating as rating, gc.gamesPlayed as gamesPlayed,
@@ -158,6 +185,37 @@ export class RatingRepository {
         this.updateUserRatingChangesAfterDateStatement().run(
             {
                 userId,
+                eventId,
+                ratingDelta,
+                afterDate: afterDate.toISOString(),
+            }
+        );
+    }
+
+    private updateTeamRatingChangesAfterDateStatement(): Statement<{
+        teamId: number;
+        eventId: number;
+        ratingDelta: number;
+        afterDate: string;
+    }> {
+        return dbManager.db.prepare(`
+            UPDATE userRatingChange
+            SET teamRating = teamRating + :ratingDelta
+            WHERE teamId = :teamId
+              AND eventId = :eventId
+              AND teamRating IS NOT NULL
+              AND timestamp > :afterDate`);
+    }
+
+    updateTeamRatingChangesAfterDate(
+        teamId: number,
+        eventId: number,
+        ratingDelta: number,
+        afterDate: Date
+    ): void {
+        this.updateTeamRatingChangesAfterDateStatement().run(
+            {
+                teamId,
                 eventId,
                 ratingDelta,
                 afterDate: afterDate.toISOString(),
