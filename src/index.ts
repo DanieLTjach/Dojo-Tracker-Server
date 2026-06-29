@@ -19,6 +19,7 @@ import LogService from './service/LogService.ts';
 import { dbManager } from './db/dbInit.ts';
 import TelegramCommandService from './service/TelegramCommandService.ts';
 import PollSchedulerService from './service/PollSchedulerService.ts';
+import { UsageService } from './service/UsageService.ts';
 
 const app = express();
 app.use(express.json());
@@ -58,6 +59,7 @@ app.listen(config.port, (error?: Error) => {
 if (config.env !== 'test') {
     TelegramCommandService.init();
     PollSchedulerService.init();
+    UsageService.initScheduler();
 }
 
 async function shutdown() {
