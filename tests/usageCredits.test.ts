@@ -9,6 +9,7 @@ import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createCustomEvent } from './testHelpers.ts';
 import { UsageService } from '../src/service/UsageService.ts';
 import { UsageAction } from '../src/model/UsageModels.ts';
+import { ClubService } from '../src/service/ClubService.ts';
 
 const app = express();
 app.use(express.json());
@@ -24,8 +25,12 @@ describe('Usage credits', () => {
     let userId = 500;
 
     beforeEach(() => {
-        clubId++;
-        userId++;
+        clubId = (
+            dbManager.db.prepare('SELECT COALESCE(MAX(id), 0) + 1000 AS id FROM club').get() as { id: number }
+        ).id;
+        userId = (
+            dbManager.db.prepare('SELECT COALESCE(MAX(id), 0) + 1000 AS id FROM user').get() as { id: number }
+        ).id;
         const timestamp = new Date().toISOString();
         dbManager.db.prepare(
             `INSERT INTO club (id, name, address, city, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
@@ -50,6 +55,14 @@ describe('Usage credits', () => {
         expect(summary.account.overdraftCutoff).toBe(-1000);
         expect(summary.account.overdraftMultiplier).toBe(2);
         expect(summary.account.isEnforced).toBe(true);
+    });
+
+    test('creates new club accounts with new-club starter credits', () => {
+        const club = new ClubService().createClub({ name: `Usage Created Club ${Date.now()}` }, 0);
+        const summary = usageService.getUsageSummary(club.id);
+
+        expect(summary.account.creditsBalance).toBe(1000);
+        expect(summary.account.overdraftCutoff).toBe(-1000);
     });
 
     test('charges daily usage and doubles charges after balance is negative', () => {

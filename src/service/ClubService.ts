@@ -52,7 +52,7 @@ export class ClubService {
         });
 
         const newClub = this.getClubById(clubId);
-        this.usageService.ensureAccount(clubId, modifiedBy);
+        this.usageService.ensureNewClubAccount(clubId, modifiedBy);
         this.logCreatedClub(newClub, modifiedBy);
         return newClub;
     }

@@ -17,6 +17,7 @@ interface Config {
     tournamentUserId: number | undefined;
     redisUrl: string | undefined;
     usageStartingCredits: number;
+    usageNewClubStartingCredits: number;
     usageDefaultOverdraftCutoff: number;
     usageDefaultOverdraftMultiplier: number;
     usageReservationTtlSeconds: number;
@@ -74,6 +75,7 @@ const config: Config = {
     tournamentUserId: tournamentMode ? (tryParseIntEnvVariable('TOURNAMENT_USER_ID') || 1) : undefined,
     redisUrl: process.env['REDIS_URL'],
     usageStartingCredits: tryParseIntEnvVariable('USAGE_STARTING_CREDITS') ?? 10000,
+    usageNewClubStartingCredits: tryParseIntEnvVariable('USAGE_NEW_CLUB_STARTING_CREDITS') ?? 1000,
     usageDefaultOverdraftCutoff: tryParseIntEnvVariable('USAGE_DEFAULT_OVERDRAFT_CUTOFF') ?? -1000,
     usageDefaultOverdraftMultiplier: tryParseIntEnvVariable('USAGE_DEFAULT_OVERDRAFT_MULTIPLIER') ?? 2,
     usageReservationTtlSeconds: tryParseIntEnvVariable('USAGE_RESERVATION_TTL_SECONDS') ?? 300,

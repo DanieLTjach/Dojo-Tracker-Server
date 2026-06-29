@@ -233,6 +233,18 @@ export class UsageService {
     }
 
     ensureAccount(clubId: number, modifiedBy: number): ClubUsageAccount {
+        return this.ensureAccountWithStartingCredits(clubId, modifiedBy, config.usageStartingCredits);
+    }
+
+    ensureNewClubAccount(clubId: number, modifiedBy: number): ClubUsageAccount {
+        return this.ensureAccountWithStartingCredits(clubId, modifiedBy, config.usageNewClubStartingCredits);
+    }
+
+    private ensureAccountWithStartingCredits(
+        clubId: number,
+        modifiedBy: number,
+        startingCredits: number
+    ): ClubUsageAccount {
         const existing = this.usageRepository.findAccountByClubId(clubId);
         if (existing !== undefined) {
             return existing;
@@ -240,7 +252,7 @@ export class UsageService {
 
         return this.usageRepository.createAccount({
             clubId,
-            creditsBalance: config.usageStartingCredits,
+            creditsBalance: startingCredits,
             overdraftCutoff: config.usageDefaultOverdraftCutoff,
             overdraftMultiplier: config.usageDefaultOverdraftMultiplier,
             isEnforced: true,
