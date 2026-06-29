@@ -19,8 +19,6 @@ const USAGE_ACTION_COSTS: Record<UsageAction, number> = {
     [UsageActionValues.TOURNAMENT_SEATING_APPLIED]: 5,
     [UsageActionValues.TOURNAMENT_ROUND_IMPORTED]: 5,
     [UsageActionValues.CSV_GAMES_IMPORTED]: 1,
-    [UsageActionValues.INVITE_CREATED]: 1,
-    [UsageActionValues.INVITE_REVOKED]: 1,
 };
 
 export interface UsageChargeRequest {

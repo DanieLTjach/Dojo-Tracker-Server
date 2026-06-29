@@ -13,7 +13,6 @@ import {
     InviteRevokedError,
     NameRequiredForNewUserError,
 } from '../src/error/ClubErrors.ts';
-import { UsageAction } from '../src/model/UsageModels.ts';
 import { UsageService } from '../src/service/UsageService.ts';
 
 const SYSTEM_USER_ID = 0;
@@ -83,22 +82,13 @@ describe('ClubInviteService', () => {
         expect(inviteRepository.findByCode(invite.code)).toBeDefined();
     });
 
-    it('charges usage credits when creating an invite', () => {
+    it('does not charge usage credits when creating an invite', () => {
         const before = usageService.getUsageSummary(clubId).account.creditsBalance;
 
         createInvite();
 
         const summary = usageService.getUsageSummary(clubId);
-        expect(summary.account.creditsBalance).toBe(before - 1);
-        expect(summary.dailyUsage).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    action: UsageAction.INVITE_CREATED,
-                    actionCount: expect.any(Number),
-                    chargedCredits: expect.any(Number),
-                }),
-            ])
-        );
+        expect(summary.account.creditsBalance).toBe(before);
     });
 
     it('revokes an invite', () => {
@@ -107,7 +97,7 @@ describe('ClubInviteService', () => {
         expect(revoked.isActive).toBe(false);
     });
 
-    it('charges usage credits when revoking an active invite only once', () => {
+    it('does not charge usage credits when revoking an active invite', () => {
         const invite = createInvite();
         const beforeRevoke = usageService.getUsageSummary(clubId).account.creditsBalance;
 
@@ -118,7 +108,7 @@ describe('ClubInviteService', () => {
 
         expect(revoked.isActive).toBe(false);
         expect(secondRevoke.isActive).toBe(false);
-        expect(afterRevoke).toBe(beforeRevoke - 1);
+        expect(afterRevoke).toBe(beforeRevoke);
         expect(afterSecondRevoke).toBe(afterRevoke);
     });
 

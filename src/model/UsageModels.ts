@@ -5,8 +5,6 @@ export const UsageAction = {
     TOURNAMENT_SEATING_APPLIED: 'TOURNAMENT_SEATING_APPLIED',
     TOURNAMENT_ROUND_IMPORTED: 'TOURNAMENT_ROUND_IMPORTED',
     CSV_GAMES_IMPORTED: 'CSV_GAMES_IMPORTED',
-    INVITE_CREATED: 'INVITE_CREATED',
-    INVITE_REVOKED: 'INVITE_REVOKED',
 } as const;
 
 export type UsageAction = typeof UsageAction[keyof typeof UsageAction];

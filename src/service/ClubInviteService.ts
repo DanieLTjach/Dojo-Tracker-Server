@@ -15,8 +15,6 @@ import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { NameAlreadyTakenByAnotherUser } from '../error/UserErrors.ts';
-import { UsageAction } from '../model/UsageModels.ts';
-import { UsageService } from './UsageService.ts';
 import {
     InviteExhaustedError,
     InviteExpiredError,
@@ -48,36 +46,29 @@ export class ClubInviteService {
     private clubService: ClubService = new ClubService();
     private userService: UserService = new UserService();
     private membershipService: ClubMembershipService = new ClubMembershipService();
-    private usageService: UsageService = new UsageService();
 
     createInvite(params: CreateInviteParams): ClubInvite {
         this.clubService.validateClubExists(params.clubId);
 
-        return this.usageService.runBillable({
+        const code = this.generateUniqueCode();
+        const now = new Date();
+        const id = this.inviteRepository.createInvite({
             clubId: params.clubId,
-            action: UsageAction.INVITE_CREATED,
+            code,
+            type: params.type,
+            source: params.source,
+            label: params.label ?? null,
+            maxUses: params.maxUses ?? null,
+            expiresAt: params.expiresAt ?? null,
+            isActive: true,
+            createdAt: now,
+            modifiedAt: now,
             modifiedBy: params.createdBy,
-        }, () => {
-            const code = this.generateUniqueCode();
-            const now = new Date();
-            const id = this.inviteRepository.createInvite({
-                clubId: params.clubId,
-                code,
-                type: params.type,
-                source: params.source,
-                label: params.label ?? null,
-                maxUses: params.maxUses ?? null,
-                expiresAt: params.expiresAt ?? null,
-                isActive: true,
-                createdAt: now,
-                modifiedAt: now,
-                modifiedBy: params.createdBy,
-            });
-
-            const invite = this.getInviteById(id);
-            this.logInviteCreated(invite, params.createdBy);
-            return invite;
         });
+
+        const invite = this.getInviteById(id);
+        this.logInviteCreated(invite, params.createdBy);
+        return invite;
     }
 
     listInvites(clubId: number): ClubInvite[] {
@@ -91,16 +82,10 @@ export class ClubInviteService {
             return invite;
         }
 
-        return this.usageService.runBillable({
-            clubId: invite.clubId,
-            action: UsageAction.INVITE_REVOKED,
-            modifiedBy,
-        }, () => {
-            this.inviteRepository.setActive(inviteId, false, modifiedBy);
-            const updated = this.getInviteById(inviteId);
-            this.logInviteRevoked(updated, modifiedBy);
-            return updated;
-        });
+        this.inviteRepository.setActive(inviteId, false, modifiedBy);
+        const updated = this.getInviteById(inviteId);
+        this.logInviteRevoked(updated, modifiedBy);
+        return updated;
     }
 
     getInvitePreview(code: string): InvitePreview {
