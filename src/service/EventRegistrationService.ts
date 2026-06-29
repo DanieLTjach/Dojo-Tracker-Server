@@ -23,6 +23,8 @@ import LogService from './LogService.ts';
 import { ProfileService } from './ProfileService.ts';
 import TelegramMessageService from './TelegramMessageService.ts';
 import { UserService } from './UserService.ts';
+import { UsageAction } from '../model/UsageModels.ts';
+import { UsageService } from './UsageService.ts';
 
 export class EventRegistrationService {
     private registrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
@@ -32,6 +34,7 @@ export class EventRegistrationService {
     private eventService: EventService = new EventService();
     private profileService: ProfileService = new ProfileService();
     private userService: UserService = new UserService();
+    private usageService: UsageService = new UsageService();
 
     apply(eventId: number, applicantId: number): EventRegistration {
         const event = this.eventService.getEventById(eventId);
@@ -333,16 +336,21 @@ export class EventRegistrationService {
     private activateMembershipIfNeeded(clubId: number, userId: number, modifierId: number): void {
         const membership = this.membershipRepository.findMembership(clubId, userId);
         if (membership === undefined) {
-            const now = new Date();
-            this.membershipRepository.createMembership({
-                clubId,
-                userId,
-                role: 'MEMBER',
-                status: 'ACTIVE',
-                createdAt: now,
-                modifiedAt: now,
-                modifiedBy: modifierId,
-            });
+            this.usageService.runBillable(
+                { clubId, action: UsageAction.CLUB_USER_ADDED, modifiedBy: modifierId },
+                () => {
+                    const now = new Date();
+                    this.membershipRepository.createMembership({
+                        clubId,
+                        userId,
+                        role: 'MEMBER',
+                        status: 'ACTIVE',
+                        createdAt: now,
+                        modifiedAt: now,
+                        modifiedBy: modifierId,
+                    });
+                }
+            );
             return;
         }
         if (membership.status === 'PENDING') {
@@ -350,27 +358,42 @@ export class EventRegistrationService {
             return;
         }
         if (membership.status === 'INACTIVE') {
-            this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifierId);
+            this.usageService.runBillable(
+                { clubId, action: UsageAction.CLUB_USER_ADDED, modifiedBy: modifierId },
+                () => {
+                    this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifierId);
+                }
+            );
         }
     }
 
     private upsertActiveMembership(clubId: number, userId: number, modifierId: number): void {
         const membership = this.membershipRepository.findMembership(clubId, userId);
-        const now = new Date();
         if (membership === undefined) {
-            this.membershipRepository.createMembership({
-                clubId,
-                userId,
-                role: 'MEMBER',
-                status: 'ACTIVE',
-                createdAt: now,
-                modifiedAt: now,
-                modifiedBy: modifierId,
-            });
+            this.usageService.runBillable(
+                { clubId, action: UsageAction.CLUB_USER_ADDED, modifiedBy: modifierId },
+                () => {
+                    const now = new Date();
+                    this.membershipRepository.createMembership({
+                        clubId,
+                        userId,
+                        role: 'MEMBER',
+                        status: 'ACTIVE',
+                        createdAt: now,
+                        modifiedAt: now,
+                        modifiedBy: modifierId,
+                    });
+                }
+            );
             return;
         }
         if (membership.status !== 'ACTIVE') {
-            this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifierId);
+            this.usageService.runBillable(
+                { clubId, action: UsageAction.CLUB_USER_ADDED, modifiedBy: modifierId },
+                () => {
+                    this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifierId);
+                }
+            );
         }
     }
 

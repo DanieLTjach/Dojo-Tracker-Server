@@ -15,9 +15,7 @@ export function withUsageTransaction(
         try {
             reservation = await usageService.reserveCharge(resolveCharge(req));
             if (reservation !== undefined) {
-                res.locals['usageCredits'] = reservation.result;
-                patchUsageJsonResponse(res, reservation.result);
-                setUsageHeaders(res, reservation.result);
+                attachUsageMetadata(res, reservation.result);
             }
 
             dbManager.db.transaction(() => {
@@ -30,6 +28,34 @@ export function withUsageTransaction(
             next(error);
         }
     };
+}
+
+export function withUsageAsync(
+    resolveCharge: UsageChargeResolver,
+    handler: (req: Request, res: Response) => Promise<unknown>
+): RequestHandler {
+    const usageService = new UsageService();
+    return async (req, res, next) => {
+        let reservation;
+        try {
+            reservation = await usageService.reserveCharge(resolveCharge(req));
+            if (reservation !== undefined) {
+                attachUsageMetadata(res, reservation.result);
+            }
+
+            await handler(req, res);
+            await usageService.finalizeReservation(reservation);
+        } catch (error) {
+            await usageService.refundReservation(reservation);
+            next(error);
+        }
+    };
+}
+
+export function attachUsageMetadata(res: Response, usageCredits: UsageChargeResult): void {
+    res.locals['usageCredits'] = usageCredits;
+    patchUsageJsonResponse(res, usageCredits);
+    setUsageHeaders(res, usageCredits);
 }
 
 export function setUsageHeaders(res: Response, usageCredits: UsageChargeResult): void {

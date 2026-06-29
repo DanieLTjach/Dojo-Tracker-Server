@@ -7,6 +7,8 @@ import { GameService } from './GameService.ts';
 import LogService from './LogService.ts';
 import { TrackedGameService } from './TrackedGameService.ts';
 import { UserService } from './UserService.ts';
+import { UsageAction } from '../model/UsageModels.ts';
+import { UsageService } from './UsageService.ts';
 
 export interface TournamentRoundImportResult {
     imported: number;
@@ -29,6 +31,7 @@ export class TournamentRoundImportService {
     private eventService: EventService = new EventService();
     private eventRegistrationService: EventRegistrationService = new EventRegistrationService();
     private userService: UserService = new UserService();
+    private usageService: UsageService = new UsageService();
 
     parseAndImport(
         eventId: number,
@@ -69,45 +72,63 @@ export class TournamentRoundImportService {
             return { imported: 0, errors, games: [] };
         }
 
-        const games: DetailedGame[] = [];
-        const baseTimestamp = new Date();
-
         try {
-            dbManager.db.transaction(() => {
-                for (let i = 0; i < tables.length; i++) {
-                    const table = tables[i]!;
-                    const createdAt = new Date(baseTimestamp.getTime() + i * 1000);
-
-                    try {
-                        const game = this.trackedGameService.createTrackedGame(
-                            eventId,
-                            table.players,
-                            importedBy,
-                            GameStatus.CREATED,
-                            createdAt,
-                            expectedRound,
-                            String(table.tableNumber)
-                        );
-                        games.push(game);
-                    } catch (error: unknown) {
-                        const message = error instanceof Error ? error.message : String(error);
-                        LogService.logError(
-                            `Tournament round import failed for event ${eventId} round ${expectedRound} table ${table.tableNumber} (importedBy=${importedBy})`,
-                            error
-                        );
-                        errors.push(`Стіл ${table.tableNumber}: ${message}`);
-                    }
-                }
-                if (errors.length > 0) {
-                    throw new ImportRollbackError();
-                }
-            })();
+            return this.usageService.runBillable(
+                {
+                    clubId: event.clubId,
+                    action: UsageAction.TOURNAMENT_ROUND_IMPORTED,
+                    count: tables.length,
+                    modifiedBy: importedBy,
+                },
+                () => this.insertImportedTables(eventId, expectedRound, tables, importedBy, errors)
+            );
         } catch (error: unknown) {
             if (!(error instanceof ImportRollbackError)) {
                 throw error;
             }
             return { imported: 0, errors, games: [] };
         }
+    }
+
+    private insertImportedTables(
+        eventId: number,
+        expectedRound: number,
+        tables: ParsedTable[],
+        importedBy: number,
+        errors: string[]
+    ): TournamentRoundImportResult {
+        const games: DetailedGame[] = [];
+        const baseTimestamp = new Date();
+
+        dbManager.db.transaction(() => {
+            for (let i = 0; i < tables.length; i++) {
+                const table = tables[i]!;
+                const createdAt = new Date(baseTimestamp.getTime() + i * 1000);
+
+                try {
+                    const game = this.trackedGameService.createTrackedGame(
+                        eventId,
+                        table.players,
+                        importedBy,
+                        GameStatus.CREATED,
+                        createdAt,
+                        expectedRound,
+                        String(table.tableNumber)
+                    );
+                    games.push(game);
+                } catch (error: unknown) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    LogService.logError(
+                        `Tournament round import failed for event ${eventId} round ${expectedRound} table ${table.tableNumber} (importedBy=${importedBy})`,
+                        error
+                    );
+                    errors.push(`Стіл ${table.tableNumber}: ${message}`);
+                }
+            }
+            if (errors.length > 0) {
+                throw new ImportRollbackError();
+            }
+        })();
 
         return { imported: games.length, errors, games };
     }

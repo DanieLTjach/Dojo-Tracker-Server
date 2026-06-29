@@ -14,10 +14,13 @@ import { UserService } from './UserService.ts';
 import TelegramMessageService from './TelegramMessageService.ts';
 import LogService from './LogService.ts';
 import { globalClubLogsTopic } from '../model/TelegramTopic.ts';
+import { UsageAction } from '../model/UsageModels.ts';
+import { UsageService } from './UsageService.ts';
 export class ClubMembershipService {
     private clubService: ClubService = new ClubService();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
     private userService: UserService = new UserService();
+    private usageService: UsageService = new UsageService();
 
     getMembers(clubId: number): ClubMembership[] {
         this.clubService.validateClubExists(clubId);
@@ -127,11 +130,16 @@ export class ClubMembershipService {
             throw new InvalidClubMembershipStateError('активувати', membership.status, ['PENDING']);
         }
 
-        this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifiedBy);
-        this.notifyUserAddedToClub(user, club);
-        const newMembership = this.getMembership(clubId, userId);
-        this.logMemberActivated(newMembership, modifiedBy);
-        return newMembership;
+        return this.usageService.runBillable(
+            { clubId, action: UsageAction.CLUB_USER_ADDED, modifiedBy },
+            () => {
+                this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifiedBy);
+                this.notifyUserAddedToClub(user, club);
+                const newMembership = this.getMembership(clubId, userId);
+                this.logMemberActivated(newMembership, modifiedBy);
+                return newMembership;
+            }
+        );
     }
 
     /**
@@ -148,25 +156,30 @@ export class ClubMembershipService {
             return existing;
         }
 
-        if (existing) {
-            this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifiedBy);
-        } else {
-            const now = new Date();
-            this.membershipRepository.createMembership({
-                clubId,
-                userId,
-                role: 'MEMBER',
-                status: 'ACTIVE',
-                createdAt: now,
-                modifiedAt: now,
-                modifiedBy,
-            });
-        }
+        return this.usageService.runBillable(
+            { clubId, action: UsageAction.CLUB_USER_ADDED, modifiedBy },
+            () => {
+                if (existing) {
+                    this.membershipRepository.updateMembershipStatus(clubId, userId, 'ACTIVE', modifiedBy);
+                } else {
+                    const now = new Date();
+                    this.membershipRepository.createMembership({
+                        clubId,
+                        userId,
+                        role: 'MEMBER',
+                        status: 'ACTIVE',
+                        createdAt: now,
+                        modifiedAt: now,
+                        modifiedBy,
+                    });
+                }
 
-        this.notifyUserAddedToClub(user, club);
-        const newMembership = this.getMembership(clubId, userId);
-        this.logMemberActivated(newMembership, modifiedBy);
-        return newMembership;
+                this.notifyUserAddedToClub(user, club);
+                const newMembership = this.getMembership(clubId, userId);
+                this.logMemberActivated(newMembership, modifiedBy);
+                return newMembership;
+            }
+        );
     }
 
     deactivateMember(clubId: number, userId: number, modifiedBy: number): ClubMembership {

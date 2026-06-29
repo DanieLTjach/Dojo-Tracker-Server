@@ -8,11 +8,17 @@ import {
     requireEventManagementRole,
     requireEventManagementRoleOrApprovedFilter,
 } from '../middleware/EventManagementMiddleware.ts';
+import { createCharge, withUsageAsync, withUsageTransaction } from '../middleware/UsageMiddleware.ts';
+import { UsageAction } from '../model/UsageModels.ts';
+import { ClubRepository } from '../repository/ClubRepository.ts';
+import { EventService } from '../service/EventService.ts';
 
 const router = Router();
 const eventController = new EventController();
 const registrationController = new EventRegistrationController();
 const achievementController = new AchievementController();
+const usageClubRepository = new ClubRepository();
+const usageEventService = new EventService();
 
 /**
  * GET /api/events
@@ -61,7 +67,14 @@ router.post(
  *
  * Authentication: Required (Admin only)
  */
-router.post('/', requireAuth, withTransaction((req, res) => eventController.createEvent(req, res)));
+router.post(
+    '/',
+    requireAuth,
+    withUsageTransaction(
+        req => chargeForEventCreate(req.body, req.user!.userId),
+        (req, res) => eventController.createEvent(req, res)
+    )
+);
 
 /**
  * PUT /api/events/:eventId
@@ -131,7 +144,11 @@ router.post(
 router.post(
     '/:eventId/tournament/seating/generate',
     requireAuth,
-    (req, res, next) => eventController.generateTournamentSeating(req, res).catch(next)
+    withUsageAsync(
+        req =>
+            chargeForExistingEvent(req.params['eventId'], UsageAction.TOURNAMENT_SEATING_GENERATED, req.user!.userId),
+        (req, res) => eventController.generateTournamentSeating(req, res)
+    )
 );
 
 /**
@@ -143,7 +160,16 @@ router.post(
 router.post(
     '/:eventId/tournament/seating/apply',
     requireAuth,
-    withTransaction((req, res) => eventController.applyTournamentSeating(req, res))
+    withUsageTransaction(
+        req =>
+            chargeForExistingEvent(
+                req.params['eventId'],
+                UsageAction.TOURNAMENT_SEATING_APPLIED,
+                req.user!.userId,
+                countSeatingGames(req.body?.rounds)
+            ),
+        (req, res) => eventController.applyTournamentSeating(req, res)
+    )
 );
 
 /**
@@ -213,5 +239,38 @@ router.patch(
     requireEventManagementRole,
     withTransaction((req, res) => registrationController.setFillerPlayer(req, res))
 );
+
+function chargeForEventCreate(body: any, modifiedBy: number) {
+    const clubId = body?.clubId;
+    if (!Number.isInteger(clubId) || !usageClubRepository.clubExists(clubId)) {
+        return undefined;
+    }
+    return createCharge(
+        clubId,
+        body?.type === 'TOURNAMENT' ? UsageAction.TOURNAMENT_CREATED : UsageAction.EVENT_CREATED,
+        modifiedBy
+    );
+}
+
+function chargeForExistingEvent(eventIdValue: unknown, action: UsageAction, modifiedBy: number, count?: number) {
+    const eventId = Number(eventIdValue);
+    if (!Number.isInteger(eventId)) {
+        return undefined;
+    }
+    try {
+        const event = usageEventService.getEventById(eventId);
+        return createCharge(event.clubId, action, modifiedBy, count);
+    } catch {
+        return undefined;
+    }
+}
+
+function countSeatingGames(rounds: unknown): number | undefined {
+    if (!Array.isArray(rounds)) {
+        return undefined;
+    }
+    const count = rounds.reduce((sum, round) => sum + (Array.isArray(round) ? round.length : 0), 0);
+    return count > 0 ? count : undefined;
+}
 
 export default router;

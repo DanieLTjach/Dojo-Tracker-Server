@@ -1,16 +1,16 @@
 CREATE TABLE clubUsageAccount (
-    clubId INTEGER PRIMARY KEY REFERENCES club(id),
+    clubId INTEGER PRIMARY KEY REFERENCES club(id) ON DELETE CASCADE,
     creditsBalance INTEGER NOT NULL DEFAULT 10000,
     overdraftCutoff INTEGER NOT NULL DEFAULT -1000,
     overdraftMultiplier INTEGER NOT NULL DEFAULT 2,
     isEnforced BOOL NOT NULL DEFAULT true,
     createdAt TIMESTAMP NOT NULL,
     modifiedAt TIMESTAMP NOT NULL,
-    modifiedBy INTEGER NOT NULL REFERENCES user(id)
+    modifiedBy INTEGER NOT NULL DEFAULT 0 REFERENCES user(id) ON DELETE SET DEFAULT
 );
 
 CREATE TABLE clubUsageDaily (
-    clubId INTEGER NOT NULL REFERENCES club(id),
+    clubId INTEGER NOT NULL REFERENCES club(id) ON DELETE CASCADE,
     usageDate TEXT NOT NULL,
     action TEXT NOT NULL,
     actionCount INTEGER NOT NULL DEFAULT 0,
@@ -18,13 +18,13 @@ CREATE TABLE clubUsageDaily (
     chargedCredits INTEGER NOT NULL DEFAULT 0,
     createdAt TIMESTAMP NOT NULL,
     modifiedAt TIMESTAMP NOT NULL,
-    modifiedBy INTEGER NOT NULL REFERENCES user(id),
+    modifiedBy INTEGER NOT NULL DEFAULT 0 REFERENCES user(id) ON DELETE SET DEFAULT,
     PRIMARY KEY (clubId, usageDate, action)
 );
 
 CREATE TABLE clubUsageAdjustment (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    clubId INTEGER NOT NULL REFERENCES club(id),
+    clubId INTEGER NOT NULL REFERENCES club(id) ON DELETE CASCADE,
     type TEXT NOT NULL CHECK (type IN ('CREDIT_ADJUSTMENT', 'OVERDRAFT_CUTOFF_UPDATE')),
     creditsDelta INTEGER,
     previousCreditsBalance INTEGER NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE clubUsageAdjustment (
     reason TEXT NOT NULL,
     externalReference TEXT,
     createdAt TIMESTAMP NOT NULL,
-    createdBy INTEGER NOT NULL REFERENCES user(id)
+    createdBy INTEGER NOT NULL DEFAULT 0 REFERENCES user(id) ON DELETE SET DEFAULT
 );
 CREATE INDEX idx_clubUsageDaily_clubId_date ON clubUsageDaily(clubId, usageDate);
 CREATE INDEX idx_clubUsageAdjustment_clubId_createdAt ON clubUsageAdjustment(clubId, createdAt);

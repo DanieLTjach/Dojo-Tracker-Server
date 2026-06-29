@@ -5,6 +5,8 @@ import { CsvParsingError, NoValidGamesInCsvError } from '../error/ImportErrors.t
 import { dbManager } from '../db/dbInit.ts';
 import type { GameWithPlayers, PlayerData, Wind } from '../model/GameModels.ts';
 import type { Event } from '../model/EventModels.ts';
+import { UsageAction } from '../model/UsageModels.ts';
+import { UsageService } from './UsageService.ts';
 
 interface RowError {
     row: number;
@@ -34,6 +36,7 @@ export class ImportService {
     private gameService: GameService = new GameService();
     private eventService: EventService = new EventService();
     private userRepository: UserRepository = new UserRepository();
+    private usageService: UsageService = new UsageService();
 
     /**
      * Parse and validate the CSV without writing any games. Returns the same shape as importGames
@@ -58,45 +61,61 @@ export class ImportService {
     }
 
     importGames(eventId: number, csvContent: string, importedBy: number): ImportResult {
-        const { parsedRows, errors } = this.parseAndValidate(eventId, csvContent);
+        const { event, parsedRows, errors } = this.parseAndValidate(eventId, csvContent);
 
         if (errors.length > 0) {
             return { imported: 0, errors, games: [] };
         }
 
-        // Pass 2: insert all games inside a transaction; any per-row failure rolls back the whole batch
-        const games: GameWithPlayers[] = [];
-        const baseTimestamp = new Date();
-
         try {
-            dbManager.db.transaction(() => {
-                for (let i = 0; i < parsedRows.length; i++) {
-                    const parsed = parsedRows[i]!;
-                    const createdAt = parsed.createdAt ?? new Date(baseTimestamp.getTime() + i * 1000);
-
-                    try {
-                        const game = this.gameService.addGame(
-                            eventId,
-                            parsed.players,
-                            importedBy,
-                            createdAt,
-                            true, // hideNewGameMessage
-                            parsed.tournamentRound,
-                            parsed.tournamentTable
-                        );
-                        games.push(game);
-                    } catch (error: any) {
-                        errors.push({ row: i + 2, message: error.message });
-                    }
-                }
-                if (errors.length > 0) {
-                    throw new ImportRollbackError();
-                }
-            })();
+            return this.usageService.runBillable(
+                {
+                    clubId: event.clubId,
+                    action: UsageAction.CSV_GAMES_IMPORTED,
+                    count: parsedRows.length,
+                    modifiedBy: importedBy,
+                },
+                () => this.insertParsedGames(eventId, parsedRows, importedBy, errors)
+            );
         } catch (error: unknown) {
             if (!(error instanceof ImportRollbackError)) throw error;
             return { imported: 0, errors, games: [] };
         }
+    }
+
+    private insertParsedGames(
+        eventId: number,
+        parsedRows: ParsedGameRow[],
+        importedBy: number,
+        errors: RowError[]
+    ): ImportResult {
+        const games: GameWithPlayers[] = [];
+        const baseTimestamp = new Date();
+
+        dbManager.db.transaction(() => {
+            for (let i = 0; i < parsedRows.length; i++) {
+                const parsed = parsedRows[i]!;
+                const createdAt = parsed.createdAt ?? new Date(baseTimestamp.getTime() + i * 1000);
+
+                try {
+                    const game = this.gameService.addGame(
+                        eventId,
+                        parsed.players,
+                        importedBy,
+                        createdAt,
+                        true,
+                        parsed.tournamentRound,
+                        parsed.tournamentTable
+                    );
+                    games.push(game);
+                } catch (error: any) {
+                    errors.push({ row: i + 2, message: error.message });
+                }
+            }
+            if (errors.length > 0) {
+                throw new ImportRollbackError();
+            }
+        })();
 
         return {
             imported: games.length,
