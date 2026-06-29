@@ -2,13 +2,9 @@ import { Router } from 'express';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { GameRulesController } from '../controller/GameRulesController.ts';
 import { requireAuth } from '../middleware/AuthMiddleware.ts';
-import { createCharge, withUsageTransaction } from '../middleware/UsageMiddleware.ts';
-import { UsageAction } from '../model/UsageModels.ts';
-import { ClubRepository } from '../repository/ClubRepository.ts';
 
 const router = Router();
 const gameRulesController = new GameRulesController();
-const clubRepository = new ClubRepository();
 
 /**
  * GET /api/game-rules/catalog
@@ -63,16 +59,7 @@ router.put(
 router.post(
     '/',
     requireAuth,
-    withUsageTransaction(
-        req => {
-            const clubId = req.body?.clubId;
-            if (!Number.isInteger(clubId) || !clubRepository.clubExists(clubId)) {
-                return undefined;
-            }
-            return createCharge(clubId, UsageAction.GAME_RULES_CREATED, req.user!.userId);
-        },
-        (req, res) => gameRulesController.createGameRules(req, res)
-    )
+    withTransaction((req, res) => gameRulesController.createGameRules(req, res))
 );
 
 /**

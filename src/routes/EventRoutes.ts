@@ -10,14 +10,12 @@ import {
 } from '../middleware/EventManagementMiddleware.ts';
 import { createCharge, withUsageAsync, withUsageTransaction } from '../middleware/UsageMiddleware.ts';
 import { UsageAction } from '../model/UsageModels.ts';
-import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventService } from '../service/EventService.ts';
 
 const router = Router();
 const eventController = new EventController();
 const registrationController = new EventRegistrationController();
 const achievementController = new AchievementController();
-const usageClubRepository = new ClubRepository();
 const usageEventService = new EventService();
 
 /**
@@ -70,10 +68,7 @@ router.post(
 router.post(
     '/',
     requireAuth,
-    withUsageTransaction(
-        req => chargeForEventCreate(req.body, req.user!.userId),
-        (req, res) => eventController.createEvent(req, res)
-    )
+    withTransaction((req, res) => eventController.createEvent(req, res))
 );
 
 /**
@@ -239,18 +234,6 @@ router.patch(
     requireEventManagementRole,
     withTransaction((req, res) => registrationController.setFillerPlayer(req, res))
 );
-
-function chargeForEventCreate(body: any, modifiedBy: number) {
-    const clubId = body?.clubId;
-    if (!Number.isInteger(clubId) || !usageClubRepository.clubExists(clubId)) {
-        return undefined;
-    }
-    return createCharge(
-        clubId,
-        body?.type === 'TOURNAMENT' ? UsageAction.TOURNAMENT_CREATED : UsageAction.EVENT_CREATED,
-        modifiedBy
-    );
-}
 
 function chargeForExistingEvent(eventIdValue: unknown, action: UsageAction, modifiedBy: number, count?: number) {
     const eventId = Number(eventIdValue);

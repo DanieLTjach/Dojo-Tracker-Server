@@ -83,7 +83,7 @@ describe('Usage credits', () => {
         );
 
         const summary = usageService.getUsageSummary(clubId);
-        expect(summary.account.creditsBalance).toBe(-7);
+        expect(summary.account.creditsBalance).toBe(-13);
         expect(summary.dailyUsage).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
@@ -95,7 +95,39 @@ describe('Usage credits', () => {
                 expect.objectContaining({
                     action: UsageAction.TRACKED_ROUND_RESULT_CREATED,
                     actionCount: 3,
-                    baseCredits: 3,
+                    baseCredits: 6,
+                    chargedCredits: 12,
+                }),
+            ])
+        );
+    });
+
+    test('charges tracked games and tournament management at 2 credits per table/action', () => {
+        usageService.ensureAccount(clubId, 0);
+
+        usageService.runBillable(
+            { clubId, action: UsageAction.TRACKED_GAME_CREATED, modifiedBy: 0 },
+            () => 'tracked'
+        );
+        usageService.runBillable(
+            { clubId, action: UsageAction.TOURNAMENT_SEATING_GENERATED, modifiedBy: 0, count: 3 },
+            () => 'seating'
+        );
+
+        const summary = usageService.getUsageSummary(clubId);
+        expect(summary.account.creditsBalance).toBe(9992);
+        expect(summary.dailyUsage).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    action: UsageAction.TRACKED_GAME_CREATED,
+                    actionCount: 1,
+                    baseCredits: 2,
+                    chargedCredits: 2,
+                }),
+                expect.objectContaining({
+                    action: UsageAction.TOURNAMENT_SEATING_GENERATED,
+                    actionCount: 3,
+                    baseCredits: 6,
                     chargedCredits: 6,
                 }),
             ])
@@ -145,7 +177,7 @@ describe('Usage credits', () => {
         });
     });
 
-    test('charges event creates and refunds failed creates', async () => {
+    test('does not charge event creates', async () => {
         usageService.ensureAccount(clubId, 0);
 
         const response = await request(app)
@@ -162,12 +194,9 @@ describe('Usage credits', () => {
             });
 
         expect(response.status).toBe(201);
-        expect(response.body.usageCredits).toMatchObject({
-            action: UsageAction.EVENT_CREATED,
-            chargedCredits: 1,
-            creditsBalance: 9999,
-        });
-        expect(response.headers['x-usage-credits-charged']).toBe('1');
+        expect(response.body.usageCredits).toBeUndefined();
+        expect(response.headers['x-usage-credits-charged']).toBeUndefined();
+        expect(usageService.getUsageSummary(clubId).account.creditsBalance).toBe(10000);
 
         const failed = await request(app)
             .post('/api/events')
@@ -179,7 +208,7 @@ describe('Usage credits', () => {
             });
 
         expect(failed.status).toBe(400);
-        expect(usageService.getUsageSummary(clubId).account.creditsBalance).toBe(9999);
+        expect(usageService.getUsageSummary(clubId).account.creditsBalance).toBe(10000);
     });
 
     test('charges saved game creates through the API', async () => {
@@ -228,7 +257,7 @@ describe('Usage credits', () => {
         );
     });
 
-    test('charges activating a club user once', async () => {
+    test('does not charge activating a club user', async () => {
         usageService.ensureAccount(clubId, 0);
         seedMembership(clubId, userId, 'MEMBER', 'PENDING');
 
@@ -237,15 +266,8 @@ describe('Usage credits', () => {
             .set('Authorization', adminAuthHeader);
 
         expect(response.status).toBe(200);
-        expect(usageService.getUsageSummary(clubId).account.creditsBalance).toBe(9999);
-        expect(usageService.getUsageSummary(clubId).dailyUsage).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    action: UsageAction.CLUB_USER_ADDED,
-                    actionCount: 1,
-                }),
-            ])
-        );
+        expect(usageService.getUsageSummary(clubId).account.creditsBalance).toBe(10000);
+        expect(usageService.getUsageSummary(clubId).dailyUsage).toEqual([]);
     });
 
     test('allows owners to view usage but keeps adjustments admin-only', async () => {
