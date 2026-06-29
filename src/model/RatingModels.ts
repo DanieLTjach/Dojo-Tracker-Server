@@ -1,4 +1,4 @@
-import { UserShortDTO } from './UserModels.ts';
+import type { UserShortDTO } from './UserModels.ts';
 
 export interface UserRatingChange {
     userId: number;
