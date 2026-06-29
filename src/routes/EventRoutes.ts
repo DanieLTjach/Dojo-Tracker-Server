@@ -8,7 +8,7 @@ import {
     requireEventManagementRole,
     requireEventManagementRoleOrApprovedFilter,
 } from '../middleware/EventManagementMiddleware.ts';
-import { createCharge, withUsageAsync, withUsageTransaction } from '../middleware/UsageMiddleware.ts';
+import { createCharge, withUsageTransaction } from '../middleware/UsageMiddleware.ts';
 import { UsageAction } from '../model/UsageModels.ts';
 import { EventService } from '../service/EventService.ts';
 
@@ -139,11 +139,9 @@ router.post(
 router.post(
     '/:eventId/tournament/seating/generate',
     requireAuth,
-    withUsageAsync(
-        req =>
-            chargeForExistingEvent(req.params['eventId'], UsageAction.TOURNAMENT_SEATING_GENERATED, req.user!.userId),
-        (req, res) => eventController.generateTournamentSeating(req, res)
-    )
+    (req, res, next) => {
+        eventController.generateTournamentSeating(req, res).catch(next);
+    }
 );
 
 /**

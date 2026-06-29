@@ -16,11 +16,9 @@ const USAGE_ACTION_COSTS: Record<UsageAction, number> = {
     [UsageActionValues.SAVED_GAME_CREATED]: 1,
     [UsageActionValues.TRACKED_GAME_CREATED]: 2,
     [UsageActionValues.TRACKED_ROUND_RESULT_CREATED]: 2,
-    [UsageActionValues.TOURNAMENT_SEATING_GENERATED]: 2,
     [UsageActionValues.TOURNAMENT_SEATING_APPLIED]: 2,
     [UsageActionValues.TOURNAMENT_ROUND_IMPORTED]: 2,
     [UsageActionValues.CSV_GAMES_IMPORTED]: 1,
-    [UsageActionValues.POLL_SENT]: 1,
     [UsageActionValues.INVITE_CREATED]: 1,
     [UsageActionValues.INVITE_REVOKED]: 1,
 };

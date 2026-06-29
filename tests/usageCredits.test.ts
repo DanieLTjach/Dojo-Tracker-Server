@@ -102,7 +102,7 @@ describe('Usage credits', () => {
         );
     });
 
-    test('charges tracked games and tournament management at 2 credits per table/action', () => {
+    test('charges tracked games and persisted tournament management at 2 credits per table/action', () => {
         usageService.ensureAccount(clubId, 0);
 
         usageService.runBillable(
@@ -110,7 +110,7 @@ describe('Usage credits', () => {
             () => 'tracked'
         );
         usageService.runBillable(
-            { clubId, action: UsageAction.TOURNAMENT_SEATING_GENERATED, modifiedBy: 0, count: 3 },
+            { clubId, action: UsageAction.TOURNAMENT_SEATING_APPLIED, modifiedBy: 0, count: 3 },
             () => 'seating'
         );
 
@@ -125,7 +125,7 @@ describe('Usage credits', () => {
                     chargedCredits: 2,
                 }),
                 expect.objectContaining({
-                    action: UsageAction.TOURNAMENT_SEATING_GENERATED,
+                    action: UsageAction.TOURNAMENT_SEATING_APPLIED,
                     actionCount: 3,
                     baseCredits: 6,
                     chargedCredits: 6,

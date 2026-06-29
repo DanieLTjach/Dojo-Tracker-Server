@@ -4,11 +4,6 @@ import type { ClubPollConfig } from '../src/model/PollModels.ts';
 import { telegramBot } from '../src/service/TelegramBot.ts';
 import { TelegramTopicType, type TelegramTopic } from '../src/model/TelegramTopic.ts';
 import LogService from '../src/service/LogService.ts';
-import { ClubRepository } from '../src/repository/ClubRepository.ts';
-import { ClubService } from '../src/service/ClubService.ts';
-import { dbManager } from '../src/db/dbInit.ts';
-import { UsageService } from '../src/service/UsageService.ts';
-import { UsageAction } from '../src/model/UsageModels.ts';
 
 function makeConfig(overrides: Partial<ClubPollConfig> = {}): ClubPollConfig {
     return {
@@ -211,93 +206,6 @@ describe('sendTelegramPoll', () => {
         );
         expect(pinChatMessageSpy).not.toHaveBeenCalled();
         expect(result).toEqual({ messageId: null, pinned: false });
-    });
-});
-
-describe('sendPollNow usage billing', () => {
-    const clubRepository = new ClubRepository();
-    const clubService = new ClubService();
-    const usageService = new UsageService();
-    const createdClubIds: number[] = [];
-
-    afterEach(() => {
-        jest.restoreAllMocks();
-        for (const clubId of createdClubIds.splice(0)) {
-            dbManager.db.prepare('DELETE FROM clubTelegramTopics WHERE clubId = ?').run(clubId);
-            dbManager.db.prepare('DELETE FROM clubUsageDaily WHERE clubId = ?').run(clubId);
-            dbManager.db.prepare('DELETE FROM clubUsageAdjustment WHERE clubId = ?').run(clubId);
-            dbManager.db.prepare('DELETE FROM clubUsageAccount WHERE clubId = ?').run(clubId);
-            dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(clubId);
-        }
-    });
-
-    function createPollClub(topic: TelegramTopic): number {
-        const clubId = clubRepository.createClub({
-            name: `Poll Billing Club ${Date.now()} ${Math.random()}`,
-            address: null,
-            city: null,
-            description: null,
-            contactInfo: null,
-            isActive: true,
-            createdAt: new Date(),
-            modifiedBy: 0,
-        });
-        createdClubIds.push(clubId);
-        clubService.setClubTelegramTopics(clubId, {
-            rating: null,
-            userLogs: null,
-            gameLogs: null,
-            clubLogs: null,
-            main: topic,
-        }, 0);
-        return clubId;
-    }
-
-    const topic: TelegramTopic = {
-        type: TelegramTopicType.MAIN,
-        chatId: -100654321,
-        topicId: 987,
-    };
-
-    test('charges once when a poll is sent to the club chat', async () => {
-        const clubId = createPollClub(topic);
-        const before = usageService.getUsageSummary(clubId).account.creditsBalance;
-        jest.spyOn(telegramBot.telegram, 'sendPoll')
-            .mockResolvedValue({ message_id: 777 } as Awaited<ReturnType<typeof telegramBot.telegram.sendPoll>>);
-        jest.spyOn(telegramBot.telegram, 'pinChatMessage').mockResolvedValue(true);
-
-        const result = await PollSchedulerService.sendPollNow(makeConfig({ clubId }));
-
-        const summary = usageService.getUsageSummary(clubId);
-        expect(result).toEqual({ messageId: 777, pinned: true });
-        expect(summary.account.creditsBalance).toBe(before - 1);
-        expect(summary.dailyUsage).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    action: UsageAction.POLL_SENT,
-                    actionCount: 1,
-                    chargedCredits: 1,
-                }),
-            ])
-        );
-    });
-
-    test('refunds the reservation when Telegram rejects the poll send', async () => {
-        const clubId = createPollClub(topic);
-        const before = usageService.getUsageSummary(clubId).account.creditsBalance;
-        jest.spyOn(telegramBot.telegram, 'sendPoll').mockRejectedValue(new Error('chat not found'));
-        const logErrorSpy = jest.spyOn(LogService, 'logError').mockImplementation(() => undefined);
-
-        const result = await PollSchedulerService.sendPollNow(makeConfig({ clubId }));
-
-        const summary = usageService.getUsageSummary(clubId);
-        expect(result).toEqual({ messageId: null, pinned: false });
-        expect(summary.account.creditsBalance).toBe(before);
-        expect(summary.dailyUsage.some(row => row.action === UsageAction.POLL_SENT)).toBe(false);
-        expect(logErrorSpy).toHaveBeenCalledWith(
-            `Error sending poll to chat ${topic.chatId} topic ${topic.topicId}`,
-            expect.any(Error)
-        );
     });
 });
 
