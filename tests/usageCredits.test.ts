@@ -102,7 +102,7 @@ describe('Usage credits', () => {
         );
     });
 
-    test('charges tracked games and persisted tournament management at 2 credits per table/action', () => {
+    test('charges tracked games and persisted tournament table-rounds at 5 credits each', () => {
         usageService.ensureAccount(clubId, 0);
 
         usageService.runBillable(
@@ -113,9 +113,13 @@ describe('Usage credits', () => {
             { clubId, action: UsageAction.TOURNAMENT_SEATING_APPLIED, modifiedBy: 0, count: 3 },
             () => 'seating'
         );
+        usageService.runBillable(
+            { clubId, action: UsageAction.TOURNAMENT_ROUND_IMPORTED, modifiedBy: 0, count: 2 },
+            () => 'import'
+        );
 
         const summary = usageService.getUsageSummary(clubId);
-        expect(summary.account.creditsBalance).toBe(9992);
+        expect(summary.account.creditsBalance).toBe(9973);
         expect(summary.dailyUsage).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
@@ -127,8 +131,14 @@ describe('Usage credits', () => {
                 expect.objectContaining({
                     action: UsageAction.TOURNAMENT_SEATING_APPLIED,
                     actionCount: 3,
-                    baseCredits: 6,
-                    chargedCredits: 6,
+                    baseCredits: 15,
+                    chargedCredits: 15,
+                }),
+                expect.objectContaining({
+                    action: UsageAction.TOURNAMENT_ROUND_IMPORTED,
+                    actionCount: 2,
+                    baseCredits: 10,
+                    chargedCredits: 10,
                 }),
             ])
         );
