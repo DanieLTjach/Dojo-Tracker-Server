@@ -137,7 +137,7 @@ export class EventRepository {
             ...params,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
-            info: params.info !== null ? JSON.stringify(params.info) : null,
+            info: serializeEventInfo(params.info),
             config: serializeEventConfig(params.config),
             blockGameCreation: booleanToInteger(params.blockGameCreation),
             createdAt: params.createdAt.toISOString(),
@@ -188,7 +188,7 @@ export class EventRepository {
             ...params,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
-            info: params.info !== null ? JSON.stringify(params.info) : null,
+            info: serializeEventInfo(params.info),
             config: serializeEventConfig(params.config),
             blockGameCreation: booleanToInteger(params.blockGameCreation),
             modifiedAt: params.modifiedAt.toISOString(),
@@ -320,6 +320,22 @@ type EventConfigDBEntity = Omit<EventConfig, 'registrationDeadline'> & {
     registrationDeadline?: string | undefined;
 };
 
+function serializeEventInfo(info: EventInfo | null): string | null {
+    if (info === null) {
+        return null;
+    }
+
+    return JSON.stringify(info);
+}
+
+function parseEventInfo(value: string | null): EventInfo | null {
+    if (value === null) {
+        return null;
+    }
+
+    return JSON.parse(value) as EventInfo;
+}
+
 function serializeEventConfig(config: EventConfig | null): string | null {
     if (config === null) {
         return null;
@@ -375,7 +391,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
         maxParticipants: config?.maxParticipants ?? null,
         registrationDeadline: config?.registrationDeadline ?? null,
-        info: dbEntity.info !== null ? JSON.parse(dbEntity.info) as EventInfo : null,
+        info: parseEventInfo(dbEntity.info),
         config,
         resolvedPlayerNameDisplay: resolvePlayerNameDisplay(config, eventType),
         blockGameCreation: Boolean(dbEntity.blockGameCreation),
