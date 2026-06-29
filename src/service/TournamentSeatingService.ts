@@ -8,9 +8,11 @@ import {
     SeatingNotEnoughParticipantsError,
     SeatingParticipantsNotMultipleOfTableSizeError,
     SeatingRoundCountMismatchError,
+    SeatingSameTeamAtTableError,
     SeatingTableSizeMismatchError,
 } from '../error/EventErrors.ts';
 import type { Event } from '../model/EventModels.ts';
+import { EventFormat } from '../model/EventModels.ts';
 import { GameStatus, Wind } from '../model/GameModels.ts';
 import type { DetailedGame, TrackedGamePlayerData } from '../model/GameModels.ts';
 import { globalLogsTopic } from '../model/TelegramTopic.ts';
@@ -22,6 +24,7 @@ import { runSeatingWorker } from '../util/runSeatingWorker.ts';
 import { EventService } from './EventService.ts';
 import { GameService } from './GameService.ts';
 import LogService from './LogService.ts';
+import { TeamService } from './TeamService.ts';
 import { TrackedGameService } from './TrackedGameService.ts';
 
 const PLAYERS_PER_TABLE = 4;
@@ -69,6 +72,7 @@ export class TournamentSeatingService {
     private trackedGameService: TrackedGameService = new TrackedGameService();
     private gameRepository: GameRepository = new GameRepository();
     private registrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
+    private teamService: TeamService = new TeamService();
 
     /**
      * Generate candidate seatings for a tournament using its approved participants and
@@ -86,6 +90,14 @@ export class TournamentSeatingService {
         const participantIds = this.getApprovedParticipantIds(eventId);
         const tables = this.resolveTableCount(event, participantIds.length);
         const rounds = event.tournament!.totalRounds;
+        this.eventService.validateTeamTournamentComposition(event, true);
+
+        // For a team tournament, forbid two players of the same team at a table. The team
+        // ids are aligned to the participant index order the generator works in, so the
+        // worker can map back. -1 marks an unteamed (e.g. filler) player.
+        const playerTeams = event.format === EventFormat.TEAM
+            ? this.buildPlayerTeams(eventId, participantIds)
+            : undefined;
 
         const candidateCount = this.resolveCandidateCount(options.candidateCount);
         const timeLimitMs = this.resolveTimeLimit(options.timeLimitMs, candidateCount);
@@ -97,7 +109,7 @@ export class TournamentSeatingService {
         const startedAt = Date.now();
         let candidates;
         try {
-            candidates = await runSeatingWorker({ tables, rounds, timeLimitMs, candidateCount, seed });
+            candidates = await runSeatingWorker({ tables, rounds, timeLimitMs, candidateCount, seed, playerTeams });
         } catch (error) {
             const elapsedMs = Date.now() - startedAt;
             LogService.logInfo(
@@ -146,6 +158,7 @@ export class TournamentSeatingService {
         const event = this.getTournamentEventForManagement(eventId, userId);
         this.assertTournamentHasNotStarted(event);
         this.assertNoExistingGames(event);
+        this.eventService.validateTeamTournamentComposition(event, true);
         this.validateSeatingShape(event, seatingRounds);
 
         // Atomicity is provided by the route's withTransaction wrapper.
@@ -204,7 +217,10 @@ export class TournamentSeatingService {
     }
 
     private assertTournamentHasNotStarted(event: Event): void {
-        if (event.tournament!.status !== TournamentStatus.CREATED) {
+        // Seating is editable before the first round starts: CREATED (individual) or
+        // DRAFT (team tournament, registration closed and teams being formed).
+        const status = event.tournament!.status;
+        if (status !== TournamentStatus.CREATED && status !== TournamentStatus.DRAFT) {
             throw new SeatingCannotBeModifiedAfterTournamentStartedError(event.name);
         }
     }
@@ -220,6 +236,34 @@ export class TournamentSeatingService {
         return this.registrationRepository
             .findRegistrationsByEventIdAndStatus(eventId, 'APPROVED')
             .map(registration => registration.userId);
+    }
+
+    /**
+     * Team id per participant, aligned to the participantIds index order the seating
+     * generator works in. Unteamed participants (e.g. approved fillers not drafted) get
+     * -1, which the generator treats as never conflicting.
+     */
+    private buildPlayerTeams(eventId: number, participantIds: number[]): number[] {
+        const teamMap = this.teamService.getPlayerTeamMapForEvent(eventId);
+        return participantIds.map(userId => teamMap.get(userId) ?? -1);
+    }
+
+    private assertNoSameTeamAtTable(
+        event: Event,
+        teamMap: Map<number, number>,
+        table: number[],
+        roundNumber: number,
+        tableNumber: number
+    ): void {
+        const teamsAtTable = new Set<number>();
+        for (const userId of table) {
+            const teamId = teamMap.get(userId);
+            if (teamId === undefined) continue;
+            if (teamsAtTable.has(teamId)) {
+                throw new SeatingSameTeamAtTableError(event.name, roundNumber, tableNumber);
+            }
+            teamsAtTable.add(teamId);
+        }
     }
 
     private resolveTableCount(event: Event, participantCount: number): number {
@@ -247,6 +291,10 @@ export class TournamentSeatingService {
     private validateSeatingShape(event: Event, seatingRounds: SeatingApplyRounds): void {
         const participantIds = new Set(this.getApprovedParticipantIds(event.id));
         const expectedRounds = event.tournament!.totalRounds;
+        // For a team tournament, reject any table that seats two players of the same team.
+        const teamMap = event.format === EventFormat.TEAM
+            ? this.teamService.getPlayerTeamMapForEvent(event.id)
+            : undefined;
 
         if (seatingRounds.length !== expectedRounds) {
             throw new SeatingRoundCountMismatchError(event.name, expectedRounds, seatingRounds.length);
@@ -275,6 +323,9 @@ export class TournamentSeatingService {
                         throw new SeatingDuplicateParticipantInRoundError(event.name, userId, roundNumber);
                     }
                     seenInRound.add(userId);
+                }
+                if (teamMap !== undefined) {
+                    this.assertNoSameTeamAtTable(event, teamMap, table, roundNumber, tableIndex + 1);
                 }
             }
             if (seenInRound.size !== participantIds.size) {

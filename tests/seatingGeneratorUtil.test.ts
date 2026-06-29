@@ -181,4 +181,69 @@ describe('SeatingGeneratorUtil', () => {
             expect(candidates.length).toBeLessThanOrEqual(3);
         });
     });
+
+    describe('team constraint (playerTeams)', () => {
+        // 16 players in 4 teams of 4: players 0-3 = team 0, 4-7 = team 1, etc.
+        const FOUR_TEAMS_OF_FOUR = Array.from({ length: 16 }, (_, i) => Math.floor(i / 4));
+
+        function countSameTeamTables(candidate: SeatingCandidate, playerTeams: number[]): number {
+            let violations = 0;
+            for (const round of candidate.rounds) {
+                for (const table of round) {
+                    const teams = table.map(p => playerTeams[p]!);
+                    if (new Set(teams).size !== teams.length) violations++;
+                }
+            }
+            return violations;
+        }
+
+        it('never seats two players of the same team at one table (4 teams x 4, 4 rounds)', () => {
+            const candidate = generateSeatingCandidate({
+                tables: 4,
+                rounds: 4,
+                timeLimitMs: TIME_LIMIT_MS,
+                seed: 7,
+                playerTeams: FOUR_TEAMS_OF_FOUR,
+            });
+            expect(countSameTeamTables(candidate, FOUR_TEAMS_OF_FOUR)).toBe(0);
+            // Each table should hold exactly one player from each of the four teams.
+            for (const round of candidate.rounds) {
+                for (const table of round) {
+                    expect(new Set(table.map(p => FOUR_TEAMS_OF_FOUR[p]!)).size).toBe(4);
+                }
+            }
+        });
+
+        it('holds the team constraint across multiple seeds', () => {
+            for (let seed = 1; seed <= 5; seed++) {
+                const candidate = generateSeatingCandidate({
+                    tables: 4,
+                    rounds: 4,
+                    timeLimitMs: TIME_LIMIT_MS,
+                    seed,
+                    playerTeams: FOUR_TEAMS_OF_FOUR,
+                });
+                expect(countSameTeamTables(candidate, FOUR_TEAMS_OF_FOUR)).toBe(0);
+            }
+        });
+
+        it('treats unteamed players (-1) as never conflicting', () => {
+            // Two real teams (0,1) plus 8 unteamed players. Unteamed must be allowed to share.
+            const playerTeams = [0, 0, 0, 0, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1];
+            const candidate = generateSeatingCandidate({
+                tables: 4,
+                rounds: 2,
+                timeLimitMs: TIME_LIMIT_MS,
+                seed: 9,
+                playerTeams,
+            });
+            // Real teams 0 and 1 must never collide; unteamed (-1) collisions are fine.
+            for (const round of candidate.rounds) {
+                for (const table of round) {
+                    const realTeams = table.map(p => playerTeams[p]!).filter(t => t >= 0);
+                    expect(new Set(realTeams).size).toBe(realTeams.length);
+                }
+            }
+        });
+    });
 });

@@ -15,6 +15,14 @@ export const EventType = {
 
 export type EventType = typeof EventType[keyof typeof EventType];
 
+export const EventFormat = {
+    INDIVIDUAL: 'INDIVIDUAL',
+    TEAM: 'TEAM',
+    HYBRID: 'HYBRID',
+} as const;
+
+export type EventFormat = typeof EventFormat[keyof typeof EventFormat];
+
 export type RuleValue = boolean | number | string;
 
 export interface LinkEntry {
@@ -98,11 +106,23 @@ export const PlayerNameDisplay = {
 
 export type PlayerNameDisplay = typeof PlayerNameDisplay[keyof typeof PlayerNameDisplay];
 
+/**
+ * Per-team-tournament sizing. The draft minimum is NOT stored here — it reuses
+ * the existing EventConfig.minParticipants. Invariants (validated in EventService):
+ * minParticipants === teamSize * teamCount, and teamCount is divisible by 4 (each
+ * table seats one player from four distinct teams).
+ */
+export interface TeamTournamentConfig {
+    teamSize: number;
+    teamCount: number;
+}
+
 export interface EventConfig {
     playerNameDisplay?: PlayerNameDisplay | undefined;
     minParticipants?: number | undefined;
     maxParticipants?: number | undefined;
     registrationDeadline?: Date | undefined;
+    teamConfig?: TeamTournamentConfig | undefined;
 }
 
 /**
@@ -123,6 +143,7 @@ export interface Event {
     name: string;
     description: string | null;
     type: EventType;
+    format: EventFormat;
     clubId: number | null;
     isCurrentRating: boolean;
     gameRules: GameRules;

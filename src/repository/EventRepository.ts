@@ -1,8 +1,8 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
-import type { Event, EventType } from '../model/EventModels.ts';
+import type { Event, EventFormat, EventType } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
-import { parseEventType, parseTournamentStatus, parseUmaTieBreak } from '../util/EnumUtil.ts';
+import { parseEventFormat, parseEventType, parseTournamentStatus, parseUmaTieBreak } from '../util/EnumUtil.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
 import type { EventConfig, EventInfo } from '../model/EventModels.ts';
 import { resolvePlayerNameDisplay } from '../model/EventModels.ts';
@@ -112,6 +112,7 @@ export class EventRepository {
         name: string;
         description: string | null;
         type: string;
+        format: string;
         gameRules: number;
         clubId: number | null;
         dateFrom: string | null;
@@ -126,8 +127,8 @@ export class EventRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, format, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :format, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -151,6 +152,7 @@ export class EventRepository {
         name: string;
         description: string | null;
         type: string;
+        format: string;
         gameRules: number;
         clubId: number | null;
         dateFrom: string | null;
@@ -168,6 +170,7 @@ export class EventRepository {
             SET name = :name,
                 description = :description,
                 type = :type,
+                format = :format,
                 gameRules = :gameRules,
                 clubId = :clubId,
                 dateFrom = :dateFrom,
@@ -249,6 +252,7 @@ export interface EventCreateParams {
     name: string;
     description: string | null;
     type: EventType;
+    format: EventFormat;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -268,6 +272,7 @@ export interface EventUpdateParams {
     name: string;
     description: string | null;
     type: EventType;
+    format: EventFormat;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -286,6 +291,7 @@ interface EventWithGameRulesDBEntity {
     name: string;
     description: string | null;
     type: string;
+    format: string;
     gameRules: number;
     clubId: number | null;
     isCurrentRating: number;
@@ -373,6 +379,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         name: dbEntity.name,
         description: dbEntity.description,
         type: eventType,
+        format: parseEventFormat(dbEntity.format),
         clubId: dbEntity.clubId,
         isCurrentRating: Boolean(dbEntity.isCurrentRating),
         startingRating: dbEntity.startingRating,
