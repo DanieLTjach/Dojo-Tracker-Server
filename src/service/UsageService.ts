@@ -27,6 +27,9 @@ const USAGE_ACTION_COSTS: Record<UsageAction, number> = {
     [UsageActionValues.CSV_GAMES_IMPORTED]: 1,
     [UsageActionValues.CLUB_USER_ADDED]: 1,
     [UsageActionValues.GAME_RULES_CREATED]: 1,
+    [UsageActionValues.POLL_SENT]: 1,
+    [UsageActionValues.INVITE_CREATED]: 1,
+    [UsageActionValues.INVITE_REVOKED]: 1,
     [UsageActionValues.TEAM_CREATED]: 1,
 };
 

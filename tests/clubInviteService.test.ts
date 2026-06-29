@@ -13,6 +13,8 @@ import {
     InviteRevokedError,
     NameRequiredForNewUserError,
 } from '../src/error/ClubErrors.ts';
+import { UsageAction } from '../src/model/UsageModels.ts';
+import { UsageService } from '../src/service/UsageService.ts';
 
 const SYSTEM_USER_ID = 0;
 const TELEGRAM_BASE = 9400000;
@@ -27,6 +29,7 @@ describe('ClubInviteService', () => {
     const membershipRepository = new ClubMembershipRepository();
     const clubRepository = new ClubRepository();
     const userService = new UserService();
+    const usageService = new UsageService();
     let clubId: number;
 
     function cleanupInvites(): void {
@@ -80,10 +83,43 @@ describe('ClubInviteService', () => {
         expect(inviteRepository.findByCode(invite.code)).toBeDefined();
     });
 
+    it('charges usage credits when creating an invite', () => {
+        const before = usageService.getUsageSummary(clubId).account.creditsBalance;
+
+        createInvite();
+
+        const summary = usageService.getUsageSummary(clubId);
+        expect(summary.account.creditsBalance).toBe(before - 1);
+        expect(summary.dailyUsage).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    action: UsageAction.INVITE_CREATED,
+                    actionCount: expect.any(Number),
+                    chargedCredits: expect.any(Number),
+                }),
+            ])
+        );
+    });
+
     it('revokes an invite', () => {
         const invite = createInvite();
         const revoked = inviteService.revokeInvite(invite.id, SYSTEM_USER_ID);
         expect(revoked.isActive).toBe(false);
+    });
+
+    it('charges usage credits when revoking an active invite only once', () => {
+        const invite = createInvite();
+        const beforeRevoke = usageService.getUsageSummary(clubId).account.creditsBalance;
+
+        const revoked = inviteService.revokeInvite(invite.id, SYSTEM_USER_ID);
+        const afterRevoke = usageService.getUsageSummary(clubId).account.creditsBalance;
+        const secondRevoke = inviteService.revokeInvite(invite.id, SYSTEM_USER_ID);
+        const afterSecondRevoke = usageService.getUsageSummary(clubId).account.creditsBalance;
+
+        expect(revoked.isActive).toBe(false);
+        expect(secondRevoke.isActive).toBe(false);
+        expect(afterRevoke).toBe(beforeRevoke - 1);
+        expect(afterSecondRevoke).toBe(afterRevoke);
     });
 
     it('JOIN_CLUB redeem registers a new user as an ACTIVE member and counts the use', () => {

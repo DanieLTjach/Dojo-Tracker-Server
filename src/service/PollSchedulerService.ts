@@ -1,10 +1,13 @@
 import cron from 'node-cron';
 import { telegramBot } from './TelegramBot.ts';
+import { SYSTEM_USER_ID } from '../../config/constants.ts';
 import { PollRepository } from '../repository/PollRepository.ts';
 import { ClubService } from './ClubService.ts';
 import type { ClubPollConfig } from '../model/PollModels.ts';
 import type { TelegramTopic } from '../model/TelegramTopic.ts';
+import { UsageAction } from '../model/UsageModels.ts';
 import LogService from './LogService.ts';
+import { UsageService } from './UsageService.ts';
 
 const KYIV_TIMEZONE = 'Europe/Kyiv';
 const LOCALE = 'uk-UA';
@@ -29,6 +32,7 @@ function nowInKyiv(): Date {
 class PollSchedulerService {
     private pollRepository: PollRepository = new PollRepository();
     private clubService: ClubService = new ClubService();
+    private usageService: UsageService = new UsageService();
 
     init() {
         // Check every minute if any poll needs to be sent
@@ -59,7 +63,7 @@ class PollSchedulerService {
             throw new Error(`No main topic configured for club ${config.clubId}`);
         }
 
-        return await this.sendTelegramPoll(pollTopic, this.buildPollTitle(config), this.buildPollOptions(config));
+        return await this.sendBillableTelegramPoll(config, pollTopic);
     }
 
     private sendScheduledPoll(config: ClubPollConfig) {
@@ -69,7 +73,9 @@ class PollSchedulerService {
             return;
         }
 
-        void this.sendTelegramPoll(pollTopic, this.buildPollTitle(config), this.buildPollOptions(config));
+        void this.sendBillableTelegramPoll(config, pollTopic).catch(error => {
+            LogService.logError(`Error billing or sending scheduled poll for club ${config.clubId}`, error);
+        });
     }
 
     buildPollTitle(config: ClubPollConfig, now: Date = nowInKyiv()): string {
@@ -113,6 +119,35 @@ class PollSchedulerService {
         } catch (error) {
             LogService.logError(`Error sending poll to chat ${topic.chatId} topic ${topic.topicId}`, error);
             return { messageId: null, pinned: false };
+        }
+    }
+
+    private async sendBillableTelegramPoll(
+        config: ClubPollConfig,
+        topic: TelegramTopic
+    ): Promise<TelegramPollSendResult> {
+        const reservation = await this.usageService.reserveCharge({
+            clubId: config.clubId,
+            action: UsageAction.POLL_SENT,
+            modifiedBy: SYSTEM_USER_ID,
+        });
+
+        try {
+            const result = await this.sendTelegramPoll(
+                topic,
+                this.buildPollTitle(config),
+                this.buildPollOptions(config)
+            );
+            if (result.messageId === null) {
+                await this.usageService.refundReservation(reservation);
+                return result;
+            }
+
+            await this.usageService.finalizeReservation(reservation);
+            return result;
+        } catch (error) {
+            await this.usageService.refundReservation(reservation);
+            throw error;
         }
     }
 
