@@ -21,21 +21,34 @@ import {
     TournamentNotInLastRoundError,
     TournamentGameNotInCurrentRoundError,
     TournamentMisconfigured,
+    InvalidEventFormatForTypeError,
+    TeamConfigOnlyForTeamTournamentError,
+    TeamConfigRequiredError,
+    InvalidTeamConfigError,
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { Event, EventConfig, EventInfo, EventType } from '../model/EventModels.ts';
+import { EventFormat } from '../model/EventModels.ts';
 import type { Game } from '../model/GameModels.ts';
 import { ClubRole } from '../model/ClubModels.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
+import { TeamRepository } from '../repository/TeamRepository.ts';
 import { UserService } from './UserService.ts';
 import { TournamentRepository } from '../repository/TournamentRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import type { EventPatchBody } from '../schema/EventSchemas.ts';
+import {
+    DraftNotStartableError,
+    NotEnoughApprovedForDraftError,
+    TeamCountMustBeDivisibleByFourError,
+    TeamDraftHasUnteamedPlayersError,
+    TeamDraftUnevenTeamsError,
+} from '../error/TeamErrors.ts';
 
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
@@ -44,6 +57,7 @@ export class EventService {
     private eventRegistrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
     private tournamentRepository: TournamentRepository = new TournamentRepository();
     private gameRepository: GameRepository = new GameRepository();
+    private teamRepository: TeamRepository = new TeamRepository();
     private userService: UserService = new UserService();
 
     getAllEvents(clubId?: number): Event[] {
@@ -105,6 +119,7 @@ export class EventService {
             name: data.name,
             description: data.description ?? null,
             type: data.type,
+            format: data.format,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
@@ -163,6 +178,7 @@ export class EventService {
             name: data.name,
             description: data.description ?? null,
             type: data.type,
+            format: data.format,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
@@ -184,7 +200,7 @@ export class EventService {
     /**
      * Partial update. Projects the existing event into the write-side EventData shape,
      * merges the provided fields over it (info is merged one level deep so a patch that
-     * touches only `venue` doesn't wipe `schedule`/`links`/`pairings`), then runs the full
+     * touches only `venue` doesn't wipe `schedule`/`links`), then runs the full
      * `updateEvent` path so all authorization, validation, and sync logic is shared — the
      * merged object is validated exactly as a full PUT would be.
      */
@@ -223,6 +239,9 @@ export class EventService {
         }
         if (nextRound > tournament.totalRounds) {
             throw new TournamentHasNoMoreRoundsError(event.name);
+        }
+        if (nextRound === 1) {
+            this.validateTeamTournamentComposition(event, false);
         }
 
         if (tournament.currentRound !== null) {
@@ -265,7 +284,13 @@ export class EventService {
 
         const previousRound = roundId - 1;
         const newCurrentRound = previousRound >= 1 ? previousRound : null;
-        const newStatus = newCurrentRound === null ? TournamentStatus.CREATED : TournamentStatus.IN_PROGRESS;
+        // Stepping back before round 1 returns to the pre-start state: DRAFT for a
+        // team tournament (teams already formed, registration closed) or CREATED
+        // for an individual tournament.
+        const preStartStatus = event.format === EventFormat.INDIVIDUAL
+            ? TournamentStatus.CREATED
+            : TournamentStatus.DRAFT;
+        const newStatus = newCurrentRound === null ? preStartStatus : TournamentStatus.IN_PROGRESS;
 
         this.tournamentRepository.updateTournamentState(eventId, newStatus, newCurrentRound, new Date(), modifiedBy);
 
@@ -408,6 +433,37 @@ export class EventService {
         return event;
     }
 
+    startDraft(eventId: number, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.authorizeTournamentManagement(event, modifiedBy);
+        if (event.format !== EventFormat.TEAM) {
+            throw new InvalidEventFormatForTypeError(event.type, event.format);
+        }
+        if (event.tournament!.status !== TournamentStatus.CREATED) {
+            throw new DraftNotStartableError(event.name);
+        }
+
+        const required = this.requiredDraftMinimum(event);
+        const approved = this.eventRegistrationRepository.countApprovedByEventId(eventId);
+        if (approved < required) {
+            throw new NotEnoughApprovedForDraftError(event.name, required, approved);
+        }
+
+        return this.setTournamentStatus(eventId, TournamentStatus.DRAFT, modifiedBy);
+    }
+
+    private setTournamentStatus(eventId: number, status: TournamentStatus, modifiedBy: number): Event {
+        const event = this.getTournamentEvent(eventId);
+        this.tournamentRepository.updateTournamentState(
+            eventId,
+            status,
+            event.tournament!.currentRound,
+            new Date(),
+            modifiedBy
+        );
+        return this.getEventById(eventId);
+    }
+
     private authorizeTournamentManagement(event: Event, userId: number): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
@@ -421,6 +477,27 @@ export class EventService {
         const role = this.membershipRepository.getUserClubRole(event.clubId, userId);
         if (role !== ClubRole.OWNER && role !== ClubRole.MODERATOR) {
             throw new InsufficientClubPermissionsError([ClubRole.OWNER, ClubRole.MODERATOR]);
+        }
+    }
+
+    validateTeamTournamentComposition(event: Event, requireTeamCountDivisibleByFour: boolean): void {
+        if (event.format !== EventFormat.TEAM) {
+            return;
+        }
+
+        const unteamedCount = this.teamRepository.countUnteamedApprovedPlayers(event.id);
+        if (unteamedCount > 0) {
+            throw new TeamDraftHasUnteamedPlayersError(event.name, unteamedCount);
+        }
+
+        const teamMemberCounts = this.teamRepository.findTeamMemberCountsByEventId(event.id);
+        const expectedMemberCount = teamMemberCounts[0]?.memberCount ?? 0;
+        if (teamMemberCounts.some(team => team.memberCount !== expectedMemberCount)) {
+            throw new TeamDraftUnevenTeamsError(event.name);
+        }
+
+        if (requireTeamCountDivisibleByFour && teamMemberCounts.length % 4 !== 0) {
+            throw new TeamCountMustBeDivisibleByFourError(event.name, teamMemberCounts.length);
         }
     }
 
@@ -469,6 +546,7 @@ export class EventService {
      */
     private validateEventDataInvariants(data: EventData, existingEvent?: Event): void {
         this.validateTournamentConfig(data, existingEvent);
+        this.validateEventFormat(data);
 
         if (data.dateFrom && data.dateTo && data.dateFrom >= data.dateTo) {
             throw new InvalidEventDateRangeError();
@@ -492,6 +570,71 @@ export class EventService {
         ) {
             throw new MinParticipantsExceedsMaxError();
         }
+    }
+
+    /**
+     * Validates the event format against its type and, for TEAM tournaments, the
+     * teamConfig sizing. v1 supports TEAM only for tournaments (HYBRID is reserved
+     * for future team seasons and rejected here). teamConfig is required for TEAM
+     * tournaments and forbidden otherwise; it must satisfy:
+     *   teamCount % 4 === 0  (a table seats one player from four distinct teams), and
+     *   minParticipants === teamSize * teamCount  (the draft minimum reuses minParticipants).
+     */
+    private validateEventFormat(data: EventData): void {
+        const format = data.format;
+        const allowed = this.allowedFormatsForType(data.type);
+        if (!allowed.includes(format)) {
+            throw new InvalidEventFormatForTypeError(data.type, format);
+        }
+
+        const isTeamTournament = data.type === 'TOURNAMENT' && format === EventFormat.TEAM;
+        const teamConfig = data.config?.teamConfig;
+
+        if (!isTeamTournament) {
+            if (teamConfig !== undefined) {
+                throw new TeamConfigOnlyForTeamTournamentError();
+            }
+            return;
+        }
+
+        if (teamConfig === undefined) {
+            throw new TeamConfigRequiredError();
+        }
+        if (!Number.isInteger(teamConfig.teamSize) || teamConfig.teamSize < 1) {
+            throw new InvalidTeamConfigError('teamSize має бути цілим числом ≥ 1');
+        }
+        if (!Number.isInteger(teamConfig.teamCount) || teamConfig.teamCount < 1) {
+            throw new InvalidTeamConfigError('teamCount має бути цілим числом ≥ 1');
+        }
+        if (teamConfig.teamCount % 4 !== 0) {
+            throw new InvalidTeamConfigError('teamCount має ділитися на 4');
+        }
+        const minParticipants = data.config?.minParticipants;
+        const expected = teamConfig.teamSize * teamConfig.teamCount;
+        if (minParticipants === undefined) {
+            throw new InvalidTeamConfigError(`вкажіть minParticipants = teamSize * teamCount (${expected})`);
+        }
+        if (minParticipants !== expected) {
+            throw new InvalidTeamConfigError(
+                `minParticipants (${minParticipants}) має дорівнювати teamSize * teamCount (${expected})`
+            );
+        }
+    }
+
+    private allowedFormatsForType(type: EventType): EventFormat[] {
+        // v1: TEAM only for tournaments; seasons stay INDIVIDUAL (team seasons / HYBRID later).
+        return type === 'TOURNAMENT'
+            ? [EventFormat.INDIVIDUAL, EventFormat.TEAM]
+            : [EventFormat.INDIVIDUAL];
+    }
+
+    private requiredDraftMinimum(event: Event): number {
+        const config = event.config;
+        if (config?.minParticipants !== undefined) {
+            return config.minParticipants;
+        }
+        const teamConfig = config?.teamConfig;
+        return teamConfig !== undefined ? teamConfig.teamSize * teamConfig.teamCount : 0;
     }
 
     private validateCurrentRatingEvent(data: EventData): void {
@@ -563,6 +706,7 @@ export function projectEventToData(event: Event): EventData {
         name: event.name,
         description: event.description,
         type: event.type,
+        format: event.format,
         clubId: event.clubId,
         isCurrentRating: event.isCurrentRating,
         dateFrom: event.dateFrom,
@@ -588,6 +732,7 @@ export function mergeEventData(base: EventData, patch: EventPatchBody): EventDat
     assignIfPresent(merged, patch, 'name');
     assignIfPresent(merged, patch, 'description');
     assignIfPresent(merged, patch, 'type');
+    assignIfPresent(merged, patch, 'format');
     assignIfPresent(merged, patch, 'isCurrentRating');
     assignIfPresent(merged, patch, 'dateFrom');
     assignIfPresent(merged, patch, 'dateTo');
@@ -660,6 +805,7 @@ export interface EventData {
     name: string;
     description?: string | null | undefined;
     type: EventType;
+    format: EventFormat;
     clubId?: number | null | undefined;
     isCurrentRating?: boolean | null | undefined;
     dateFrom?: Date | null | undefined;

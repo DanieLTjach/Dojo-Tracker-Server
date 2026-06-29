@@ -13,6 +13,7 @@ interface Config {
     globalUserLogsTopicId: number | undefined;
     globalGameLogsTopicId: number | undefined;
     globalClubLogsTopicId: number | undefined;
+    telegramNotificationsEnabled: boolean;
     tournamentMode: boolean;
     tournamentUserId: number | undefined;
     usageStartingCredits: number;
@@ -39,6 +40,20 @@ function tryParseIntEnvVariable(varName: string): number | undefined {
         throw new Error(`${varName} environment variable must be a valid integer`);
     }
     return intValue;
+}
+
+function parseBooleanEnvVariable(varName: string, defaultValue: boolean): boolean {
+    const variable = process.env[varName];
+    if (variable === undefined) {
+        return defaultValue;
+    }
+    if (variable === 'true') {
+        return true;
+    }
+    if (variable === 'false') {
+        return false;
+    }
+    throw new Error(`${varName} environment variable must be either 'true' or 'false'`);
 }
 
 const env = getRequiredStringEnvVariable('NODE_ENV');
@@ -68,6 +83,7 @@ const config: Config = {
     globalUserLogsTopicId: tryParseIntEnvVariable('GLOBAL_USER_LOGS_TOPIC_ID'),
     globalGameLogsTopicId: tryParseIntEnvVariable('GLOBAL_GAME_LOGS_TOPIC_ID'),
     globalClubLogsTopicId: tryParseIntEnvVariable('GLOBAL_CLUB_LOGS_TOPIC_ID'),
+    telegramNotificationsEnabled: parseBooleanEnvVariable('TELEGRAM_NOTIFICATIONS_ENABLED', true),
     tournamentMode,
     tournamentUserId: tournamentMode ? (tryParseIntEnvVariable('TOURNAMENT_USER_ID') || 1) : undefined,
     usageStartingCredits: tryParseIntEnvVariable('USAGE_STARTING_CREDITS') ?? 10000,

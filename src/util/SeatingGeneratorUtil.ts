@@ -50,6 +50,12 @@ export interface SeatingOptions {
     timeLimitMs: number;
     /** Seed for the deterministic RNG. */
     seed: number;
+    /**
+     * Optional team constraint for team tournaments. playerTeams[i] is the team id of
+     * player index i, or -1 for an unteamed player. When present, no table may seat two
+     * players from the same team. Plain array so it survives the worker-thread boundary.
+     */
+    playerTeams?: number[] | undefined;
 }
 
 export class SeatingGenerationError extends Error {}
@@ -107,13 +113,14 @@ function buildSchedule(
     tables: number,
     rounds: number,
     rng: Rng,
-    deadline: Deadline
+    deadline: Deadline,
+    playerTeams: number[] | undefined
 ): SeatingRound[] | null {
     // The randomised DFS can hit a dead end on tight configurations (rounds near the pairing
     // maximum), so restart from a fresh state until one succeeds or the deadline passes. The
     // RNG keeps advancing across restarts, so each attempt explores a different ordering.
     while (!deadline.expired()) {
-        const result = attemptSchedule(playerCount, tables, rounds, rng, deadline);
+        const result = attemptSchedule(playerCount, tables, rounds, rng, deadline, playerTeams);
         if (result) return result;
     }
     return null;
@@ -124,11 +131,17 @@ function attemptSchedule(
     tables: number,
     rounds: number,
     rng: Rng,
-    deadline: Deadline
+    deadline: Deadline,
+    playerTeams: number[] | undefined
 ): SeatingRound[] | null {
     // existingPairings[a] = set of players a is already playing with
     const existingPairings: Set<number>[] = Array.from({ length: playerCount }, () => new Set<number>());
-    const allPossibleTables = generateAllPossibleTables(playerCount);
+    // For team tournaments, drop every table that seats two players from the same team up
+    // front. Because the whole search (the recursion pool, the pool-exhaustion fallback, and
+    // pickTablesForOneRound) only ever draws from this filtered universe, the team constraint
+    // can never be violated — not even on the repeat-pairing fallback path.
+    const allPossibleTables = generateAllPossibleTables(playerCount)
+        .filter(table => isTableTeamLegal(table, playerTeams));
 
     const schedule: SeatingRound[] = [];
 
@@ -234,6 +247,22 @@ function areAllPairingsAllowedForTable(table: number[], forbiddenPairings: Set<n
         for (let j = i + 1; j < table.length; j++) {
             if (forbiddenPairings[table[i]!]!.has(table[j]!)) return false;
         }
+    }
+    return true;
+}
+
+/**
+ * True if no two seated players share a team. Unteamed players (team id < 0) never
+ * conflict. With no playerTeams supplied the constraint is inactive (always true).
+ */
+function isTableTeamLegal(table: number[], playerTeams: number[] | undefined): boolean {
+    if (playerTeams === undefined) return true;
+    const seen = new Set<number>();
+    for (const player of table) {
+        const team = playerTeams[player]!;
+        if (team < 0) continue;
+        if (seen.has(team)) return false;
+        seen.add(team);
     }
     return true;
 }
@@ -499,13 +528,13 @@ function optimiseTableNumbers(
  * if schedule cannot be found within the time budget.
  */
 export function generateSeatingCandidate(options: SeatingOptions): SeatingCandidate {
-    const { tables, rounds, timeLimitMs, seed } = options;
+    const { tables, rounds, timeLimitMs, seed, playerTeams } = options;
 
     const playerCount = tables * PLAYERS_PER_TABLE;
     const rng = new Rng(seed);
     const deadline = new Deadline(timeLimitMs);
 
-    const schedule = buildSchedule(playerCount, tables, rounds, rng, deadline);
+    const schedule = buildSchedule(playerCount, tables, rounds, rng, deadline, playerTeams);
     if (!schedule) {
         throw new SeatingGenerationError(
             `Could not build a schedule for ${tables} tables over ${rounds} rounds within the time limit`

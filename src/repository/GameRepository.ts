@@ -2,7 +2,7 @@ import type { Statement } from 'better-sqlite3';
 import type { Game, GameFilters, GamePlayer, GameRound, GameState, GameStatus } from '../model/GameModels.ts';
 import type { GameRoundResult, PlayerPointChange } from '../model/GameRoundResultModels.ts';
 import { dbManager } from '../db/dbInit.ts';
-import { RATING_TO_POINTS_COEFFICIENT } from '../service/RatingService.ts';
+import { RATING_TO_POINTS_COEFFICIENT } from '../model/RatingModels.ts';
 import { parseGameStatus, parseWind } from '../util/EnumUtil.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
 

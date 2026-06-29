@@ -288,3 +288,42 @@ export class SeatingMissingParticipantsInRoundError extends BadRequestError {
         );
     }
 }
+
+export class SeatingSameTeamAtTableError extends BadRequestError {
+    constructor(eventName: string, round: number, table: number) {
+        super(
+            `У раунді ${round} турніру "${eventName}" за столом ${table} опинились двоє гравців однієї команди`,
+            'seatingSameTeamAtTable'
+        );
+    }
+}
+
+export class InvalidEventFormatForTypeError extends BadRequestError {
+    constructor(type: string, format: string) {
+        super(
+            `Формат "${format}" недоступний для події типу "${type}"`,
+            'invalidEventFormatForType'
+        );
+    }
+}
+
+export class TeamConfigOnlyForTeamTournamentError extends BadRequestError {
+    constructor() {
+        super(
+            'Конфіг команд (teamConfig) доступний лише для командних турнірів',
+            'teamConfigOnlyForTeamTournament'
+        );
+    }
+}
+
+export class TeamConfigRequiredError extends BadRequestError {
+    constructor() {
+        super('Командний турнір потребує конфіг команд (teamConfig)', 'teamConfigRequired');
+    }
+}
+
+export class InvalidTeamConfigError extends BadRequestError {
+    constructor(reason: string) {
+        super(`Некоректний конфіг команд: ${reason}`, 'invalidTeamConfig');
+    }
+}
