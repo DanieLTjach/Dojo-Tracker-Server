@@ -572,6 +572,50 @@ describe('Database Migrations', () => {
         db.close();
     });
 
+    test('migration 10 removes legacy static pairings from event info', () => {
+        const db = createMigratedDb('9.sql');
+
+        db.prepare(`
+      INSERT INTO event (id, name, type, gameRules, info, createdAt, modifiedAt, modifiedBy)
+      VALUES
+        (
+          10201, 'Pairings And Venue', 'TOURNAMENT', 1,
+          '{"venue":{"name":"Dojo"},"pairings":[[[1,2,3,4]]]}',
+          '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z', 0
+        ),
+        (
+          10202, 'Pairings Only', 'TOURNAMENT', 1,
+          '{"pairings":[[[1,2,3,4]]]}',
+          '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z', 0
+        ),
+        (
+          10203, 'Venue Only', 'TOURNAMENT', 1,
+          '{"venue":{"name":"Dojo"}}',
+          '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z', 0
+        )
+    `).run();
+
+        runMigration(db, '10.sql');
+
+        const rows = db.prepare(`
+      SELECT id, info
+      FROM event
+      WHERE id IN (10201, 10202, 10203)
+      ORDER BY id
+    `).all() as Array<{ id: number, info: string | null }>;
+
+        expect(rows.map(row => ({
+            id: row.id,
+            info: row.info === null ? null : JSON.parse(row.info),
+        }))).toEqual([
+            { id: 10201, info: { venue: { name: 'Dojo' } } },
+            { id: 10202, info: null },
+            { id: 10203, info: { venue: { name: 'Dojo' } } },
+        ]);
+
+        db.close();
+    });
+
     test('seeded game rules details parse against the current schema after all migrations', () => {
         const db = createMigratedDb(getMigrationFiles().at(-1)!);
 

@@ -392,6 +392,15 @@ describe('Event API Endpoints', () => {
             expect(response.status).toBe(400);
         });
 
+        test('should require totalRounds in tournament config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, clubId: 1, type: 'TOURNAMENT', tournament: {} });
+
+            expect(response.status).toBe(400);
+        });
+
         test('should reject season with tournament config', async () => {
             const response = await request(app)
                 .post('/api/events')
@@ -879,10 +888,6 @@ describe('Event API Endpoints', () => {
                 registrationForm: 'https://forms.example.com/x',
                 googleMaps: 'https://maps.google.com/?q=Kyiv',
             },
-            pairings: [
-                [[12, 29, 38, 39], [1, 6, 9, 25], [2, 7, 20, 43]],
-                [[4, 25, 26, 29], [11, 18, 42, 43], [14, 16, 23, 40]],
-            ],
         };
 
         let createdEventId: number | undefined;
@@ -908,7 +913,6 @@ describe('Event API Endpoints', () => {
                 .get(`/api/events/${createdEventId}`)
                 .set('Authorization', adminAuthHeader);
             expect(fetched.body.info).toEqual(fullInfo);
-            expect(fetched.body.info.pairings[0][0]).toEqual([12, 29, 38, 39]);
         });
 
         test('stores null when info omitted or explicitly null', async () => {
@@ -953,27 +957,11 @@ describe('Event API Endpoints', () => {
             expect(cleared.body.info).toBeNull();
         });
 
-        test('rejects pairings with a table that does not have exactly 4 players', async () => {
+        test('rejects the removed pairings field', async () => {
             const response = await request(app)
                 .post('/api/events')
                 .set('Authorization', adminAuthHeader)
-                .send({ ...basePayload, info: { pairings: [[[1, 2, 3]]] } });
-            expect(response.status).toBe(400);
-        });
-
-        test('rejects pairings with mismatched table counts across rounds', async () => {
-            const response = await request(app)
-                .post('/api/events')
-                .set('Authorization', adminAuthHeader)
-                .send({
-                    ...basePayload,
-                    info: {
-                        pairings: [
-                            [[1, 2, 3, 4], [5, 6, 7, 8]],
-                            [[9, 10, 11, 12]],
-                        ],
-                    },
-                });
+                .send({ ...basePayload, info: { pairings: [[[1, 2, 3, 4]]] } });
             expect(response.status).toBe(400);
         });
 
