@@ -805,37 +805,6 @@ describe('Event API Endpoints', () => {
             expect(fetched.body.info).toEqual(fullInfo);
         });
 
-        test('strips legacy pairings from event reads and subsequent writes', async () => {
-            const created = await request(app)
-                .post('/api/events')
-                .set('Authorization', adminAuthHeader)
-                .send({ ...basePayload, info: fullInfo });
-            createdEventId = created.body.id;
-
-            dbManager.db.prepare('UPDATE event SET info = ? WHERE id = ?').run(
-                JSON.stringify({ ...fullInfo, pairings: [[[12, 29, 38, 39]]] }),
-                createdEventId
-            );
-
-            const fetched = await request(app)
-                .get(`/api/events/${createdEventId}`)
-                .set('Authorization', adminAuthHeader);
-            expect(fetched.status).toBe(200);
-            expect(fetched.body.info).toEqual(fullInfo);
-            expect(fetched.body.info).not.toHaveProperty('pairings');
-
-            const patched = await request(app)
-                .patch(`/api/events/${createdEventId}`)
-                .set('Authorization', adminAuthHeader)
-                .send({ info: { contacts: { phone: '+380999998877' } } });
-            expect(patched.status).toBe(200);
-            expect(patched.body.info).not.toHaveProperty('pairings');
-
-            const stored = dbManager.db.prepare('SELECT info FROM event WHERE id = ?')
-                .get(createdEventId) as { info: string };
-            expect(JSON.parse(stored.info)).not.toHaveProperty('pairings');
-        });
-
         test('stores null when info omitted or explicitly null', async () => {
             const omitted = await request(app)
                 .post('/api/events')

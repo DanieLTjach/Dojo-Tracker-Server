@@ -320,23 +320,12 @@ type EventConfigDBEntity = Omit<EventConfig, 'registrationDeadline'> & {
     registrationDeadline?: string | undefined;
 };
 
-type LegacyEventInfoDBEntity = EventInfo & {
-    pairings?: unknown;
-};
-
-function sanitizeEventInfo(info: LegacyEventInfoDBEntity): EventInfo | null {
-    const sanitized = { ...info };
-    delete sanitized.pairings;
-    return Object.keys(sanitized).length > 0 ? sanitized : null;
-}
-
 function serializeEventInfo(info: EventInfo | null): string | null {
     if (info === null) {
         return null;
     }
 
-    const sanitized = sanitizeEventInfo(info as LegacyEventInfoDBEntity);
-    return sanitized !== null ? JSON.stringify(sanitized) : null;
+    return JSON.stringify(info);
 }
 
 function parseEventInfo(value: string | null): EventInfo | null {
@@ -344,7 +333,7 @@ function parseEventInfo(value: string | null): EventInfo | null {
         return null;
     }
 
-    return sanitizeEventInfo(JSON.parse(value) as LegacyEventInfoDBEntity);
+    return JSON.parse(value) as EventInfo;
 }
 
 function serializeEventConfig(config: EventConfig | null): string | null {

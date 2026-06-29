@@ -76,7 +76,7 @@ describe('Public tournament endpoint', () => {
 
         dbManager.db.prepare(
             `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Public Test Tournament', 'Tournament description', 'TOURNAMENT', ?, ?, NULL, NULL, 0, 0, '{"venue":{"name":"Public Dojo"},"pairings":[[[1,2,3,4]]]}', '{"maxParticipants":8,"registrationDeadline":"2026-06-01T00:00:00.000Z"}', ?, ?, ?)`
+             VALUES (?, 'Public Test Tournament', 'Tournament description', 'TOURNAMENT', ?, ?, NULL, NULL, 0, 0, '{"venue":{"name":"Public Dojo"}}', '{"maxParticipants":8,"registrationDeadline":"2026-06-01T00:00:00.000Z"}', ?, ?, ?)`
         ).run(TOURNAMENT_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, ts, ts, SYSTEM_USER_ID);
 
         dbManager.db.prepare(
