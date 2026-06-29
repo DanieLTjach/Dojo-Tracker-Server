@@ -299,7 +299,6 @@ export class TeamRepository {
                 GROUP BY teamId
             ) counts ON counts.teamId = t.id
             WHERE t.eventId = :eventId
-            GROUP BY t.id, t.name
             ORDER BY totalTeamRating DESC, t.name
         `);
     }

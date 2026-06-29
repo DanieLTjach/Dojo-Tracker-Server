@@ -53,7 +53,7 @@ export class RatingRepository {
               AND eventId = :eventId
               AND teamRating IS NOT NULL
               AND timestamp < :beforeDate
-            ORDER BY timestamp DESC, gameId DESC, userId DESC
+            ORDER BY timestamp DESC
             LIMIT 1`);
     }
 

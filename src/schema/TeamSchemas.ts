@@ -27,7 +27,7 @@ export const teamCreateSchema = z.object({
         name: teamNameSchema,
         // Optional: managers can create a team for another captain; when omitted the
         // acting user becomes the captain.
-        captainUserId: userIdSchema.positive().optional(),
+        captainUserId: userIdSchema.optional(),
     }),
 });
 
@@ -42,7 +42,7 @@ export const teamDeleteSchema = z.object({
 
 export const teamAddMemberSchema = z.object({
     params: z.object({ eventId: eventIdParamSchema, teamId: teamIdParamSchema }),
-    body: z.strictObject({ userId: userIdSchema.positive() }),
+    body: z.strictObject({ userId: userIdSchema }),
 });
 
 export const teamRemoveMemberSchema = z.object({
