@@ -13,6 +13,7 @@ import userStatsRoutes from './routes/UserStatsRoutes.ts';
 import clubRoutes from './routes/ClubRoutes.ts';
 import inviteRoutes from './routes/InviteRoutes.ts';
 import publicRoutes from './routes/PublicRoutes.ts';
+import smartCompassRoutes from './routes/SmartCompassRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
 
 import LogService from './service/LogService.ts';
@@ -44,6 +45,7 @@ app.use('/api/events', userStatsRoutes);
 app.use('/api/clubs', clubRoutes);
 app.use('/api/invites', inviteRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/smart-compass', smartCompassRoutes);
 
 app.use(handleErrors);
 
