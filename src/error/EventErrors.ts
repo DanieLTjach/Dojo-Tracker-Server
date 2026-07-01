@@ -228,3 +228,57 @@ export class SeatingMissingParticipantsInRoundError extends BadRequestError {
         super('seatingMissingParticipantsInRound', { eventName, round, expected, actual });
     }
 }
+
+export class SeatingSameTeamAtTableError extends BadRequestError {
+    constructor(eventName: string, round: number, table: number) {
+        super('seatingSameTeamAtTable', { eventName, round, table });
+    }
+}
+
+export class InvalidEventFormatForTypeError extends BadRequestError {
+    constructor(type: string, format: string) {
+        super('invalidEventFormatForType', { type, format });
+    }
+}
+
+export class TeamConfigOnlyForTeamTournamentError extends BadRequestError {
+    constructor() {
+        super('teamConfigOnlyForTeamTournament');
+    }
+}
+
+export class TeamConfigRequiredError extends BadRequestError {
+    constructor() {
+        super('teamConfigRequired');
+    }
+}
+
+export class InvalidTeamSizeError extends BadRequestError {
+    constructor() {
+        super('invalidTeamSize');
+    }
+}
+
+export class InvalidTeamCountError extends BadRequestError {
+    constructor() {
+        super('invalidTeamCount');
+    }
+}
+
+export class TeamCountNotDivisibleByFourError extends BadRequestError {
+    constructor() {
+        super('teamCountNotDivisibleByFour');
+    }
+}
+
+export class MinParticipantsRequiredForTeamConfigError extends BadRequestError {
+    constructor(expected: number) {
+        super('minParticipantsRequiredForTeamConfig', { expected });
+    }
+}
+
+export class MinParticipantsMustMatchTeamConfigError extends BadRequestError {
+    constructor(minParticipants: number, expected: number) {
+        super('minParticipantsMustMatchTeamConfig', { minParticipants, expected });
+    }
+}

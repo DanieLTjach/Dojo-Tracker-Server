@@ -62,6 +62,31 @@ errors:
   seatingInvalidParticipant: 'Participant {{userId}} is not an approved participant in tournament "{{eventName}}" (round {{round}})'
   seatingDuplicateParticipantInRound: 'Participant {{userId}} appears more than once in round {{round}} of tournament "{{eventName}}"'
   seatingMissingParticipantsInRound: 'Round {{round}} of tournament "{{eventName}}" must include all {{expected}} participants (received {{actual}})'
+  seatingSameTeamAtTable: 'In round {{round}} of tournament "{{eventName}}", table {{table}} has two players from the same team'
+  invalidEventFormatForType: 'Format "{{format}}" is not available for event type "{{type}}"'
+  teamConfigOnlyForTeamTournament: Team config (teamConfig) is only available for team tournaments
+  teamConfigRequired: Team tournaments require a team config (teamConfig)
+  invalidTeamSize: teamSize must be an integer >= 1
+  invalidTeamCount: teamCount must be an integer >= 1
+  teamCountNotDivisibleByFour: teamCount must be divisible by 4
+  minParticipantsRequiredForTeamConfig: "Please set minParticipants = teamSize * teamCount ({{expected}})"
+  minParticipantsMustMatchTeamConfig: "minParticipants ({{minParticipants}}) must equal teamSize * teamCount ({{expected}})"
+
+  teamNotFound: Team with ID {{teamId}} was not found
+  teamNotInEvent: Team {{teamId}} does not belong to event {{eventId}}
+  teamsNotAllowedForFormat: 'Teams are only available for team events ("{{eventName}}")'
+  insufficientTeamPermissions: 'You do not have permission to manage teams for tournament "{{eventName}}"'
+  teamCountLimitReached: Team count limit reached ({{limit}})
+  teamFull: 'Team "{{teamName}}" is already full ({{teamSize}})'
+  userAlreadyInTeamForEvent: Player {{userId}} is already on a team for this event
+  userNotApprovedParticipant: Player {{userId}} is not an approved participant of the tournament
+  teamCompositionLocked: 'Team composition for tournament "{{eventName}}" can no longer be changed'
+  teamMemberNotFound: Player {{userId}} is not on team {{teamId}}
+  notEnoughApprovedForDraft: 'Starting the draft for tournament "{{eventName}}" requires at least {{required}} approved participants (currently {{approved}})'
+  draftNotStartable: 'The draft for tournament "{{eventName}}" cannot be started from its current state'
+  teamDraftHasUnteamedPlayers: 'Team tournament "{{eventName}}" has {{unteamedCount}} approved participants without a team'
+  teamDraftUnevenTeams: 'Teams in team tournament "{{eventName}}" have different numbers of members'
+  teamCountMustBeDivisibleByFour: 'The number of teams in tournament "{{eventName}}" ({{teamCount}}) must be divisible by 4'
 
   eventRegistrationNotFound: "Registration for user with id {{userId}} in event '{{eventName}}' was not found"
   userNotRegisteredForTournament: 'User {{userId}} is not registered for tournament "{{eventName}}"'

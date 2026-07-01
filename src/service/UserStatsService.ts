@@ -3,7 +3,8 @@ import { UserStatsRepository } from '../repository/UserStatsRepository.ts';
 import { UserService } from './UserService.ts';
 import { EventService } from './EventService.ts';
 import { UserHasNoRatingDespiteHavingPlayedGames } from '../error/RatingErrors.ts';
-import { RATING_TO_POINTS_COEFFICIENT, RatingService } from './RatingService.ts';
+import { RATING_TO_POINTS_COEFFICIENT } from '../model/RatingModels.ts';
+import { RatingService } from './RatingService.ts';
 import type { Event } from '../model/EventModels.ts';
 
 export class UserStatsService {

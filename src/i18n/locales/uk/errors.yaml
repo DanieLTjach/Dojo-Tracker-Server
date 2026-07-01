@@ -62,6 +62,31 @@ errors:
   seatingInvalidParticipant: 'Учасник {{userId}} не є схваленим учасником турніру "{{eventName}}" (раунд {{round}})'
   seatingDuplicateParticipantInRound: 'Учасник {{userId}} зустрічається в розсадці більше одного разу в раунді {{round}} турніру "{{eventName}}"'
   seatingMissingParticipantsInRound: 'У раунді {{round}} турніру "{{eventName}}" мають бути всі {{expected}} учасників (надіслано {{actual}})'
+  seatingSameTeamAtTable: 'У раунді {{round}} турніру "{{eventName}}" за столом {{table}} опинились двоє гравців однієї команди'
+  invalidEventFormatForType: 'Формат "{{format}}" недоступний для події типу "{{type}}"'
+  teamConfigOnlyForTeamTournament: Конфіг команд (teamConfig) доступний лише для командних турнірів
+  teamConfigRequired: Командний турнір потребує конфіг команд (teamConfig)
+  invalidTeamSize: teamSize має бути цілим числом ≥ 1
+  invalidTeamCount: teamCount має бути цілим числом ≥ 1
+  teamCountNotDivisibleByFour: teamCount має ділитися на 4
+  minParticipantsRequiredForTeamConfig: "Вкажіть minParticipants = teamSize * teamCount ({{expected}})"
+  minParticipantsMustMatchTeamConfig: "minParticipants ({{minParticipants}}) має дорівнювати teamSize * teamCount ({{expected}})"
+
+  teamNotFound: Команду з ID {{teamId}} не знайдено
+  teamNotInEvent: Команда {{teamId}} не належить події {{eventId}}
+  teamsNotAllowedForFormat: 'Команди доступні лише для командних подій ("{{eventName}}")'
+  insufficientTeamPermissions: 'Недостатньо прав для керування командами турніру "{{eventName}}"'
+  teamCountLimitReached: Досягнуто межу кількості команд ({{limit}})
+  teamFull: 'Команда "{{teamName}}" вже заповнена ({{teamSize}})'
+  userAlreadyInTeamForEvent: Гравець {{userId}} вже у команді цієї події
+  userNotApprovedParticipant: Гравець {{userId}} не є схваленим учасником турніру
+  teamCompositionLocked: 'Склад команд турніру "{{eventName}}" вже не можна змінювати'
+  teamMemberNotFound: Гравця {{userId}} немає в команді {{teamId}}
+  notEnoughApprovedForDraft: 'Для старту драфту турніру "{{eventName}}" потрібно щонайменше {{required}} схвалених учасників (наразі {{approved}})'
+  draftNotStartable: 'Драфт турніру "{{eventName}}" не можна розпочати з поточного стану'
+  teamDraftHasUnteamedPlayers: 'У командному турнірі "{{eventName}}" є {{unteamedCount}} схвалених учасників без команди'
+  teamDraftUnevenTeams: 'У командному турнірі "{{eventName}}" команди мають різну кількість учасників'
+  teamCountMustBeDivisibleByFour: 'Кількість команд у турнірі "{{eventName}}" ({{teamCount}}) має ділитися на 4'
 
   eventRegistrationNotFound: "Реєстрацію користувача з id {{userId}} на подію '{{eventName}}' не знайдено"
   userNotRegisteredForTournament: 'Користувач {{userId}} не зареєстрований на турнір "{{eventName}}"'

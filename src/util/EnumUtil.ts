@@ -1,7 +1,8 @@
 import { InternalServerError } from '../error/BaseErrors.ts';
 import { ClubInviteSource, ClubInviteType, ClubMembershipStatus, ClubRole } from '../model/ClubModels.ts';
 import { EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
-import { EventType, UmaTieBreak } from '../model/EventModels.ts';
+import { EventFormat, EventType, UmaTieBreak } from '../model/EventModels.ts';
+import { TeamRole } from '../model/TeamModels.ts';
 import { GameStatus, Wind } from '../model/GameModels.ts';
 import { ClubTelegramTopicType } from '../model/TelegramTopic.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
@@ -69,6 +70,14 @@ export function parseUmaTieBreak(value: string): UmaTieBreak {
 
 export function parseEventType(value: string): EventType {
     return parseEnumValue('EventType', EventType, value);
+}
+
+export function parseEventFormat(value: string): EventFormat {
+    return parseEnumValue('EventFormat', EventFormat, value);
+}
+
+export function parseTeamRole(value: string): TeamRole {
+    return parseEnumValue('TeamRole', TeamRole, value);
 }
 
 export function parseClubTelegramTopicType(value: string): ClubTelegramTopicType {
