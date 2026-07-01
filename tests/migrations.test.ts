@@ -708,4 +708,63 @@ describe('Database Migrations', () => {
 
         db.close();
     });
+
+    test('migration 11 creates smart compass pairing and session tables', () => {
+        const db = createMigratedDb('10.sql');
+        runMigration(db, '11.sql');
+        db.pragma('foreign_keys = ON');
+
+        const pairingColumns = (db.prepare('PRAGMA table_info(smartCompassPairingCode)').all() as Array<
+            { name: string, type: string, notnull: number, dflt_value: string | null }
+        >).map(({ name, type, notnull, dflt_value }) => ({ name, type, notnull, dflt_value }));
+        expect(pairingColumns).toEqual([
+            { name: 'id', type: 'INTEGER', notnull: 0, dflt_value: null },
+            { name: 'gameId', type: 'INTEGER', notnull: 1, dflt_value: null },
+            { name: 'codeHash', type: 'TEXT', notnull: 1, dflt_value: null },
+            { name: 'expiresAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+            { name: 'redeemedAt', type: 'TIMESTAMP', notnull: 0, dflt_value: null },
+            { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+            { name: 'createdBy', type: 'INTEGER', notnull: 1, dflt_value: null },
+        ]);
+
+        const sessionColumns = (db.prepare('PRAGMA table_info(smartCompassSession)').all() as Array<
+            { name: string, type: string, notnull: number, dflt_value: string | null }
+        >).map(({ name, type, notnull, dflt_value }) => ({ name, type, notnull, dflt_value }));
+        expect(sessionColumns).toEqual([
+            { name: 'id', type: 'INTEGER', notnull: 0, dflt_value: null },
+            { name: 'gameId', type: 'INTEGER', notnull: 1, dflt_value: null },
+            { name: 'pairingCodeId', type: 'INTEGER', notnull: 1, dflt_value: null },
+            { name: 'tokenHash', type: 'TEXT', notnull: 1, dflt_value: null },
+            { name: 'deviceLabel', type: 'TEXT', notnull: 0, dflt_value: null },
+            { name: 'expiresAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+            { name: 'revokedAt', type: 'TIMESTAMP', notnull: 0, dflt_value: null },
+            { name: 'lastUsedAt', type: 'TIMESTAMP', notnull: 0, dflt_value: null },
+            { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+            { name: 'createdBy', type: 'INTEGER', notnull: 1, dflt_value: null },
+            { name: 'modifiedAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+            { name: 'modifiedBy', type: 'INTEGER', notnull: 1, dflt_value: null },
+        ]);
+
+        const indexes = db.prepare(`
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'index'
+              AND tbl_name IN ('smartCompassPairingCode', 'smartCompassSession')
+            ORDER BY name
+        `).all() as Array<{ name: string }>;
+        expect(indexes.map(index => index.name)).toEqual([
+            'idx_smartCompassPairingCode_expiresAt',
+            'idx_smartCompassPairingCode_gameId',
+            'idx_smartCompassSession_createdBy',
+            'idx_smartCompassSession_expiresAt',
+            'idx_smartCompassSession_gameId',
+            'sqlite_autoindex_smartCompassPairingCode_1',
+            'sqlite_autoindex_smartCompassSession_1',
+        ]);
+
+        const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+        expect(foreignKeyViolations).toEqual([]);
+
+        db.close();
+    });
 });
