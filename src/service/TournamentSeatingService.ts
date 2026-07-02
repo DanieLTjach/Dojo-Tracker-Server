@@ -87,7 +87,7 @@ export class TournamentSeatingService {
         const event = this.getTournamentEventForManagement(eventId, userId);
         this.assertTournamentHasNotStarted(event);
 
-        const participantIds = this.getApprovedParticipantIds(eventId);
+        const participantIds = this.getSeatableParticipantIds(event);
         const tables = this.resolveTableCount(event, participantIds.length);
         const rounds = event.tournament!.totalRounds;
         this.eventService.validateTeamTournamentComposition(event, true);
@@ -239,6 +239,20 @@ export class TournamentSeatingService {
     }
 
     /**
+     * The players seating actually places. For a team tournament that is exactly
+     * the drafted (teamed) players — approved players left undrafted are reserves
+     * and are not seated. For an individual tournament it is every approved player.
+     */
+    private getSeatableParticipantIds(event: Event): number[] {
+        const approved = this.getApprovedParticipantIds(event.id);
+        if (event.format !== EventFormat.TEAM) {
+            return approved;
+        }
+        const teamMap = this.teamService.getPlayerTeamMapForEvent(event.id);
+        return approved.filter(userId => teamMap.has(userId));
+    }
+
+    /**
      * Team id per participant, aligned to the participantIds index order the seating
      * generator works in. Unteamed participants (e.g. approved fillers not drafted) get
      * -1, which the generator treats as never conflicting.
@@ -289,7 +303,7 @@ export class TournamentSeatingService {
     }
 
     private validateSeatingShape(event: Event, seatingRounds: SeatingApplyRounds): void {
-        const participantIds = new Set(this.getApprovedParticipantIds(event.id));
+        const participantIds = new Set(this.getSeatableParticipantIds(event));
         const expectedRounds = event.tournament!.totalRounds;
         // For a team tournament, reject any table that seats two players of the same team.
         const teamMap = event.format === EventFormat.TEAM
