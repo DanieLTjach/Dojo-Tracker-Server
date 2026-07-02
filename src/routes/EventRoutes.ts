@@ -262,6 +262,11 @@ router.delete(
     requireAuth,
     withTransaction((req, res) => teamController.remove(req, res))
 );
+router.patch(
+    '/:eventId/teams/:teamId/captain',
+    requireAuth,
+    withTransaction((req, res) => teamController.setCaptain(req, res))
+);
 router.post(
     '/:eventId/teams/:teamId/members',
     requireAuth,

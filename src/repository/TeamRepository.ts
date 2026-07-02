@@ -160,6 +160,30 @@ export class TeamRepository {
         this.removeMemberStatement().run({ teamId, userId });
     }
 
+    private updateMemberRoleStatement(): Statement<{
+        teamId: number;
+        userId: number;
+        role: string;
+        modifiedAt: string;
+        modifiedBy: number;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE teamMembership
+            SET role = :role, modifiedAt = :modifiedAt, modifiedBy = :modifiedBy
+            WHERE teamId = :teamId AND userId = :userId
+        `);
+    }
+
+    updateMemberRole(teamId: number, userId: number, role: TeamRole, modifiedBy: number): void {
+        this.updateMemberRoleStatement().run({
+            teamId,
+            userId,
+            role,
+            modifiedAt: new Date().toISOString(),
+            modifiedBy,
+        });
+    }
+
     private findPlayerTeamMapStatement(): Statement<{ eventId: number }, { userId: number, teamId: number }> {
         return dbManager.db.prepare(`
             SELECT userId, teamId FROM teamMembership WHERE eventId = :eventId

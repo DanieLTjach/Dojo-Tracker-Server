@@ -17,6 +17,7 @@ import {
     TeamDraftHasUnteamedPlayersError,
     TeamDraftUnevenTeamsError,
     TeamFullError,
+    TeamMemberNotFoundError,
     TeamsNotAllowedForFormatError,
     UserAlreadyInTeamForEventError,
     UserNotApprovedParticipantError,
@@ -295,6 +296,51 @@ describe('TeamService', () => {
                 profileLastName: 'Player',
                 profileHidden: false,
             });
+        });
+    });
+
+    describe('setCaptain', () => {
+        beforeEach(moveTeamTournamentToDraft);
+
+        it('promotes a member to captain and demotes the previous captain', () => {
+            const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Dragons', CAPTAIN_A, CAPTAIN_A);
+            service.addMember(TEAM_TOURNAMENT_ID, team.id, PLAYER_1, CAPTAIN_A);
+
+            const updated = service.setCaptain(TEAM_TOURNAMENT_ID, team.id, PLAYER_1, OWNER_ID);
+            const roleOf = (userId: number) => updated.members.find(m => m.userId === userId)?.role;
+            expect(roleOf(PLAYER_1)).toBe('CAPTAIN');
+            expect(roleOf(CAPTAIN_A)).toBe('MEMBER');
+        });
+
+        it('is idempotent when the user is already captain', () => {
+            const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Dragons', CAPTAIN_A, CAPTAIN_A);
+            const updated = service.setCaptain(TEAM_TOURNAMENT_ID, team.id, CAPTAIN_A, OWNER_ID);
+            expect(updated.members.find(m => m.userId === CAPTAIN_A)?.role).toBe('CAPTAIN');
+        });
+
+        it('rejects promoting a user who is not on the team', () => {
+            const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Dragons', CAPTAIN_A, CAPTAIN_A);
+            expect(() => service.setCaptain(TEAM_TOURNAMENT_ID, team.id, PLAYER_2, OWNER_ID))
+                .toThrow(TeamMemberNotFoundError);
+        });
+
+        it('forbids a captain of another team from reassigning', () => {
+            const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'A', CAPTAIN_A, CAPTAIN_A);
+            service.addMember(TEAM_TOURNAMENT_ID, teamA.id, PLAYER_1, CAPTAIN_A);
+            expect(() => service.setCaptain(TEAM_TOURNAMENT_ID, teamA.id, PLAYER_1, CAPTAIN_B))
+                .toThrow(InsufficientTeamPermissionsError);
+        });
+    });
+
+    describe('captain removal', () => {
+        beforeEach(moveTeamTournamentToDraft);
+
+        it('lets a manager remove the captain to freely restructure in draft', () => {
+            const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Dragons', CAPTAIN_A, CAPTAIN_A);
+            const after = service.removeMember(TEAM_TOURNAMENT_ID, team.id, CAPTAIN_A, OWNER_ID);
+            expect(after.members.map(m => m.userId)).not.toContain(CAPTAIN_A);
+            // Freed player becomes available again.
+            expect(service.getAvailablePlayers(TEAM_TOURNAMENT_ID).map(p => p.userId)).toContain(CAPTAIN_A);
         });
     });
 
