@@ -56,7 +56,11 @@ router.put(
  *
  * Authentication: Required (admin for global rules, or owner of the target club)
  */
-router.post('/', requireAuth, withTransaction((req, res) => gameRulesController.createGameRules(req, res)));
+router.post(
+    '/',
+    requireAuth,
+    withTransaction((req, res) => gameRulesController.createGameRules(req, res))
+);
 
 /**
  * PUT /api/game-rules/:id

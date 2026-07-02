@@ -77,7 +77,11 @@ export class ClubInviteService {
     }
 
     revokeInvite(inviteId: number, modifiedBy: number): ClubInvite {
-        this.validateInviteExistsById(inviteId);
+        const invite = this.getInviteById(inviteId);
+        if (!invite.isActive) {
+            return invite;
+        }
+
         this.inviteRepository.setActive(inviteId, false, modifiedBy);
         const updated = this.getInviteById(inviteId);
         this.logInviteRevoked(updated, modifiedBy);
@@ -179,12 +183,6 @@ export class ClubInviteService {
             throw new InviteNotFoundError(String(id));
         }
         return invite;
-    }
-
-    private validateInviteExistsById(id: number): void {
-        if (this.inviteRepository.findById(id) === undefined) {
-            throw new InviteNotFoundError(String(id));
-        }
     }
 
     private computeRedeemable(invite: ClubInvite): boolean {

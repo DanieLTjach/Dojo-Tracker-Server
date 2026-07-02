@@ -360,8 +360,8 @@ export class EventRegistrationService {
 
     private upsertActiveMembership(clubId: number, userId: number, modifierId: number): void {
         const membership = this.membershipRepository.findMembership(clubId, userId);
-        const now = new Date();
         if (membership === undefined) {
+            const now = new Date();
             this.membershipRepository.createMembership({
                 clubId,
                 userId,

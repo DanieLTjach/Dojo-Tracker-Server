@@ -31,6 +31,7 @@ import type { ClubPollConfig } from '../model/PollModels.ts';
 import PollSchedulerService from './PollSchedulerService.ts';
 import { EventService } from './EventService.ts';
 import { TournamentRoundImportService } from './TournamentRoundImportService.ts';
+import { NotEnoughCreditsError } from '../error/UsageErrors.ts';
 
 type TelegramCommandContext = Context<{
     message: Update.New & Update.NonChannel & Message.TextMessage;
@@ -1174,6 +1175,10 @@ class TelegramCommandService {
         } catch (e) {
             if (e instanceof TelegramReplyError) {
                 ctx.reply(e.message);
+            } else if (e instanceof NotEnoughCreditsError) {
+                ctx.reply(
+                    'Недостатньо usage credits для цієї дії. Поповніть баланс клубу або зверніться до адміністратора.'
+                );
             } else {
                 LogService.logError('Unexpected error executing Telegram command: ', e);
                 ctx.reply('Сталася помилка при виконанні команди. Спробуйте ще раз пізніше.');

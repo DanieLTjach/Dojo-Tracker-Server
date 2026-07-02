@@ -2,14 +2,34 @@ import { Router } from 'express';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { ClubController } from '../controller/ClubController.ts';
 import { ClubMembershipController } from '../controller/ClubMembershipController.ts';
+import { UsageController } from '../controller/UsageController.ts';
 import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
 import { requireClubRole } from '../middleware/ClubRoleMiddleware.ts';
 
 const router = Router();
 const clubController = new ClubController();
 const membershipController = new ClubMembershipController();
+const usageController = new UsageController();
 
 router.get('/', withTransaction((req, res) => clubController.getAllClubs(req, res)));
+router.get(
+    '/:clubId/usage',
+    requireAuth,
+    requireClubRole('OWNER'),
+    withTransaction((req, res) => usageController.getUsageSummary(req, res))
+);
+router.post(
+    '/:clubId/usage/adjustments',
+    requireAuth,
+    requireAdmin,
+    (req, res, next) => usageController.adjustCredits(req, res).catch(next)
+);
+router.patch(
+    '/:clubId/usage/account',
+    requireAuth,
+    requireAdmin,
+    (req, res, next) => usageController.updateUsageAccount(req, res).catch(next)
+);
 router.get('/:clubId', withTransaction((req, res) => clubController.getClubById(req, res)));
 router.post('/', requireAuth, requireAdmin, withTransaction((req, res) => clubController.createClub(req, res)));
 router.put(

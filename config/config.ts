@@ -16,6 +16,10 @@ interface Config {
     telegramNotificationsEnabled: boolean;
     tournamentMode: boolean;
     tournamentUserId: number | undefined;
+    usageStartingCredits: number;
+    usageNewClubStartingCredits: number;
+    usageDefaultOverdraftCutoff: number;
+    usageDefaultOverdraftMultiplier: number;
 }
 
 function getRequiredStringEnvVariable(varName: string): string {
@@ -82,6 +86,10 @@ const config: Config = {
     telegramNotificationsEnabled: parseBooleanEnvVariable('TELEGRAM_NOTIFICATIONS_ENABLED', true),
     tournamentMode,
     tournamentUserId: tournamentMode ? (tryParseIntEnvVariable('TOURNAMENT_USER_ID') || 1) : undefined,
+    usageStartingCredits: tryParseIntEnvVariable('USAGE_STARTING_CREDITS') ?? 10000,
+    usageNewClubStartingCredits: tryParseIntEnvVariable('USAGE_NEW_CLUB_STARTING_CREDITS') ?? 1000,
+    usageDefaultOverdraftCutoff: tryParseIntEnvVariable('USAGE_DEFAULT_OVERDRAFT_CUTOFF') ?? -1000,
+    usageDefaultOverdraftMultiplier: tryParseIntEnvVariable('USAGE_DEFAULT_OVERDRAFT_MULTIPLIER') ?? 2,
 };
 
 export default config;

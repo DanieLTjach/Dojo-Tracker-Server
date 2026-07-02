@@ -6,10 +6,12 @@ import { ClubRepository } from '../repository/ClubRepository.ts';
 import LogService from './LogService.ts';
 import dedent from 'dedent';
 import { UserRepository } from '../repository/UserRepository.ts';
+import { UsageService } from './UsageService.ts';
 
 export class ClubService {
     private clubRepository: ClubRepository = new ClubRepository();
     private userRepository: UserRepository = new UserRepository();
+    private usageService: UsageService = new UsageService();
 
     getAllClubs(): Club[] {
         return this.clubRepository.findAllClubs();
@@ -50,6 +52,7 @@ export class ClubService {
         });
 
         const newClub = this.getClubById(clubId);
+        this.usageService.ensureNewClubAccount(clubId, modifiedBy);
         this.logCreatedClub(newClub, modifiedBy);
         return newClub;
     }
