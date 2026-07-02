@@ -228,23 +228,6 @@ export class TeamRepository {
         return this.countTeamsByEventIdStatement().get({ eventId })!.count;
     }
 
-    private countUnteamedApprovedPlayersStatement(): Statement<{ eventId: number }, { count: number }> {
-        return dbManager.db.prepare(`
-            SELECT COUNT(*) as count
-            FROM eventRegistration er
-            WHERE er.eventId = :eventId
-              AND er.status = 'APPROVED'
-              AND NOT EXISTS (
-                  SELECT 1 FROM teamMembership tm
-                  WHERE tm.eventId = er.eventId AND tm.userId = er.userId
-              )
-        `);
-    }
-
-    countUnteamedApprovedPlayers(eventId: number): number {
-        return this.countUnteamedApprovedPlayersStatement().get({ eventId })!.count;
-    }
-
     private findTeamMemberCountsStatement(): Statement<{ eventId: number }, TeamMemberCountDTO> {
         return dbManager.db.prepare(`
             SELECT t.id as teamId, COUNT(tm.userId) as memberCount
