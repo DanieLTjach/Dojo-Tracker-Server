@@ -10,6 +10,7 @@ import {
 } from '../error/EventRegistrationErrors.ts';
 import { BadRequestError } from '../error/BaseErrors.ts';
 import type { Event } from '../model/EventModels.ts';
+import { PlayerNameDisplay } from '../model/EventModels.ts';
 import type { EventRegistration, EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
 import type { Profile } from '../model/ProfileModels.ts';
 import type { User } from '../model/UserModels.ts';
@@ -37,7 +38,7 @@ export class EventRegistrationService {
         const event = this.eventService.getEventById(eventId);
         this.validateEventIsTournament(event);
         const applicant = this.userService.getUserById(applicantId);
-        this.validateProfileHasNames(applicantId);
+        this.validateProfileHasNames(applicantId, event);
 
         if (event.clubId !== null) {
             this.ensureClubMembershipForApply(event.clubId, applicantId);
@@ -155,7 +156,7 @@ export class EventRegistrationService {
             );
         }
 
-        this.validateProfileHasNames(targetUserId);
+        this.validateProfileHasNames(targetUserId, event);
 
         const existing = this.registrationRepository.findRegistration(eventId, targetUserId);
         if (existing === undefined || existing.status !== 'APPROVED') {
@@ -292,7 +293,10 @@ export class EventRegistrationService {
         }
     }
 
-    private validateProfileHasNames(userId: number): void {
+    private validateProfileHasNames(userId: number, event: Event): void {
+        if (event.resolvedPlayerNameDisplay === PlayerNameDisplay.NICKNAME) {
+            return;
+        }
         const profile = this.profileService.getProfileByUserId(userId);
         if (profile === undefined || profile.firstName === null || profile.lastName === null) {
             throw new MissingProfileNamesForTournamentRegistrationError();
