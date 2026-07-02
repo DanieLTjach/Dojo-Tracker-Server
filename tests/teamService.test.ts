@@ -11,12 +11,11 @@ import {
     InsufficientTeamPermissionsError,
     NotEnoughApprovedForDraftError,
     DraftNotStartableError,
-    TeamCountMustBeDivisibleByFourError,
     TeamCompositionLockedError,
     TeamCountLimitReachedError,
-    TeamDraftHasUnteamedPlayersError,
-    TeamDraftUnevenTeamsError,
+    TeamDraftIncompleteError,
     TeamFullError,
+    TeamMemberNotFoundError,
     TeamsNotAllowedForFormatError,
     UserAlreadyInTeamForEventError,
     UserNotApprovedParticipantError,
@@ -298,6 +297,51 @@ describe('TeamService', () => {
         });
     });
 
+    describe('setCaptain', () => {
+        beforeEach(moveTeamTournamentToDraft);
+
+        it('promotes a member to captain and demotes the previous captain', () => {
+            const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Dragons', CAPTAIN_A, CAPTAIN_A);
+            service.addMember(TEAM_TOURNAMENT_ID, team.id, PLAYER_1, CAPTAIN_A);
+
+            const updated = service.setCaptain(TEAM_TOURNAMENT_ID, team.id, PLAYER_1, OWNER_ID);
+            const roleOf = (userId: number) => updated.members.find(m => m.userId === userId)?.role;
+            expect(roleOf(PLAYER_1)).toBe('CAPTAIN');
+            expect(roleOf(CAPTAIN_A)).toBe('MEMBER');
+        });
+
+        it('is idempotent when the user is already captain', () => {
+            const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Dragons', CAPTAIN_A, CAPTAIN_A);
+            const updated = service.setCaptain(TEAM_TOURNAMENT_ID, team.id, CAPTAIN_A, OWNER_ID);
+            expect(updated.members.find(m => m.userId === CAPTAIN_A)?.role).toBe('CAPTAIN');
+        });
+
+        it('rejects promoting a user who is not on the team', () => {
+            const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Dragons', CAPTAIN_A, CAPTAIN_A);
+            expect(() => service.setCaptain(TEAM_TOURNAMENT_ID, team.id, PLAYER_2, OWNER_ID))
+                .toThrow(TeamMemberNotFoundError);
+        });
+
+        it('forbids a captain of another team from reassigning', () => {
+            const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'A', CAPTAIN_A, CAPTAIN_A);
+            service.addMember(TEAM_TOURNAMENT_ID, teamA.id, PLAYER_1, CAPTAIN_A);
+            expect(() => service.setCaptain(TEAM_TOURNAMENT_ID, teamA.id, PLAYER_1, CAPTAIN_B))
+                .toThrow(InsufficientTeamPermissionsError);
+        });
+    });
+
+    describe('captain removal', () => {
+        beforeEach(moveTeamTournamentToDraft);
+
+        it('lets a manager remove the captain to freely restructure in draft', () => {
+            const team = service.createTeam(TEAM_TOURNAMENT_ID, 'Dragons', CAPTAIN_A, CAPTAIN_A);
+            const after = service.removeMember(TEAM_TOURNAMENT_ID, team.id, CAPTAIN_A, OWNER_ID);
+            expect(after.members.map(m => m.userId)).not.toContain(CAPTAIN_A);
+            // Freed player becomes available again.
+            expect(service.getAvailablePlayers(TEAM_TOURNAMENT_ID).map(p => p.userId)).toContain(CAPTAIN_A);
+        });
+    });
+
     describe('startDraft', () => {
         it('moves a team tournament from CREATED to DRAFT once minParticipants approved', () => {
             // 4 approved (< 8 min) -> should fail.
@@ -353,33 +397,50 @@ describe('TeamService', () => {
     describe('team tournament composition validation', () => {
         beforeEach(moveTeamTournamentToDraft);
 
-        it('rejects a team tournament with approved players who are not on a team', () => {
+        // teamConfig for this tournament is { teamSize: 2, teamCount: 4 } → a full
+        // draft needs 4 teams of 2 (8 teamed players). Builds them from the 4 base
+        // approved players plus the 4 extra approved throwaways.
+        function fillFourTeams(): void {
+            const roster = [CAPTAIN_A, CAPTAIN_B, PLAYER_1, PLAYER_2, ...EXTRA_IDS];
+            for (let i = 0; i < 4; i++) {
+                const captain = roster[i * 2]!;
+                const member = roster[i * 2 + 1]!;
+                const team = service.createTeam(TEAM_TOURNAMENT_ID, `T${i}`, captain, OWNER_ID);
+                service.addMember(TEAM_TOURNAMENT_ID, team.id, member, OWNER_ID);
+            }
+        }
+
+        it('rejects a draft that does not fill the configured team shape', () => {
             const event = eventService.getEventById(TEAM_TOURNAMENT_ID);
             expect(() => eventService.validateTeamTournamentComposition(event, true))
-                .toThrow(TeamDraftHasUnteamedPlayersError);
+                .toThrow(TeamDraftIncompleteError);
         });
 
-        it('rejects teams with uneven member counts before starting round 1', () => {
+        it('rejects a partially-filled team even when team count matches', () => {
             const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'A', CAPTAIN_A, CAPTAIN_A);
             service.addMember(TEAM_TOURNAMENT_ID, teamA.id, PLAYER_1, CAPTAIN_A);
-            service.createTeam(TEAM_TOURNAMENT_ID, 'B', CAPTAIN_B, CAPTAIN_B);
+            service.createTeam(TEAM_TOURNAMENT_ID, 'B', CAPTAIN_B, CAPTAIN_B); // only 1 member
+            insertExtraApproved();
             service.createTeam(TEAM_TOURNAMENT_ID, 'C', PLAYER_2, OWNER_ID);
+            service.createTeam(TEAM_TOURNAMENT_ID, 'D', EXTRA_IDS[0]!, OWNER_ID);
 
             const event = eventService.getEventById(TEAM_TOURNAMENT_ID);
             expect(() => eventService.validateTeamTournamentComposition(event, false))
-                .toThrow(TeamDraftUnevenTeamsError);
+                .toThrow(TeamDraftIncompleteError);
         });
 
-        it('requires the team count to be divisible by 4 for seating generation', () => {
-            const teamA = service.createTeam(TEAM_TOURNAMENT_ID, 'A', CAPTAIN_A, CAPTAIN_A);
-            service.addMember(TEAM_TOURNAMENT_ID, teamA.id, PLAYER_1, CAPTAIN_A);
-            const teamB = service.createTeam(TEAM_TOURNAMENT_ID, 'B', CAPTAIN_B, CAPTAIN_B);
-            service.addMember(TEAM_TOURNAMENT_ID, teamB.id, PLAYER_2, CAPTAIN_B);
+        it('accepts a full, even draft matching the config and ignores unteamed reserves', () => {
+            insertExtraApproved();
+            fillFourTeams(); // 4 base + 4 extra fills 4 teams of 2 exactly
+            // The extra approved players not placed in a team are reserves.
 
             const event = eventService.getEventById(TEAM_TOURNAMENT_ID);
-            expect(() => eventService.validateTeamTournamentComposition(event, true))
-                .toThrow(TeamCountMustBeDivisibleByFourError);
+            expect(() => eventService.validateTeamTournamentComposition(event, true)).not.toThrow();
         });
+
+        // Extra approved throwaways are cleaned after the outer afterEach clears
+        // the teams that reference them (Jest runs inner afterEach first).
+        afterAll(cleanupExtraApproved);
     });
 
     describe('getTeamStandings', () => {
@@ -531,17 +592,20 @@ describe('TeamService', () => {
     });
 
     // Helpers to push approved count to >= 8 for the draft test using throwaway users.
-    const EXTRA_IDS = [97250, 97251, 97252];
+    const EXTRA_IDS = [97250, 97251, 97252, 97253];
+    // Idempotent: safe to call across tests (the outer afterEach clears teams,
+    // not these approved registrations, so repeated inserts must not conflict).
     function insertExtraApproved(): void {
         for (const id of EXTRA_IDS) {
             const t = nextTs();
             dbManager.db.prepare(
-                `INSERT INTO user (id, name, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                `INSERT OR IGNORE INTO user (id, name, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, 0, 1, 'ACTIVE', ?, ?, ?)`
             ).run(id, `Extra ${id}`, t, t, SYSTEM_USER_ID);
             dbManager.db.prepare(
                 `INSERT INTO eventRegistration (eventId, userId, status, isFillerPlayer, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, 'APPROVED', 0, ?, ?, ?)`
+                 VALUES (?, ?, 'APPROVED', 0, ?, ?, ?)
+                 ON CONFLICT(eventId, userId) DO UPDATE SET status='APPROVED'`
             ).run(TEAM_TOURNAMENT_ID, id, t, t, SYSTEM_USER_ID);
         }
     }

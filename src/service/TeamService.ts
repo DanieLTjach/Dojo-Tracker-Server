@@ -155,6 +155,34 @@ export class TeamService {
         return this.getTeam(teamId);
     }
 
+    /**
+     * Promote an existing team member to CAPTAIN, demoting the current captain to
+     * MEMBER. Only allowed while composition is editable (DRAFT / pre-start) and to
+     * the team's captain or a club manager/admin. Idempotent if the user is already
+     * the captain.
+     */
+    setCaptain(eventId: number, teamId: number, userId: number, actingUserId: number): Team {
+        const event = this.getTeamEvent(eventId);
+        const team = this.getTeamInEvent(eventId, teamId);
+        this.assertCompositionEditable(event);
+        this.authorizeTeamManagement(event, teamId, actingUserId);
+
+        const target = team.members.find(m => m.userId === userId);
+        if (target === undefined) {
+            throw new TeamMemberNotFoundError(teamId, userId);
+        }
+        if (target.role === TeamRole.CAPTAIN) {
+            return team;
+        }
+
+        const currentCaptain = team.members.find(m => m.role === TeamRole.CAPTAIN);
+        if (currentCaptain !== undefined) {
+            this.teamRepository.updateMemberRole(teamId, currentCaptain.userId, TeamRole.MEMBER, actingUserId);
+        }
+        this.teamRepository.updateMemberRole(teamId, userId, TeamRole.CAPTAIN, actingUserId);
+        return this.getTeam(teamId);
+    }
+
     // --- helpers ---
 
     private getTeamEvent(eventId: number): Event {

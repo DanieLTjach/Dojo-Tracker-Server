@@ -310,4 +310,78 @@ describe('Tournament seating generation', () => {
             expect(response.body.errorCode).toBe('seatingCannotBeModifiedAfterTournamentStarted');
         });
     });
+
+    describe('Team tournament seating seats only teamed players', () => {
+        const TEAM_EVENT_ID = 99510;
+        // 8 teamed players (four teams of two) plus one approved-but-undrafted reserve.
+        // teamCount is 4 (divisible by 4, as seating requires) and the 8 teamed players
+        // are a multiple of the 4-per-table size.
+        const TEAM_PLAYER_IDS = [99520, 99521, 99522, 99523, 99524, 99525, 99526, 99527] as const;
+        const RESERVE_ID = 99528;
+        const ALL_IDS = [...TEAM_PLAYER_IDS, RESERVE_ID];
+
+        beforeEach(() => {
+            const ts = '2024-01-01T00:00:00.000Z';
+            for (const userId of ALL_IDS) {
+                dbManager.db.prepare(
+                    `INSERT OR IGNORE INTO user (id, name, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
+                ).run(userId, `Team Seating ${userId}`, ts, ts);
+                dbManager.db.prepare(
+                    `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, 'MEMBER', 'ACTIVE', ?, ?, 0)`
+                ).run(TEST_CLUB_ID, userId, ts, ts);
+            }
+            // TEAM tournament with teamConfig {teamSize:4, teamCount:2} in DRAFT.
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, format, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, config, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'Team Seating Tournament', 'TOURNAMENT', 'TEAM', ?, ?, '2026-01-01T00:00:00.000Z', '2030-01-01T00:00:00.000Z', 0, 0, '{"teamConfig":{"teamSize":2,"teamCount":4},"minParticipants":8}', ?, ?, 0)`
+            ).run(TEAM_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, ts, ts);
+            dbManager.db.prepare(
+                `INSERT INTO tournament (eventId, status, totalRounds, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'DRAFT', 1, ?, ?, 0)`
+            ).run(TEAM_EVENT_ID, ts, ts);
+            for (const userId of ALL_IDS) {
+                insertApprovedRegistration(TEAM_EVENT_ID, userId);
+            }
+
+            // Draft four full teams of two; the reserve is left undrafted.
+            for (let team = 0; team < 4; team++) {
+                const teamId = 99530 + team;
+                dbManager.db.prepare(
+                    `INSERT INTO team (id, eventId, name, createdAt, modifiedAt, modifiedBy) VALUES (?, ?, ?, ?, ?, 0)`
+                ).run(teamId, TEAM_EVENT_ID, `T${team}`, ts, ts);
+                for (let i = 0; i < 2; i++) {
+                    const userId = TEAM_PLAYER_IDS[team * 2 + i]!;
+                    dbManager.db.prepare(
+                        `INSERT INTO teamMembership (teamId, eventId, userId, role, createdAt, modifiedAt, modifiedBy)
+                     VALUES (?, ?, ?, ?, ?, ?, 0)`
+                    ).run(teamId, TEAM_EVENT_ID, userId, i === 0 ? 'CAPTAIN' : 'MEMBER', ts, ts);
+                }
+            }
+        });
+
+        afterEach(() => {
+            dbManager.db.prepare('DELETE FROM teamMembership WHERE eventId = ?').run(TEAM_EVENT_ID);
+            dbManager.db.prepare('DELETE FROM team WHERE eventId = ?').run(TEAM_EVENT_ID);
+            cleanupEvent(TEAM_EVENT_ID);
+            dbManager.db.prepare(`DELETE FROM clubMembership WHERE userId IN (${ALL_IDS.join(',')})`).run();
+            dbManager.db.prepare(`DELETE FROM user WHERE id IN (${ALL_IDS.join(',')})`).run();
+        });
+
+        it('seats the 8 teamed players and ignores the approved reserve (9 → 8, divisible by 4)', async () => {
+            const response = await request(app)
+                .post(`/api/events/${TEAM_EVENT_ID}/tournament/seating/generate`)
+                .set('Authorization', adminAuthHeader)
+                .send({ timeLimitMs: 1000, candidateCount: 2, seed: 123 });
+
+            expect(response.status).toBe(200);
+            // 9 approved, but only 8 are teamed → 2 tables, not a divisible-by-4 error.
+            expect(response.body.participantCount).toBe(TEAM_PLAYER_IDS.length);
+            expect(response.body.tables).toBe(2);
+
+            const seatedIds = response.body.candidates[0].rounds[0].flat();
+            expect(seatedIds).not.toContain(RESERVE_ID);
+        });
+    });
 });
