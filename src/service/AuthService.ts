@@ -14,6 +14,7 @@ import { UserIsNotActive } from '../error/UserErrors.ts';
 import config from '../../config/config.ts';
 import { RefreshTokenRepository } from '../repository/RefreshTokenRepository.ts';
 import type { User } from '../model/UserModels.ts';
+import { dbManager } from '../db/dbInit.ts';
 
 export class AuthService {
     private userService: UserService = new UserService();
@@ -41,32 +42,46 @@ export class AuthService {
     }
 
     refresh(refreshToken: unknown): TokenPair {
-        const tokenRow = this.findRefreshToken(refreshToken);
-        const now = new Date();
+        let refreshError: InvalidRefreshTokenError | undefined;
+        const tokenPair = dbManager.db.transaction(() => {
+            const tokenRow = this.findRefreshToken(refreshToken);
+            const now = new Date();
 
-        if (tokenRow.revokedAt !== null) {
+            if (tokenRow.revokedAt !== null) {
+                throw new InvalidRefreshTokenError();
+            }
+
+            if (tokenRow.rotatedAt !== null) {
+                this.refreshTokenRepository.revokeFamily(tokenRow.familyId, now);
+                refreshError = new InvalidRefreshTokenError();
+                return undefined;
+            }
+
+            if (tokenRow.expiresAt.getTime() <= now.getTime()) {
+                throw new RefreshTokenExpiredError();
+            }
+
+            const user = this.userService.getUserById(tokenRow.userId);
+            if (!user.isActive) {
+                throw new InvalidAuthTokenError('User is inactive');
+            }
+
+            this.refreshTokenRepository.markRotated(tokenRow.id, now);
+            const nextTokenPair = this.createSessionTokenPair(user, tokenRow.familyId, now);
+            this.refreshTokenRepository.deleteExpired(now);
+
+            return nextTokenPair;
+        })();
+
+        if (refreshError !== undefined) {
+            throw refreshError;
+        }
+
+        if (tokenPair === undefined) {
             throw new InvalidRefreshTokenError();
         }
 
-        if (tokenRow.rotatedAt !== null) {
-            this.refreshTokenRepository.revokeFamily(tokenRow.familyId, now);
-            throw new InvalidRefreshTokenError();
-        }
-
-        if (tokenRow.expiresAt.getTime() <= now.getTime()) {
-            throw new RefreshTokenExpiredError();
-        }
-
-        const user = this.userService.getUserById(tokenRow.userId);
-        if (!user.isActive) {
-            throw new InvalidAuthTokenError('User is inactive');
-        }
-
-        const nextTokenPair = this.createSessionTokenPair(user, tokenRow.familyId, now);
-        this.refreshTokenRepository.markRotated(tokenRow.id, now);
-        this.refreshTokenRepository.deleteExpired(now);
-
-        return nextTokenPair;
+        return tokenPair;
     }
 
     /**

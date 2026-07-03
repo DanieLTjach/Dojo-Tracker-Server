@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import request from 'supertest';
 import express from 'express';
 import authRoutes from '../src/routes/AuthRoutes.ts';
@@ -8,6 +9,9 @@ import { HashUtil } from '../src/util/HashUtil.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
 import config from '../config/config.ts';
+import { TokenService } from '../src/service/TokenService.ts';
+import { RefreshTokenRepository } from '../src/repository/RefreshTokenRepository.ts';
+import type { RefreshTokenRow, TokenPair } from '../src/model/AuthModels.ts';
 
 const app = express();
 app.use(express.json());
@@ -20,10 +24,14 @@ describe('Authentication API Endpoints', () => {
     const TEST_USERNAME = 'testuser';
     const userService = new UserService();
     const userRepository = new UserRepository();
+    const tokenService = new TokenService();
+    const refreshTokenRepository = new RefreshTokenRepository();
+    let testUserId: number;
 
     beforeAll(() => {
         // Create test user before running auth tests
         const user = userService.registerUser('name', TEST_USERNAME, TEST_TELEGRAM_ID, 0);
+        testUserId = user.id;
         // Activate the user for tests
         userRepository.updateUserStatus(user.id, true, 'ACTIVE', 0);
     });
@@ -117,16 +125,43 @@ describe('Authentication API Endpoints', () => {
         };
     }
 
+    async function authenticateUser(
+        telegramId: number = TEST_TELEGRAM_ID,
+        username: string = TEST_USERNAME
+    ): Promise<TokenPair> {
+        const initData = generateValidInitData(telegramId, username);
+
+        const response = await request(app)
+            .post('/api/authenticate')
+            .query(initData)
+            .expect(200);
+
+        return response.body as TokenPair;
+    }
+
+    function findRefreshTokenRow(refreshToken: string): RefreshTokenRow {
+        const tokenHash = tokenService.hashRefreshToken(refreshToken);
+        const tokenRow = refreshTokenRepository.findByHash(tokenHash);
+
+        expect(tokenRow).toBeDefined();
+
+        return tokenRow!;
+    }
+
     describe('POST /api/authenticate', () => {
-        it('should authenticate an existing user', async () => {
-            const initData = generateValidInitData(TEST_TELEGRAM_ID, TEST_USERNAME);
+        it('should authenticate an existing user and persist a hashed refresh token', async () => {
+            const tokenPair = await authenticateUser();
+            const refreshTokenRow = findRefreshTokenRow(tokenPair.refreshToken);
 
-            const response = await request(app)
-                .post('/api/authenticate')
-                .query(initData)
-                .expect(200);
-
-            expect(response.body).toHaveProperty('accessToken');
+            expect(tokenPair).toHaveProperty('accessToken');
+            expect(tokenPair).toHaveProperty('refreshToken');
+            expect(typeof tokenPair.refreshToken).toBe('string');
+            expect(tokenPair.refreshToken.length).toBeGreaterThan(0);
+            expect(refreshTokenRow.userId).toBe(testUserId);
+            expect(refreshTokenRow.tokenHash).not.toBe(tokenPair.refreshToken);
+            expect(refreshTokenRow.tokenHash).toHaveLength(64);
+            expect(refreshTokenRow.rotatedAt).toBeNull();
+            expect(refreshTokenRow.revokedAt).toBeNull();
         });
 
         it('should reject authentication for non-existent user', async () => {
@@ -217,6 +252,120 @@ describe('Authentication API Endpoints', () => {
                 .expect(403);
 
             expect(response.body).toHaveProperty('errorCode', 'userIsNotActive');
+        });
+    });
+
+    describe('POST /api/authenticate/refresh', () => {
+        it('should rotate a live refresh token and return a new valid access token', async () => {
+            const tokenPair = await authenticateUser();
+            const oldRefreshTokenRow = findRefreshTokenRow(tokenPair.refreshToken);
+
+            const response = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: tokenPair.refreshToken })
+                .expect(200);
+
+            const nextTokenPair = response.body as TokenPair;
+            const rotatedOldTokenRow = findRefreshTokenRow(tokenPair.refreshToken);
+            const nextRefreshTokenRow = findRefreshTokenRow(nextTokenPair.refreshToken);
+            const decodedAccessToken = tokenService.verifyToken(nextTokenPair.accessToken);
+
+            expect(decodedAccessToken.userId).toBe(testUserId);
+            expect(nextTokenPair.refreshToken).not.toBe(tokenPair.refreshToken);
+            expect(rotatedOldTokenRow.rotatedAt).toBeInstanceOf(Date);
+            expect(rotatedOldTokenRow.revokedAt).toBeNull();
+            expect(nextRefreshTokenRow.familyId).toBe(oldRefreshTokenRow.familyId);
+            expect(nextRefreshTokenRow.rotatedAt).toBeNull();
+            expect(nextRefreshTokenRow.revokedAt).toBeNull();
+        });
+
+        it('should reject an expired refresh token', async () => {
+            const expiredRefreshToken = tokenService.generateRefreshToken();
+            refreshTokenRepository.insert(
+                testUserId,
+                expiredRefreshToken.tokenHash,
+                crypto.randomUUID(),
+                new Date(Date.now() - 60_000)
+            );
+
+            const response = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: expiredRefreshToken.token })
+                .expect(401);
+
+            expect(response.body).toHaveProperty('errorCode', 'refreshTokenExpired');
+        });
+
+        it('should reject an unknown refresh token', async () => {
+            const response = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: tokenService.generateRefreshToken().token })
+                .expect(401);
+
+            expect(response.body).toHaveProperty('errorCode', 'invalidRefreshToken');
+        });
+
+        it('should revoke a refresh-token family when a rotated token is reused', async () => {
+            const tokenPair = await authenticateUser();
+
+            const firstRefreshResponse = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: tokenPair.refreshToken })
+                .expect(200);
+            const nextTokenPair = firstRefreshResponse.body as TokenPair;
+
+            const reuseResponse = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: tokenPair.refreshToken })
+                .expect(401);
+            const revokedNextTokenRow = findRefreshTokenRow(nextTokenPair.refreshToken);
+
+            const revokedNextResponse = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: nextTokenPair.refreshToken })
+                .expect(401);
+
+            expect(reuseResponse.body).toHaveProperty('errorCode', 'invalidRefreshToken');
+            expect(revokedNextTokenRow.revokedAt).toBeInstanceOf(Date);
+            expect(revokedNextResponse.body).toHaveProperty('errorCode', 'invalidRefreshToken');
+        });
+
+        it('should reject refresh for a deactivated user without rotating the token', async () => {
+            const inactiveLaterTelegramId = 123123123;
+            const inactiveLaterUsername = 'inactive_later';
+            const user = userService.registerUser(
+                'inactive_later_name',
+                inactiveLaterUsername,
+                inactiveLaterTelegramId,
+                0
+            );
+            userRepository.updateUserStatus(user.id, true, 'ACTIVE', 0);
+            const tokenPair = await authenticateUser(inactiveLaterTelegramId, inactiveLaterUsername);
+            userRepository.updateUserStatus(user.id, false, 'INACTIVE', 0);
+
+            const response = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: tokenPair.refreshToken })
+                .expect(401);
+            const refreshTokenRow = findRefreshTokenRow(tokenPair.refreshToken);
+
+            expect(response.body).toHaveProperty('errorCode', 'invalidAuthToken');
+            expect(refreshTokenRow.rotatedAt).toBeNull();
+            expect(refreshTokenRow.revokedAt).toBeNull();
+        });
+
+        it('should reject missing and garbage refresh token bodies', async () => {
+            const missingResponse = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({})
+                .expect(401);
+            const garbageResponse = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: 12345 })
+                .expect(401);
+
+            expect(missingResponse.body).toHaveProperty('errorCode', 'invalidRefreshToken');
+            expect(garbageResponse.body).toHaveProperty('errorCode', 'invalidRefreshToken');
         });
     });
 });
