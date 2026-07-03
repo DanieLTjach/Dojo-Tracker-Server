@@ -6,6 +6,22 @@ export interface TokenPair {
     refreshToken?: string; // Optional for future implementation
 }
 
+export interface GeneratedRefreshToken {
+    token: string;
+    tokenHash: string;
+}
+
+export interface RefreshTokenRow {
+    id: number;
+    userId: number;
+    tokenHash: string;
+    familyId: string;
+    expiresAt: Date;
+    createdAt: Date;
+    rotatedAt: Date | null;
+    revokedAt: Date | null;
+}
+
 /**
  * Decoded JWT token payload
  */

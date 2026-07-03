@@ -4,6 +4,7 @@ interface Config {
     dbPath: string;
     jwtSecret: string;
     jwtExpiry: string;
+    refreshTokenExpiryDays: number;
     authInitDataValiditySeconds: number;
     frontendUrl: string;
     botUrl: string;
@@ -71,6 +72,7 @@ const config: Config = {
     botToken: getRequiredStringEnvVariable('BOT_TOKEN'),
     jwtSecret: getRequiredStringEnvVariable('JWT_SECRET'),
     jwtExpiry: process.env['JWT_EXPIRY'] || '7d',
+    refreshTokenExpiryDays: tryParseIntEnvVariable('REFRESH_TOKEN_EXPIRY_DAYS') || 90,
     authInitDataValiditySeconds: tryParseIntEnvVariable('AUTH_INIT_DATA_VALIDITY_SECONDS') || 86400,
     frontendUrl: getRequiredStringEnvVariable('FRONTEND_URL'),
     botUrl: getRequiredStringEnvVariable('BOT_URL'),
