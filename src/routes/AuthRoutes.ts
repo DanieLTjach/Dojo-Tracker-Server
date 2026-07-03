@@ -14,4 +14,10 @@ const authController = new AuthController();
  */
 router.post('/authenticate', withTransaction((req, res) => authController.authenticate(req, res)));
 
+/**
+ * POST /api/authenticate/refresh
+ * Refreshes an access token using a rotating refresh token.
+ */
+router.post('/authenticate/refresh', withTransaction((req, res) => authController.refresh(req, res)));
+
 export default router;

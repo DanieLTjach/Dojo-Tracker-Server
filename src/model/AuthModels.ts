@@ -1,9 +1,15 @@
 /**
- * Token pair returned after successful authentication
+ * Access token returned by TokenService.
  */
-export interface TokenPair {
+export interface AccessTokenPair {
     accessToken: string;
-    refreshToken?: string; // Optional for future implementation
+}
+
+/**
+ * Token pair returned after successful authentication.
+ */
+export interface TokenPair extends AccessTokenPair {
+    refreshToken: string;
 }
 
 export interface GeneratedRefreshToken {

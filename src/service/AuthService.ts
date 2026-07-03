@@ -1,21 +1,28 @@
+import crypto from 'crypto';
 import { HashUtil } from '../util/HashUtil.ts';
 import { UserService } from './UserService.ts';
 import { TokenService } from './TokenService.ts';
-import type { TokenPair, TelegramUser } from '../model/AuthModels.ts';
+import type { RefreshTokenRow, TokenPair, TelegramUser } from '../model/AuthModels.ts';
 import {
-    InvalidInitDataError,
     ExpiredAuthDataError,
+    InvalidAuthTokenError,
+    InvalidInitDataError,
+    InvalidRefreshTokenError,
+    RefreshTokenExpiredError,
 } from '../error/AuthErrors.ts';
 import { UserIsNotActive } from '../error/UserErrors.ts';
 import config from '../../config/config.ts';
+import { RefreshTokenRepository } from '../repository/RefreshTokenRepository.ts';
+import type { User } from '../model/UserModels.ts';
 
 export class AuthService {
     private userService: UserService = new UserService();
     private tokenService: TokenService = new TokenService();
+    private refreshTokenRepository: RefreshTokenRepository = new RefreshTokenRepository();
 
     /**
      * Authenticates a user using Telegram Mini App initData.
-     * Validates the hash and creates a JWT token.
+     * Validates the hash and creates an access/refresh token pair.
      *
      * @param params - Query parameters from initData (as key-value object)
      * @returns TokenPair with JWT access token
@@ -30,7 +37,36 @@ export class AuthService {
             throw new UserIsNotActive(user.id);
         }
 
-        return this.tokenService.createTokenPair(user);
+        return this.createSessionTokenPair(user, crypto.randomUUID());
+    }
+
+    refresh(refreshToken: unknown): TokenPair {
+        const tokenRow = this.findRefreshToken(refreshToken);
+        const now = new Date();
+
+        if (tokenRow.revokedAt !== null) {
+            throw new InvalidRefreshTokenError();
+        }
+
+        if (tokenRow.rotatedAt !== null) {
+            this.refreshTokenRepository.revokeFamily(tokenRow.familyId, now);
+            throw new InvalidRefreshTokenError();
+        }
+
+        if (tokenRow.expiresAt.getTime() <= now.getTime()) {
+            throw new RefreshTokenExpiredError();
+        }
+
+        const user = this.userService.getUserById(tokenRow.userId);
+        if (!user.isActive) {
+            throw new InvalidAuthTokenError('User is inactive');
+        }
+
+        const nextTokenPair = this.createSessionTokenPair(user, tokenRow.familyId, now);
+        this.refreshTokenRepository.markRotated(tokenRow.id, now);
+        this.refreshTokenRepository.deleteExpired(now);
+
+        return nextTokenPair;
     }
 
     /**
@@ -127,5 +163,31 @@ export class AuthService {
         } catch {
             throw new InvalidInitDataError(errorMessage);
         }
+    }
+
+    private findRefreshToken(refreshToken: unknown): RefreshTokenRow {
+        if (typeof refreshToken !== 'string' || refreshToken.length === 0) {
+            throw new InvalidRefreshTokenError();
+        }
+
+        const tokenHash = this.tokenService.hashRefreshToken(refreshToken);
+        const tokenRow = this.refreshTokenRepository.findByHash(tokenHash);
+        if (tokenRow === undefined) {
+            throw new InvalidRefreshTokenError();
+        }
+
+        return tokenRow;
+    }
+
+    private createSessionTokenPair(user: User, familyId: string, now: Date = new Date()): TokenPair {
+        const refreshToken = this.tokenService.generateRefreshToken();
+        const expiresAt = new Date(now.getTime() + config.refreshTokenExpiryDays * 24 * 60 * 60 * 1000);
+
+        this.refreshTokenRepository.insert(user.id, refreshToken.tokenHash, familyId, expiresAt, now);
+
+        return {
+            accessToken: this.tokenService.createTokenPair(user).accessToken,
+            refreshToken: refreshToken.token,
+        };
     }
 }

@@ -27,6 +27,18 @@ export class InvalidAuthTokenError extends UnauthorizedError {
     }
 }
 
+export class InvalidRefreshTokenError extends UnauthorizedError {
+    constructor() {
+        super('Невалідний refresh-токен. Перезайдіть в додаток', 'invalidRefreshToken');
+    }
+}
+
+export class RefreshTokenExpiredError extends UnauthorizedError {
+    constructor() {
+        super('Термін дії refresh-токена минув. Перезайдіть в додаток', 'refreshTokenExpired');
+    }
+}
+
 export class InsufficientPermissionsError extends ForbiddenError {
     constructor() {
         super('Недостатньо прав для виконання цієї дії', 'insufficientPermissions');

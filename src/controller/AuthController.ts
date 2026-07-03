@@ -20,4 +20,17 @@ export class AuthController {
         const result = this.authService.authenticate(initDataParams);
         return res.status(StatusCodes.OK).json(result);
     }
+
+    /**
+     * Refreshes an access token using an opaque rotating refresh token.
+     * Endpoint: POST /api/authenticate/refresh
+     *
+     * @param req - Express request with refreshToken in JSON body
+     * @param res - Express response
+     * @returns TokenPair with a new JWT and refresh token
+     */
+    refresh(req: Request, res: Response) {
+        const result = this.authService.refresh(req.body?.refreshToken);
+        return res.status(StatusCodes.OK).json(result);
+    }
 }
