@@ -24,7 +24,7 @@ import {
 } from '../error/ClubErrors.ts';
 import { generateInviteCode } from '../util/InviteCodeUtil.ts';
 import { t } from '../i18n/index.ts';
-import { resolveEffectiveLocale } from '../util/LocaleResolver.ts';
+import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 const CODE_GENERATION_ATTEMPTS = 10;
 const NAME_COLLISION_ATTEMPTS = 10;
@@ -206,13 +206,9 @@ export class ClubInviteService {
         LogService.logInfo(buildMessage(GLOBAL_LOGS_LOCALE), globalClubLogsTopic);
         const clubLogsTopic = this.clubService.getClubTelegramTopics(clubId).clubLogs;
         if (clubLogsTopic !== null) {
-            const locale = this.resolveClubLocale(clubId);
+            const locale = resolveClubLocale(this.clubService.getClubById(clubId));
             LogService.logInfo(buildMessage(locale), clubLogsTopic);
         }
-    }
-
-    private resolveClubLocale(clubId: number): string {
-        return resolveEffectiveLocale(null, this.clubService.getClubById(clubId));
     }
 
     private logInviteCreated(invite: ClubInvite, createdBy: number): void {

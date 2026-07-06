@@ -2,6 +2,7 @@ import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createCustomEvent } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
+import { ProfileService } from '../src/service/ProfileService.ts';
 import { AchievementService } from '../src/service/AchievementService.ts';
 import { AchievementCriterion } from '../src/model/AchievementModels.ts';
 import { AchievementsOnlyForTournamentsError } from '../src/error/EventErrors.ts';
@@ -48,6 +49,7 @@ function addRatingChange(userId: number, eventId: number, gameId: number, rating
 
 describe('AchievementService (persisted tournament achievements)', () => {
     const userService = new UserService();
+    const profileService = new ProfileService();
     const achievementService = new AchievementService();
 
     let u1: number;
@@ -60,6 +62,10 @@ describe('AchievementService (persisted tournament achievements)', () => {
         u2 = userService.registerUser('Bravo', 'bravo', 910002, 0).id;
         u3 = userService.registerUser('Charlie', 'charlie', 910003, 0).id;
         u4 = userService.registerUser('Delta', 'delta', 910004, 0).id;
+
+        // The requesting user's locale drives result formatting; pin u1 to English
+        // so the formatted-value assertions below stay stable.
+        profileService.updateProfile(u1, undefined, undefined, undefined, undefined, undefined, undefined, u1, 'en');
 
         createCustomEvent(
             EVENT_ID,
@@ -103,7 +109,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
     });
 
     it('computes and returns tournament achievements with winners', () => {
-        const results = achievementService.getEventAchievements(EVENT_ID, 'en');
+        const results = achievementService.getEventAchievements(EVENT_ID, u1);
         expect(results).toHaveLength(21);
 
         const dealerWins = results.find(r => r.metric === 'dealer_wins')!;
@@ -127,7 +133,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
     });
 
     it('marks the event computed so a second read does not recompute from scratch', () => {
-        achievementService.getEventAchievements(EVENT_ID);
+        achievementService.getEventAchievements(EVENT_ID, u1);
         const computed = dbManager.db
             .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
             .get(EVENT_ID) as { achievementsComputedAt: string | null };
@@ -135,7 +141,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
     });
 
     it('force recompute returns results and refreshes the computed marker', () => {
-        const results = achievementService.forceRecomputeEventAchievements(EVENT_ID);
+        const results = achievementService.forceRecomputeEventAchievements(EVENT_ID, u1);
         const dealerWins = results.find(r => r.metric === 'dealer_wins')!;
         expect(dealerWins.winners.map(w => w.userId)).toEqual([u1]);
     });
@@ -151,7 +157,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
             1,
             'SEASON'
         );
-        expect(() => achievementService.forceRecomputeEventAchievements(seasonEventId))
+        expect(() => achievementService.forceRecomputeEventAchievements(seasonEventId, u1))
             .toThrow(AchievementsOnlyForTournamentsError);
     });
 

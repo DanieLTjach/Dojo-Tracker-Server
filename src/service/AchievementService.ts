@@ -14,7 +14,9 @@ import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
-import { t } from '../i18n/index.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
+import { UserService } from './UserService.ts';
+import { resolveUserLocale } from '../util/LocaleResolver.ts';
 
 const DEFINITION_BY_METRIC = new Map<AchievementMetric, AchievementDefinition>(
     ACHIEVEMENTS.map(definition => [definition.metric, definition])
@@ -23,6 +25,7 @@ const DEFINITION_BY_METRIC = new Map<AchievementMetric, AchievementDefinition>(
 export class AchievementService {
     private achievementRepository: AchievementRepository = new AchievementRepository();
     private gameRepository: GameRepository = new GameRepository();
+    private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
 
     /**
@@ -59,11 +62,13 @@ export class AchievementService {
      * Admin-triggered recompute. Unlike the defensive recompute that runs on game
      * changes, this throws on bad data so the admin sees what went wrong.
      */
-    forceRecomputeEventAchievements(eventId: number, locale?: string | null): EventAchievementResult[] {
+    forceRecomputeEventAchievements(eventId: number, requestingUserId: number): EventAchievementResult[] {
         const event = this.eventService.getEventById(eventId);
         if (event.type !== 'TOURNAMENT') {
             throw new AchievementsOnlyForTournamentsError();
         }
+        const user = this.userService.getUserById(requestingUserId);
+        const locale = resolveUserLocale(user);
 
         this.computeAndPersist(event);
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
@@ -97,8 +102,10 @@ export class AchievementService {
     }
 
     /** Achievements for the tournament page. Computes lazily on first read for historical tournaments. */
-    getEventAchievements(eventId: number, locale?: string | null): EventAchievementResult[] {
+    getEventAchievements(eventId: number, requestingUserId: number): EventAchievementResult[] {
         const event = this.eventService.getEventById(eventId);
+        const user = this.userService.getUserById(requestingUserId);
+        const locale = resolveUserLocale(user);
 
         if (!this.achievementRepository.areEventAchievementsComputed(eventId)) {
             this.recomputeEventAchievements(event);
@@ -108,10 +115,13 @@ export class AchievementService {
     }
 
     /** Achievements a user has won across all tournaments, for the profile page. */
-    getUserAchievements(userId: number, locale?: string | null): UserAchievement[] {
+    getUserAchievements(userId: number): UserAchievement[] {
         for (const eventId of this.achievementRepository.findUncomputedTournamentEventIdsForUser(userId)) {
             this.recomputeEventAchievements(this.eventService.getEventById(eventId));
         }
+
+        const user = this.userService.getUserById(userId);
+        const locale = resolveUserLocale(user);
 
         return this.achievementRepository.findByUserId(userId).flatMap(row => {
             const definition = DEFINITION_BY_METRIC.get(row.metric);
@@ -134,7 +144,7 @@ export class AchievementService {
 
     private buildEventResults(
         winnerRows: EventAchievementWinnerRow[],
-        locale?: string | null
+        locale: SupportedLocale
     ): EventAchievementResult[] {
         return ACHIEVEMENTS.map(definition => {
             const winners = winnerRows.filter(row => row.metric === definition.metric);
@@ -159,14 +169,14 @@ export class AchievementService {
     }
 }
 
-function achievementDescription(definition: AchievementDefinition, locale?: string | null): string {
+function achievementDescription(definition: AchievementDefinition, locale: SupportedLocale): string {
     return t(`achievements.descriptions.${definition.metric}`, {}, locale);
 }
 
 function formatValue(
     value: number | undefined,
     unit: AchievementValueUnit,
-    locale?: string | null
+    locale: SupportedLocale
 ): string | undefined {
     if (value === undefined) {
         return undefined;

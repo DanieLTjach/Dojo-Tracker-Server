@@ -24,7 +24,7 @@ import { ProfileService } from './ProfileService.ts';
 import TelegramMessageService from './TelegramMessageService.ts';
 import { UserService } from './UserService.ts';
 import { t, translationRef } from '../i18n/index.ts';
-import { resolveEventLocale } from '../util/LocaleResolver.ts';
+import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 
 export class EventRegistrationService {
     private registrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
@@ -397,7 +397,7 @@ export class EventRegistrationService {
         if (target.telegramId === null) {
             return;
         }
-        const locale = resolveEventLocale(event, target);
+        const locale = resolveUserLocale(target);
         const message = dedent`
             <b>${t(headlineKey, {}, locale)}</b>
 
@@ -414,7 +414,7 @@ export class EventRegistrationService {
         if (event.clubId !== null) {
             const clubLogsTopic = this.clubService.getClubTelegramTopics(event.clubId).clubLogs;
             if (clubLogsTopic !== null) {
-                const locale = resolveEventLocale(event);
+                const locale = resolveClubLocale(this.clubService.getClubById(event.clubId));
                 LogService.logInfo(buildMessage(locale), clubLogsTopic);
             }
         }

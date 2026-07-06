@@ -3,29 +3,27 @@ import { StatusCodes } from 'http-status-codes';
 import { AchievementService } from '../service/AchievementService.ts';
 import { getEventAchievementsSchema, recomputeEventAchievementsSchema } from '../schema/EventSchemas.ts';
 import { getUserAchievementsSchema } from '../schema/UserSchemas.ts';
-import { resolveRequestLocale } from '../util/LocaleResolver.ts';
 
 export class AchievementController {
     private achievementService: AchievementService = new AchievementService();
 
     getEventAchievements(req: Request, res: Response) {
         const { params: { eventId } } = getEventAchievementsSchema.parse(req);
-        const achievements = this.achievementService.getEventAchievements(eventId, resolveRequestLocale(req));
+        const userId = req.user!.userId;
+        const achievements = this.achievementService.getEventAchievements(eventId, userId);
         return res.status(StatusCodes.OK).json({ achievements });
     }
 
     recomputeEventAchievements(req: Request, res: Response) {
         const { params: { eventId } } = recomputeEventAchievementsSchema.parse(req);
-        const achievements = this.achievementService.forceRecomputeEventAchievements(
-            eventId,
-            resolveRequestLocale(req)
-        );
+        const userId = req.user!.userId;
+        const achievements = this.achievementService.forceRecomputeEventAchievements(eventId, userId);
         return res.status(StatusCodes.OK).json({ achievements });
     }
 
     getUserAchievements(req: Request, res: Response) {
         const { params: { id } } = getUserAchievementsSchema.parse(req);
-        const achievements = this.achievementService.getUserAchievements(id, resolveRequestLocale(req));
+        const achievements = this.achievementService.getUserAchievements(id);
         return res.status(StatusCodes.OK).json({ achievements });
     }
 }

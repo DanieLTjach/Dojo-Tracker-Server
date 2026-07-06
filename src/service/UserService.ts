@@ -18,7 +18,7 @@ import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
 import { t } from '../i18n/index.ts';
-import { resolveEffectiveLocale } from '../util/LocaleResolver.ts';
+import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 export class UserService {
     private userRepository: UserRepository = new UserRepository();
@@ -279,7 +279,7 @@ export class UserService {
 
     private logMessageToUserLogsTopics(user: User, buildMessage: (locale: string) => string) {
         this.clubMembershipRepository.findActiveMembershipsByUserId(user.id).forEach(clubMembership => {
-            const locale = resolveEffectiveLocale(null, this.clubService.getClubById(clubMembership.clubId));
+            const locale = resolveClubLocale(this.clubService.getClubById(clubMembership.clubId));
             LogService.logInfo(
                 buildMessage(locale),
                 this.clubService.getClubTelegramTopics(clubMembership.clubId).userLogs

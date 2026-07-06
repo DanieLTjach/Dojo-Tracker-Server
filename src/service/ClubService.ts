@@ -7,7 +7,7 @@ import LogService from './LogService.ts';
 import dedent from 'dedent';
 import { UserRepository } from '../repository/UserRepository.ts';
 import { t } from '../i18n/index.ts';
-import { resolveEffectiveLocale } from '../util/LocaleResolver.ts';
+import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 export class ClubService {
     private clubRepository: ClubRepository = new ClubRepository();
@@ -110,7 +110,7 @@ export class ClubService {
         LogService.logInfo(buildMessage(GLOBAL_LOGS_LOCALE), globalClubLogsTopic);
         const clubLogsTopic = this.getClubTelegramTopics(club.id).clubLogs;
         if (clubLogsTopic !== null) {
-            const locale = resolveEffectiveLocale(null, club);
+            const locale = resolveClubLocale(club);
             LogService.logInfo(buildMessage(locale), clubLogsTopic);
         }
     }

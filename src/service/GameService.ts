@@ -51,7 +51,7 @@ import { GameCreationBlockedError, TournamentGameNotInCurrentRoundError } from '
 import { AchievementService } from './AchievementService.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { t } from '../i18n/index.ts';
-import { resolveEffectiveLocale, resolveEventLocale } from '../util/LocaleResolver.ts';
+import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 export class GameService {
     private gameRepository: GameRepository = new GameRepository();
@@ -505,7 +505,7 @@ export class GameService {
         let clubPrefix = '';
         if (event.clubId !== null) {
             const club = this.clubService.getClubById(event.clubId);
-            const locale = resolveEffectiveLocale(null, club);
+            const locale = resolveClubLocale(club);
             LogService.logInfo(buildMessage(locale), this.clubService.getClubTelegramTopics(event.clubId).gameLogs);
             clubPrefix = `<b>${t('telegram.gameLog.clubPrefix', { clubName: club.name }, GLOBAL_LOGS_LOCALE)}</b>\n `;
         }
@@ -542,6 +542,10 @@ export class GameService {
             return;
         }
 
+        if (event.clubId === null) {
+            return;
+        }
+
         // Sort players by points descending (as they were ranked in the game)
         const sortedPlayers = [...game.players].sort((a, b) => b.points - a.points);
 
@@ -574,7 +578,7 @@ export class GameService {
         }).join('\n\n');
 
         const createdByUser = this.userService.getUserById(createdBy);
-        const locale = resolveEventLocale(event);
+        const locale = resolveClubLocale(this.clubService.getClubById(event.clubId));
         const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>` +
             '\n' + t('telegram.gameLog.addedBy', {
                 gameLink: `<a href="${config.botUrl}?startapp=game_${game.id}"><b>${
@@ -584,9 +588,7 @@ export class GameService {
             }, locale) + '\n\n' +
             `${playerLines}`;
 
-        if (event.clubId !== null) {
-            LogService.logInfo(message, this.clubService.getClubTelegramTopics(event.clubId).rating);
-        }
+        LogService.logInfo(message, this.clubService.getClubTelegramTopics(event.clubId).rating);
     }
 
     private signedNumberToString(num: number): string {

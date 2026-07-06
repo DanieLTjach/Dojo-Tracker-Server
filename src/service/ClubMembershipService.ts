@@ -15,7 +15,7 @@ import TelegramMessageService from './TelegramMessageService.ts';
 import LogService from './LogService.ts';
 import { GLOBAL_LOGS_LOCALE, globalClubLogsTopic } from '../model/TelegramTopic.ts';
 import { t, translationRef } from '../i18n/index.ts';
-import { resolveEffectiveLocale } from '../util/LocaleResolver.ts';
+import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 export class ClubMembershipService {
     private clubService: ClubService = new ClubService();
     private membershipRepository: ClubMembershipRepository = new ClubMembershipRepository();
@@ -220,7 +220,7 @@ export class ClubMembershipService {
         if (user.telegramId === null) {
             return;
         }
-        const locale = resolveEffectiveLocale(user, club);
+        const locale = resolveUserLocale(user);
 
         const message = dedent`
             <b>${t('telegram.notify.addedToClubTitle', { clubName: club.name }, locale)}</b>
@@ -235,13 +235,9 @@ export class ClubMembershipService {
         LogService.logInfo(buildMessage(GLOBAL_LOGS_LOCALE), globalClubLogsTopic);
         const clubLogsTopic = this.clubService.getClubTelegramTopics(clubId).clubLogs;
         if (clubLogsTopic !== null) {
-            const locale = this.resolveClubLocale(clubId);
+            const locale = resolveClubLocale(this.clubService.getClubById(clubId));
             LogService.logInfo(buildMessage(locale), clubLogsTopic);
         }
-    }
-
-    private resolveClubLocale(clubId: number): string {
-        return resolveEffectiveLocale(null, this.clubService.getClubById(clubId));
     }
 
     private logJoinRequest(membership: ClubMembership, userId: number): void {
