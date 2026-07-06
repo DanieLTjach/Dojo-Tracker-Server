@@ -66,7 +66,7 @@ describe('buildPollTitle', () => {
         const now = new Date(2026, 3, 8);
         const config = makeConfig({ eventDays: [3, 5] });
 
-        const title = PollSchedulerService.buildPollTitle(config, now);
+        const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
         expect(title).toBe(t('telegram.poll.title', { dates: '8, 10 квітня' }));
     });
@@ -76,7 +76,7 @@ describe('buildPollTitle', () => {
         const now = new Date(2026, 2, 30);
         const config = makeConfig({ eventDays: [1, 5] });
 
-        const title = PollSchedulerService.buildPollTitle(config, now);
+        const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
         expect(title).toBe(t('telegram.poll.title', { dates: '30 березня, 3 квітня' }));
     });
@@ -85,7 +85,7 @@ describe('buildPollTitle', () => {
         const now = new Date(2026, 3, 8); // Wednesday
         const config = makeConfig({ eventDays: [5] }); // Friday only
 
-        const title = PollSchedulerService.buildPollTitle(config, now);
+        const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
         expect(title).toBe(t('telegram.poll.title', { dates: '10 квітня' }));
     });
@@ -94,7 +94,7 @@ describe('buildPollTitle', () => {
         const now = new Date(2026, 3, 8); // Wednesday
         const config = makeConfig({ eventDays: [5, 3] }); // Fri, Wed (reversed)
 
-        const title = PollSchedulerService.buildPollTitle(config, now);
+        const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
         // Should still show Wed(8) before Fri(10)
         expect(title).toBe(t('telegram.poll.title', { dates: '8, 10 квітня' }));
@@ -106,7 +106,7 @@ describe('buildPollOptions', () => {
         const now = new Date(2026, 3, 8); // Wednesday
         const config = makeConfig({ eventDays: [5, 3], extraOptions: [] }); // Fri, Wed
 
-        const options = PollSchedulerService.buildPollOptions(config, now);
+        const options = PollSchedulerService.buildPollOptions(config, 'uk', now);
 
         // Wed(today) comes before Fri(+2 days)
         expect(options).toEqual(['Середа', 'П\u02BCятниця']);
@@ -116,7 +116,7 @@ describe('buildPollOptions', () => {
         const now = new Date(2026, 3, 8);
         const config = makeConfig({ eventDays: [3], extraOptions: ['Результати 👀', 'У цей раз я пас'] });
 
-        const options = PollSchedulerService.buildPollOptions(config, now);
+        const options = PollSchedulerService.buildPollOptions(config, 'uk', now);
 
         expect(options).toEqual(['Середа', 'Результати 👀', 'У цей раз я пас']);
     });
@@ -125,7 +125,7 @@ describe('buildPollOptions', () => {
         const now = new Date(2026, 3, 8);
         const config = makeConfig({ eventDays: [3, 5], extraOptions: [] });
 
-        const options = PollSchedulerService.buildPollOptions(config, now);
+        const options = PollSchedulerService.buildPollOptions(config, 'uk', now);
 
         expect(options).toEqual(['Середа', 'П\u02BCятниця']);
     });
@@ -213,7 +213,7 @@ describe('sendTelegramPoll', () => {
 describe('formatDayName', () => {
     test('capitalizes the first letter', () => {
         const wednesday = new Date(2026, 3, 8);
-        const name = formatDayName(wednesday);
+        const name = formatDayName(wednesday, 'uk');
         expect(name.charAt(0)).toBe(name.charAt(0).toUpperCase());
         expect(name).toBe('Середа');
     });

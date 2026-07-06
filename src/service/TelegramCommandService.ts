@@ -787,8 +787,9 @@ class TelegramCommandService {
             return;
         }
 
-        const title = PollSchedulerService.buildPollTitle(pollConfig);
-        const options = PollSchedulerService.buildPollOptions(pollConfig);
+        const clubLocale = resolveClubLocale(this.clubService.getClubById(clubId));
+        const title = PollSchedulerService.buildPollTitle(pollConfig, clubLocale);
+        const options = PollSchedulerService.buildPollOptions(pollConfig, clubLocale);
         await ctx.sendPoll(title, options, {
             is_anonymous: false,
             allows_multiple_answers: true,
