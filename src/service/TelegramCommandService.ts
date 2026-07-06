@@ -31,7 +31,7 @@ import type { ClubPollConfig } from '../model/PollModels.ts';
 import PollSchedulerService from './PollSchedulerService.ts';
 import { EventService } from './EventService.ts';
 import { TournamentRoundImportService } from './TournamentRoundImportService.ts';
-import { SupportedLocale, t } from '../i18n/index.ts';
+import { DEFAULT_LOCALE, SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 
 type TelegramCommandContext =
@@ -195,17 +195,17 @@ class TelegramCommandService {
         });
 
         telegramBot.telegram.setMyCommands([
-            { command: 'help', description: t('telegram.commands.help') },
-            { command: 'post_app_link', description: t('telegram.commands.postAppLink') },
-            { command: 'set_topic', description: t('telegram.commands.setTopic') },
-            { command: 'unset_topic', description: t('telegram.commands.unsetTopic') },
-            { command: 'diagnose_topics', description: t('telegram.commands.diagnoseTopics') },
-            { command: 'setup_poll', description: t('telegram.commands.setupPoll') },
-            { command: 'preview_poll', description: t('telegram.commands.previewPoll') },
-            { command: 'send_poll', description: t('telegram.commands.sendPoll') },
-            { command: 'create_invite', description: t('telegram.commands.createInvite') },
-            { command: 'list_invites', description: t('telegram.commands.listInvites') },
-            { command: 'revoke_invite', description: t('telegram.commands.revokeInvite') },
+            { command: 'help', description: t('telegram.commands.help', {}, DEFAULT_LOCALE) },
+            { command: 'post_app_link', description: t('telegram.commands.postAppLink', {}, DEFAULT_LOCALE) },
+            { command: 'set_topic', description: t('telegram.commands.setTopic', {}, DEFAULT_LOCALE) },
+            { command: 'unset_topic', description: t('telegram.commands.unsetTopic', {}, DEFAULT_LOCALE) },
+            { command: 'diagnose_topics', description: t('telegram.commands.diagnoseTopics', {}, DEFAULT_LOCALE) },
+            { command: 'setup_poll', description: t('telegram.commands.setupPoll', {}, DEFAULT_LOCALE) },
+            { command: 'preview_poll', description: t('telegram.commands.previewPoll', {}, DEFAULT_LOCALE) },
+            { command: 'send_poll', description: t('telegram.commands.sendPoll', {}, DEFAULT_LOCALE) },
+            { command: 'create_invite', description: t('telegram.commands.createInvite', {}, DEFAULT_LOCALE) },
+            { command: 'list_invites', description: t('telegram.commands.listInvites', {}, DEFAULT_LOCALE) },
+            { command: 'revoke_invite', description: t('telegram.commands.revokeInvite', {}, DEFAULT_LOCALE) },
         ]);
 
         telegramBot.launch(() => {
@@ -1236,7 +1236,7 @@ class TelegramCommandService {
         const user = this.userService.getOptionalUserByTelegramId(ctx.from.id);
         if (user === undefined) {
             LogService.logError(`Received telegram command from unregistered user with id: ${ctx.from.id}: ${ctx}`);
-            ctx.reply(t('telegram.errors.userNotRegistered'));
+            ctx.reply(t('telegram.errors.userNotRegistered', {}, DEFAULT_LOCALE));
             return;
         }
         const locale = resolveUserLocale(user);

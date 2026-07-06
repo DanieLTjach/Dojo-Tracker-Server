@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import * as yaml from 'js-yaml';
-import { t } from '../src/i18n/index.ts';
+import { DEFAULT_LOCALE, t } from '../src/i18n/index.ts';
 import { ResponseStatusError } from '../src/error/BaseErrors.ts';
 import * as AuthErrors from '../src/error/AuthErrors.ts';
 import * as ClubErrors from '../src/error/ClubErrors.ts';
@@ -16,23 +16,23 @@ import * as UserErrors from '../src/error/UserErrors.ts';
 
 describe('i18n core', () => {
     it('resolves a key from the loaded catalog', () => {
-        expect(t('common.none')).toBe('немає');
+        expect(t('common.none', {}, DEFAULT_LOCALE)).toBe('немає');
     });
 
     it('returns the key itself when missing', () => {
-        expect(t('common.doesNotExist')).toBe('common.doesNotExist');
+        expect(t('common.doesNotExist', {}, DEFAULT_LOCALE)).toBe('common.doesNotExist');
     });
 
     it('interpolates {{param}} placeholders', () => {
-        expect(t('errors.gameNotFoundById', { id: 42 })).toBe('Гру з id 42 не знайдено');
+        expect(t('errors.gameNotFoundById', { id: 42 }, DEFAULT_LOCALE)).toBe('Гру з id 42 не знайдено');
     });
 
     it('returns the template verbatim when no params object is passed', () => {
-        expect(t('errors.gameNotFoundById')).toBe('Гру з id {{id}} не знайдено');
+        expect(t('errors.gameNotFoundById', undefined, DEFAULT_LOCALE)).toBe('Гру з id {{id}} не знайдено');
     });
 
     it('blanks out placeholders missing from a provided params object', () => {
-        expect(t('errors.gameNotFoundById', {})).toBe('Гру з id  не знайдено');
+        expect(t('errors.gameNotFoundById', {}, DEFAULT_LOCALE)).toBe('Гру з id  не знайдено');
     });
 });
 

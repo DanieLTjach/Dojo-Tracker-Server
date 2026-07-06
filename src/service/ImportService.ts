@@ -7,7 +7,7 @@ import {
     NoValidGamesInCsvError,
 } from '../error/ImportErrors.ts';
 import { dbManager } from '../db/dbInit.ts';
-import { t } from '../i18n/index.ts';
+import { DEFAULT_LOCALE, t } from '../i18n/index.ts';
 import type { GameWithPlayers, PlayerData, Wind } from '../model/GameModels.ts';
 import type { Event } from '../model/EventModels.ts';
 
@@ -187,17 +187,17 @@ export class ImportService {
             const chomboStr = getValue(`player${p}_chombo`);
 
             if (!username) {
-                throw new Error(t('import.rowUsernameEmpty', { row: rowNumber, player: p }));
+                throw new Error(t('import.rowUsernameEmpty', { row: rowNumber, player: p }, DEFAULT_LOCALE));
             }
 
             const user = this.userRepository.findUserByTelegramUsername(username);
             if (!user) {
-                throw new Error(t('import.rowUserNotFound', { row: rowNumber, username }));
+                throw new Error(t('import.rowUserNotFound', { row: rowNumber, username }, DEFAULT_LOCALE));
             }
 
             const points = Number(pointsStr);
             if (isNaN(points) || !Number.isInteger(points)) {
-                throw new Error(t('import.rowPointsNotInteger', { row: rowNumber, player: p }));
+                throw new Error(t('import.rowPointsNotInteger', { row: rowNumber, player: p }, DEFAULT_LOCALE));
             }
 
             let startPlace: Wind | undefined = undefined;
@@ -208,7 +208,7 @@ export class ImportService {
                             row: rowNumber,
                             player: p,
                             validWinds: VALID_WINDS.join(', '),
-                        })
+                        }, DEFAULT_LOCALE)
                     );
                 }
                 startPlace = startPlaceStr as Wind;
@@ -216,7 +216,9 @@ export class ImportService {
 
             const chomboCount = chomboStr ? Number(chomboStr) : 0;
             if (isNaN(chomboCount) || !Number.isInteger(chomboCount) || chomboCount < 0) {
-                throw new Error(t('import.rowChomboNotNonNegativeInteger', { row: rowNumber, player: p }));
+                throw new Error(
+                    t('import.rowChomboNotNonNegativeInteger', { row: rowNumber, player: p }, DEFAULT_LOCALE)
+                );
             }
 
             players.push({
@@ -232,7 +234,7 @@ export class ImportService {
         if (createdAtStr) {
             createdAt = new Date(createdAtStr);
             if (isNaN(createdAt.getTime())) {
-                throw new Error(t('import.rowInvalidCreatedAt', { row: rowNumber }));
+                throw new Error(t('import.rowInvalidCreatedAt', { row: rowNumber }, DEFAULT_LOCALE));
             }
         }
 
@@ -243,7 +245,7 @@ export class ImportService {
         const tournamentTable = tableStr || null;
 
         if (tournamentRound !== null && (isNaN(tournamentRound) || tournamentRound < 1)) {
-            throw new Error(t('import.rowTournamentRoundNotPositiveInteger', { row: rowNumber }));
+            throw new Error(t('import.rowTournamentRoundNotPositiveInteger', { row: rowNumber }, DEFAULT_LOCALE));
         }
 
         return { players, createdAt, tournamentRound, tournamentTable };

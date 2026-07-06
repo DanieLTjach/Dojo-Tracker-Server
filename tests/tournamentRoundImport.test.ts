@@ -7,7 +7,7 @@ import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createCustomEvent } from './testHelpers.ts';
 import { TournamentRoundImportService } from '../src/service/TournamentRoundImportService.ts';
 import { TrackedGameService } from '../src/service/TrackedGameService.ts';
-import { t } from '../src/i18n/index.ts';
+import { DEFAULT_LOCALE, t } from '../src/i18n/index.ts';
 
 const SYSTEM_USER_ID = 0;
 const TOURNAMENT_EVENT_ID = 99100;
@@ -154,7 +154,9 @@ describe('TournamentRoundImportService', () => {
         const result = importService.parseAndImport(ENDED_TOURNAMENT_EVENT_ID, 1, text, SYSTEM_USER_ID);
 
         expect(result.imported).toBe(0);
-        expect(result.errors).toEqual([t('telegram.importParse.eventEnded', { eventName: 'Ended Import Tournament' })]);
+        expect(result.errors).toEqual([
+            t('telegram.importParse.eventEnded', { eventName: 'Ended Import Tournament' }, DEFAULT_LOCALE),
+        ]);
     });
 
     test('rejects user not registered for tournament', () => {
@@ -187,7 +189,9 @@ describe('TournamentRoundImportService', () => {
         const result = importService.parseAndImport(TOURNAMENT_EVENT_ID, 3, text, SYSTEM_USER_ID);
 
         expect(result.imported).toBe(0);
-        expect(result.errors[0]).toBe(t('telegram.importParse.roundMismatch', { roundInPaste: 5, expectedRound: 3 }));
+        expect(result.errors[0]).toBe(
+            t('telegram.importParse.roundMismatch', { roundInPaste: 5, expectedRound: 3 }, DEFAULT_LOCALE)
+        );
     });
 
     test('rejects duplicate player across tables', () => {
@@ -296,8 +300,8 @@ describe('TournamentRoundImportService', () => {
             expect(result.imported).toBe(0);
             expect(result.errors).toHaveLength(1);
             // tablePrefix wraps the eventHasntStarted error; assert both fragments are present.
-            const tablePrefix = t('telegram.importParse.tablePrefix', { table: 1, message: '' });
-            const notStartedTail = t('errors.eventHasntStarted', { eventName: '' }).trim();
+            const tablePrefix = t('telegram.importParse.tablePrefix', { table: 1, message: '' }, DEFAULT_LOCALE);
+            const notStartedTail = t('errors.eventHasntStarted', { eventName: '' }, DEFAULT_LOCALE).trim();
             expect(result.errors[0]).toContain(tablePrefix);
             expect(result.errors[0]).toContain(notStartedTail);
         });

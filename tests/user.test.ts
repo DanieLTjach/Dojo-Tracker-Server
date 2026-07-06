@@ -5,7 +5,7 @@ import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createTelegramInitData } from './testHelpers.ts';
-import { t } from '../src/i18n/index.ts';
+import { DEFAULT_LOCALE, t } from '../src/i18n/index.ts';
 
 const app = express();
 app.use(express.json());
@@ -133,7 +133,7 @@ describe('User API Endpoints', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe(
-                t('errors.telegramUsernameAlreadyTakenByAnotherUser', { telegramUsername: '@testuser' })
+                t('errors.telegramUsernameAlreadyTakenByAnotherUser', { telegramUsername: '@testuser' }, DEFAULT_LOCALE)
             );
         });
 
@@ -146,7 +146,9 @@ describe('User API Endpoints', () => {
                 .send({ name: 'Test User' });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe(t('errors.nameAlreadyTakenByAnotherUser', { name: 'Test User' }));
+            expect(response.body.message).toBe(
+                t('errors.nameAlreadyTakenByAnotherUser', { name: 'Test User' }, DEFAULT_LOCALE)
+            );
         });
 
         it('should fail when telegram ID already exists', async () => {
@@ -159,7 +161,7 @@ describe('User API Endpoints', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe(
-                t('errors.userWithThisTelegramIdAlreadyExists', { telegramId: 456456456 })
+                t('errors.userWithThisTelegramIdAlreadyExists', { telegramId: 456456456 }, DEFAULT_LOCALE)
             );
         });
     });
@@ -304,7 +306,7 @@ describe('User API Endpoints', () => {
                 .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }));
+            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }, DEFAULT_LOCALE));
         });
 
         it('should fail when user id is not a number', async () => {
@@ -341,7 +343,9 @@ describe('User API Endpoints', () => {
                 .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe(t('errors.userNotFoundByTelegramId', { telegramId: 888888888 }));
+            expect(response.body.message).toBe(
+                t('errors.userNotFoundByTelegramId', { telegramId: 888888888 }, DEFAULT_LOCALE)
+            );
         });
 
         it('should fail when telegram id is not a number', async () => {
@@ -442,7 +446,7 @@ describe('User API Endpoints', () => {
                 .send(updateData);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }));
+            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }, DEFAULT_LOCALE));
         });
 
         it('should fail when name is already taken by another user', async () => {
@@ -456,7 +460,9 @@ describe('User API Endpoints', () => {
                 .send(updateData);
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe(t('errors.nameAlreadyTakenByAnotherUser', { name: 'Test User 2' }));
+            expect(response.body.message).toBe(
+                t('errors.nameAlreadyTakenByAnotherUser', { name: 'Test User 2' }, DEFAULT_LOCALE)
+            );
         });
 
         it('should fail when telegram username is already taken by another user', async () => {
@@ -471,7 +477,11 @@ describe('User API Endpoints', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe(
-                t('errors.telegramUsernameAlreadyTakenByAnotherUser', { telegramUsername: '@testuser2' })
+                t(
+                    'errors.telegramUsernameAlreadyTakenByAnotherUser',
+                    { telegramUsername: '@testuser2' },
+                    DEFAULT_LOCALE
+                )
             );
         });
     });
@@ -504,7 +514,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toBe(t('errors.insufficientPermissions'));
+            expect(response.body.message).toBe(t('errors.insufficientPermissions', {}, DEFAULT_LOCALE));
         });
 
         it('should fail when user id does not exist', async () => {
@@ -514,7 +524,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }));
+            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }, DEFAULT_LOCALE));
         });
     });
 
@@ -546,7 +556,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toBe(t('errors.insufficientPermissions'));
+            expect(response.body.message).toBe(t('errors.insufficientPermissions', {}, DEFAULT_LOCALE));
         });
 
         it('should fail when user id does not exist', async () => {
@@ -556,7 +566,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }));
+            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }, DEFAULT_LOCALE));
         });
     });
 });

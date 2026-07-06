@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
-import { t, type TranslationParams } from '../i18n/index.ts';
+import { DEFAULT_LOCALE, t, type TranslationParams } from '../i18n/index.ts';
 
 export class ResponseStatusError extends Error {
     statusCode: number;
@@ -13,7 +13,7 @@ export class ResponseStatusError extends Error {
         params?: TranslationParams
     ) {
         const translationKey = `errors.${errorCode}`;
-        super(t(translationKey, params));
+        super(t(translationKey, params, DEFAULT_LOCALE));
         this.name = 'ResponseStatusError';
         this.statusCode = statusCode;
         this.errorCode = errorCode;
@@ -21,7 +21,7 @@ export class ResponseStatusError extends Error {
         this.params = params;
     }
 
-    getLocalizedMessage(locale?: string | null): string {
+    getLocalizedMessage(locale: string | null): string {
         return t(this.translationKey, this.params, locale);
     }
 }
