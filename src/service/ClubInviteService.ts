@@ -1,6 +1,6 @@
 import dedent from 'dedent';
 import LogService from './LogService.ts';
-import { globalClubLogsTopic } from '../model/TelegramTopic.ts';
+import { GLOBAL_LOGS_LOCALE, globalClubLogsTopic } from '../model/TelegramTopic.ts';
 import { SYSTEM_USER_ID } from '../../config/constants.ts';
 import type {
     ClubInvite,
@@ -202,11 +202,12 @@ export class ClubInviteService {
         return true;
     }
 
-    private logClubEvent(clubId: number, message: string): void {
-        LogService.logInfo(message, globalClubLogsTopic);
+    private logClubEvent(clubId: number, buildMessage: (locale: string) => string): void {
+        LogService.logInfo(buildMessage(GLOBAL_LOGS_LOCALE), globalClubLogsTopic);
         const clubLogsTopic = this.clubService.getClubTelegramTopics(clubId).clubLogs;
         if (clubLogsTopic !== null) {
-            LogService.logInfo(message, clubLogsTopic);
+            const locale = this.resolveClubLocale(clubId);
+            LogService.logInfo(buildMessage(locale), clubLogsTopic);
         }
     }
 
@@ -216,56 +217,56 @@ export class ClubInviteService {
 
     private logInviteCreated(invite: ClubInvite, createdBy: number): void {
         const creator = this.userService.getUserById(createdBy);
-        const locale = this.resolveClubLocale(invite.clubId);
-        const tr = (key: string) => t(key, {}, locale);
-        const message = dedent`
-            <b>${tr('telegram.inviteLog.createdTitle')}</b>
+        this.logClubEvent(invite.clubId, locale => {
+            const tr = (key: string) => t(key, {}, locale);
+            return dedent`
+                <b>${tr('telegram.inviteLog.createdTitle')}</b>
 
-            <b>${tr('telegram.inviteLog.clubLabel')}</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
-            <b>${tr('telegram.inviteLog.codeLabel')}</b> <code>${invite.code}</code>
-            <b>${tr('telegram.inviteLog.typeLabel')}</b> ${invite.type}
-            <b>${tr('telegram.inviteLog.sourceLabel')}</b> ${invite.source}${
-            invite.label !== null ? `\n<b>${tr('telegram.inviteLog.labelLabel')}</b> ${invite.label}` : ''
-        }
-            <b>${tr('telegram.inviteLog.createdByLabel')}</b> ${creator.name} <code>(ID: ${creator.id})</code>
-        `;
-        this.logClubEvent(invite.clubId, message);
+                <b>${tr('telegram.inviteLog.clubLabel')}</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
+                <b>${tr('telegram.inviteLog.codeLabel')}</b> <code>${invite.code}</code>
+                <b>${tr('telegram.inviteLog.typeLabel')}</b> ${invite.type}
+                <b>${tr('telegram.inviteLog.sourceLabel')}</b> ${invite.source}${
+                invite.label !== null ? `\n<b>${tr('telegram.inviteLog.labelLabel')}</b> ${invite.label}` : ''
+            }
+                <b>${tr('telegram.inviteLog.createdByLabel')}</b> ${creator.name} <code>(ID: ${creator.id})</code>
+            `;
+        });
     }
 
     private logInviteRevoked(invite: ClubInvite, modifiedBy: number): void {
         const modifier = this.userService.getUserById(modifiedBy);
-        const locale = this.resolveClubLocale(invite.clubId);
-        const tr = (key: string) => t(key, {}, locale);
-        const message = dedent`
-            <b>${tr('telegram.inviteLog.revokedTitle')}</b>
+        this.logClubEvent(invite.clubId, locale => {
+            const tr = (key: string) => t(key, {}, locale);
+            return dedent`
+                <b>${tr('telegram.inviteLog.revokedTitle')}</b>
 
-            <b>${tr('telegram.inviteLog.clubLabel')}</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
-            <b>${tr('telegram.inviteLog.codeLabel')}</b> <code>${invite.code}</code>
-            <b>${tr('telegram.inviteLog.revokedByLabel')}</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
-        `;
-        this.logClubEvent(invite.clubId, message);
+                <b>${tr('telegram.inviteLog.clubLabel')}</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
+                <b>${tr('telegram.inviteLog.codeLabel')}</b> <code>${invite.code}</code>
+                <b>${tr('telegram.inviteLog.revokedByLabel')}</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+            `;
+        });
     }
 
     private logInviteRedeemed(invite: ClubInvite, userId: number): void {
         const user = this.userService.getUserById(userId);
-        const locale = this.resolveClubLocale(invite.clubId);
-        const tr = (key: string) => t(key, {}, locale);
-        const message = dedent`
-            <b>${tr('telegram.inviteLog.redeemedTitle')}</b>
+        this.logClubEvent(invite.clubId, locale => {
+            const tr = (key: string) => t(key, {}, locale);
+            return dedent`
+                <b>${tr('telegram.inviteLog.redeemedTitle')}</b>
 
-            <b>${tr('telegram.inviteLog.clubLabel')}</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
-            <b>${
-            tr('telegram.inviteLog.codeLabel')
-        }</b> <code>${invite.code}</code> (${invite.type}, ${invite.source})${
-            invite.label !== null ? ` — ${invite.label}` : ''
-        }
-            <b>${tr('telegram.inviteLog.userLabel')}</b> ${user.name} <code>(ID: ${user.id})</code>${
-            user.telegramUsername !== null
-                ? `\n<b>${tr('telegram.inviteLog.telegramLabel')}</b> ${user.telegramUsername}`
-                : ''
-        }
-        `;
-        this.logClubEvent(invite.clubId, message);
+                <b>${tr('telegram.inviteLog.clubLabel')}</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
+                <b>${
+                tr('telegram.inviteLog.codeLabel')
+            }</b> <code>${invite.code}</code> (${invite.type}, ${invite.source})${
+                invite.label !== null ? ` — ${invite.label}` : ''
+            }
+                <b>${tr('telegram.inviteLog.userLabel')}</b> ${user.name} <code>(ID: ${user.id})</code>${
+                user.telegramUsername !== null
+                    ? `\n<b>${tr('telegram.inviteLog.telegramLabel')}</b> ${user.telegramUsername}`
+                    : ''
+            }
+            `;
+        });
     }
 }
 

@@ -35,7 +35,7 @@ import LogService from './LogService.ts';
 import dedent from 'dedent';
 import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
-import { globalGameLogsTopic } from '../model/TelegramTopic.ts';
+import { GLOBAL_LOGS_LOCALE, globalGameLogsTopic } from '../model/TelegramTopic.ts';
 import {
     InsufficientClubPermissionsError,
     YouHaveToBeClubMemberError,
@@ -398,49 +398,50 @@ export class GameService {
 
     private logEditedGame(oldGame: GameWithPlayers, newGame: GameWithPlayers, event: Event, modifiedBy: number): void {
         const user = this.userService.getUserById(modifiedBy);
-        const locale = resolveEventLocale(event);
-        const tr = (key: string) => t(key, {}, locale);
-
         const oldEvent = this.eventService.getEventById(oldGame.eventId);
-        const changes: string[] = [];
-        if (oldEvent.id !== event.id) {
-            changes.push(
-                `<b>${
-                    tr('telegram.gameLog.eventLabel')
-                }</b> ${oldEvent.name} <code>(ID: ${oldEvent.id})</code> → ${event.name} <code>(ID: ${event.id})</code>`
-            );
-        }
-        if (oldGame.createdAt.toISOString() !== newGame.createdAt.toISOString()) {
-            changes.push(
-                `<b>${
-                    tr('telegram.gameLog.timestampLabel')
-                }</b> <code>${oldGame.createdAt.toISOString()}</code> → <code>${newGame.createdAt.toISOString()}</code>`
-            );
-        }
-
         const playersChanged = this.havePlayersChanged(oldGame.players, newGame.players);
 
-        let message = dedent`
-            <b>${tr('telegram.gameLog.editedTitle')}</b>
+        this.logMessageToGameLogsTopics(locale => {
+            const tr = (key: string) => t(key, {}, locale);
 
-            <b>${tr('telegram.gameLog.gameIdLabel')}</b> <code>${newGame.id}</code>
-            ${this.formatEventGameLogSection(newGame, event, locale)}
-        `;
+            const changes: string[] = [];
+            if (oldEvent.id !== event.id) {
+                changes.push(
+                    `<b>${
+                        tr('telegram.gameLog.eventLabel')
+                    }</b> ${oldEvent.name} <code>(ID: ${oldEvent.id})</code> → ${event.name} <code>(ID: ${event.id})</code>`
+                );
+            }
+            if (oldGame.createdAt.toISOString() !== newGame.createdAt.toISOString()) {
+                changes.push(
+                    `<b>${
+                        tr('telegram.gameLog.timestampLabel')
+                    }</b> <code>${oldGame.createdAt.toISOString()}</code> → <code>${newGame.createdAt.toISOString()}</code>`
+                );
+            }
 
-        if (changes.length > 0) {
-            message += '\n' + changes.join('\n');
-        }
+            let message = dedent`
+                <b>${tr('telegram.gameLog.editedTitle')}</b>
 
-        message += `\n<b>${tr('telegram.gameLog.editedByLabel')}:</b> ${user.name} <code>(ID: ${user.id})</code>`;
+                <b>${tr('telegram.gameLog.gameIdLabel')}</b> <code>${newGame.id}</code>
+                ${this.formatEventGameLogSection(newGame, event, locale)}
+            `;
 
-        if (playersChanged) {
-            message += `\n\n<b>${tr('telegram.gameLog.playersBeforeLabel')}</b>\n` +
-                this.printPlayersLog(oldGame.players, locale);
-            message += `\n\n<b>${tr('telegram.gameLog.playersAfterLabel')}</b>\n` +
-                this.printPlayersLog(newGame.players, locale);
-        }
+            if (changes.length > 0) {
+                message += '\n' + changes.join('\n');
+            }
 
-        this.logMessageToGameLogsTopics(message, event);
+            message += `\n<b>${tr('telegram.gameLog.editedByLabel')}:</b> ${user.name} <code>(ID: ${user.id})</code>`;
+
+            if (playersChanged) {
+                message += `\n\n<b>${tr('telegram.gameLog.playersBeforeLabel')}</b>\n` +
+                    this.printPlayersLog(oldGame.players, locale);
+                message += `\n\n<b>${tr('telegram.gameLog.playersAfterLabel')}</b>\n` +
+                    this.printPlayersLog(newGame.players, locale);
+            }
+
+            return message;
+        }, event);
     }
 
     private havePlayersChanged(oldPlayers: GamePlayer[], newPlayers: GamePlayer[]): boolean {
@@ -485,30 +486,30 @@ export class GameService {
         userLabelKey: string
     ): void {
         const user = this.userService.getUserById(userId);
-        const locale = resolveEventLocale(event);
-        const tr = (key: string) => t(key, {}, locale);
-        const message = dedent`
-            <b>${tr(titleKey)}</b>
+        this.logMessageToGameLogsTopics(locale => {
+            const tr = (key: string) => t(key, {}, locale);
+            return dedent`
+                <b>${tr(titleKey)}</b>
 
-            <b>${tr('telegram.gameLog.gameIdLabel')}</b> <code>${game.id}</code>
-            ${this.formatEventGameLogSection(game, event, locale)}
-            <b>${tr('telegram.gameLog.timestampLabel')}</b> <code>${game.createdAt.toISOString()}</code>
-            <b>${tr(userLabelKey)}:</b> ${user.name} <code>(ID: ${user.id})</code>
+                <b>${tr('telegram.gameLog.gameIdLabel')}</b> <code>${game.id}</code>
+                ${this.formatEventGameLogSection(game, event, locale)}
+                <b>${tr('telegram.gameLog.timestampLabel')}</b> <code>${game.createdAt.toISOString()}</code>
+                <b>${tr(userLabelKey)}:</b> ${user.name} <code>(ID: ${user.id})</code>
 
-            <b>${tr('telegram.gameLog.playersLabel')}</b>\n
-        ` + this.printPlayersLog(game.players, locale);
-        this.logMessageToGameLogsTopics(message, event);
+                <b>${tr('telegram.gameLog.playersLabel')}</b>\n
+            ` + this.printPlayersLog(game.players, locale);
+        }, event);
     }
 
-    logMessageToGameLogsTopics(message: string, event: Event) {
+    logMessageToGameLogsTopics(buildMessage: (locale: string) => string, event: Event) {
         let clubPrefix = '';
         if (event.clubId !== null) {
             const club = this.clubService.getClubById(event.clubId);
             const locale = resolveEffectiveLocale(null, club);
-            clubPrefix = `<b>${t('telegram.gameLog.clubPrefix', { clubName: club.name }, locale)}</b>\n `;
-            LogService.logInfo(message, this.clubService.getClubTelegramTopics(event.clubId).gameLogs);
+            LogService.logInfo(buildMessage(locale), this.clubService.getClubTelegramTopics(event.clubId).gameLogs);
+            clubPrefix = `<b>${t('telegram.gameLog.clubPrefix', { clubName: club.name }, GLOBAL_LOGS_LOCALE)}</b>\n `;
         }
-        LogService.logInfo(clubPrefix + message, globalGameLogsTopic);
+        LogService.logInfo(clubPrefix + buildMessage(GLOBAL_LOGS_LOCALE), globalGameLogsTopic);
     }
 
     private printPlayersLog(players: GamePlayer[], locale: string): string {
