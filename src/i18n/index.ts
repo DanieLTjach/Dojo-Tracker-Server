@@ -18,9 +18,9 @@ type Catalog = Record<string, unknown>;
 
 const localesDir = join(dirname(fileURLToPath(import.meta.url)), 'locales');
 
-export const DEFAULT_LOCALE = 'uk';
 export const SUPPORTED_LOCALES = ['en', 'uk'] as const;
 export type SupportedLocale = typeof SUPPORTED_LOCALES[number];
+export const DEFAULT_LOCALE: SupportedLocale = 'uk';
 
 function loadLocale(locale: string): Catalog {
     const dir = join(localesDir, locale);
@@ -35,11 +35,7 @@ function loadLocale(locale: string): Catalog {
 }
 
 function loadCatalogs(): Record<string, Catalog> {
-    const localeDirs = readdirSync(localesDir, { withFileTypes: true })
-        .filter(entry => entry.isDirectory())
-        .map(entry => entry.name);
-    const locales = new Set([DEFAULT_LOCALE, ...SUPPORTED_LOCALES, ...localeDirs]);
-    return Object.fromEntries([...locales].map(locale => [locale, loadLocale(locale)]));
+    return Object.fromEntries(SUPPORTED_LOCALES.map(locale => [locale, loadLocale(locale)]));
 }
 
 const catalogs: Record<string, Catalog> = loadCatalogs();
