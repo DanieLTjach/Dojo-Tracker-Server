@@ -576,7 +576,7 @@ describe('Database Migrations', () => {
     });
 
     test('migration 10 removes legacy static pairings from event info', () => {
-        const db = createMigratedDb('9.sql');
+        const db = createMigratedDb(9);
 
         db.prepare(`
       INSERT INTO event (id, name, type, gameRules, info, createdAt, modifiedAt, modifiedBy)
@@ -598,7 +598,7 @@ describe('Database Migrations', () => {
         )
     `).run();
 
-        runMigration(db, '10.sql');
+        runMigration(db, 10);
 
         const rows = db.prepare(`
       SELECT id, info
@@ -662,7 +662,7 @@ describe('Database Migrations', () => {
     });
 
     test('migration 10 adds team mode schema and backfills event.format', () => {
-        const db = createMigratedDb('9.sql');
+        const db = createMigratedDb(9);
 
         // An event created before migration 10 must keep working and default to INDIVIDUAL.
         db.prepare(`
@@ -670,7 +670,7 @@ describe('Database Migrations', () => {
             VALUES (9301, 'Legacy Event', NULL, 'SEASON', 1, 1, NULL, NULL, 0, 0, '2026-05-01T00:00:00.000Z', '2026-05-01T00:00:00.000Z', 0)
         `).run();
 
-        runMigration(db, '10.sql');
+        runMigration(db, 10);
         db.pragma('foreign_keys = ON');
 
         // format column exists, backfilled to INDIVIDUAL.
