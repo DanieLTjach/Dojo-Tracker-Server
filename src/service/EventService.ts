@@ -51,8 +51,7 @@ import {
     DraftNotStartableError,
     NotEnoughApprovedForDraftError,
     TeamCountMustBeDivisibleByFourError,
-    TeamDraftHasUnteamedPlayersError,
-    TeamDraftUnevenTeamsError,
+    TeamDraftIncompleteError,
 } from '../error/TeamErrors.ts';
 
 export class EventService {
@@ -493,15 +492,17 @@ export class EventService {
             return;
         }
 
-        const unteamedCount = this.teamRepository.countUnteamedApprovedPlayers(event.id);
-        if (unteamedCount > 0) {
-            throw new TeamDraftHasUnteamedPlayersError(event.name, unteamedCount);
-        }
-
+        // A team tournament is ready when the drafted teams fill the configured
+        // shape: exactly teamCount teams, each with exactly teamSize members.
+        // Approved players who were not drafted are treated as reserves — they do
+        // not block the start, so an organizer may approve more players than fit.
+        const { teamSize, teamCount } = event.config?.teamConfig ?? { teamSize: 0, teamCount: 0 };
         const teamMemberCounts = this.teamRepository.findTeamMemberCountsByEventId(event.id);
-        const expectedMemberCount = teamMemberCounts[0]?.memberCount ?? 0;
-        if (teamMemberCounts.some(team => team.memberCount !== expectedMemberCount)) {
-            throw new TeamDraftUnevenTeamsError(event.name);
+
+        const draftMatchesConfig = teamMemberCounts.length === teamCount &&
+            teamMemberCounts.every(team => team.memberCount === teamSize);
+        if (!draftMatchesConfig) {
+            throw new TeamDraftIncompleteError(event.name, teamCount, teamSize);
         }
 
         if (requireTeamCountDivisibleByFour && teamMemberCounts.length % 4 !== 0) {

@@ -87,6 +87,7 @@ errors:
   teamDraftHasUnteamedPlayers: 'У командному турнірі "{{eventName}}" є {{unteamedCount}} схвалених учасників без команди'
   teamDraftUnevenTeams: 'У командному турнірі "{{eventName}}" команди мають різну кількість учасників'
   teamCountMustBeDivisibleByFour: 'Кількість команд у турнірі "{{eventName}}" ({{teamCount}}) має ділитися на 4'
+  teamDraftIncomplete: 'Щоб почати командний турнір "{{eventName}}", сформуйте {{teamCount}} повних команд по {{teamSize}} гравців'
 
   eventRegistrationNotFound: "Реєстрацію користувача з id {{userId}} на подію '{{eventName}}' не знайдено"
   userNotRegisteredForTournament: 'Користувач {{userId}} не зареєстрований на турнір "{{eventName}}"'

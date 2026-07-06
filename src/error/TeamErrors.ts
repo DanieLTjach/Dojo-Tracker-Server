@@ -89,3 +89,9 @@ export class TeamCountMustBeDivisibleByFourError extends BadRequestError {
         super('teamCountMustBeDivisibleByFour', { eventName, teamCount });
     }
 }
+
+export class TeamDraftIncompleteError extends BadRequestError {
+    constructor(eventName: string, teamCount: number, teamSize: number) {
+        super('teamDraftIncomplete', { eventName, teamCount, teamSize });
+    }
+}

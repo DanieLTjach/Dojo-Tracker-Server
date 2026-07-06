@@ -87,6 +87,7 @@ errors:
   teamDraftHasUnteamedPlayers: 'Team tournament "{{eventName}}" has {{unteamedCount}} approved participants without a team'
   teamDraftUnevenTeams: 'Teams in team tournament "{{eventName}}" have different numbers of members'
   teamCountMustBeDivisibleByFour: 'The number of teams in tournament "{{eventName}}" ({{teamCount}}) must be divisible by 4'
+  teamDraftIncomplete: 'To start the team tournament "{{eventName}}", form {{teamCount}} full teams of {{teamSize}} players each'
 
   eventRegistrationNotFound: "Registration for user with id {{userId}} in event '{{eventName}}' was not found"
   userNotRegisteredForTournament: 'User {{userId}} is not registered for tournament "{{eventName}}"'

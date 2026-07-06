@@ -10,6 +10,7 @@ import {
     teamListSchema,
     teamRemoveMemberSchema,
     teamRenameSchema,
+    teamSetCaptainSchema,
     teamStandingsSchema,
 } from '../schema/TeamSchemas.ts';
 import { TeamService } from '../service/TeamService.ts';
@@ -68,6 +69,12 @@ export class TeamController {
     removeMember(req: Request, res: Response) {
         const { params: { eventId, teamId, userId } } = teamRemoveMemberSchema.parse(req);
         const team = this.teamService.removeMember(eventId, teamId, userId, req.user!.userId);
+        return res.status(StatusCodes.OK).json(team);
+    }
+
+    setCaptain(req: Request, res: Response) {
+        const { params: { eventId, teamId }, body } = teamSetCaptainSchema.parse(req);
+        const team = this.teamService.setCaptain(eventId, teamId, body.userId, req.user!.userId);
         return res.status(StatusCodes.OK).json(team);
     }
 
