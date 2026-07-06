@@ -39,7 +39,7 @@ describe('Club API Endpoints', () => {
         const response = await request(app)
             .post('/api/clubs')
             .set('Authorization', adminAuthHeader)
-            .send({ name });
+            .send({ name, country: 'UA', locale: 'uk' });
         return response.body.id;
     }
 
@@ -111,6 +111,8 @@ describe('Club API Endpoints', () => {
                     name: 'Integration Club Create',
                     description: 'Created in tests',
                     city: 'Kyiv',
+                    country: 'UA',
+                    locale: 'uk',
                 });
 
             createdClubId = response.body.id;
@@ -374,6 +376,8 @@ describe('Club API Endpoints', () => {
                     name: 'Integration Club Updated',
                     address: 'Main st 1',
                     city: 'Lviv',
+                    country: 'UA',
+                    locale: 'uk',
                     description: 'Updated',
                     contactInfo: '+380...',
                     isActive: true,
