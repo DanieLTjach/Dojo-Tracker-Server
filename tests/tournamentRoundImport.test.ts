@@ -155,7 +155,7 @@ describe('TournamentRoundImportService', () => {
 
         expect(result.imported).toBe(0);
         expect(result.errors).toEqual([
-            t('telegram.importParse.eventEnded', { eventName: 'Ended Import Tournament' }, DEFAULT_LOCALE),
+            t('telegram.importParse.eventEnded', DEFAULT_LOCALE, { eventName: 'Ended Import Tournament' }),
         ]);
     });
 
@@ -190,7 +190,7 @@ describe('TournamentRoundImportService', () => {
 
         expect(result.imported).toBe(0);
         expect(result.errors[0]).toBe(
-            t('telegram.importParse.roundMismatch', { roundInPaste: 5, expectedRound: 3 }, DEFAULT_LOCALE)
+            t('telegram.importParse.roundMismatch', DEFAULT_LOCALE, { roundInPaste: 5, expectedRound: 3 })
         );
     });
 
@@ -300,8 +300,8 @@ describe('TournamentRoundImportService', () => {
             expect(result.imported).toBe(0);
             expect(result.errors).toHaveLength(1);
             // tablePrefix wraps the eventHasntStarted error; assert both fragments are present.
-            const tablePrefix = t('telegram.importParse.tablePrefix', { table: 1, message: '' }, DEFAULT_LOCALE);
-            const notStartedTail = t('errors.eventHasntStarted', { eventName: '' }, DEFAULT_LOCALE).trim();
+            const tablePrefix = t('telegram.importParse.tablePrefix', DEFAULT_LOCALE, { table: 1, message: '' });
+            const notStartedTail = t('errors.eventHasntStarted', DEFAULT_LOCALE, { eventName: '' }).trim();
             expect(result.errors[0]).toContain(tablePrefix);
             expect(result.errors[0]).toContain(notStartedTail);
         });

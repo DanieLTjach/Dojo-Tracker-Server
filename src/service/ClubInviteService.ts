@@ -214,7 +214,7 @@ export class ClubInviteService {
     private logInviteCreated(invite: ClubInvite, createdBy: number): void {
         const creator = this.userService.getUserById(createdBy);
         this.logClubEvent(invite.clubId, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr('telegram.inviteLog.createdTitle')}</b>
 
@@ -232,7 +232,7 @@ export class ClubInviteService {
     private logInviteRevoked(invite: ClubInvite, modifiedBy: number): void {
         const modifier = this.userService.getUserById(modifiedBy);
         this.logClubEvent(invite.clubId, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr('telegram.inviteLog.revokedTitle')}</b>
 
@@ -246,7 +246,7 @@ export class ClubInviteService {
     private logInviteRedeemed(invite: ClubInvite, userId: number): void {
         const user = this.userService.getUserById(userId);
         this.logClubEvent(invite.clubId, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr('telegram.inviteLog.redeemedTitle')}</b>
 

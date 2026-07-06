@@ -68,7 +68,7 @@ describe('buildPollTitle', () => {
 
         const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
-        expect(title).toBe(t('telegram.poll.title', { dates: '8, 10 квітня' }, DEFAULT_LOCALE));
+        expect(title).toBe(t('telegram.poll.title', DEFAULT_LOCALE, { dates: '8, 10 квітня' }));
     });
 
     test('cross-month dates show full format for each date', () => {
@@ -78,7 +78,7 @@ describe('buildPollTitle', () => {
 
         const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
-        expect(title).toBe(t('telegram.poll.title', { dates: '30 березня, 3 квітня' }, DEFAULT_LOCALE));
+        expect(title).toBe(t('telegram.poll.title', DEFAULT_LOCALE, { dates: '30 березня, 3 квітня' }));
     });
 
     test('single event day', () => {
@@ -87,7 +87,7 @@ describe('buildPollTitle', () => {
 
         const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
-        expect(title).toBe(t('telegram.poll.title', { dates: '10 квітня' }, DEFAULT_LOCALE));
+        expect(title).toBe(t('telegram.poll.title', DEFAULT_LOCALE, { dates: '10 квітня' }));
     });
 
     test('event days are sorted chronologically regardless of input order', () => {
@@ -97,7 +97,7 @@ describe('buildPollTitle', () => {
         const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
         // Should still show Wed(8) before Fri(10)
-        expect(title).toBe(t('telegram.poll.title', { dates: '8, 10 квітня' }, DEFAULT_LOCALE));
+        expect(title).toBe(t('telegram.poll.title', DEFAULT_LOCALE, { dates: '8, 10 квітня' }));
     });
 });
 

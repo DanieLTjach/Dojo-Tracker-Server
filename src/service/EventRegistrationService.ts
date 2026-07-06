@@ -399,12 +399,10 @@ export class EventRegistrationService {
         }
         const locale = resolveUserLocale(target);
         const message = dedent`
-            <b>${t(headlineKey, {}, locale)}</b>
+            <b>${t(headlineKey, locale)}</b>
 
-            <b>${t('telegram.notify.tournamentLabel', {}, locale)}</b> ${event.name}
-            <a href="${config.botUrl}?startapp=event_${event.id}">${
-            t('telegram.notify.openTournamentPage', {}, locale)
-        }</a>
+            <b>${t('telegram.notify.tournamentLabel', locale)}</b> ${event.name}
+            <a href="${config.botUrl}?startapp=event_${event.id}">${t('telegram.notify.openTournamentPage', locale)}</a>
         `;
         void TelegramMessageService.sendDirectMessage(target.telegramId, message);
     }
@@ -425,19 +423,17 @@ export class EventRegistrationService {
         const firstName = profile?.firstName ?? '—';
         const lastName = profile?.lastName ?? '—';
         return `${user.name} <code>(ID: ${user.id})</code>\n<b>${
-            t('telegram.registrationLog.nameLabel', {}, locale)
+            t('telegram.registrationLog.nameLabel', locale)
         }</b> ${firstName} ${lastName}`;
     }
 
     private logApplied(event: Event, applicant: User): void {
         this.logEvent(event, locale =>
             dedent`
-            <b>${t('telegram.registrationLog.titleApplied', {}, locale)}</b>
+            <b>${t('telegram.registrationLog.titleApplied', locale)}</b>
 
-            <b>${
-                t('telegram.registrationLog.tournamentLabel', {}, locale)
-            }</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>${t('telegram.registrationLog.participantLabel', {}, locale)}</b> ${
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${t('telegram.registrationLog.participantLabel', locale)}</b> ${
                 this.formatParticipant(applicant, locale)
             }
         `);
@@ -446,16 +442,12 @@ export class EventRegistrationService {
     private logApproved(event: Event, target: User, modifier: User): void {
         this.logEvent(event, locale =>
             dedent`
-            <b>${t('telegram.registrationLog.titleApproved', {}, locale)}</b>
+            <b>${t('telegram.registrationLog.titleApproved', locale)}</b>
 
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${t('telegram.registrationLog.participantLabel', locale)}</b> ${this.formatParticipant(target, locale)}
             <b>${
-                t('telegram.registrationLog.tournamentLabel', {}, locale)
-            }</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>${t('telegram.registrationLog.participantLabel', {}, locale)}</b> ${
-                this.formatParticipant(target, locale)
-            }
-            <b>${
-                t('telegram.registrationLog.approvedByLabel', {}, locale)
+                t('telegram.registrationLog.approvedByLabel', locale)
             }</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `);
     }
@@ -463,16 +455,12 @@ export class EventRegistrationService {
     private logRejected(event: Event, target: User, modifier: User): void {
         this.logEvent(event, locale =>
             dedent`
-            <b>${t('telegram.registrationLog.titleRejected', {}, locale)}</b>
+            <b>${t('telegram.registrationLog.titleRejected', locale)}</b>
 
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${t('telegram.registrationLog.participantLabel', locale)}</b> ${this.formatParticipant(target, locale)}
             <b>${
-                t('telegram.registrationLog.tournamentLabel', {}, locale)
-            }</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>${t('telegram.registrationLog.participantLabel', {}, locale)}</b> ${
-                this.formatParticipant(target, locale)
-            }
-            <b>${
-                t('telegram.registrationLog.rejectedByLabel', {}, locale)
+                t('telegram.registrationLog.rejectedByLabel', locale)
             }</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `);
     }
@@ -480,12 +468,10 @@ export class EventRegistrationService {
     private logWithdrawn(event: Event, applicant: User): void {
         this.logEvent(event, locale =>
             dedent`
-            <b>${t('telegram.registrationLog.titleWithdrawn', {}, locale)}</b>
+            <b>${t('telegram.registrationLog.titleWithdrawn', locale)}</b>
 
-            <b>${
-                t('telegram.registrationLog.tournamentLabel', {}, locale)
-            }</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>${t('telegram.registrationLog.participantLabel', {}, locale)}</b> ${
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${t('telegram.registrationLog.participantLabel', locale)}</b> ${
                 this.formatParticipant(applicant, locale)
             }
         `);
@@ -494,16 +480,12 @@ export class EventRegistrationService {
     private logManualRegistered(event: Event, target: User, modifier: User): void {
         this.logEvent(event, locale =>
             dedent`
-            <b>${t('telegram.registrationLog.titleManualRegistered', {}, locale)}</b>
+            <b>${t('telegram.registrationLog.titleManualRegistered', locale)}</b>
 
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${t('telegram.registrationLog.participantLabel', locale)}</b> ${this.formatParticipant(target, locale)}
             <b>${
-                t('telegram.registrationLog.tournamentLabel', {}, locale)
-            }</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>${t('telegram.registrationLog.participantLabel', {}, locale)}</b> ${
-                this.formatParticipant(target, locale)
-            }
-            <b>${
-                t('telegram.registrationLog.addedByLabel', {}, locale)
+                t('telegram.registrationLog.addedByLabel', locale)
             }</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `);
     }
@@ -518,22 +500,16 @@ export class EventRegistrationService {
         const fmt = (n: string | null): string => n ?? '—';
         this.logEvent(event, locale =>
             dedent`
-            <b>${t('telegram.registrationLog.titleProfileNamesUpdated', {}, locale)}</b>
+            <b>${t('telegram.registrationLog.titleProfileNamesUpdated', locale)}</b>
 
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
             <b>${
-                t('telegram.registrationLog.tournamentLabel', {}, locale)
-            }</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>${
-                t('telegram.registrationLog.participantLabel', {}, locale)
+                t('telegram.registrationLog.participantLabel', locale)
             }</b> ${target.name} <code>(ID: ${target.id})</code>
-            <b>${t('telegram.registrationLog.beforeLabel', {}, locale)}</b> ${fmt(before.firstName)} ${
-                fmt(before.lastName)
-            }
-            <b>${t('telegram.registrationLog.afterLabel', {}, locale)}</b> ${fmt(after.firstName)} ${
-                fmt(after.lastName)
-            }
+            <b>${t('telegram.registrationLog.beforeLabel', locale)}</b> ${fmt(before.firstName)} ${fmt(before.lastName)}
+            <b>${t('telegram.registrationLog.afterLabel', locale)}</b> ${fmt(after.firstName)} ${fmt(after.lastName)}
             <b>${
-                t('telegram.registrationLog.updatedByLabel', {}, locale)
+                t('telegram.registrationLog.updatedByLabel', locale)
             }</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `);
     }

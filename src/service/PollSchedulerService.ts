@@ -112,7 +112,7 @@ class PollSchedulerService {
             ? `${dates.map(d => d.getDate()).join(', ')} ${formatMonthName(dates[0]!, locale)}`
             : dates.map(d => `${d.getDate()} ${formatMonthName(d, locale)}`).join(', ');
 
-        return t('telegram.poll.title', { dates: datesText }, locale);
+        return t('telegram.poll.title', locale, { dates: datesText });
     }
 
     buildPollOptions(config: ClubPollConfig, locale: SupportedLocale, now: Date = nowInKyiv()): string[] {

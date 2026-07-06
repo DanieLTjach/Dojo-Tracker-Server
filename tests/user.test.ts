@@ -133,7 +133,7 @@ describe('User API Endpoints', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe(
-                t('errors.telegramUsernameAlreadyTakenByAnotherUser', { telegramUsername: '@testuser' }, DEFAULT_LOCALE)
+                t('errors.telegramUsernameAlreadyTakenByAnotherUser', DEFAULT_LOCALE, { telegramUsername: '@testuser' })
             );
         });
 
@@ -147,7 +147,7 @@ describe('User API Endpoints', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe(
-                t('errors.nameAlreadyTakenByAnotherUser', { name: 'Test User' }, DEFAULT_LOCALE)
+                t('errors.nameAlreadyTakenByAnotherUser', DEFAULT_LOCALE, { name: 'Test User' })
             );
         });
 
@@ -161,7 +161,7 @@ describe('User API Endpoints', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe(
-                t('errors.userWithThisTelegramIdAlreadyExists', { telegramId: 456456456 }, DEFAULT_LOCALE)
+                t('errors.userWithThisTelegramIdAlreadyExists', DEFAULT_LOCALE, { telegramId: 456456456 })
             );
         });
     });
@@ -306,7 +306,7 @@ describe('User API Endpoints', () => {
                 .set('Authorization', adminAuthHeader);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }, DEFAULT_LOCALE));
+            expect(response.body.message).toBe(t('errors.userNotFoundById', DEFAULT_LOCALE, { id: 99999 }));
         });
 
         it('should fail when user id is not a number', async () => {
@@ -344,7 +344,7 @@ describe('User API Endpoints', () => {
 
             expect(response.status).toBe(404);
             expect(response.body.message).toBe(
-                t('errors.userNotFoundByTelegramId', { telegramId: 888888888 }, DEFAULT_LOCALE)
+                t('errors.userNotFoundByTelegramId', DEFAULT_LOCALE, { telegramId: 888888888 })
             );
         });
 
@@ -446,7 +446,7 @@ describe('User API Endpoints', () => {
                 .send(updateData);
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }, DEFAULT_LOCALE));
+            expect(response.body.message).toBe(t('errors.userNotFoundById', DEFAULT_LOCALE, { id: 99999 }));
         });
 
         it('should fail when name is already taken by another user', async () => {
@@ -461,7 +461,7 @@ describe('User API Endpoints', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe(
-                t('errors.nameAlreadyTakenByAnotherUser', { name: 'Test User 2' }, DEFAULT_LOCALE)
+                t('errors.nameAlreadyTakenByAnotherUser', DEFAULT_LOCALE, { name: 'Test User 2' })
             );
         });
 
@@ -479,8 +479,8 @@ describe('User API Endpoints', () => {
             expect(response.body.message).toBe(
                 t(
                     'errors.telegramUsernameAlreadyTakenByAnotherUser',
-                    { telegramUsername: '@testuser2' },
-                    DEFAULT_LOCALE
+                    DEFAULT_LOCALE,
+                    { telegramUsername: '@testuser2' }
                 )
             );
         });
@@ -514,7 +514,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toBe(t('errors.insufficientPermissions', {}, DEFAULT_LOCALE));
+            expect(response.body.message).toBe(t('errors.insufficientPermissions', DEFAULT_LOCALE));
         });
 
         it('should fail when user id does not exist', async () => {
@@ -524,7 +524,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }, DEFAULT_LOCALE));
+            expect(response.body.message).toBe(t('errors.userNotFoundById', DEFAULT_LOCALE, { id: 99999 }));
         });
     });
 
@@ -556,7 +556,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(403);
-            expect(response.body.message).toBe(t('errors.insufficientPermissions', {}, DEFAULT_LOCALE));
+            expect(response.body.message).toBe(t('errors.insufficientPermissions', DEFAULT_LOCALE));
         });
 
         it('should fail when user id does not exist', async () => {
@@ -566,7 +566,7 @@ describe('User API Endpoints', () => {
                 .send({});
 
             expect(response.status).toBe(404);
-            expect(response.body.message).toBe(t('errors.userNotFoundById', { id: 99999 }, DEFAULT_LOCALE));
+            expect(response.body.message).toBe(t('errors.userNotFoundById', DEFAULT_LOCALE, { id: 99999 }));
         });
     });
 });

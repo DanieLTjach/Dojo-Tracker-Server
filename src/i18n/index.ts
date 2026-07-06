@@ -63,7 +63,7 @@ function interpolate(template: string, params: TranslationParams, locale: Suppor
     return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
         const value = params[key];
         if (isTranslationRef(value)) {
-            return t(value.key, value.params, locale);
+            return t(value.key, locale, value.params);
         }
         return value === undefined || value === null ? '' : String(value);
     });
@@ -88,7 +88,7 @@ function getCatalog(locale: SupportedLocale): Catalog {
  * interpolating any `{{param}}` placeholders. Returns the key itself if it is missing from the
  * catalog, so a typo surfaces visibly instead of throwing.
  */
-export function t(key: string, params?: TranslationParams, locale?: SupportedLocale): string {
+export function t(key: string, locale: SupportedLocale, params?: TranslationParams): string {
     const normalizedLocale = normalizeLocale(locale);
     const template = read(getCatalog(normalizedLocale), key) ?? read(getCatalog(DEFAULT_LOCALE), key);
     if (typeof template !== 'string') {

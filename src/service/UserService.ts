@@ -210,7 +210,7 @@ export class UserService {
     private logRegisteredUser(user: User, createdBy: number): void {
         const creator = this.getUserById(createdBy);
         this.logMessageToUserLogsTopics(user, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             const na = tr('telegram.userLog.noValue');
             return dedent`
                 <b>${tr('telegram.userLog.registeredTitle')}</b>
@@ -227,7 +227,7 @@ export class UserService {
     private logEditedUser(oldUser: User, newUser: User, modifiedBy: number): void {
         const modifier = this.getUserById(modifiedBy);
         this.logMessageToUserLogsTopics(newUser, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             const na = tr('telegram.userLog.noValue');
             const changes: string[] = [];
             if (oldUser.name !== newUser.name) {
@@ -259,7 +259,7 @@ export class UserService {
     private logActivationStatusChanged(oldUser: User, newUser: User, modifiedBy: number): void {
         const modifier = this.getUserById(modifiedBy);
         this.logMessageToUserLogsTopics(newUser, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             const na = tr('telegram.userLog.noValue');
             const title = newUser.isActive
                 ? tr('telegram.userLog.activatedTitle')

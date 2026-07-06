@@ -13,7 +13,7 @@ export class ResponseStatusError extends Error {
         params?: TranslationParams
     ) {
         const translationKey = `errors.${errorCode}`;
-        super(t(translationKey, params, DEFAULT_LOCALE));
+        super(t(translationKey, DEFAULT_LOCALE, params));
         this.name = 'ResponseStatusError';
         this.statusCode = statusCode;
         this.errorCode = errorCode;
@@ -22,7 +22,7 @@ export class ResponseStatusError extends Error {
     }
 
     getLocalizedMessage(locale: SupportedLocale): string {
-        return t(this.translationKey, this.params, locale);
+        return t(this.translationKey, locale, this.params);
     }
 }
 

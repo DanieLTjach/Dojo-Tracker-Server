@@ -118,7 +118,7 @@ export class ClubService {
     private logCreatedClub(club: Club, createdBy: number): void {
         const creator = this.userRepository.findUserById(createdBy);
         this.logClubEvent(club, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr('telegram.clubLog.createdTitle')}</b>
 
@@ -138,7 +138,7 @@ export class ClubService {
     private logEditedClub(oldClub: Club, newClub: Club, modifiedBy: number): void {
         const modifier = this.userRepository.findUserById(modifiedBy);
         this.logClubEvent(newClub, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             const changes: string[] = [];
 
             if (oldClub.name !== newClub.name) {
@@ -203,7 +203,7 @@ export class ClubService {
     private logDeletedClub(club: Club, deletedBy: number): void {
         const deleter = this.userRepository.findUserById(deletedBy);
         this.logClubEvent(club, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr('telegram.clubLog.deletedTitle')}</b>
 

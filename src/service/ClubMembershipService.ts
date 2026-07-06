@@ -223,10 +223,10 @@ export class ClubMembershipService {
         const locale = resolveUserLocale(user);
 
         const message = dedent`
-            <b>${t('telegram.notify.addedToClubTitle', { clubName: club.name }, locale)}</b>
+            <b>${t('telegram.notify.addedToClubTitle', locale, { clubName: club.name })}</b>
 
-            ${t('telegram.notify.addedToClubBody', {}, locale)}
-            <a href="${config.botUrl}">${t('telegram.notify.openApp', {}, locale)}</a>
+            ${t('telegram.notify.addedToClubBody', locale)}
+            <a href="${config.botUrl}">${t('telegram.notify.openApp', locale)}</a>
         `;
         void TelegramMessageService.sendDirectMessage(user.telegramId!, message);
     }
@@ -243,7 +243,7 @@ export class ClubMembershipService {
     private logJoinRequest(membership: ClubMembership, userId: number): void {
         const user = this.userService.getUserById(userId);
         this.logClubEvent(membership.clubId, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr('telegram.membershipLog.joinRequestTitle')}</b>
 
@@ -259,7 +259,7 @@ export class ClubMembershipService {
     private logLeftClub(membership: ClubMembership, userId: number): void {
         const user = this.userService.getUserById(userId);
         this.logClubEvent(membership.clubId, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr('telegram.membershipLog.leftClubTitle')}</b>
 
@@ -276,7 +276,7 @@ export class ClubMembershipService {
         const user = this.userService.getUserById(membership.userId);
         const modifier = this.userService.getUserById(modifiedBy);
         this.logClubEvent(membership.clubId, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr('telegram.membershipLog.memberApprovedTitle')}</b>
 
@@ -296,7 +296,7 @@ export class ClubMembershipService {
         const user = this.userService.getUserById(membership.userId);
         const modifier = this.userService.getUserById(modifiedBy);
         this.logClubEvent(membership.clubId, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr('telegram.membershipLog.memberRemovedTitle')}</b>
 
@@ -318,7 +318,7 @@ export class ClubMembershipService {
         const user = this.userService.getUserById(newMembership.userId);
         const modifier = this.userService.getUserById(modifiedBy);
         this.logClubEvent(newMembership.clubId, locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr('telegram.membershipLog.roleChangedTitle')}</b>
 

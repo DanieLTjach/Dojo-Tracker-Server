@@ -170,7 +170,7 @@ export class AchievementService {
 }
 
 function achievementDescription(definition: AchievementDefinition, locale: SupportedLocale): string {
-    return t(`achievements.descriptions.${definition.metric}`, {}, locale);
+    return t(`achievements.descriptions.${definition.metric}`, locale);
 }
 
 function formatValue(
@@ -181,5 +181,5 @@ function formatValue(
     if (value === undefined) {
         return undefined;
     }
-    return t(`achievements.units.${unit}`, { value: value.toLocaleString('en-US') }, locale);
+    return t(`achievements.units.${unit}`, locale, { value: value.toLocaleString('en-US') });
 }

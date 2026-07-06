@@ -44,12 +44,12 @@ export class TournamentRoundImportService {
 
         const event = this.eventService.getEventById(eventId);
         if (event.type !== 'TOURNAMENT') {
-            return { imported: 0, errors: [t('telegram.importParse.notTournament', {}, locale)], games: [] };
+            return { imported: 0, errors: [t('telegram.importParse.notTournament', locale)], games: [] };
         }
         if (this.eventService.hasEventEnded(event)) {
             return {
                 imported: 0,
-                errors: [t('telegram.importParse.eventEnded', { eventName: event.name }, locale)],
+                errors: [t('telegram.importParse.eventEnded', locale, { eventName: event.name })],
                 games: [],
             };
         }
@@ -69,7 +69,7 @@ export class TournamentRoundImportService {
         }
 
         if (tables.length === 0) {
-            return { imported: 0, errors: [t('telegram.importParse.noPlayerRows', {}, locale)], games: [] };
+            return { imported: 0, errors: [t('telegram.importParse.noPlayerRows', locale)], games: [] };
         }
 
         this.validateTables(eventId, expectedRound, tables, errors, locale);
@@ -104,7 +104,7 @@ export class TournamentRoundImportService {
                             error
                         );
                         errors.push(
-                            t('telegram.importParse.tablePrefix', { table: table.tableNumber, message }, locale)
+                            t('telegram.importParse.tablePrefix', locale, { table: table.tableNumber, message })
                         );
                     }
                 }
@@ -133,17 +133,17 @@ export class TournamentRoundImportService {
         const lines = text.trim().split('\n').map(line => line.trim()).filter(line => line.length > 0);
 
         if (lines.length < 2) {
-            throw new Error(t('telegram.importParse.expectHeaderAndRows', {}, locale));
+            throw new Error(t('telegram.importParse.expectHeaderAndRows', locale));
         }
 
         const headerMatch = lines[0]!.match(ROUND_HEADER_PATTERN);
         if (!headerMatch) {
-            throw new Error(t('telegram.importParse.firstLineFormat', {}, locale));
+            throw new Error(t('telegram.importParse.firstLineFormat', locale));
         }
 
         const roundInPaste = Number(headerMatch[1]);
         if (roundInPaste !== expectedRound) {
-            throw new Error(t('telegram.importParse.roundMismatch', { roundInPaste, expectedRound }, locale));
+            throw new Error(t('telegram.importParse.roundMismatch', locale, { roundInPaste, expectedRound }));
         }
 
         const tables: ParsedTable[] = [];
@@ -155,11 +155,11 @@ export class TournamentRoundImportService {
             const tokens = line.split(/\s+/).filter(token => token.length > 0);
             if (tokens.length !== playerCount) {
                 errors.push(
-                    t('telegram.importParse.rowWrongPlayerCount', {
+                    t('telegram.importParse.rowWrongPlayerCount', locale, {
                         table: tableNumber,
                         playerCount,
                         actual: tokens.length,
-                    }, locale)
+                    })
                 );
                 continue;
             }
@@ -171,7 +171,7 @@ export class TournamentRoundImportService {
                 const token = tokens[p]!;
                 const userId = Number(token);
                 if (!Number.isInteger(userId) || userId <= 0) {
-                    errors.push(t('telegram.importParse.rowInvalidUserId', { table: tableNumber, token }, locale));
+                    errors.push(t('telegram.importParse.rowInvalidUserId', locale, { table: tableNumber, token }));
                     rowValid = false;
                     break;
                 }
@@ -181,7 +181,7 @@ export class TournamentRoundImportService {
                     this.eventRegistrationService.validateUserIsApprovedParticipant(eventId, userId);
                 } catch (error: unknown) {
                     const message = error instanceof Error ? error.message : String(error);
-                    errors.push(t('telegram.importParse.rowPrefix', { table: tableNumber, message }, locale));
+                    errors.push(t('telegram.importParse.rowPrefix', locale, { table: tableNumber, message }));
                     rowValid = false;
                     break;
                 }
@@ -213,8 +213,8 @@ export class TournamentRoundImportService {
                 errors.push(
                     t(
                         'telegram.importParse.tableGameExists',
-                        { table: table.tableNumber, round: tournamentRound },
-                        locale
+                        locale,
+                        { table: table.tableNumber, round: tournamentRound }
                     )
                 );
             }
@@ -223,16 +223,16 @@ export class TournamentRoundImportService {
             for (const player of table.players) {
                 if (tableUserIds.has(player.userId)) {
                     errors.push(
-                        t('telegram.importParse.tablePlayerDuplicate', {
+                        t('telegram.importParse.tablePlayerDuplicate', locale, {
                             table: table.tableNumber,
                             userId: player.userId,
-                        }, locale)
+                        })
                     );
                 }
                 tableUserIds.add(player.userId);
 
                 if (seenUserIds.has(player.userId)) {
-                    errors.push(t('telegram.importParse.playerOnMultipleTables', { userId: player.userId }, locale));
+                    errors.push(t('telegram.importParse.playerOnMultipleTables', locale, { userId: player.userId }));
                 }
                 seenUserIds.add(player.userId);
             }

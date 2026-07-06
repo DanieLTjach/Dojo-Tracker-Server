@@ -452,7 +452,7 @@ export class TrackedGameService {
         const { headingKey, actorLabelKey } = TRACKED_GAME_LOG_ACTIONS[action];
         const user = this.userService.getUserById(actorId);
         this.gameService.logMessageToGameLogsTopics(locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr(headingKey)}</b>
 
@@ -474,7 +474,7 @@ export class TrackedGameService {
     ): void {
         const user = this.userService.getUserById(modifiedBy);
         this.gameService.logMessageToGameLogsTopics(locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             const pointChangesSection = deletedRound.result.playerPointChanges.length > 0
                 ? `\n\n<b>${tr('telegram.trackedGameLog.pointChangesRemovedLabel')}</b>\n` +
                     this.printRoundPointChangesLog(deletedRound.result.playerPointChanges)
@@ -498,7 +498,7 @@ export class TrackedGameService {
         return players.map((p, index) => {
             const user = this.userService.getUserById(p.userId);
             return `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>\n   • ${
-                t('telegram.gameLog.startPlaceLabel', {}, locale)
+                t('telegram.gameLog.startPlaceLabel', locale)
             } <b>${p.startPlace}</b>`;
         }).join('\n\n');
     }

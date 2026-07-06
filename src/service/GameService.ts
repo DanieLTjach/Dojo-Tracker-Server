@@ -402,7 +402,7 @@ export class GameService {
         const playersChanged = this.havePlayersChanged(oldGame.players, newGame.players);
 
         this.logMessageToGameLogsTopics(locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
 
             const changes: string[] = [];
             if (oldEvent.id !== event.id) {
@@ -466,7 +466,7 @@ export class GameService {
     }
 
     formatEventGameLogSection(game: Game, event: Event, locale: SupportedLocale): string {
-        const tr = (key: string) => t(key, {}, locale);
+        const tr = (key: string) => t(key, locale);
         let section = `<b>${tr('telegram.gameLog.eventLabel')}</b> ${event.name} <code>(ID: ${event.id})</code>`;
         if (event.type === 'TOURNAMENT') {
             const round = game.tournamentRound ?? '—';
@@ -487,7 +487,7 @@ export class GameService {
     ): void {
         const user = this.userService.getUserById(userId);
         this.logMessageToGameLogsTopics(locale => {
-            const tr = (key: string) => t(key, {}, locale);
+            const tr = (key: string) => t(key, locale);
             return dedent`
                 <b>${tr(titleKey)}</b>
 
@@ -507,13 +507,13 @@ export class GameService {
             const club = this.clubService.getClubById(event.clubId);
             const locale = resolveClubLocale(club);
             LogService.logInfo(buildMessage(locale), this.clubService.getClubTelegramTopics(event.clubId).gameLogs);
-            clubPrefix = `<b>${t('telegram.gameLog.clubPrefix', { clubName: club.name }, GLOBAL_LOGS_LOCALE)}</b>\n `;
+            clubPrefix = `<b>${t('telegram.gameLog.clubPrefix', GLOBAL_LOGS_LOCALE, { clubName: club.name })}</b>\n `;
         }
         LogService.logInfo(clubPrefix + buildMessage(GLOBAL_LOGS_LOCALE), globalGameLogsTopic);
     }
 
     private printPlayersLog(players: GamePlayer[], locale: SupportedLocale): string {
-        const tr = (key: string) => t(key, {}, locale);
+        const tr = (key: string) => t(key, locale);
         return players.map((p, index) => {
             const user = this.userService.getUserById(p.userId);
             const ratingSign = p.ratingChange >= 0 ? '+' : '';
@@ -580,12 +580,12 @@ export class GameService {
         const createdByUser = this.userService.getUserById(createdBy);
         const locale = resolveClubLocale(this.clubService.getClubById(event.clubId));
         const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>` +
-            '\n' + t('telegram.gameLog.addedBy', {
+            '\n' + t('telegram.gameLog.addedBy', locale, {
                 gameLink: `<a href="${config.botUrl}?startapp=game_${game.id}"><b>${
-                    t('telegram.gameLog.addedNewGame', {}, locale)
+                    t('telegram.gameLog.addedNewGame', locale)
                 }</b></a>`,
                 userLink: this.generateUserProfileLink(createdByUser),
-            }, locale) + '\n\n' +
+            }) + '\n\n' +
             `${playerLines}`;
 
         LogService.logInfo(message, this.clubService.getClubTelegramTopics(event.clubId).rating);

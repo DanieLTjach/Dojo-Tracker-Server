@@ -36,7 +36,7 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
     if (err instanceof ZodError) {
         res.status(StatusCodes.BAD_REQUEST).json({
             error: 'Invalid request data',
-            message: t('errors.invalidRequestData', {}, locale),
+            message: t('errors.invalidRequestData', locale),
             details: err.issues,
         });
         return;
@@ -45,7 +45,7 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
     if (err instanceof SqliteError) {
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
             error: 'Database error',
-            message: t('errors.databaseError', { message: err.message }, locale),
+            message: t('errors.databaseError', locale, { message: err.message }),
             details: err.message,
         });
         return;
@@ -56,6 +56,6 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
         errorCode: err instanceof ResponseStatusError ? err.errorCode : undefined,
         message: err instanceof ResponseStatusError
             ? err.getLocalizedMessage(locale)
-            : err.message || t('errors.internalServerError', {}, locale),
+            : err.message || t('errors.internalServerError', locale),
     });
 };
