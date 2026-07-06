@@ -247,3 +247,80 @@ telegram:
   gameLog:
     addedNewGame: new game
     addedBy: Added {{gameLink}} by {{userLink}}
+    newGameTitle: 🎮 New Game Added
+    editedTitle: ✏️ Game Edited
+    deletedTitle: 🗑️ Game Deleted
+    createdByLabel: Created by
+    editedByLabel: Edited by
+    deletedByLabel: Deleted by
+    gameIdLabel: "Game ID:"
+    eventLabel: "Event:"
+    tournamentRoundLabel: "Tournament round:"
+    tournamentTableLabel: "Tournament table:"
+    timestampLabel: "Timestamp:"
+    playersLabel: "Players:"
+    playersBeforeLabel: "Players (Before):"
+    playersAfterLabel: "Players (After):"
+    pointsLabel: "Points:"
+    startPlaceLabel: "Start Place:"
+    chomboCountLabel: "Chombo Count:"
+    ratingLabel: "Rating:"
+    clubPrefix: "{{clubName}} club"
+
+  # ── Tracked (live) game log posts (TrackedGameService) ──
+  trackedGameLog:
+    createdTitle: 🎮 New Tracked Game Created
+    startedOnCreateTitle: 🎮 New Tracked Game Started
+    startedTitle: 🎮 Tracked Game Started
+    rolledBackTitle: ↩️ Last Round Rolled Back
+    startedByLabel: Started by
+    rolledBackByLabel: Rolled back by
+    roundLabel: "Round:"
+    resultTypeLabel: "Result type:"
+    pointChangesRemovedLabel: "Point changes removed:"
+
+  # ── Club invite log posts (ClubInviteService) ──
+  inviteLog:
+    createdTitle: 🎟 Invite Created
+    revokedTitle: 🚫 Invite Revoked
+    redeemedTitle: ✨ Invite Redeemed
+    clubLabel: "Club:"
+    codeLabel: "Code:"
+    typeLabel: "Type:"
+    sourceLabel: "Source:"
+    labelLabel: "Label:"
+    createdByLabel: "Created by:"
+    revokedByLabel: "Revoked by:"
+    userLabel: "User:"
+    telegramLabel: "Telegram:"
+
+  membershipLog:
+    joinRequestTitle: 🔔 Club Join Request
+    leftClubTitle: 🚪 Member Left Club
+    memberApprovedTitle: ✅ Member Approved
+    memberRemovedTitle: ❌ Member Removed
+    roleChangedTitle: 🔄 Member Role Changed
+    clubLabel: "Club:"
+    userLabel: "User:"
+    statusLabel: "Status:"
+    roleLabel: "Role:"
+    previousRoleLabel: "Previous Role:"
+    approvedByLabel: "Approved by:"
+    removedByLabel: "Removed by:"
+    changedByLabel: "Changed by:"
+
+  userLog:
+    registeredTitle: 👤 New User Registered
+    editedTitle: ✏️ User Edited
+    activatedTitle: ✅ User Activated
+    deactivatedTitle: ❌ User Deactivated
+    userIdLabel: "User ID:"
+    nameLabel: "Name:"
+    telegramUsernameLabel: "Telegram Username:"
+    telegramIdLabel: "Telegram ID:"
+    isActiveLabel: "Is active:"
+    statusLabel: "Status:"
+    registeredByLabel: "Registered by:"
+    editedByLabel: "Edited by:"
+    updatedByLabel: "Updated by:"
+    noValue: N/A

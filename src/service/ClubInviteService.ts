@@ -23,6 +23,8 @@ import {
     NameRequiredForNewUserError,
 } from '../error/ClubErrors.ts';
 import { generateInviteCode } from '../util/InviteCodeUtil.ts';
+import { t } from '../i18n/index.ts';
+import { resolveEffectiveLocale } from '../util/LocaleResolver.ts';
 
 const CODE_GENERATION_ATTEMPTS = 10;
 const NAME_COLLISION_ATTEMPTS = 10;
@@ -208,43 +210,59 @@ export class ClubInviteService {
         }
     }
 
+    private resolveClubLocale(clubId: number): string {
+        return resolveEffectiveLocale(null, this.clubService.getClubById(clubId));
+    }
+
     private logInviteCreated(invite: ClubInvite, createdBy: number): void {
         const creator = this.userService.getUserById(createdBy);
+        const locale = this.resolveClubLocale(invite.clubId);
+        const tr = (key: string) => t(key, {}, locale);
         const message = dedent`
-            <b>🎟 Invite Created</b>
+            <b>${tr('telegram.inviteLog.createdTitle')}</b>
 
-            <b>Club:</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
-            <b>Code:</b> <code>${invite.code}</code>
-            <b>Type:</b> ${invite.type}
-            <b>Source:</b> ${invite.source}${invite.label !== null ? `\n<b>Label:</b> ${invite.label}` : ''}
-            <b>Created by:</b> ${creator.name} <code>(ID: ${creator.id})</code>
+            <b>${tr('telegram.inviteLog.clubLabel')}</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
+            <b>${tr('telegram.inviteLog.codeLabel')}</b> <code>${invite.code}</code>
+            <b>${tr('telegram.inviteLog.typeLabel')}</b> ${invite.type}
+            <b>${tr('telegram.inviteLog.sourceLabel')}</b> ${invite.source}${
+            invite.label !== null ? `\n<b>${tr('telegram.inviteLog.labelLabel')}</b> ${invite.label}` : ''
+        }
+            <b>${tr('telegram.inviteLog.createdByLabel')}</b> ${creator.name} <code>(ID: ${creator.id})</code>
         `;
         this.logClubEvent(invite.clubId, message);
     }
 
     private logInviteRevoked(invite: ClubInvite, modifiedBy: number): void {
         const modifier = this.userService.getUserById(modifiedBy);
+        const locale = this.resolveClubLocale(invite.clubId);
+        const tr = (key: string) => t(key, {}, locale);
         const message = dedent`
-            <b>🚫 Invite Revoked</b>
+            <b>${tr('telegram.inviteLog.revokedTitle')}</b>
 
-            <b>Club:</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
-            <b>Code:</b> <code>${invite.code}</code>
-            <b>Revoked by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+            <b>${tr('telegram.inviteLog.clubLabel')}</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
+            <b>${tr('telegram.inviteLog.codeLabel')}</b> <code>${invite.code}</code>
+            <b>${tr('telegram.inviteLog.revokedByLabel')}</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         this.logClubEvent(invite.clubId, message);
     }
 
     private logInviteRedeemed(invite: ClubInvite, userId: number): void {
         const user = this.userService.getUserById(userId);
+        const locale = this.resolveClubLocale(invite.clubId);
+        const tr = (key: string) => t(key, {}, locale);
         const message = dedent`
-            <b>✨ Invite Redeemed</b>
+            <b>${tr('telegram.inviteLog.redeemedTitle')}</b>
 
-            <b>Club:</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
-            <b>Code:</b> <code>${invite.code}</code> (${invite.type}, ${invite.source})${
+            <b>${tr('telegram.inviteLog.clubLabel')}</b> ${invite.clubName} <code>(ID: ${invite.clubId})</code>
+            <b>${
+            tr('telegram.inviteLog.codeLabel')
+        }</b> <code>${invite.code}</code> (${invite.type}, ${invite.source})${
             invite.label !== null ? ` — ${invite.label}` : ''
         }
-            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>${
-            user.telegramUsername !== null ? `\n<b>Telegram:</b> ${user.telegramUsername}` : ''
+            <b>${tr('telegram.inviteLog.userLabel')}</b> ${user.name} <code>(ID: ${user.id})</code>${
+            user.telegramUsername !== null
+                ? `\n<b>${tr('telegram.inviteLog.telegramLabel')}</b> ${user.telegramUsername}`
+                : ''
         }
         `;
         this.logClubEvent(invite.clubId, message);

@@ -239,26 +239,38 @@ export class ClubMembershipService {
         }
     }
 
+    private resolveClubLocale(clubId: number): string {
+        return resolveEffectiveLocale(null, this.clubService.getClubById(clubId));
+    }
+
     private logJoinRequest(membership: ClubMembership, userId: number): void {
         const user = this.userService.getUserById(userId);
+        const locale = this.resolveClubLocale(membership.clubId);
+        const tr = (key: string) => t(key, {}, locale);
         const message = dedent`
-            <b>🔔 Club Join Request</b>
+            <b>${tr('telegram.membershipLog.joinRequestTitle')}</b>
 
-            <b>Club:</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
-            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
-            <b>Status:</b> ${membership.status}
+            <b>${
+            tr('telegram.membershipLog.clubLabel')
+        }</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
+            <b>${tr('telegram.membershipLog.userLabel')}</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>${tr('telegram.membershipLog.statusLabel')}</b> ${membership.status}
         `;
         this.logClubEvent(membership.clubId, message);
     }
 
     private logLeftClub(membership: ClubMembership, userId: number): void {
         const user = this.userService.getUserById(userId);
+        const locale = this.resolveClubLocale(membership.clubId);
+        const tr = (key: string) => t(key, {}, locale);
         const message = dedent`
-            <b>🚪 Member Left Club</b>
+            <b>${tr('telegram.membershipLog.leftClubTitle')}</b>
 
-            <b>Club:</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
-            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
-            <b>Previous Role:</b> ${membership.role}
+            <b>${
+            tr('telegram.membershipLog.clubLabel')
+        }</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
+            <b>${tr('telegram.membershipLog.userLabel')}</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>${tr('telegram.membershipLog.previousRoleLabel')}</b> ${membership.role}
         `;
         this.logClubEvent(membership.clubId, message);
     }
@@ -266,13 +278,17 @@ export class ClubMembershipService {
     private logMemberActivated(membership: ClubMembership, modifiedBy: number): void {
         const user = this.userService.getUserById(membership.userId);
         const modifier = this.userService.getUserById(modifiedBy);
+        const locale = this.resolveClubLocale(membership.clubId);
+        const tr = (key: string) => t(key, {}, locale);
         const message = dedent`
-            <b>✅ Member Approved</b>
+            <b>${tr('telegram.membershipLog.memberApprovedTitle')}</b>
 
-            <b>Club:</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
-            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
-            <b>Role:</b> ${membership.role}
-            <b>Approved by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+            <b>${
+            tr('telegram.membershipLog.clubLabel')
+        }</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
+            <b>${tr('telegram.membershipLog.userLabel')}</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>${tr('telegram.membershipLog.roleLabel')}</b> ${membership.role}
+            <b>${tr('telegram.membershipLog.approvedByLabel')}</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         this.logClubEvent(membership.clubId, message);
     }
@@ -280,13 +296,17 @@ export class ClubMembershipService {
     private logMemberDeactivated(membership: ClubMembership, modifiedBy: number): void {
         const user = this.userService.getUserById(membership.userId);
         const modifier = this.userService.getUserById(modifiedBy);
+        const locale = this.resolveClubLocale(membership.clubId);
+        const tr = (key: string) => t(key, {}, locale);
         const message = dedent`
-            <b>❌ Member Removed</b>
+            <b>${tr('telegram.membershipLog.memberRemovedTitle')}</b>
 
-            <b>Club:</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
-            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
-            <b>Previous Role:</b> ${membership.role}
-            <b>Removed by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+            <b>${
+            tr('telegram.membershipLog.clubLabel')
+        }</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
+            <b>${tr('telegram.membershipLog.userLabel')}</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>${tr('telegram.membershipLog.previousRoleLabel')}</b> ${membership.role}
+            <b>${tr('telegram.membershipLog.removedByLabel')}</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         this.logClubEvent(membership.clubId, message);
     }
@@ -298,13 +318,17 @@ export class ClubMembershipService {
     ): void {
         const user = this.userService.getUserById(newMembership.userId);
         const modifier = this.userService.getUserById(modifiedBy);
+        const locale = this.resolveClubLocale(newMembership.clubId);
+        const tr = (key: string) => t(key, {}, locale);
         const message = dedent`
-            <b>🔄 Member Role Changed</b>
+            <b>${tr('telegram.membershipLog.roleChangedTitle')}</b>
 
-            <b>Club:</b> ${newMembership.clubName} <code>(ID: ${newMembership.clubId})</code>
-            <b>User:</b> ${user.name} <code>(ID: ${user.id})</code>
-            <b>Role:</b> ${oldMembership.role} → ${newMembership.role}
-            <b>Changed by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+            <b>${
+            tr('telegram.membershipLog.clubLabel')
+        }</b> ${newMembership.clubName} <code>(ID: ${newMembership.clubId})</code>
+            <b>${tr('telegram.membershipLog.userLabel')}</b> ${user.name} <code>(ID: ${user.id})</code>
+            <b>${tr('telegram.membershipLog.roleLabel')}</b> ${oldMembership.role} → ${newMembership.role}
+            <b>${tr('telegram.membershipLog.changedByLabel')}</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
         `;
         this.logClubEvent(newMembership.clubId, message);
     }

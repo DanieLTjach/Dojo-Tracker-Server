@@ -265,3 +265,82 @@ telegram:
   gameLog:
     addedNewGame: нову гру
     addedBy: Додано {{gameLink}} користувачем {{userLink}}
+    newGameTitle: 🎮 Додано нову гру
+    editedTitle: ✏️ Гру відредаговано
+    deletedTitle: 🗑️ Гру видалено
+    createdByLabel: Створив
+    editedByLabel: Відредагував
+    deletedByLabel: Видалив
+    gameIdLabel: "ID гри:"
+    eventLabel: "Подія:"
+    tournamentRoundLabel: "Раунд турніру:"
+    tournamentTableLabel: "Стіл турніру:"
+    timestampLabel: "Час:"
+    playersLabel: "Гравці:"
+    playersBeforeLabel: "Гравці (до):"
+    playersAfterLabel: "Гравці (після):"
+    pointsLabel: "Очки:"
+    startPlaceLabel: "Стартове місце:"
+    chomboCountLabel: "Кількість чомбо:"
+    ratingLabel: "Рейтинг:"
+    clubPrefix: "Клуб {{clubName}}"
+
+  # ── Tracked (live) game log posts (TrackedGameService) ──
+  trackedGameLog:
+    createdTitle: 🎮 Створено нову відстежувану гру
+    startedOnCreateTitle: 🎮 Розпочато нову відстежувану гру
+    startedTitle: 🎮 Відстежувану гру розпочато
+    rolledBackTitle: ↩️ Останній раунд скасовано
+    startedByLabel: Розпочав
+    rolledBackByLabel: Скасував
+    roundLabel: "Раунд:"
+    resultTypeLabel: "Тип результату:"
+    pointChangesRemovedLabel: "Видалені зміни очок:"
+
+  # ── Club invite log posts (ClubInviteService) ──
+  inviteLog:
+    createdTitle: 🎟 Створено запрошення
+    revokedTitle: 🚫 Запрошення відкликано
+    redeemedTitle: ✨ Запрошення використано
+    clubLabel: "Клуб:"
+    codeLabel: "Код:"
+    typeLabel: "Тип:"
+    sourceLabel: "Джерело:"
+    labelLabel: "Мітка:"
+    createdByLabel: "Створив:"
+    revokedByLabel: "Відкликав:"
+    userLabel: "Користувач:"
+    telegramLabel: "Telegram:"
+
+  # ── Club membership log posts (ClubMembershipService) ──
+  membershipLog:
+    joinRequestTitle: 🔔 Запит на вступ до клубу
+    leftClubTitle: 🚪 Учасник залишив клуб
+    memberApprovedTitle: ✅ Учасника схвалено
+    memberRemovedTitle: ❌ Учасника видалено
+    roleChangedTitle: 🔄 Змінено роль учасника
+    clubLabel: "Клуб:"
+    userLabel: "Користувач:"
+    statusLabel: "Статус:"
+    roleLabel: "Роль:"
+    previousRoleLabel: "Попередня роль:"
+    approvedByLabel: "Схвалив:"
+    removedByLabel: "Видалив:"
+    changedByLabel: "Змінив:"
+
+  # ── User log posts (UserService) ──
+  userLog:
+    registeredTitle: 👤 Зареєстровано нового користувача
+    editedTitle: ✏️ Користувача відредаговано
+    activatedTitle: ✅ Користувача активовано
+    deactivatedTitle: ❌ Користувача деактивовано
+    userIdLabel: "ID користувача:"
+    nameLabel: "Імʼя:"
+    telegramUsernameLabel: "Telegram username:"
+    telegramIdLabel: "Telegram ID:"
+    isActiveLabel: "Активний:"
+    statusLabel: "Статус:"
+    registeredByLabel: "Зареєстрував:"
+    editedByLabel: "Відредагував:"
+    updatedByLabel: "Оновив:"
+    noValue: Н/Д

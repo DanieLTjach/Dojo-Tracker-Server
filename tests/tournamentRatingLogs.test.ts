@@ -49,6 +49,7 @@ async function addScoreOnlyTournamentGame(round: number) {
 function ratingUpdateLogCalls(spy: jest.SpiedFunction<typeof LogService.logInfo>): unknown[][] {
     return spy.mock.calls.filter(([message]) =>
         typeof message === 'string' &&
+        message.includes('startapp=event_') &&
         message.includes('Додано') &&
         message.includes('нову гру')
     );
