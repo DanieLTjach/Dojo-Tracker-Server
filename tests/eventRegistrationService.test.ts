@@ -34,6 +34,7 @@ describe('EventRegistrationService', () => {
     const TOURNAMENT_EVENT_ID = 96300;
     const TOURNAMENT_LIMITED_EVENT_ID = 96301;
     const SEASON_EVENT_ID = 96302;
+    const TOURNAMENT_NICKNAME_EVENT_ID = 96303;
     const GAME_RULES_ID = 96400;
 
     let timestampOffset = 0;
@@ -126,18 +127,25 @@ describe('EventRegistrationService', () => {
             `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
              VALUES (?, 'ERS Season', NULL, 'SEASON', ?, ?, NULL, NULL, 0, 0, ?, ?, ?)`
         ).run(SEASON_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, nextTs(), nextTs(), SYSTEM_USER_ID);
+
+        dbManager.db.prepare(
+            `INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, config, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'ERS Tournament Nickname', NULL, 'TOURNAMENT', ?, ?, NULL, NULL, 0, 0, '{"playerNameDisplay":"NICKNAME"}', ?, ?, ?)`
+        ).run(TOURNAMENT_NICKNAME_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, nextTs(), nextTs(), SYSTEM_USER_ID);
     });
 
     afterAll(() => {
-        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?, ?)').run(
+        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?, ?, ?)').run(
             TOURNAMENT_EVENT_ID,
             TOURNAMENT_LIMITED_EVENT_ID,
-            SEASON_EVENT_ID
+            SEASON_EVENT_ID,
+            TOURNAMENT_NICKNAME_EVENT_ID
         );
-        dbManager.db.prepare('DELETE FROM event WHERE id IN (?, ?, ?)').run(
+        dbManager.db.prepare('DELETE FROM event WHERE id IN (?, ?, ?, ?)').run(
             TOURNAMENT_EVENT_ID,
             TOURNAMENT_LIMITED_EVENT_ID,
-            SEASON_EVENT_ID
+            SEASON_EVENT_ID,
+            TOURNAMENT_NICKNAME_EVENT_ID
         );
         dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(GAME_RULES_ID);
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(TEST_CLUB_ID);
@@ -170,10 +178,11 @@ describe('EventRegistrationService', () => {
 
     afterEach(() => {
         // Wipe registrations between tests for isolation
-        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?, ?)').run(
+        dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?, ?, ?)').run(
             TOURNAMENT_EVENT_ID,
             TOURNAMENT_LIMITED_EVENT_ID,
-            SEASON_EVENT_ID
+            SEASON_EVENT_ID,
+            TOURNAMENT_NICKNAME_EVENT_ID
         );
         // Reset NON_MEMBER club membership for clean apply tests
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(
@@ -228,6 +237,11 @@ describe('EventRegistrationService', () => {
             expect(() => service.apply(TOURNAMENT_EVENT_ID, NO_NAMES_USER_ID)).toThrow(
                 MissingProfileNamesForTournamentRegistrationError
             );
+        });
+
+        it('allows apply without firstName/lastName when event resolves to NICKNAME display', () => {
+            const result = service.apply(TOURNAMENT_NICKNAME_EVENT_ID, NO_NAMES_USER_ID);
+            expect(result.status).toBe('PENDING');
         });
 
         it('rejects apply on non-tournament events', () => {

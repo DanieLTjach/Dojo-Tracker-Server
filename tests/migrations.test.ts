@@ -575,6 +575,50 @@ describe('Database Migrations', () => {
         db.close();
     });
 
+    test('migration 10 removes legacy static pairings from event info', () => {
+        const db = createMigratedDb('9.sql');
+
+        db.prepare(`
+      INSERT INTO event (id, name, type, gameRules, info, createdAt, modifiedAt, modifiedBy)
+      VALUES
+        (
+          10201, 'Pairings And Venue', 'TOURNAMENT', 1,
+          '{"venue":{"name":"Dojo"},"pairings":[[[1,2,3,4]]]}',
+          '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z', 0
+        ),
+        (
+          10202, 'Pairings Only', 'TOURNAMENT', 1,
+          '{"pairings":[[[1,2,3,4]]]}',
+          '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z', 0
+        ),
+        (
+          10203, 'Venue Only', 'TOURNAMENT', 1,
+          '{"venue":{"name":"Dojo"}}',
+          '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z', 0
+        )
+    `).run();
+
+        runMigration(db, '10.sql');
+
+        const rows = db.prepare(`
+      SELECT id, info
+      FROM event
+      WHERE id IN (10201, 10202, 10203)
+      ORDER BY id
+    `).all() as Array<{ id: number, info: string | null }>;
+
+        expect(rows.map(row => ({
+            id: row.id,
+            info: row.info === null ? null : JSON.parse(row.info),
+        }))).toEqual([
+            { id: 10201, info: { venue: { name: 'Dojo' } } },
+            { id: 10202, info: null },
+            { id: 10203, info: { venue: { name: 'Dojo' } } },
+        ]);
+
+        db.close();
+    });
+
     test('seeded game rules details parse against the current schema after all migrations', () => {
         const db = createMigratedDb(getMigrationFiles(migrationsDir).at(-1)!.version);
 
@@ -613,6 +657,57 @@ describe('Database Migrations', () => {
                 label: 'Mahjong Soul - 3P Mahjong',
             },
         ]);
+
+        db.close();
+    });
+
+    test('migration 10 adds team mode schema and backfills event.format', () => {
+        const db = createMigratedDb('9.sql');
+
+        // An event created before migration 10 must keep working and default to INDIVIDUAL.
+        db.prepare(`
+            INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
+            VALUES (9301, 'Legacy Event', NULL, 'SEASON', 1, 1, NULL, NULL, 0, 0, '2026-05-01T00:00:00.000Z', '2026-05-01T00:00:00.000Z', 0)
+        `).run();
+
+        runMigration(db, '10.sql');
+        db.pragma('foreign_keys = ON');
+
+        // format column exists, backfilled to INDIVIDUAL.
+        const event = db.prepare('SELECT format FROM event WHERE id = 9301').get() as { format: string };
+        expect(event.format).toBe('INDIVIDUAL');
+
+        // eventFormat enum is seeded.
+        const formats = db.prepare('SELECT format FROM eventFormat ORDER BY format').all() as Array<{ format: string }>;
+        expect(formats.map(f => f.format)).toEqual(['HYBRID', 'INDIVIDUAL', 'TEAM']);
+
+        // DRAFT status added (additive — existing statuses preserved).
+        const statuses = db.prepare('SELECT status FROM tournamentStatus ORDER BY status').all() as Array<
+            { status: string }
+        >;
+        expect(statuses.map(s => s.status)).toEqual(['CREATED', 'DRAFT', 'FINISHED', 'IN_PROGRESS', 'LAST_ROUND']);
+
+        // teamRole enum seeded.
+        const roles = db.prepare('SELECT role FROM teamRole ORDER BY role').all() as Array<{ role: string }>;
+        expect(roles.map(r => r.role)).toEqual(['CAPTAIN', 'MEMBER']);
+
+        // team / teamMembership tables exist with the one-team-per-player-per-event constraint.
+        db.prepare(`INSERT INTO team (id, eventId, name, createdAt, modifiedAt, modifiedBy)
+                    VALUES (1, 9301, 'Team A', '2026-05-02T00:00:00.000Z', '2026-05-02T00:00:00.000Z', 0)`).run();
+        db.prepare(`INSERT INTO team (id, eventId, name, createdAt, modifiedAt, modifiedBy)
+                    VALUES (2, 9301, 'Team B', '2026-05-02T00:00:00.000Z', '2026-05-02T00:00:00.000Z', 0)`).run();
+        db.prepare(`INSERT INTO teamMembership (teamId, eventId, userId, role, createdAt, modifiedAt, modifiedBy)
+                    VALUES (1, 9301, 0, 'CAPTAIN', '2026-05-02T00:00:00.000Z', '2026-05-02T00:00:00.000Z', 0)`).run();
+        expect(() =>
+            db.prepare(`INSERT INTO teamMembership (teamId, eventId, userId, role, createdAt, modifiedAt, modifiedBy)
+                        VALUES (2, 9301, 0, 'MEMBER', '2026-05-02T00:00:00.000Z', '2026-05-02T00:00:00.000Z', 0)`).run()
+        ).toThrow(); // UNIQUE (eventId, userId)
+
+        // userRatingChange gained nullable team attribution columns.
+        const cols = db.prepare('PRAGMA table_info(userRatingChange)').all() as Array<{ name: string }>;
+        const colNames = cols.map(c => c.name);
+        expect(colNames).toContain('teamId');
+        expect(colNames).toContain('teamRating');
 
         db.close();
     });

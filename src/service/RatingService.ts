@@ -8,13 +8,16 @@ import type {
     UserRatingChangeShortDTO,
     UserRatingWithPlace,
 } from '../model/RatingModels.ts';
+import { RATING_TO_POINTS_COEFFICIENT } from '../model/RatingModels.ts';
 import { RatingRepository } from '../repository/RatingRepository.ts';
 import { EventService } from './EventService.ts';
+import { TeamService } from './TeamService.ts';
 import { UserService } from './UserService.ts';
 import { getChomboHandling, getSubstitutePlayerPenaltyBeforeUma, getSubstitutePlayerUma } from '../util/RulesUtils.ts';
 
 export class RatingService {
     private ratingRepository: RatingRepository = new RatingRepository();
+    private teamService: TeamService = new TeamService();
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
 
@@ -68,6 +71,9 @@ export class RatingService {
         this.sortPlayersData(players, gameRules.umaTieBreak);
         const uma = this.calculateUma(players, gameRules);
 
+        const playerTeamMap = this.teamService.getPlayerTeamMapForEvent(eventId);
+        const currentTeamRatings = new Map<number, number>();
+
         for (const [index, playerData] of players.entries()) {
             const latestRatingChange = this.ratingRepository.findUserLatestRatingChangeBeforeDate(
                 playerData.userId,
@@ -83,6 +89,17 @@ export class RatingService {
                 (getChomboHandling(detailedRules ?? {}) === 'mangan' ? 0 : 20000) * (playerData.chomboCount ?? 0);
             const newRating = currentRating + ratingChange;
 
+            const teamId = playerTeamMap.get(playerData.userId) ?? null;
+            const newTeamRating = teamId !== null
+                ? this.calculateNextTeamRating(
+                    teamId,
+                    eventId,
+                    gameTimestamp,
+                    startingRating,
+                    ratingChange,
+                    currentTeamRatings
+                )
+                : null;
             this.ratingRepository.addUserRatingChange({
                 userId: playerData.userId,
                 eventId: eventId,
@@ -90,6 +107,8 @@ export class RatingService {
                 ratingChange,
                 rating: newRating,
                 timestamp: gameTimestamp,
+                teamId,
+                teamRating: newTeamRating,
             });
             this.ratingRepository.updateUserRatingChangesAfterDate(
                 playerData.userId,
@@ -97,6 +116,9 @@ export class RatingService {
                 ratingChange,
                 gameTimestamp
             );
+            if (teamId !== null) {
+                this.ratingRepository.updateTeamRatingChangesAfterDate(teamId, eventId, ratingChange, gameTimestamp);
+            }
         }
     }
 
@@ -112,8 +134,42 @@ export class RatingService {
                 -userRatingChange.ratingChange,
                 game.createdAt
             );
+            if (
+                userRatingChange.teamId !== null &&
+                userRatingChange.teamId !== undefined &&
+                userRatingChange.teamRating !== null
+            ) {
+                this.ratingRepository.updateTeamRatingChangesAfterDate(
+                    userRatingChange.teamId,
+                    game.eventId,
+                    -userRatingChange.ratingChange,
+                    game.createdAt
+                );
+            }
         }
         this.ratingRepository.deleteRatingChangesFromGame(game.id);
+    }
+
+    private calculateNextTeamRating(
+        teamId: number,
+        eventId: number,
+        gameTimestamp: Date,
+        startingRating: number,
+        ratingChange: number,
+        currentTeamRatings: Map<number, number>
+    ): number {
+        let currentTeamRating = currentTeamRatings.get(teamId);
+        if (currentTeamRating === undefined) {
+            const latestTeamRatingChange = this.ratingRepository.findTeamLatestRatingChangeBeforeDate(
+                teamId,
+                eventId,
+                gameTimestamp
+            );
+            currentTeamRating = latestTeamRatingChange?.teamRating ?? startingRating * RATING_TO_POINTS_COEFFICIENT;
+        }
+        const newTeamRating = currentTeamRating + ratingChange;
+        currentTeamRatings.set(teamId, newTeamRating);
+        return newTeamRating;
     }
 
     private applySubstitutePenalty(playersData: PlayerData[], gameRules: GameRules): PlayerData[] {
@@ -242,8 +298,6 @@ export class RatingService {
         return standingsMap;
     }
 }
-
-export const RATING_TO_POINTS_COEFFICIENT: number = 1000;
 
 function normalizeUserRating(userRating: UserRating): UserRating {
     return { ...userRating, rating: userRating.rating / RATING_TO_POINTS_COEFFICIENT };

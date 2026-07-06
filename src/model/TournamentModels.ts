@@ -1,5 +1,6 @@
 export const TournamentStatus = {
     CREATED: 'CREATED',
+    DRAFT: 'DRAFT',
     IN_PROGRESS: 'IN_PROGRESS',
     LAST_ROUND: 'LAST_ROUND',
     FINISHED: 'FINISHED',
