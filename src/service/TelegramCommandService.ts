@@ -31,14 +31,18 @@ import type { ClubPollConfig } from '../model/PollModels.ts';
 import PollSchedulerService from './PollSchedulerService.ts';
 import { EventService } from './EventService.ts';
 import { TournamentRoundImportService } from './TournamentRoundImportService.ts';
-import { t } from '../i18n/index.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
+import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 
-type TelegramCommandContext = Context<{
-    message: Update.New & Update.NonChannel & Message.TextMessage;
-    update_id: number;
-}>;
+type TelegramCommandContext =
+    & Context<{
+        message: Update.New & Update.NonChannel & Message.TextMessage;
+        update_id: number;
+    }>
+    & { locale: SupportedLocale };
 
-type TelegramCallbackQueryContext = Context<Update.CallbackQueryUpdate<CallbackQuery>> & { match: RegExpExecArray };
+type TelegramCallbackQueryRawContext = Context<Update.CallbackQueryUpdate<CallbackQuery>> & { match: RegExpExecArray };
+type TelegramCallbackQueryContext = TelegramCallbackQueryRawContext & { locale: SupportedLocale };
 
 type ClubData = { clubId: number, clubName: string };
 
@@ -215,49 +219,54 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         const isClubAdmin = this.isUserClubAdmin(user);
 
-        let text = `<b>${t('telegram.help.title')}</b>\n` +
+        const locale = ctx.locale;
+        let text = `<b>${t('telegram.help.title', {}, locale)}</b>\n` +
             `\n` +
-            `<code>/help</code> — ${t('telegram.help.cmdHelp')}\n`;
+            `<code>/help</code> — ${t('telegram.help.cmdHelp', {}, locale)}\n`;
 
         if (isClubAdmin) {
             text += `\n` +
-                `<b>${t('telegram.help.sectionAdmin')}:</b>\n` +
-                `<code>/post_app_link</code> — ${t('telegram.help.cmdPostAppLink')}\n` +
+                `<b>${t('telegram.help.sectionAdmin', {}, locale)}:</b>\n` +
+                `<code>/post_app_link</code> — ${t('telegram.help.cmdPostAppLink', {}, locale)}\n` +
                 `\n` +
-                `<b>${t('telegram.help.sectionPolls')}:</b>\n` +
-                `<code>/setup_poll</code> — ${t('telegram.help.cmdSetupPoll')}\n` +
-                `<code>/preview_poll</code> — ${t('telegram.help.cmdPreviewPoll')}\n` +
-                `<code>/send_poll</code> — ${t('telegram.help.cmdSendPoll')}\n` +
+                `<b>${t('telegram.help.sectionPolls', {}, locale)}:</b>\n` +
+                `<code>/setup_poll</code> — ${t('telegram.help.cmdSetupPoll', {}, locale)}\n` +
+                `<code>/preview_poll</code> — ${t('telegram.help.cmdPreviewPoll', {}, locale)}\n` +
+                `<code>/send_poll</code> — ${t('telegram.help.cmdSendPoll', {}, locale)}\n` +
                 `\n` +
-                `<b>${t('telegram.help.sectionInvites')}:</b>\n` +
-                `<code>/create_invite</code> — ${t('telegram.help.cmdCreateInvite')}\n` +
-                `<code>/list_invites</code> — ${t('telegram.help.cmdListInvites')}\n` +
-                `<code>/revoke_invite</code> — ${t('telegram.help.cmdRevokeInvite')}\n` +
+                `<b>${t('telegram.help.sectionInvites', {}, locale)}:</b>\n` +
+                `<code>/create_invite</code> — ${t('telegram.help.cmdCreateInvite', {}, locale)}\n` +
+                `<code>/list_invites</code> — ${t('telegram.help.cmdListInvites', {}, locale)}\n` +
+                `<code>/revoke_invite</code> — ${t('telegram.help.cmdRevokeInvite', {}, locale)}\n` +
                 `\n` +
-                `<b>${t('telegram.help.sectionNotifications')}:</b>\n` +
-                `<code>/set_topic</code> — ${t('telegram.help.cmdSetTopic')}\n` +
-                `<code>/unset_topic</code> — ${t('telegram.help.cmdUnsetTopic')}\n` +
-                `<code>/diagnose_topics</code> — ${t('telegram.help.cmdDiagnoseTopics')}\n`;
+                `<b>${t('telegram.help.sectionNotifications', {}, locale)}:</b>\n` +
+                `<code>/set_topic</code> — ${t('telegram.help.cmdSetTopic', {}, locale)}\n` +
+                `<code>/unset_topic</code> — ${t('telegram.help.cmdUnsetTopic', {}, locale)}\n` +
+                `<code>/diagnose_topics</code> — ${t('telegram.help.cmdDiagnoseTopics', {}, locale)}\n`;
         }
 
         if (user.isAdmin) {
             text += `\n` +
-                `<b>${t('telegram.help.sectionTournament')}:</b>\n` +
-                `<code>/import_tournament_round</code> — ${t('telegram.help.cmdImportTournamentRound')}\n`;
+                `<b>${t('telegram.help.sectionTournament', {}, locale)}:</b>\n` +
+                `<code>/import_tournament_round</code> — ${t('telegram.help.cmdImportTournamentRound', {}, locale)}\n`;
         }
 
         ctx.replyWithHTML(text);
     }
 
     private handlePostAppLinkCommand(ctx: TelegramCommandContext) {
-        ctx.replyWithHTML(`<b>${t('telegram.appLink.title')}</b>\n${t('telegram.appLink.body')}`, {
-            reply_markup: {
-                inline_keyboard: [[{
-                    text: t('telegram.appLink.openButton'),
-                    url: config.botUrl,
-                }]],
-            },
-        });
+        ctx.replyWithHTML(
+            `<b>${t('telegram.appLink.title', {}, ctx.locale)}</b>\n` +
+                t('telegram.appLink.body', {}, ctx.locale),
+            {
+                reply_markup: {
+                    inline_keyboard: [[{
+                        text: t('telegram.appLink.openButton', {}, ctx.locale),
+                        url: config.botUrl,
+                    }]],
+                },
+            }
+        );
     }
 
     private handleSetTopicCommand(ctx: TelegramCommandContext) {
@@ -265,7 +274,7 @@ class TelegramCommandService {
         const clubData = this.getUserOwnedClubData(user);
         const messageTopicId = this.getMessageTopicId(ctx.message);
 
-        ctx.reply(t('telegram.topic.selectClubToSet'), {
+        ctx.reply(t('telegram.topic.selectClubToSet', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: clubData.map(membership => [{
                     text: membership.clubName,
@@ -283,10 +292,10 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
 
-        ctx.reply(t('telegram.topic.selectTopicToSet'), {
+        ctx.reply(t('telegram.topic.selectTopicToSet', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: Object.values(ClubTelegramTopicType).map(topicType => [{
-                    text: clubTelegramTopicDescription(topicType),
+                    text: clubTelegramTopicDescription(topicType, ctx.locale),
                     callback_data: `set_topic_${topicType}_${clubId}` + (topicId !== undefined ? `_${topicId}` : ''),
                 }]),
             },
@@ -314,14 +323,14 @@ class TelegramCommandService {
             this.clubService.setClubTelegramTopics(clubId, updatedTopics, user.id);
         })();
 
-        ctx.reply(clubTelegramTopicUpdatedSuccessfullyText(topicType));
+        ctx.reply(clubTelegramTopicUpdatedSuccessfullyText(topicType, ctx.locale));
     }
 
     private handleUnsetTopicCommand(ctx: TelegramCommandContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        ctx.reply(t('telegram.topic.selectClubToUnset'), {
+        ctx.reply(t('telegram.topic.selectClubToUnset', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: clubData.map(c => [{
                     text: c.clubName,
@@ -342,14 +351,14 @@ class TelegramCommandService {
             .filter(t => getTopicByType(topics, t) !== null);
 
         if (setTypes.length === 0) {
-            ctx.reply(t('telegram.topic.noTopicsConfigured'));
+            ctx.reply(t('telegram.topic.noTopicsConfigured', {}, ctx.locale));
             return;
         }
 
-        ctx.reply(t('telegram.topic.selectTopicToUnset'), {
+        ctx.reply(t('telegram.topic.selectTopicToUnset', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: setTypes.map(topicType => [{
-                    text: clubTelegramTopicDescription(topicType),
+                    text: clubTelegramTopicDescription(topicType, ctx.locale),
                     callback_data: `unset_topic_${topicType}_${clubId}`,
                 }]),
             },
@@ -369,7 +378,7 @@ class TelegramCommandService {
             this.clubService.setClubTelegramTopics(clubId, updated, user.id);
         })();
 
-        ctx.reply(clubTelegramTopicUnsetSuccessfullyText(topicType));
+        ctx.reply(clubTelegramTopicUnsetSuccessfullyText(topicType, ctx.locale));
     }
 
     private handleDiagnoseTopicsCommand(ctx: TelegramCommandContext) {
@@ -381,7 +390,7 @@ class TelegramCommandService {
             return this.sendDiagnoseTopicsForClub(ctx, user, clubData[0]!.clubId);
         }
 
-        ctx.reply(t('telegram.topic.diagnoseSelectClub'), {
+        ctx.reply(t('telegram.topic.diagnoseSelectClub', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: clubData.map(c => [{
                     text: c.clubName,
@@ -405,21 +414,22 @@ class TelegramCommandService {
         this.validateUserCanEditClub(user, clubId);
         const topics = this.clubService.getClubTelegramTopics(clubId);
 
-        const lines: string[] = [`${t('telegram.topic.diagnoseTitle')}`, ''];
+        const locale = ctx.locale;
+        const lines: string[] = [`${t('telegram.topic.diagnoseTitle', {}, locale)}`, ''];
         const buttons: { text: string, callback_data: string }[][] = [];
 
         for (const topicType of Object.values(ClubTelegramTopicType) as ClubTelegramTopicType[]) {
             const topic = getTopicByType(topics, topicType);
-            const label = clubTelegramTopicDescription(topicType);
+            const label = clubTelegramTopicDescription(topicType, locale);
             if (topic === null) {
-                lines.push(`${label}: ${t('telegram.topic.diagnoseNotConfigured')}`);
+                lines.push(`${label}: ${t('telegram.topic.diagnoseNotConfigured', {}, locale)}`);
             } else {
                 const topicSuffix = topic.topicId !== undefined
-                    ? `${t('telegram.topic.diagnoseThread')} <code>${topic.topicId}</code>`
-                    : t('telegram.topic.diagnoseGeneral');
+                    ? `${t('telegram.topic.diagnoseThread', {}, locale)} <code>${topic.topicId}</code>`
+                    : t('telegram.topic.diagnoseGeneral', {}, locale);
                 lines.push(`${label}: chat <code>${topic.chatId}</code>${topicSuffix}`);
                 buttons.push([{
-                    text: `${t('telegram.topic.testButton')} ${label}`,
+                    text: `${t('telegram.topic.testButton', {}, locale)} ${label}`,
                     callback_data: `test_topic_${topicType}_${clubId}`,
                 }]);
             }
@@ -439,17 +449,19 @@ class TelegramCommandService {
 
         const topic = getTopicByType(this.clubService.getClubTelegramTopics(clubId), topicType);
         if (topic === null) {
-            await ctx.answerCbQuery(t('telegram.topic.testNotConfigured'), { show_alert: true });
+            await ctx.answerCbQuery(t('telegram.topic.testNotConfigured', {}, ctx.locale), { show_alert: true });
             return;
         }
 
         await TelegramMessageService.sendMessage(
-            `<b>${t('telegram.topic.testMessageTitle')}</b>\n` +
-                `${t('telegram.topic.testMessageTopic')} ${clubTelegramTopicDescription(topicType)}\n` +
-                t('telegram.topic.testMessageBody'),
+            `<b>${t('telegram.topic.testMessageTitle', {}, ctx.locale)}</b>\n` +
+                `${t('telegram.topic.testMessageTopic', {}, ctx.locale)} ${
+                    clubTelegramTopicDescription(topicType, ctx.locale)
+                }\n` +
+                t('telegram.topic.testMessageBody', {}, ctx.locale),
             topic
         );
-        await ctx.answerCbQuery(t('telegram.topic.testMessageSent'));
+        await ctx.answerCbQuery(t('telegram.topic.testMessageSent', {}, ctx.locale));
     }
 
     // ── Poll wizard handlers ──
@@ -458,7 +470,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        ctx.reply(t('telegram.poll.setupIntro'), {
+        ctx.reply(t('telegram.poll.setupIntro', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: clubData.map(club => [{
                     text: club.clubName,
@@ -479,30 +491,45 @@ class TelegramCommandService {
             return;
         }
 
+        const locale = ctx.locale;
         const club = this.clubService.getClubById(clubId);
-        const daysText = existingConfig.eventDays.map(d => DAY_NAMES_SHORT[d]).join(', ');
-        const sendDayText = DAY_NAMES_SHORT[existingConfig.sendDay];
+        const dayNames = dayNamesShort(locale);
+        const daysText = existingConfig.eventDays.map(d => dayNames[d]).join(', ');
+        const sendDayText = dayNames[existingConfig.sendDay];
         ctx.reply(
-            `${t('telegram.poll.existingTitle', { clubName: club.name })}\n\n` +
-                `${t('telegram.poll.titleLabel')} ${existingConfig.pollTitle}\n` +
-                `${t('telegram.poll.eventDaysLabel')} ${daysText}\n` +
-                `${t('telegram.poll.sendLabel')} ${sendDayText} ${
-                    t('telegram.poll.sendAtConnector')
+            `${t('telegram.poll.existingTitle', { clubName: club.name }, locale)}\n\n` +
+                `${t('telegram.poll.titleLabel', {}, locale)} ${existingConfig.pollTitle}\n` +
+                `${t('telegram.poll.eventDaysLabel', {}, locale)} ${daysText}\n` +
+                `${t('telegram.poll.sendLabel', {}, locale)} ${sendDayText} ${
+                    t('telegram.poll.sendAtConnector', {}, locale)
                 } ${existingConfig.sendTime}\n` +
-                `${t('telegram.poll.extrasLabel')} ${
+                `${t('telegram.poll.extrasLabel', {}, locale)} ${
                     existingConfig.extraOptions.length > 0
                         ? existingConfig.extraOptions.join(', ')
-                        : t('telegram.poll.none')
+                        : t('telegram.poll.none', {}, locale)
                 }\n` +
-                `${existingConfig.isActive ? t('telegram.poll.statusActive') : t('telegram.poll.statusInactive')}`,
+                `${
+                    existingConfig.isActive
+                        ? t('telegram.poll.statusActive', {}, locale)
+                        : t('telegram.poll.statusInactive', {}, locale)
+                }`,
             {
                 parse_mode: 'HTML',
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: t('telegram.poll.reconfigure'), callback_data: `poll_day_${clubId}_-1_` }],
+                        [{
+                            text: t('telegram.poll.reconfigure', {}, locale),
+                            callback_data: `poll_day_${clubId}_-1_`,
+                        }],
                         existingConfig.isActive
-                            ? [{ text: t('telegram.poll.disable'), callback_data: `poll_toggle_${clubId}` }]
-                            : [{ text: t('telegram.poll.enable'), callback_data: `poll_toggle_${clubId}` }],
+                            ? [{
+                                text: t('telegram.poll.disable', {}, locale),
+                                callback_data: `poll_toggle_${clubId}`,
+                            }]
+                            : [{
+                                text: t('telegram.poll.enable', {}, locale),
+                                callback_data: `poll_toggle_${clubId}`,
+                            }],
                     ],
                 },
             }
@@ -531,10 +558,12 @@ class TelegramCommandService {
     }
 
     private showDaySelector(ctx: TelegramCallbackQueryContext, clubId: number, daysStr: string) {
+        const locale = ctx.locale;
         const selectedDays = parseNumberList(daysStr);
+        const dayNames = dayNamesShort(locale);
 
         const dayButtons = ALL_DAYS.map(day => ({
-            text: (selectedDays.includes(day) ? '✅ ' : '⬜ ') + DAY_NAMES_SHORT[day],
+            text: (selectedDays.includes(day) ? '✅ ' : '⬜ ') + dayNames[day],
             callback_data: `poll_day_${clubId}_${day}_${daysStr}`,
         }));
 
@@ -542,11 +571,14 @@ class TelegramCommandService {
             dayButtons.slice(0, 4),
             dayButtons.slice(4, 7),
             ...(selectedDays.length > 0
-                ? [[{ text: t('telegram.poll.next'), callback_data: `poll_days_done_${clubId}_${daysStr}` }]]
+                ? [[{
+                    text: t('telegram.poll.next', {}, locale),
+                    callback_data: `poll_days_done_${clubId}_${daysStr}`,
+                }]]
                 : []),
         ];
 
-        ctx.reply(t('telegram.poll.selectEventDays'), {
+        ctx.reply(t('telegram.poll.selectEventDays', {}, locale), {
             reply_markup: { inline_keyboard: keyboard },
         });
     }
@@ -558,12 +590,13 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
 
+        const dayNames = dayNamesShort(ctx.locale);
         const dayButtons = ALL_DAYS.map(day => [{
-            text: DAY_NAMES_SHORT[day]!,
+            text: dayNames[day]!,
             callback_data: `poll_send_${clubId}_${daysStr}_${day}`,
         }]);
 
-        ctx.reply(t('telegram.poll.selectSendDay'), {
+        ctx.reply(t('telegram.poll.selectSendDay', {}, ctx.locale), {
             reply_markup: { inline_keyboard: dayButtons },
         });
     }
@@ -582,7 +615,7 @@ class TelegramCommandService {
             callback_data: `poll_time_${clubId}_${daysStr}_${sendDay}_${time}`,
         }]);
 
-        ctx.reply(t('telegram.poll.selectSendTime'), {
+        ctx.reply(t('telegram.poll.selectSendTime', {}, ctx.locale), {
             reply_markup: { inline_keyboard: timeButtons },
         });
     }
@@ -631,17 +664,21 @@ class TelegramCommandService {
     ) {
         const selectedExtras = parseNumberList(extrasStr);
 
-        const extraButtons = EXTRA_OPTION_PRESETS.map((option, index) => [{
+        // Preset labels map to the strings persisted into the poll config and shown to club
+        // members, so they follow the club locale — not the admin's.
+        const club = this.clubService.getClubById(clubId);
+        const presets = extraOptionPresets(resolveClubLocale(club));
+        const extraButtons = presets.map((option, index) => [{
             text: (selectedExtras.includes(index) ? '✅ ' : '⬜ ') + option,
             callback_data: `poll_extra_${clubId}_${daysStr}_${sendDay}_${sendTime}_${index}_${extrasStr}`,
         }]);
 
-        ctx.reply(t('telegram.poll.selectExtraOptions'), {
+        ctx.reply(t('telegram.poll.selectExtraOptions', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: [
                     ...extraButtons,
                     [{
-                        text: t('telegram.poll.saveAndContinue'),
+                        text: t('telegram.poll.saveAndContinue', {}, ctx.locale),
                         callback_data: `poll_extras_done_${clubId}_${daysStr}_${sendDay}_${sendTime}_${extrasStr}`,
                     }],
                 ],
@@ -659,9 +696,13 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
 
+        const locale = ctx.locale;
         const club = this.clubService.getClubById(clubId);
         const eventDays = daysStr.split(',').map(Number);
-        const extraOptions = parseNumberList(extrasStr).map(i => EXTRA_OPTION_PRESETS[i]!);
+        // Stored options are club-facing (rendered into the poll shown to members), so map them
+        // through the club locale rather than the admin's.
+        const clubPresets = extraOptionPresets(resolveClubLocale(club));
+        const extraOptions = parseNumberList(extrasStr).map(i => clubPresets[i]!);
 
         const pollConfig: ClubPollConfig = {
             clubId,
@@ -675,17 +716,20 @@ class TelegramCommandService {
 
         this.pollRepository.upsertConfig(pollConfig, user.id);
 
-        const daysText = eventDays.map(d => DAY_NAMES_SHORT[d]).join(', ');
-        const extrasText = extraOptions.length > 0 ? extraOptions.join(', ') : t('telegram.poll.none');
+        const dayNames = dayNamesShort(locale);
+        const daysText = eventDays.map(d => dayNames[d]).join(', ');
+        const extrasText = extraOptions.length > 0
+            ? extraOptions.join(', ')
+            : t('telegram.poll.none', {}, locale);
         ctx.reply(
-            `${t('telegram.poll.savedTitle')}\n\n` +
-                `${t('telegram.poll.titleLabel')} ${club.name}\n` +
-                `${t('telegram.poll.eventDaysLabel')} ${daysText}\n` +
-                `${t('telegram.poll.sendLabel')} ${DAY_NAMES_SHORT[sendDay]} ${
-                    t('telegram.poll.sendAtConnector')
+            `${t('telegram.poll.savedTitle', {}, locale)}\n\n` +
+                `${t('telegram.poll.titleLabel', {}, locale)} ${club.name}\n` +
+                `${t('telegram.poll.eventDaysLabel', {}, locale)} ${daysText}\n` +
+                `${t('telegram.poll.sendLabel', {}, locale)} ${dayNames[sendDay]} ${
+                    t('telegram.poll.sendAtConnector', {}, locale)
                 } ${sendTime}\n` +
-                `${t('telegram.poll.extrasLabel')} ${extrasText}\n\n` +
-                t('telegram.poll.savedReminder')
+                `${t('telegram.poll.extrasLabel', {}, locale)} ${extrasText}\n\n` +
+                t('telegram.poll.savedReminder', {}, locale)
         );
     }
 
@@ -702,8 +746,8 @@ class TelegramCommandService {
 
         ctx.reply(
             newConfig.isActive
-                ? t('telegram.poll.enabledNotice')
-                : t('telegram.poll.disabledNotice')
+                ? t('telegram.poll.enabledNotice', {}, ctx.locale)
+                : t('telegram.poll.disabledNotice', {}, ctx.locale)
         );
     }
 
@@ -718,11 +762,11 @@ class TelegramCommandService {
         );
 
         if (clubsWithPolls.length === 0) {
-            ctx.reply(t('telegram.poll.noConfigsUseSetup'));
+            ctx.reply(t('telegram.poll.noConfigsUseSetup', {}, ctx.locale));
             return;
         }
 
-        ctx.reply(t('telegram.poll.previewIntro'), {
+        ctx.reply(t('telegram.poll.previewIntro', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: clubsWithPolls.map(club => [{
                     text: `📊 ${club.clubName}`,
@@ -739,7 +783,7 @@ class TelegramCommandService {
 
         const pollConfig = this.pollRepository.findConfigByClubId(clubId);
         if (!pollConfig) {
-            ctx.reply(t('telegram.poll.notConfiguredForClub'));
+            ctx.reply(t('telegram.poll.notConfiguredForClub', {}, ctx.locale));
             return;
         }
 
@@ -760,11 +804,11 @@ class TelegramCommandService {
         );
 
         if (clubsWithPolls.length === 0) {
-            ctx.reply(t('telegram.poll.noConfigsUseSetup'));
+            ctx.reply(t('telegram.poll.noConfigsUseSetup', {}, ctx.locale));
             return;
         }
 
-        ctx.reply(t('telegram.poll.sendNowConfirm'), {
+        ctx.reply(t('telegram.poll.sendNowConfirm', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: clubsWithPolls.map(club => [{
                     text: `📊 ${club.clubName}`,
@@ -781,26 +825,26 @@ class TelegramCommandService {
 
         const pollConfig = this.pollRepository.findConfigByClubId(clubId);
         if (!pollConfig) {
-            ctx.reply(t('telegram.poll.notConfiguredForClub'));
+            ctx.reply(t('telegram.poll.notConfiguredForClub', {}, ctx.locale));
             return;
         }
 
         const mainTopic = this.clubService.getClubTelegramTopics(clubId).main;
         if (mainTopic === null) {
-            ctx.reply(t('telegram.poll.mainTopicNotSet'));
+            ctx.reply(t('telegram.poll.mainTopicNotSet', {}, ctx.locale));
             return;
         }
 
         const result = await PollSchedulerService.sendPollNow(pollConfig);
         if (result.messageId === null) {
-            ctx.reply(t('telegram.poll.sendFailed'));
+            ctx.reply(t('telegram.poll.sendFailed', {}, ctx.locale));
             return;
         }
 
         ctx.reply(
             result.pinned
-                ? t('telegram.poll.sentAndPinned')
-                : t('telegram.poll.sentNotPinned')
+                ? t('telegram.poll.sentAndPinned', {}, ctx.locale)
+                : t('telegram.poll.sentNotPinned', {}, ctx.locale)
         );
     }
 
@@ -810,7 +854,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        ctx.reply(t('telegram.invite.selectClubToCreate'), {
+        ctx.reply(t('telegram.invite.selectClubToCreate', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: clubData.map(club => [{
                     text: club.clubName,
@@ -825,11 +869,17 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
 
-        ctx.reply(t('telegram.invite.selectType'), {
+        ctx.reply(t('telegram.invite.selectType', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: inviteTypeLabel(ClubInviteType.JOIN_CLUB), callback_data: `inv_t_${clubId}_J` }],
-                    [{ text: inviteTypeLabel(ClubInviteType.REGISTRATION_ONLY), callback_data: `inv_t_${clubId}_R` }],
+                    [{
+                        text: inviteTypeLabel(ClubInviteType.JOIN_CLUB, ctx.locale),
+                        callback_data: `inv_t_${clubId}_J`,
+                    }],
+                    [{
+                        text: inviteTypeLabel(ClubInviteType.REGISTRATION_ONLY, ctx.locale),
+                        callback_data: `inv_t_${clubId}_R`,
+                    }],
                 ],
             },
         });
@@ -841,10 +891,10 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         this.validateUserCanEditClub(user, clubId);
 
-        ctx.reply(t('telegram.invite.selectSource'), {
+        ctx.reply(t('telegram.invite.selectSource', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: INVITE_SOURCES.map((source, index) => [{
-                    text: inviteSourceLabel(source),
+                    text: inviteSourceLabel(source, ctx.locale),
                     callback_data: `inv_s_${clubId}_${typeCode}_${index}`,
                 }]),
             },
@@ -859,7 +909,7 @@ class TelegramCommandService {
         this.validateUserCanEditClub(user, clubId);
 
         if (source === undefined) {
-            ctx.reply(t('telegram.invite.unknownSource'));
+            ctx.reply(t('telegram.invite.unknownSource', {}, ctx.locale));
             return;
         }
 
@@ -874,12 +924,12 @@ class TelegramCommandService {
 
         const link = inviteDeepLink(invite.code);
         const caption = dedent`
-            <b>${t('telegram.invite.captionTitle')}</b>
+            <b>${t('telegram.invite.captionTitle', {}, ctx.locale)}</b>
 
-            <b>${t('telegram.invite.captionClub')}</b> ${invite.clubName}
-            <b>${t('telegram.invite.captionType')}</b> ${inviteTypeLabel(invite.type)}
-            <b>${t('telegram.invite.captionSource')}</b> ${inviteSourceLabel(invite.source)}
-            <b>${t('telegram.invite.captionCode')}</b> <code>${invite.code}</code>
+            <b>${t('telegram.invite.captionClub', {}, ctx.locale)}</b> ${invite.clubName}
+            <b>${t('telegram.invite.captionType', {}, ctx.locale)}</b> ${inviteTypeLabel(invite.type, ctx.locale)}
+            <b>${t('telegram.invite.captionSource', {}, ctx.locale)}</b> ${inviteSourceLabel(invite.source, ctx.locale)}
+            <b>${t('telegram.invite.captionCode', {}, ctx.locale)}</b> <code>${invite.code}</code>
 
             <a href="${link}">${link}</a>
         `;
@@ -892,7 +942,7 @@ class TelegramCommandService {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        ctx.reply(t('telegram.invite.selectClubToList'), {
+        ctx.reply(t('telegram.invite.selectClubToList', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: clubData.map(club => [{
                     text: club.clubName,
@@ -909,19 +959,19 @@ class TelegramCommandService {
 
         const invites = this.clubInviteService.listInvites(clubId);
         if (invites.length === 0) {
-            ctx.reply(t('telegram.invite.noInvites'));
+            ctx.reply(t('telegram.invite.noInvites', {}, ctx.locale));
             return;
         }
 
-        const text = invites.map(formatInviteLine).join('\n\n');
-        ctx.replyWithHTML(`<b>${t('telegram.invite.listTitle')}</b>\n\n${text}`);
+        const text = invites.map(invite => formatInviteLine(invite, ctx.locale)).join('\n\n');
+        ctx.replyWithHTML(`<b>${t('telegram.invite.listTitle', {}, ctx.locale)}</b>\n\n${text}`);
     }
 
     private handleRevokeInviteCommand(ctx: TelegramCommandContext) {
         const user = this.getUserByTelegramId(ctx.from.id);
         const clubData = this.getUserOwnedClubData(user);
 
-        ctx.reply(t('telegram.invite.selectClubToRevoke'), {
+        ctx.reply(t('telegram.invite.selectClubToRevoke', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: clubData.map(club => [{
                     text: club.clubName,
@@ -941,10 +991,10 @@ class TelegramCommandService {
             throw new NoActiveInvitesTelegramError();
         }
 
-        ctx.reply(t('telegram.invite.selectToRevoke'), {
+        ctx.reply(t('telegram.invite.selectToRevoke', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: activeInvites.map(invite => [{
-                    text: `${invite.code} · ${inviteTypeLabel(invite.type)}`,
+                    text: `${invite.code} · ${inviteTypeLabel(invite.type, ctx.locale)}`,
                     callback_data: `invr_p_${invite.id}`,
                 }]),
             },
@@ -957,9 +1007,12 @@ class TelegramCommandService {
         const invite = this.clubInviteService.getInviteById(inviteId);
         this.validateUserCanEditClub(user, invite.clubId);
 
-        ctx.reply(t('telegram.invite.revokeConfirmPrompt', { code: invite.code }), {
+        ctx.reply(t('telegram.invite.revokeConfirmPrompt', { code: invite.code }, ctx.locale), {
             reply_markup: {
-                inline_keyboard: [[{ text: t('telegram.invite.revokeButton'), callback_data: `invr_x_${invite.id}` }]],
+                inline_keyboard: [[{
+                    text: t('telegram.invite.revokeButton', {}, ctx.locale),
+                    callback_data: `invr_x_${invite.id}`,
+                }]],
             },
         });
     }
@@ -971,7 +1024,7 @@ class TelegramCommandService {
         this.validateUserCanEditClub(user, invite.clubId);
 
         const revoked = dbManager.db.transaction(() => this.clubInviteService.revokeInvite(inviteId, user.id))();
-        ctx.reply(t('telegram.invite.revoked', { code: revoked.code }));
+        ctx.reply(t('telegram.invite.revoked', { code: revoked.code }, ctx.locale));
     }
 
     private handleImportTournamentRoundCommand(ctx: TelegramCommandContext) {
@@ -984,11 +1037,11 @@ class TelegramCommandService {
             .sort((a, b) => b.id - a.id);
 
         if (tournaments.length === 0) {
-            ctx.reply(t('telegram.tournamentImport.noActiveTournaments'));
+            ctx.reply(t('telegram.tournamentImport.noActiveTournaments', {}, ctx.locale));
             return;
         }
 
-        ctx.reply(t('telegram.tournamentImport.selectTournament'), {
+        ctx.reply(t('telegram.tournamentImport.selectTournament', {}, ctx.locale), {
             reply_markup: {
                 inline_keyboard: tournaments.map(event => [{
                     text: event.name,
@@ -1005,11 +1058,11 @@ class TelegramCommandService {
         const eventId = parseInt(ctx.match[1]!);
         const event = this.eventService.getEventById(eventId);
         if (event.type !== 'TOURNAMENT') {
-            ctx.reply(t('telegram.tournamentImport.notTournament'));
+            ctx.reply(t('telegram.tournamentImport.notTournament', {}, ctx.locale));
             return;
         }
         if (this.eventService.hasEventEnded(event)) {
-            ctx.reply(t('telegram.tournamentImport.tournamentEnded'));
+            ctx.reply(t('telegram.tournamentImport.tournamentEnded', {}, ctx.locale));
             return;
         }
 
@@ -1019,7 +1072,7 @@ class TelegramCommandService {
             updatedAt: Date.now(),
         });
 
-        ctx.reply(t('telegram.tournamentImport.sendRoundNumber'));
+        ctx.reply(t('telegram.tournamentImport.sendRoundNumber', {}, ctx.locale));
     }
 
     private handleTextMessage(ctx: TelegramCommandContext) {
@@ -1048,7 +1101,7 @@ class TelegramCommandService {
         if (pending.step === 'awaiting_round') {
             const round = Number(text.trim());
             if (!Number.isInteger(round) || round < 1) {
-                ctx.reply(t('telegram.tournamentImport.roundMustBePositive'));
+                ctx.reply(t('telegram.tournamentImport.roundMustBePositive', {}, ctx.locale));
                 return;
             }
 
@@ -1059,7 +1112,7 @@ class TelegramCommandService {
                 updatedAt: Date.now(),
             });
 
-            ctx.reply(t('telegram.tournamentImport.sendSeating', { round }));
+            ctx.reply(t('telegram.tournamentImport.sendSeating', { round }, ctx.locale));
             return;
         }
 
@@ -1075,13 +1128,13 @@ class TelegramCommandService {
 
             if (result.errors.length > 0) {
                 ctx.reply(
-                    `${t('telegram.tournamentImport.importErrorsTitle')}\n` +
+                    `${t('telegram.tournamentImport.importErrorsTitle', {}, ctx.locale)}\n` +
                         result.errors.map(e => `• ${e}`).join('\n')
                 );
                 return;
             }
 
-            ctx.reply(t('telegram.tournamentImport.imported', { count: result.imported }));
+            ctx.reply(t('telegram.tournamentImport.imported', { count: result.imported }, ctx.locale));
         }
     }
 
@@ -1150,7 +1203,7 @@ class TelegramCommandService {
     }
 
     private async executeCallbackQueryWithErrorHandling(
-        ctx: TelegramCallbackQueryContext,
+        ctx: TelegramCallbackQueryRawContext,
         code: (ctx: TelegramCallbackQueryContext) => Promise<void> | void
     ) {
         await this.executeWithErrorHandling(ctx, async ctx => {
@@ -1172,16 +1225,29 @@ class TelegramCommandService {
 
     private async executeWithErrorHandling<C extends Context<U>, U extends Update>(
         ctx: C,
-        code: (ctx: C) => Promise<void> | void
+        code: (ctx: C & { locale: SupportedLocale }) => Promise<void> | void
     ) {
+        if (ctx.from === undefined) {
+            LogService.logError('Received telegram command with unknown sender: ' + ctx);
+            return;
+        }
+
+        const user = this.userService.getOptionalUserByTelegramId(ctx.from.id);
+        if (user === undefined) {
+            LogService.logError(`Received telegram command from unregistered user with id: ${ctx.from.id}: ${ctx}`);
+            ctx.reply(t('telegram.errors.userNotRegistered'));
+            return;
+        }
+        const locale = resolveUserLocale(user);
+
         try {
-            await code(ctx);
+            await code({ ...ctx, locale });
         } catch (e) {
             if (e instanceof TelegramReplyError) {
-                ctx.reply(e.message);
+                ctx.reply(t(e.key, e.params, locale));
             } else {
                 LogService.logError('Unexpected error executing Telegram command: ', e);
-                ctx.reply(t('telegram.genericCommandError'));
+                ctx.reply(t('telegram.genericCommandError', {}, locale));
             }
         }
     }
@@ -1197,27 +1263,27 @@ function parseNumberList(str: string): number[] {
 
 const INVITE_SOURCES: ClubInviteSource[] = Object.values(ClubInviteSource);
 
-function inviteTypeLabel(type: ClubInviteType): string {
+function inviteTypeLabel(type: ClubInviteType, locale: SupportedLocale): string {
     switch (type) {
         case ClubInviteType.JOIN_CLUB:
-            return t('telegram.invite.typeJoinClub');
+            return t('telegram.invite.typeJoinClub', {}, locale);
         case ClubInviteType.REGISTRATION_ONLY:
-            return t('telegram.invite.typeRegistrationOnly');
+            return t('telegram.invite.typeRegistrationOnly', {}, locale);
     }
 }
 
-function inviteSourceLabel(source: ClubInviteSource): string {
+function inviteSourceLabel(source: ClubInviteSource, locale: SupportedLocale): string {
     switch (source) {
         case ClubInviteSource.PERSON:
-            return t('telegram.invite.sourcePerson');
+            return t('telegram.invite.sourcePerson', {}, locale);
         case ClubInviteSource.TUTORIAL:
-            return t('telegram.invite.sourceTutorial');
+            return t('telegram.invite.sourceTutorial', {}, locale);
         case ClubInviteSource.FESTIVAL:
-            return t('telegram.invite.sourceFestival');
+            return t('telegram.invite.sourceFestival', {}, locale);
         case ClubInviteSource.SOCIAL_NETWORK:
-            return t('telegram.invite.sourceSocialNetwork');
+            return t('telegram.invite.sourceSocialNetwork', {}, locale);
         case ClubInviteSource.OTHER:
-            return t('telegram.invite.sourceOther');
+            return t('telegram.invite.sourceOther', {}, locale);
     }
 }
 
@@ -1229,65 +1295,65 @@ function inviteDeepLink(code: string): string {
     return `${config.botUrl}?startapp=invite_${code}`;
 }
 
-function formatInviteLine(invite: ClubInvite): string {
+function formatInviteLine(invite: ClubInvite, locale: SupportedLocale): string {
     const status = invite.isActive ? '🟢' : '🔴';
     const uses = invite.maxUses !== null ? `${invite.usesCount}/${invite.maxUses}` : `${invite.usesCount}`;
     const parts = [
-        `${status} <code>${invite.code}</code> — ${inviteTypeLabel(invite.type)}`,
-        `${t('telegram.invite.lineSource')} ${inviteSourceLabel(invite.source)} · ` +
-        `${t('telegram.invite.lineUses')} ${uses}`,
+        `${status} <code>${invite.code}</code> — ${inviteTypeLabel(invite.type, locale)}`,
+        `${t('telegram.invite.lineSource', {}, locale)} ${inviteSourceLabel(invite.source, locale)} · ` +
+        `${t('telegram.invite.lineUses', {}, locale)} ${uses}`,
     ];
     if (invite.label !== null) {
-        parts.push(`${t('telegram.invite.lineLabel')} ${invite.label}`);
+        parts.push(`${t('telegram.invite.lineLabel', {}, locale)} ${invite.label}`);
     }
     if (invite.expiresAt !== null) {
-        parts.push(`${t('telegram.invite.lineExpires')} ${invite.expiresAt.toISOString()}`);
+        parts.push(`${t('telegram.invite.lineExpires', {}, locale)} ${invite.expiresAt.toISOString()}`);
     }
     return parts.join('\n');
 }
 
-function clubTelegramTopicDescription(topicType: ClubTelegramTopicType): string {
+function clubTelegramTopicDescription(topicType: ClubTelegramTopicType, locale: SupportedLocale): string {
     switch (topicType) {
         case ClubTelegramTopicType.RATING:
-            return t('telegram.topicType.rating');
+            return t('telegram.topicType.rating', {}, locale);
         case ClubTelegramTopicType.USER_LOGS:
-            return t('telegram.topicType.userLogs');
+            return t('telegram.topicType.userLogs', {}, locale);
         case ClubTelegramTopicType.GAME_LOGS:
-            return t('telegram.topicType.gameLogs');
+            return t('telegram.topicType.gameLogs', {}, locale);
         case ClubTelegramTopicType.CLUB_LOGS:
-            return t('telegram.topicType.clubLogs');
+            return t('telegram.topicType.clubLogs', {}, locale);
         case ClubTelegramTopicType.MAIN:
-            return t('telegram.topicType.main');
+            return t('telegram.topicType.main', {}, locale);
     }
 }
 
-function clubTelegramTopicUpdatedSuccessfullyText(topicType: ClubTelegramTopicType): string {
+function clubTelegramTopicUpdatedSuccessfullyText(topicType: ClubTelegramTopicType, locale: SupportedLocale): string {
     switch (topicType) {
         case ClubTelegramTopicType.RATING:
-            return t('telegram.topicSet.rating');
+            return t('telegram.topicSet.rating', {}, locale);
         case ClubTelegramTopicType.USER_LOGS:
-            return t('telegram.topicSet.userLogs');
+            return t('telegram.topicSet.userLogs', {}, locale);
         case ClubTelegramTopicType.GAME_LOGS:
-            return t('telegram.topicSet.gameLogs');
+            return t('telegram.topicSet.gameLogs', {}, locale);
         case ClubTelegramTopicType.CLUB_LOGS:
-            return t('telegram.topicSet.clubLogs');
+            return t('telegram.topicSet.clubLogs', {}, locale);
         case ClubTelegramTopicType.MAIN:
-            return t('telegram.topicSet.main');
+            return t('telegram.topicSet.main', {}, locale);
     }
 }
 
-function clubTelegramTopicUnsetSuccessfullyText(topicType: ClubTelegramTopicType): string {
+function clubTelegramTopicUnsetSuccessfullyText(topicType: ClubTelegramTopicType, locale: SupportedLocale): string {
     switch (topicType) {
         case ClubTelegramTopicType.RATING:
-            return t('telegram.topicUnset.rating');
+            return t('telegram.topicUnset.rating', {}, locale);
         case ClubTelegramTopicType.USER_LOGS:
-            return t('telegram.topicUnset.userLogs');
+            return t('telegram.topicUnset.userLogs', {}, locale);
         case ClubTelegramTopicType.GAME_LOGS:
-            return t('telegram.topicUnset.gameLogs');
+            return t('telegram.topicUnset.gameLogs', {}, locale);
         case ClubTelegramTopicType.CLUB_LOGS:
-            return t('telegram.topicUnset.clubLogs');
+            return t('telegram.topicUnset.clubLogs', {}, locale);
         case ClubTelegramTopicType.MAIN:
-            return t('telegram.topicUnset.main');
+            return t('telegram.topicUnset.main', {}, locale);
     }
 }
 
@@ -1308,21 +1374,25 @@ function getTopicByType(topics: ClubTelegramTopics, topicType: ClubTelegramTopic
 
 const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7]; // Mon-Sun
 
-const DAY_NAMES_SHORT: Record<number, string> = {
-    1: t('telegram.daysShort.mon'),
-    2: t('telegram.daysShort.tue'),
-    3: t('telegram.daysShort.wed'),
-    4: t('telegram.daysShort.thu'),
-    5: t('telegram.daysShort.fri'),
-    6: t('telegram.daysShort.sat'),
-    7: t('telegram.daysShort.sun'),
-};
+function dayNamesShort(locale: SupportedLocale): Record<number, string> {
+    return {
+        1: t('telegram.daysShort.mon', {}, locale),
+        2: t('telegram.daysShort.tue', {}, locale),
+        3: t('telegram.daysShort.wed', {}, locale),
+        4: t('telegram.daysShort.thu', {}, locale),
+        5: t('telegram.daysShort.fri', {}, locale),
+        6: t('telegram.daysShort.sat', {}, locale),
+        7: t('telegram.daysShort.sun', {}, locale),
+    };
+}
 
-const EXTRA_OPTION_PRESETS = [
-    t('telegram.poll.extraResults'),
-    t('telegram.poll.extraPass'),
-    t('telegram.poll.extraMaybe'),
-    t('telegram.poll.extraLate'),
-];
+function extraOptionPresets(locale: SupportedLocale): string[] {
+    return [
+        t('telegram.poll.extraResults', {}, locale),
+        t('telegram.poll.extraPass', {}, locale),
+        t('telegram.poll.extraMaybe', {}, locale),
+        t('telegram.poll.extraLate', {}, locale),
+    ];
+}
 
 export default new TelegramCommandService();

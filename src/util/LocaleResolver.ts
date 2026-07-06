@@ -1,5 +1,5 @@
 import type { Request } from 'express';
-import { DEFAULT_LOCALE, normalizeLocale } from '../i18n/index.ts';
+import { DEFAULT_LOCALE, normalizeLocale, SupportedLocale } from '../i18n/index.ts';
 import type { Club } from '../model/ClubModels.ts';
 import type { Event } from '../model/EventModels.ts';
 import type { User } from '../model/UserModels.ts';
@@ -12,6 +12,14 @@ const clubRepository = new ClubRepository();
 const eventRepository = new EventRepository();
 const gameRepository = new GameRepository();
 const userRepository = new UserRepository();
+
+export function resolveUserLocale(user: User): SupportedLocale {
+    return normalizeLocale(user.profile?.locale);
+}
+
+export function resolveClubLocale(club: Club): SupportedLocale {
+    return normalizeLocale(club.locale);
+}
 
 export function resolveEffectiveLocale(
     user: User | null | undefined,
