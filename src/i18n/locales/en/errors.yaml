@@ -125,7 +125,6 @@ errors:
   gameNotCreatedWhenStarting: Only a game in CREATED status can be started
   notGamePlayer: Only players in this game can perform this action
 
-  csvParsingError: "{{message}}"
   userNotFoundByUsername: User with Telegram username {{username}} was not found
   noValidGamesInCsv: CSV file does not contain any valid games
 

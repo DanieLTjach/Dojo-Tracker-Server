@@ -160,7 +160,7 @@ export class AchievementService {
 }
 
 function achievementDescription(definition: AchievementDefinition, locale?: string | null): string {
-    return t(`achievements.descriptions.${definition.metric}`, undefined, locale);
+    return t(`achievements.descriptions.${definition.metric}`, {}, locale);
 }
 
 function formatValue(

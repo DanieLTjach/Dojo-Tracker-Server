@@ -428,7 +428,7 @@ describe('Tournament management', () => {
                 .send({});
 
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('tournamentRoundNotCurrent');
+            expect(response.body.errorCode).toBe('tournamentRoundNotStarted');
         });
 
         test('rejects cancelling a round whose games are already finished', async () => {

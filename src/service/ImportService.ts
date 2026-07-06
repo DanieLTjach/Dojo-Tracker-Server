@@ -1,7 +1,11 @@
 import { GameService } from './GameService.ts';
 import { EventService } from './EventService.ts';
 import { UserRepository } from '../repository/UserRepository.ts';
-import { CsvParsingError, NoValidGamesInCsvError } from '../error/ImportErrors.ts';
+import {
+    CsvMissingHeaderOrDataRowError,
+    CsvMissingRequiredColumnError,
+    NoValidGamesInCsvError,
+} from '../error/ImportErrors.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { t } from '../i18n/index.ts';
 import type { GameWithPlayers, PlayerData, Wind } from '../model/GameModels.ts';
@@ -141,7 +145,7 @@ export class ImportService {
     private parseCsv(csvContent: string): { headers: string[], dataRows: string[][] } {
         const lines = csvContent.trim().split('\n');
         if (lines.length < 2) {
-            throw new CsvParsingError(t('import.csvMissingHeaderOrDataRow'));
+            throw new CsvMissingHeaderOrDataRowError();
         }
 
         const headers = lines[0]!.split(',').map(h => h.trim());
@@ -157,7 +161,7 @@ export class ImportService {
             for (const col of PLAYER_COLUMNS) {
                 const expected = `player${p}_${col}`;
                 if (!headers.includes(expected)) {
-                    throw new CsvParsingError(t('import.csvMissingRequiredColumn', { column: expected }));
+                    throw new CsvMissingRequiredColumnError(expected);
                 }
             }
         }

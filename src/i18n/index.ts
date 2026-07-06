@@ -70,15 +70,17 @@ function interpolate(template: string, params: TranslationParams, locale: string
 }
 
 export function isSupportedLocale(locale: string): boolean {
-    return Object.hasOwn(catalogs, locale);
+    return (SUPPORTED_LOCALES as readonly string[]).includes(locale);
 }
 
-export function normalizeLocale(locale: string | null | undefined): string {
-    return locale !== undefined && locale !== null && isSupportedLocale(locale) ? locale : DEFAULT_LOCALE;
+export function normalizeLocale(locale: string | null | undefined): SupportedLocale {
+    return locale !== undefined && locale !== null && isSupportedLocale(locale)
+        ? locale as SupportedLocale
+        : DEFAULT_LOCALE;
 }
 
-function getCatalog(locale?: string): Catalog {
-    return catalogs[normalizeLocale(locale)] ?? {};
+function getCatalog(locale: SupportedLocale): Catalog {
+    return catalogs[locale] ?? {};
 }
 
 /**

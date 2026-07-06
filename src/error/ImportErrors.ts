@@ -1,8 +1,14 @@
 import { BadRequestError } from './BaseErrors.ts';
 
-export class CsvParsingError extends BadRequestError {
-    constructor(message: string) {
-        super(message, 'csvParsingError');
+export class CsvMissingHeaderOrDataRowError extends BadRequestError {
+    constructor() {
+        super('import.csvMissingHeaderOrDataRow');
+    }
+}
+
+export class CsvMissingRequiredColumnError extends BadRequestError {
+    constructor(column: string) {
+        super('import.csvMissingRequiredColumn', { column });
     }
 }
 

@@ -225,8 +225,8 @@ export class ClubMembershipService {
         const message = dedent`
             <b>${t('telegram.notify.addedToClubTitle', { clubName: club.name }, locale)}</b>
 
-            ${t('telegram.notify.addedToClubBody', undefined, locale)}
-            <a href="${config.botUrl}">${t('telegram.notify.openApp', undefined, locale)}</a>
+            ${t('telegram.notify.addedToClubBody', {}, locale)}
+            <a href="${config.botUrl}">${t('telegram.notify.openApp', {}, locale)}</a>
         `;
         void TelegramMessageService.sendDirectMessage(user.telegramId!, message);
     }

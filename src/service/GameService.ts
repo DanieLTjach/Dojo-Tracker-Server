@@ -551,7 +551,7 @@ export class GameService {
         const message = `<a href="${config.botUrl}?startapp=event_${event.id}"><b>${event.name}</b></a>` +
             '\n' + t('telegram.gameLog.addedBy', {
                 gameLink: `<a href="${config.botUrl}?startapp=game_${game.id}"><b>${
-                    t('telegram.gameLog.addedNewGame', undefined, locale)
+                    t('telegram.gameLog.addedNewGame', {}, locale)
                 }</b></a>`,
                 userLink: this.generateUserProfileLink(createdByUser),
             }, locale) + '\n\n' +

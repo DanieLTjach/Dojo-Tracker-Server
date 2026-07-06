@@ -29,6 +29,7 @@ import {
     TeamCountNotDivisibleByFourError,
     MinParticipantsRequiredForTeamConfigError,
     MinParticipantsMustMatchTeamConfigError,
+    TournamentRoundNotStartedError,
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
@@ -280,6 +281,9 @@ export class EventService {
 
         // Only the round that is actually current can be cancelled. A null currentRound (nothing
         // started) or any other round id is rejected.
+        if (tournament.currentRound === null) {
+            throw new TournamentRoundNotStartedError(event.name, roundId);
+        }
         if (tournament.currentRound !== roundId) {
             throw new TournamentRoundNotCurrentError(event.name, tournament.currentRound, roundId);
         }

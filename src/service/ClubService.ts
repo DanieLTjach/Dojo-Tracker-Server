@@ -117,7 +117,7 @@ export class ClubService {
     private logCreatedClub(club: Club, createdBy: number): void {
         const creator = this.userRepository.findUserById(createdBy);
         const locale = resolveEffectiveLocale(null, club);
-        const tr = (key: string) => t(key, undefined, locale);
+        const tr = (key: string) => t(key, {}, locale);
         const message = dedent`
             <b>${tr('telegram.clubLog.createdTitle')}</b>
 
@@ -137,7 +137,7 @@ export class ClubService {
     private logEditedClub(oldClub: Club, newClub: Club, modifiedBy: number): void {
         const modifier = this.userRepository.findUserById(modifiedBy);
         const locale = resolveEffectiveLocale(null, newClub);
-        const tr = (key: string) => t(key, undefined, locale);
+        const tr = (key: string) => t(key, {}, locale);
         const changes: string[] = [];
 
         if (oldClub.name !== newClub.name) {
@@ -199,7 +199,7 @@ export class ClubService {
     private logDeletedClub(club: Club, deletedBy: number): void {
         const deleter = this.userRepository.findUserById(deletedBy);
         const locale = resolveEffectiveLocale(null, club);
-        const tr = (key: string) => t(key, undefined, locale);
+        const tr = (key: string) => t(key, {}, locale);
         const message = dedent`
             <b>${tr('telegram.clubLog.deletedTitle')}</b>
 
