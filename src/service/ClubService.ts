@@ -44,8 +44,8 @@ export class ClubService {
             name: data.name,
             address: data.address ?? null,
             city: data.city ?? null,
-            country: data.country ?? 'UA',
-            locale: data.locale ?? 'uk',
+            country: data.country,
+            locale: data.locale,
             description: data.description ?? null,
             contactInfo: data.contactInfo ?? null,
             isActive: data.isActive ?? true,
@@ -72,8 +72,8 @@ export class ClubService {
             name: data.name,
             address: data.address ?? null,
             city: data.city ?? null,
-            country: data.country ?? oldClub.country,
-            locale: data.locale ?? oldClub.locale,
+            country: data.country,
+            locale: data.locale,
             description: data.description ?? null,
             contactInfo: data.contactInfo ?? null,
             isActive: data.isActive ?? true,
@@ -260,8 +260,8 @@ export interface ClubData {
     name: string;
     address?: string | null | undefined;
     city?: string | null | undefined;
-    country?: string | undefined;
-    locale?: string | undefined;
+    country: string;
+    locale: string;
     description?: string | null | undefined;
     contactInfo?: string | null | undefined;
     isActive?: boolean | null | undefined;

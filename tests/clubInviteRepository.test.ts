@@ -36,6 +36,8 @@ describe('ClubInviteRepository', () => {
             name: 'Invite Repo Club',
             address: null,
             city: null,
+            country: 'UA',
+            locale: 'uk',
             description: null,
             contactInfo: null,
             isActive: true,

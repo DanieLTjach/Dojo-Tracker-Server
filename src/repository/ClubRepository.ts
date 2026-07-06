@@ -101,8 +101,6 @@ export class ClubRepository {
     createClub(params: ClubCreateParams): number {
         const result = this.createClubStatement().get({
             ...params,
-            country: params.country ?? 'UA',
-            locale: params.locale ?? 'uk',
             isActive: booleanToInteger(params.isActive),
             createdAt: params.createdAt.toISOString(),
             modifiedAt: params.createdAt.toISOString(),
@@ -143,8 +141,6 @@ export class ClubRepository {
     updateClub(params: ClubUpdateParams): void {
         this.updateClubStatement().run({
             ...params,
-            country: params.country ?? 'UA',
-            locale: params.locale ?? 'uk',
             isActive: booleanToInteger(params.isActive),
             modifiedAt: params.modifiedAt.toISOString(),
         });
@@ -276,8 +272,8 @@ export interface ClubCreateParams {
     name: string;
     address: string | null;
     city: string | null;
-    country?: string;
-    locale?: string;
+    country: string;
+    locale: string;
     description: string | null;
     contactInfo: string | null;
     isActive: boolean;
@@ -290,8 +286,8 @@ export interface ClubUpdateParams {
     name: string;
     address: string | null;
     city: string | null;
-    country?: string;
-    locale?: string;
+    country: string;
+    locale: string;
     description: string | null;
     contactInfo: string | null;
     isActive: boolean;
