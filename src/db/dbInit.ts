@@ -30,7 +30,7 @@ class DBManager {
         } catch (error) {
             console.error('Failed to initialize database:', error);
             this.closeDB();
-            process.exit(1);
+            throw error;
         }
     }
 
