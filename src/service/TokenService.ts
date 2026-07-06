@@ -4,6 +4,7 @@ import type { TokenPair, DecodedToken } from '../model/AuthModels.ts';
 import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
 import { InvalidTokenError, TokenExpiredError } from '../error/AuthErrors.ts';
+import LogService from './LogService.ts';
 
 export class TokenService {
     /**
@@ -30,6 +31,8 @@ export class TokenService {
             return jwt.verify(token, config.jwtSecret) as DecodedToken;
         } catch (error) {
             if (error instanceof jwt.TokenExpiredError) {
+                const decoded = jwt.decode(token) as DecodedToken | null;
+                LogService.logError(`Received expired JWT token from user ${decoded?.userId}`);
                 throw new TokenExpiredError();
             }
             if (error instanceof jwt.JsonWebTokenError) {
