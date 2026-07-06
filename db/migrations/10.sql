@@ -77,8 +77,3 @@ CREATE INDEX idx_teamMembership_userId ON teamMembership(userId);
 ALTER TABLE userRatingChange ADD COLUMN teamId INTEGER REFERENCES team(id);
 ALTER TABLE userRatingChange ADD COLUMN teamRating INTEGER;
 CREATE INDEX idx_userRatingChange_teamId ON userRatingChange(teamId);
-
--- Locale support: club default locale/country, and per-profile locale override.
-ALTER TABLE club ADD COLUMN country TEXT NOT NULL DEFAULT 'UA';
-ALTER TABLE club ADD COLUMN locale TEXT NOT NULL DEFAULT 'uk';
-ALTER TABLE profile ADD COLUMN locale TEXT;
