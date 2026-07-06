@@ -36,7 +36,7 @@ import { EventService } from './EventService.ts';
 import { GameService } from './GameService.ts';
 import { RatingService } from './RatingService.ts';
 import { UserService } from './UserService.ts';
-import { t } from '../i18n/index.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
 
 const TRACKED_GAME_LOG_ACTIONS = {
     CREATED: {
@@ -494,7 +494,7 @@ export class TrackedGameService {
         }, event);
     }
 
-    private printTrackedGamePlayersLog(players: GamePlayer[], locale: string): string {
+    private printTrackedGamePlayersLog(players: GamePlayer[], locale: SupportedLocale): string {
         return players.map((p, index) => {
             const user = this.userService.getUserById(p.userId);
             return `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>\n   • ${

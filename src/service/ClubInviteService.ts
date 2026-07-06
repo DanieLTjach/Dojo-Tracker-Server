@@ -23,7 +23,7 @@ import {
     NameRequiredForNewUserError,
 } from '../error/ClubErrors.ts';
 import { generateInviteCode } from '../util/InviteCodeUtil.ts';
-import { t } from '../i18n/index.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 const CODE_GENERATION_ATTEMPTS = 10;
@@ -202,7 +202,7 @@ export class ClubInviteService {
         return true;
     }
 
-    private logClubEvent(clubId: number, buildMessage: (locale: string) => string): void {
+    private logClubEvent(clubId: number, buildMessage: (locale: SupportedLocale) => string): void {
         LogService.logInfo(buildMessage(GLOBAL_LOGS_LOCALE), globalClubLogsTopic);
         const clubLogsTopic = this.clubService.getClubTelegramTopics(clubId).clubLogs;
         if (clubLogsTopic !== null) {

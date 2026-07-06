@@ -17,7 +17,7 @@ import { ClubMembershipRepository } from '../repository/ClubMembershipRepository
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
-import { t } from '../i18n/index.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 export class UserService {
@@ -277,7 +277,7 @@ export class UserService {
         });
     }
 
-    private logMessageToUserLogsTopics(user: User, buildMessage: (locale: string) => string) {
+    private logMessageToUserLogsTopics(user: User, buildMessage: (locale: SupportedLocale) => string) {
         this.clubMembershipRepository.findActiveMembershipsByUserId(user.id).forEach(clubMembership => {
             const locale = resolveClubLocale(this.clubService.getClubById(clubMembership.clubId));
             LogService.logInfo(

@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
-import { DEFAULT_LOCALE, t, type TranslationParams } from '../i18n/index.ts';
+import { DEFAULT_LOCALE, type SupportedLocale, t, type TranslationParams } from '../i18n/index.ts';
 
 export class ResponseStatusError extends Error {
     statusCode: number;
@@ -21,7 +21,7 @@ export class ResponseStatusError extends Error {
         this.params = params;
     }
 
-    getLocalizedMessage(locale: string | null): string {
+    getLocalizedMessage(locale: SupportedLocale): string {
         return t(this.translationKey, this.params, locale);
     }
 }

@@ -59,7 +59,7 @@ function isTranslationRef(value: TranslationParamValue): value is TranslationRef
     return value !== null && typeof value === 'object' && 'key' in value;
 }
 
-function interpolate(template: string, params: TranslationParams, locale: string): string {
+function interpolate(template: string, params: TranslationParams, locale: SupportedLocale): string {
     return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
         const value = params[key];
         if (isTranslationRef(value)) {
@@ -88,7 +88,7 @@ function getCatalog(locale: SupportedLocale): Catalog {
  * interpolating any `{{param}}` placeholders. Returns the key itself if it is missing from the
  * catalog, so a typo surfaces visibly instead of throwing.
  */
-export function t(key: string, params?: TranslationParams, locale?: string | null): string {
+export function t(key: string, params?: TranslationParams, locale?: SupportedLocale): string {
     const normalizedLocale = normalizeLocale(locale);
     const template = read(getCatalog(normalizedLocale), key) ?? read(getCatalog(DEFAULT_LOCALE), key);
     if (typeof template !== 'string') {

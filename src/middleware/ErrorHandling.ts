@@ -5,13 +5,13 @@ import { ZodError } from 'zod';
 import { SqliteError } from 'better-sqlite3';
 import LogService from '../service/LogService.ts';
 import { UserService } from '../service/UserService.ts';
-import { DEFAULT_LOCALE, t } from '../i18n/index.ts';
+import { DEFAULT_LOCALE, SupportedLocale, t } from '../i18n/index.ts';
 import { resolveUserLocale } from '../util/LocaleResolver.ts';
 
 const userService = new UserService();
 
 export const handleErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {
-    let locale = DEFAULT_LOCALE;
+    let locale: SupportedLocale = DEFAULT_LOCALE;
     let userInfo = 'unknown';
     if (req.user?.userId) {
         try {

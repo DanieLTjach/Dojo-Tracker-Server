@@ -14,7 +14,7 @@ import { UserService } from './UserService.ts';
 import TelegramMessageService from './TelegramMessageService.ts';
 import LogService from './LogService.ts';
 import { GLOBAL_LOGS_LOCALE, globalClubLogsTopic } from '../model/TelegramTopic.ts';
-import { t, translationRef } from '../i18n/index.ts';
+import { SupportedLocale, t, translationRef } from '../i18n/index.ts';
 import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 export class ClubMembershipService {
     private clubService: ClubService = new ClubService();
@@ -231,7 +231,7 @@ export class ClubMembershipService {
         void TelegramMessageService.sendDirectMessage(user.telegramId!, message);
     }
 
-    private logClubEvent(clubId: number, buildMessage: (locale: string) => string): void {
+    private logClubEvent(clubId: number, buildMessage: (locale: SupportedLocale) => string): void {
         LogService.logInfo(buildMessage(GLOBAL_LOGS_LOCALE), globalClubLogsTopic);
         const clubLogsTopic = this.clubService.getClubTelegramTopics(clubId).clubLogs;
         if (clubLogsTopic !== null) {

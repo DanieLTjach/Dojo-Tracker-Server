@@ -50,7 +50,7 @@ import { GameRepository } from '../repository/GameRepository.ts';
 import { GameCreationBlockedError, TournamentGameNotInCurrentRoundError } from '../error/EventErrors.ts';
 import { AchievementService } from './AchievementService.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
-import { t } from '../i18n/index.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 export class GameService {
@@ -465,7 +465,7 @@ export class GameService {
         );
     }
 
-    formatEventGameLogSection(game: Game, event: Event, locale: string): string {
+    formatEventGameLogSection(game: Game, event: Event, locale: SupportedLocale): string {
         const tr = (key: string) => t(key, {}, locale);
         let section = `<b>${tr('telegram.gameLog.eventLabel')}</b> ${event.name} <code>(ID: ${event.id})</code>`;
         if (event.type === 'TOURNAMENT') {
@@ -501,7 +501,7 @@ export class GameService {
         }, event);
     }
 
-    logMessageToGameLogsTopics(buildMessage: (locale: string) => string, event: Event) {
+    logMessageToGameLogsTopics(buildMessage: (locale: SupportedLocale) => string, event: Event) {
         let clubPrefix = '';
         if (event.clubId !== null) {
             const club = this.clubService.getClubById(event.clubId);
@@ -512,7 +512,7 @@ export class GameService {
         LogService.logInfo(clubPrefix + buildMessage(GLOBAL_LOGS_LOCALE), globalGameLogsTopic);
     }
 
-    private printPlayersLog(players: GamePlayer[], locale: string): string {
+    private printPlayersLog(players: GamePlayer[], locale: SupportedLocale): string {
         const tr = (key: string) => t(key, {}, locale);
         return players.map((p, index) => {
             const user = this.userService.getUserById(p.userId);

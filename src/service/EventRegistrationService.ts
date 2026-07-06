@@ -23,7 +23,7 @@ import LogService from './LogService.ts';
 import { ProfileService } from './ProfileService.ts';
 import TelegramMessageService from './TelegramMessageService.ts';
 import { UserService } from './UserService.ts';
-import { t, translationRef } from '../i18n/index.ts';
+import { SupportedLocale, t, translationRef } from '../i18n/index.ts';
 import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 
 export class EventRegistrationService {
@@ -409,7 +409,7 @@ export class EventRegistrationService {
         void TelegramMessageService.sendDirectMessage(target.telegramId, message);
     }
 
-    private logEvent(event: Event, buildMessage: (locale: string) => string): void {
+    private logEvent(event: Event, buildMessage: (locale: SupportedLocale) => string): void {
         LogService.logInfo(buildMessage(GLOBAL_LOGS_LOCALE), globalClubLogsTopic);
         if (event.clubId !== null) {
             const clubLogsTopic = this.clubService.getClubTelegramTopics(event.clubId).clubLogs;
@@ -420,7 +420,7 @@ export class EventRegistrationService {
         }
     }
 
-    private formatParticipant(user: User, locale: string): string {
+    private formatParticipant(user: User, locale: SupportedLocale): string {
         const profile = this.profileService.getProfileByUserId(user.id);
         const firstName = profile?.firstName ?? '—';
         const lastName = profile?.lastName ?? '—';
