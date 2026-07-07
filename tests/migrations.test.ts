@@ -713,7 +713,7 @@ describe('Database Migrations', () => {
     });
 
     test('migration 11 adds club country/locale defaults and nullable profile locale', () => {
-        const db = createMigratedDb('11.sql');
+        const db = createMigratedDb(11);
 
         const club = db.prepare('SELECT country, locale FROM club WHERE id = 1').get() as Record<string, unknown>;
         expect(club).toEqual({ country: 'UA', locale: 'uk' });
