@@ -24,6 +24,7 @@ export function createAuthRouter(authController: AuthController = new AuthContro
     router.post('/auth/google', asyncHandler((req, res) => authController.authenticateGoogle(req, res)));
     router.post('/auth/telegram', asyncHandler((req, res) => authController.authenticateTelegram(req, res)));
     router.post('/auth/discord', asyncHandler((req, res) => authController.authenticateDiscord(req, res)));
+    router.post('/auth/register', withTransaction((req, res) => authController.registerExternal(req, res)));
     router.post('/auth/link/google', requireAuth, asyncHandler((req, res) => authController.linkGoogle(req, res)));
     router.post('/auth/link/telegram', requireAuth, asyncHandler((req, res) => authController.linkTelegram(req, res)));
     router.post('/auth/link/discord', requireAuth, asyncHandler((req, res) => authController.linkDiscord(req, res)));

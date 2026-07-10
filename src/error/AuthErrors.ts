@@ -61,6 +61,12 @@ export class InvalidExternalAuthTokenError extends UnauthorizedError {
     }
 }
 
+export class InvalidExternalAuthRegistrationTokenError extends UnauthorizedError {
+    constructor() {
+        super('invalidExternalAuthRegistrationToken');
+    }
+}
+
 export class ExternalAuthProviderUnavailableError extends ServiceUnavailableError {
     constructor(provider: AuthProvider) {
         super('externalAuthProviderUnavailable', { provider });

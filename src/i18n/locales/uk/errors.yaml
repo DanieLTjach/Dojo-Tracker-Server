@@ -12,6 +12,7 @@ errors:
   invalidToken: Невалідний токен автентифікації. Перезайдіть в додаток
   authProviderNotConfigured: Провайдер автентифікації {{provider}} не налаштований
   invalidExternalAuthToken: Невалідний токен автентифікації {{provider}}
+  invalidExternalAuthRegistrationToken: Токен реєстрації зовнішньої автентифікації невалідний або прострочений
   externalAuthProviderUnavailable: Провайдер автентифікації {{provider}} тимчасово недоступний
   authProviderIdentityAlreadyLinked: Обліковий запис {{provider}} вже прив'язаний до іншого користувача
   userAlreadyHasAuthProvider: Користувач вже має прив'язаний обліковий запис {{provider}}

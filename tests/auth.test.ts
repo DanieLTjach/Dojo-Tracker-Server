@@ -24,6 +24,7 @@ import {
     TelegramAuthProviderAdapter,
     type ExternalAuthProviderAdapter,
 } from '../src/service/ExternalAuthProviderRegistry.ts';
+import { hashRegistrationToken } from '../src/service/ExternalAuthRegistrationService.ts';
 
 const app = express();
 app.use(express.json());
@@ -291,6 +292,7 @@ describe('Authentication API Endpoints', () => {
     describe('external browser auth', () => {
         it('supports a LINE-like adapter without provider-specific AuthService methods', async () => {
             const lineProvider = 'LINE' as AuthProvider;
+            dbManager.db.prepare("INSERT INTO authProvider (provider) VALUES ('LINE')").run();
             const registry = new ExternalAuthProviderRegistry([
                 new FakeExternalAuthProviderAdapter(lineProvider, {
                     'line-token': {
@@ -301,16 +303,21 @@ describe('Authentication API Endpoints', () => {
                 }),
             ]);
 
-            const result = await new AuthService(registry).authenticateExternal(
-                lineProvider,
-                { credential: 'line-token' }
-            );
+            try {
+                const result = await new AuthService(registry).authenticateExternal(
+                    lineProvider,
+                    { credential: 'line-token' }
+                );
 
-            expect(result).toMatchObject({
-                registrationRequired: true,
-                provider: 'LINE',
-                suggestedName: 'LINE User',
-            });
+                expect(result).toMatchObject({
+                    registrationRequired: true,
+                    provider: 'LINE',
+                    suggestedName: 'LINE User',
+                });
+            } finally {
+                dbManager.db.prepare("DELETE FROM pendingExternalAuthRegistration WHERE provider = 'LINE'").run();
+                dbManager.db.prepare("DELETE FROM authProvider WHERE provider = 'LINE'").run();
+            }
         });
 
         it('lists configured auth providers without authentication', async () => {
@@ -372,6 +379,7 @@ describe('Authentication API Endpoints', () => {
 
             expect(response.body).toEqual({
                 registrationRequired: true,
+                registrationToken: expect.any(String),
                 provider: 'GOOGLE',
                 suggestedName: 'Google New',
                 profile: {
@@ -394,9 +402,16 @@ describe('Authentication API Endpoints', () => {
                 }, {})
             );
 
-            const response = await request(externalAuthApp)
+            const authResponse = await request(externalAuthApp)
                 .post('/api/auth/google')
-                .send({ credential: 'google-register-token', name: 'Google Registered' })
+                .send({ credential: 'google-register-token' })
+                .expect(200);
+            const response = await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    name: 'Google Registered',
+                })
                 .expect(200);
 
             const user = userRepository.findUserByName('Google Registered')!;
@@ -405,6 +420,127 @@ describe('Authentication API Endpoints', () => {
             expect(user.telegramId).toBeNull();
             expect(identity.userId).toBe(user.id);
             expect(identity.email).toBe('registered@example.com');
+        });
+
+        it('stores only a hash of the registration token', async () => {
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-hashed-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-hashed',
+                        displayName: 'Google Hashed',
+                    },
+                }, {})
+            );
+
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-hashed-token' })
+                .expect(200);
+            const registrationToken = authResponse.body.registrationToken as string;
+            const stored = dbManager.db.prepare(`
+                SELECT tokenHash
+                FROM pendingExternalAuthRegistration
+                WHERE provider = 'GOOGLE' AND providerUserId = 'google-hashed'`).get() as { tokenHash: string };
+
+            expect(stored.tokenHash).toBe(hashRegistrationToken(registrationToken));
+            expect(stored.tokenHash).not.toContain(registrationToken);
+        });
+
+        it('keeps a registration token usable after a name conflict and consumes it once on success', async () => {
+            userService.registerUser('Registration Name Collision', undefined, undefined, 0);
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-registration-retry': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-registration-retry',
+                        displayName: 'Registration Retry',
+                    },
+                }, {})
+            );
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-registration-retry' })
+                .expect(200);
+            const registrationToken = authResponse.body.registrationToken as string;
+
+            await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({ registrationToken, name: 'Registration Name Collision' })
+                .expect(400);
+            await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({ registrationToken, name: 'Registration Retry Success' })
+                .expect(200);
+            const consumedResponse = await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({ registrationToken, name: 'Cannot Reuse Registration' })
+                .expect(401);
+
+            expect(consumedResponse.body.errorCode).toBe('invalidExternalAuthRegistrationToken');
+        });
+
+        it('rejects expired and malformed registration tokens', async () => {
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-expired-registration': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-expired-registration',
+                    },
+                }, {})
+            );
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-expired-registration' })
+                .expect(200);
+            const registrationToken = authResponse.body.registrationToken as string;
+            dbManager.db.prepare(`
+                UPDATE pendingExternalAuthRegistration
+                SET expiresAt = :expiresAt
+                WHERE tokenHash = :tokenHash`).run({
+                expiresAt: new Date(0).toISOString(),
+                tokenHash: hashRegistrationToken(registrationToken),
+            });
+
+            await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({ registrationToken, name: 'Expired Registration' })
+                .expect(401);
+            await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({ registrationToken: 'not-a-real-token', name: 'Malformed Registration' })
+                .expect(401);
+        });
+
+        it('rejects registration when the provider identity was linked concurrently', async () => {
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-registration-race': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-registration-race',
+                    },
+                }, {})
+            );
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-registration-race' })
+                .expect(200);
+            const linkedUser = userService.registerUser('Concurrent Linked User', undefined, undefined, 0);
+            authProviderIdentityRepository.createIdentity(linkedUser.id, {
+                provider: AuthProvider.GOOGLE,
+                providerUserId: 'google-registration-race',
+            });
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    name: 'Concurrent Registration',
+                })
+                .expect(409);
+
+            expect(response.body.errorCode).toBe('authProviderIdentityAlreadyLinked');
+            expect(userRepository.findUserByName('Concurrent Registration')).toBeUndefined();
         });
 
         it('does not auto-link Google users by display name or email', async () => {
@@ -467,9 +603,16 @@ describe('Authentication API Endpoints', () => {
                 })
             );
 
-            const response = await request(externalAuthApp)
+            const authResponse = await request(externalAuthApp)
                 .post('/api/auth/telegram')
-                .send({ idToken: 'telegram-new-token', name: 'Telegram New' })
+                .send({ idToken: 'telegram-new-token' })
+                .expect(200);
+            const response = await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    name: 'Telegram New',
+                })
                 .expect(200);
 
             const user = userRepository.findUserByName('Telegram New')!;
@@ -608,6 +751,7 @@ describe('Authentication API Endpoints', () => {
 
             expect(response.body).toEqual({
                 registrationRequired: true,
+                registrationToken: expect.any(String),
                 provider: 'DISCORD',
                 suggestedName: 'Discord New',
                 profile: {
@@ -629,9 +773,16 @@ describe('Authentication API Endpoints', () => {
                 })
             );
 
-            const response = await request(externalAuthApp)
+            const authResponse = await request(externalAuthApp)
                 .post('/api/auth/discord')
-                .send({ code: 'discord-register-code', name: 'Discord Registered' })
+                .send({ code: 'discord-register-code' })
+                .expect(200);
+            const response = await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    name: 'Discord Registered',
+                })
                 .expect(200);
 
             const user = userRepository.findUserByName('Discord Registered')!;

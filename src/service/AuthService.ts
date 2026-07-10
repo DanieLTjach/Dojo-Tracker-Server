@@ -25,6 +25,7 @@ import { UserIsNotActive } from '../error/UserErrors.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { SYSTEM_USER_ID } from '../../config/constants.ts';
 import config from '../../config/config.ts';
+import { ExternalAuthRegistrationService } from './ExternalAuthRegistrationService.ts';
 
 type ExternalAuthResult = TokenPair | ExternalAuthRegistrationRequired;
 
@@ -33,6 +34,7 @@ export class AuthService {
     private tokenService: TokenService = new TokenService();
     private authProviderIdentityRepository: AuthProviderIdentityRepository = new AuthProviderIdentityRepository();
     private externalAuthProviderRegistry: ExternalAuthProviderRegistry;
+    private externalAuthRegistrationService = new ExternalAuthRegistrationService();
 
     constructor(externalAuthProviderRegistry: ExternalAuthProviderRegistry = new ExternalAuthProviderRegistry()) {
         this.externalAuthProviderRegistry = externalAuthProviderRegistry;
@@ -60,12 +62,11 @@ export class AuthService {
 
     async authenticateExternal(
         provider: AuthProvider,
-        input: ExternalAuthProviderInput,
-        name?: string
+        input: ExternalAuthProviderInput
     ): Promise<ExternalAuthResult> {
         const adapter = this.externalAuthProviderRegistry.getAdapter(provider);
         const { profile } = await adapter.verify(input);
-        return this.resolveExternalAuth(profile, adapter, name);
+        return this.resolveExternalAuth(profile, adapter);
     }
 
     async linkExternal(
@@ -91,6 +92,34 @@ export class AuthService {
 
     getAvailableProviders(): AvailableAuthProviderDTO[] {
         return this.externalAuthProviderRegistry.getAvailableProviders();
+    }
+
+    registerExternal(registrationToken: string, name: string): TokenPair {
+        return dbManager.db.transaction(() => {
+            const pending = this.externalAuthRegistrationService.getValid(registrationToken);
+            const profile = pending.profile;
+            const adapter = this.externalAuthProviderRegistry.getAdapter(profile.provider);
+
+            const existingIdentity = this.authProviderIdentityRepository.findIdentity(
+                profile.provider,
+                profile.providerUserId
+            );
+            const existingLegacyUser = adapter.findLegacyUser?.(profile, this.userService);
+            if (existingIdentity !== undefined || existingLegacyUser !== undefined) {
+                throw new AuthProviderIdentityAlreadyLinkedError(profile.provider);
+            }
+
+            const registrationFields = adapter.getRegistrationUserFields?.(profile) ?? {};
+            const user = this.userService.registerUser(
+                name,
+                registrationFields.telegramUsername,
+                registrationFields.telegramId,
+                SYSTEM_USER_ID
+            );
+            this.authProviderIdentityRepository.createIdentity(user.id, profile);
+            this.externalAuthRegistrationService.consume(pending.tokenHash);
+            return this.tokenService.createTokenPair(user);
+        })();
     }
 
     /**
@@ -191,8 +220,7 @@ export class AuthService {
 
     private resolveExternalAuth(
         profile: VerifiedExternalProfile,
-        adapter: ExternalAuthProviderAdapter,
-        name?: string
+        adapter: ExternalAuthProviderAdapter
     ): ExternalAuthResult {
         return dbManager.db.transaction(() => {
             const existingIdentity = this.authProviderIdentityRepository.findIdentity(
@@ -212,19 +240,7 @@ export class AuthService {
                 return this.tokenService.createTokenPair(existingLegacyUser);
             }
 
-            if (name === undefined) {
-                return this.buildRegistrationRequired(profile);
-            }
-
-            const registrationFields = adapter.getRegistrationUserFields?.(profile) ?? {};
-            const user = this.userService.registerUser(
-                name,
-                registrationFields.telegramUsername,
-                registrationFields.telegramId,
-                SYSTEM_USER_ID
-            );
-            this.authProviderIdentityRepository.createIdentity(user.id, profile);
-            return this.tokenService.createTokenPair(user);
+            return this.externalAuthRegistrationService.create(profile);
         })();
     }
 
@@ -276,19 +292,6 @@ export class AuthService {
         }
 
         this.authProviderIdentityRepository.createIdentity(userId, profile);
-    }
-
-    private buildRegistrationRequired(profile: VerifiedExternalProfile): ExternalAuthRegistrationRequired {
-        return {
-            registrationRequired: true,
-            provider: profile.provider,
-            suggestedName: profile.displayName ?? profile.username ?? null,
-            profile: {
-                displayName: profile.displayName ?? null,
-                email: profile.email ?? null,
-                username: profile.username ?? null,
-            },
-        };
     }
 
     private validateUserIsActive(userId: number, isActive: boolean): void {

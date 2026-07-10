@@ -608,6 +608,23 @@ describe('Database Migrations', () => {
             { name: 'modifiedAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
         ]);
 
+        const pendingRegistrationColumns = (
+            db.prepare('PRAGMA table_info(pendingExternalAuthRegistration)').all() as Array<{
+                name: string;
+                type: string;
+                notnull: number;
+                dflt_value: string | null;
+            }>
+        ).map(({ name, type, notnull, dflt_value }) => ({ name, type, notnull, dflt_value }));
+        expect(pendingRegistrationColumns).toEqual([
+            { name: 'tokenHash', type: 'TEXT', notnull: 1, dflt_value: null },
+            { name: 'provider', type: 'TEXT', notnull: 1, dflt_value: null },
+            { name: 'providerUserId', type: 'TEXT', notnull: 1, dflt_value: null },
+            { name: 'profileJson', type: 'TEXT', notnull: 1, dflt_value: null },
+            { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+            { name: 'expiresAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null },
+        ]);
+
         const identities = db.prepare(`
       SELECT userId, provider, providerUserId, displayName, email, username, createdAt, modifiedAt
       FROM authProviderIdentity

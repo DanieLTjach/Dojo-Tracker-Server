@@ -1,7 +1,12 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { AuthService } from '../service/AuthService.ts';
-import { googleAuthSchema, telegramBrowserAuthSchema, discordAuthSchema } from '../schema/AuthSchemas.ts';
+import {
+    googleAuthSchema,
+    telegramBrowserAuthSchema,
+    discordAuthSchema,
+    externalAuthRegistrationSchema,
+} from '../schema/AuthSchemas.ts';
 import { AuthProvider } from '../model/AuthProviderModels.ts';
 
 export class AuthController {
@@ -28,14 +33,14 @@ export class AuthController {
     }
 
     async authenticateGoogle(req: Request, res: Response) {
-        const { body: { credential, name } } = googleAuthSchema.parse(req);
-        const result = await this.authService.authenticateExternal(AuthProvider.GOOGLE, { credential }, name);
+        const { body: { credential } } = googleAuthSchema.parse(req);
+        const result = await this.authService.authenticateExternal(AuthProvider.GOOGLE, { credential });
         return res.status(StatusCodes.OK).json(result);
     }
 
     async authenticateTelegram(req: Request, res: Response) {
-        const { body: { idToken, name } } = telegramBrowserAuthSchema.parse(req);
-        const result = await this.authService.authenticateExternal(AuthProvider.TELEGRAM, { idToken }, name);
+        const { body: { idToken } } = telegramBrowserAuthSchema.parse(req);
+        const result = await this.authService.authenticateExternal(AuthProvider.TELEGRAM, { idToken });
         return res.status(StatusCodes.OK).json(result);
     }
 
@@ -52,8 +57,8 @@ export class AuthController {
     }
 
     async authenticateDiscord(req: Request, res: Response) {
-        const { body: { code, name } } = discordAuthSchema.parse(req);
-        const result = await this.authService.authenticateExternal(AuthProvider.DISCORD, { code }, name);
+        const { body: { code } } = discordAuthSchema.parse(req);
+        const result = await this.authService.authenticateExternal(AuthProvider.DISCORD, { code });
         return res.status(StatusCodes.OK).json(result);
     }
 
@@ -70,6 +75,12 @@ export class AuthController {
 
     getAvailableProviders(_req: Request, res: Response) {
         const result = this.authService.getAvailableProviders();
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    registerExternal(req: Request, res: Response) {
+        const { body: { registrationToken, name } } = externalAuthRegistrationSchema.parse(req);
+        const result = this.authService.registerExternal(registrationToken, name);
         return res.status(StatusCodes.OK).json(result);
     }
 }

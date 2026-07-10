@@ -20,6 +20,19 @@ CREATE TABLE authProviderIdentity (
 
 CREATE INDEX idx_auth_provider_identity_user_id ON authProviderIdentity(userId);
 
+CREATE TABLE pendingExternalAuthRegistration (
+    tokenHash TEXT NOT NULL PRIMARY KEY,
+    provider TEXT NOT NULL REFERENCES authProvider(provider),
+    providerUserId TEXT NOT NULL,
+    profileJson TEXT NOT NULL,
+    createdAt TIMESTAMP NOT NULL,
+    expiresAt TIMESTAMP NOT NULL,
+    UNIQUE (provider, providerUserId)
+);
+
+CREATE INDEX idx_pending_external_auth_registration_expires_at
+    ON pendingExternalAuthRegistration(expiresAt);
+
 INSERT INTO authProviderIdentity (
     userId,
     provider,
