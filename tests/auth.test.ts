@@ -32,16 +32,18 @@ app.use('/api', authRoutes);
 app.use(handleErrors);
 
 class FakeExternalAuthProviderAdapter implements ExternalAuthProviderAdapter {
-    readonly flows: ExternalAuthFlow[] = ['BROWSER'];
+    readonly flows: ExternalAuthFlow[];
     readonly provider: AuthProvider;
     private profiles: Record<string, VerifiedExternalProfile>;
 
     constructor(
         provider: AuthProvider,
-        profiles: Record<string, VerifiedExternalProfile>
+        profiles: Record<string, VerifiedExternalProfile>,
+        flows: ExternalAuthFlow[] = ['BROWSER']
     ) {
         this.provider = provider;
         this.profiles = profiles;
+        this.flows = flows;
     }
 
     isConfigured(): boolean {
@@ -54,7 +56,15 @@ class FakeExternalAuthProviderAdapter implements ExternalAuthProviderAdapter {
             : 'idToken' in input
             ? input.idToken
             : input.code;
-        return { profile: this.profiles[token]! };
+        const result: VerifiedExternalAuth = { profile: this.profiles[token]! };
+        if (this.provider === AuthProvider.DISCORD && 'flow' in input && input.flow === 'ACTIVITY') {
+            result.providerSession = {
+                provider: AuthProvider.DISCORD,
+                accessToken: `discord-access-${token}`,
+                expiresIn: 3600,
+            };
+        }
+        return result;
     }
 }
 
@@ -69,7 +79,11 @@ class FakeExternalAuthTokenVerifier extends ExternalAuthProviderRegistry {
             new TelegramAuthProviderAdapter({
                 verify: async (idToken: string) => telegramProfiles[idToken]!,
             }),
-            new FakeExternalAuthProviderAdapter(AuthProvider.DISCORD, discordProfiles),
+            new FakeExternalAuthProviderAdapter(
+                AuthProvider.DISCORD,
+                discordProfiles,
+                ['BROWSER', 'ACTIVITY']
+            ),
         ]);
     }
 }
@@ -329,7 +343,7 @@ describe('Authentication API Endpoints', () => {
 
             expect(response.body).toEqual([
                 { provider: 'GOOGLE', flows: ['BROWSER'] },
-                { provider: 'DISCORD', flows: ['BROWSER'] },
+                { provider: 'DISCORD', flows: ['BROWSER', 'ACTIVITY'] },
             ]);
         });
 
@@ -727,10 +741,15 @@ describe('Authentication API Endpoints', () => {
 
             const response = await request(externalAuthApp)
                 .post('/api/auth/discord')
-                .send({ code: 'discord-existing-code' })
+                .send({
+                    flow: 'BROWSER',
+                    code: 'discord-existing-code',
+                    codeVerifier: 'a'.repeat(43),
+                })
                 .expect(200);
 
             expect(response.body).toHaveProperty('accessToken');
+            expect(response.body).not.toHaveProperty('providerSession');
         });
 
         it('requires explicit registration for an unknown Discord identity', async () => {
@@ -746,7 +765,7 @@ describe('Authentication API Endpoints', () => {
 
             const response = await request(externalAuthApp)
                 .post('/api/auth/discord')
-                .send({ code: 'discord-new-code' })
+                .send({ flow: 'ACTIVITY', code: 'discord-new-code' })
                 .expect(200);
 
             expect(response.body).toEqual({
@@ -759,7 +778,17 @@ describe('Authentication API Endpoints', () => {
                     email: null,
                     username: null,
                 },
+                providerSession: {
+                    provider: 'DISCORD',
+                    accessToken: 'discord-access-discord-new-code',
+                    expiresIn: 3600,
+                },
             });
+            const pendingProfile = dbManager.db.prepare(`
+                SELECT profileJson
+                FROM pendingExternalAuthRegistration
+                WHERE provider = 'DISCORD' AND providerUserId = 'discord-new'`).get() as { profileJson: string };
+            expect(pendingProfile.profileJson).not.toContain('discord-access-discord-new-code');
         });
 
         it('creates a Discord-only user after explicit registration', async () => {
@@ -775,7 +804,7 @@ describe('Authentication API Endpoints', () => {
 
             const authResponse = await request(externalAuthApp)
                 .post('/api/auth/discord')
-                .send({ code: 'discord-register-code' })
+                .send({ flow: 'ACTIVITY', code: 'discord-register-code' })
                 .expect(200);
             const response = await request(externalAuthApp)
                 .post('/api/auth/register')
@@ -807,7 +836,7 @@ describe('Authentication API Endpoints', () => {
             const linkResponse = await request(externalAuthApp)
                 .post('/api/auth/link/discord')
                 .set('Authorization', createAuthHeader(user.id))
-                .send({ code: 'discord-link-code' })
+                .send({ flow: 'ACTIVITY', code: 'discord-link-code' })
                 .expect(200);
 
             expect(linkResponse.body).toEqual({
@@ -816,6 +845,11 @@ describe('Authentication API Endpoints', () => {
                 email: null,
                 username: null,
                 linkedAt: expect.any(String),
+                providerSession: {
+                    provider: 'DISCORD',
+                    accessToken: 'discord-access-discord-link-code',
+                    expiresIn: 3600,
+                },
             });
         });
     });

@@ -57,14 +57,14 @@ export class AuthController {
     }
 
     async authenticateDiscord(req: Request, res: Response) {
-        const { body: { code } } = discordAuthSchema.parse(req);
-        const result = await this.authService.authenticateExternal(AuthProvider.DISCORD, { code });
+        const { body } = discordAuthSchema.parse(req);
+        const result = await this.authService.authenticateExternal(AuthProvider.DISCORD, body);
         return res.status(StatusCodes.OK).json(result);
     }
 
     async linkDiscord(req: Request, res: Response) {
-        const { body: { code } } = discordAuthSchema.parse(req);
-        const result = await this.authService.linkExternal(req.user!.userId, AuthProvider.DISCORD, { code });
+        const { body } = discordAuthSchema.parse(req);
+        const result = await this.authService.linkExternal(req.user!.userId, AuthProvider.DISCORD, body);
         return res.status(StatusCodes.OK).json(result);
     }
 

@@ -15,9 +15,17 @@ export const telegramBrowserAuthSchema = z.object({
 });
 
 export const discordAuthSchema = z.object({
-    body: z.object({
-        code: z.string().trim().min(1, 'Discord code is required'),
-    }),
+    body: z.discriminatedUnion('flow', [
+        z.object({
+            flow: z.literal('BROWSER'),
+            code: z.string().trim().min(1, 'Discord code is required'),
+            codeVerifier: z.string().trim().min(43, 'Discord PKCE code verifier is invalid').max(128),
+        }),
+        z.object({
+            flow: z.literal('ACTIVITY'),
+            code: z.string().trim().min(1, 'Discord code is required'),
+        }),
+    ]),
 });
 
 export const externalAuthRegistrationSchema = z.object({

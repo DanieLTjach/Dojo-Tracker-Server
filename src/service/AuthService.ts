@@ -6,6 +6,7 @@ import {
     AuthProvider,
     type AvailableAuthProviderDTO,
     type ExternalAuthProviderInput,
+    type ExternalAuthProviderSession,
     type ExternalAuthRegistrationRequired,
     type LinkedAuthProviderDTO,
     type VerifiedExternalProfile,
@@ -27,7 +28,13 @@ import { SYSTEM_USER_ID } from '../../config/constants.ts';
 import config from '../../config/config.ts';
 import { ExternalAuthRegistrationService } from './ExternalAuthRegistrationService.ts';
 
-type ExternalAuthResult = TokenPair | ExternalAuthRegistrationRequired;
+type ExternalAuthResult = (TokenPair | ExternalAuthRegistrationRequired) & {
+    providerSession?: ExternalAuthProviderSession;
+};
+
+type ExternalAuthLinkResult = LinkedAuthProviderDTO & {
+    providerSession?: ExternalAuthProviderSession;
+};
 
 export class AuthService {
     private userService: UserService = new UserService();
@@ -65,18 +72,20 @@ export class AuthService {
         input: ExternalAuthProviderInput
     ): Promise<ExternalAuthResult> {
         const adapter = this.externalAuthProviderRegistry.getAdapter(provider);
-        const { profile } = await adapter.verify(input);
-        return this.resolveExternalAuth(profile, adapter);
+        const { profile, providerSession } = await adapter.verify(input);
+        const result = this.resolveExternalAuth(profile, adapter);
+        return providerSession === undefined ? result : { ...result, providerSession };
     }
 
     async linkExternal(
         userId: number,
         provider: AuthProvider,
         input: ExternalAuthProviderInput
-    ): Promise<LinkedAuthProviderDTO> {
+    ): Promise<ExternalAuthLinkResult> {
         const adapter = this.externalAuthProviderRegistry.getAdapter(provider);
-        const { profile } = await adapter.verify(input);
-        return this.linkExternalAuthProvider(userId, profile, adapter);
+        const { profile, providerSession } = await adapter.verify(input);
+        const result = this.linkExternalAuthProvider(userId, profile, adapter);
+        return providerSession === undefined ? result : { ...result, providerSession };
     }
 
     getLinkedProviders(userId: number): LinkedAuthProviderDTO[] {

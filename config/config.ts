@@ -9,6 +9,7 @@ interface Config {
     telegramLoginClientId: string | undefined;
     discordClientId: string | undefined;
     discordClientSecret: string | undefined;
+    discordBrowserRedirectUri: string | undefined;
     frontendUrl: string;
     botUrl: string;
     botToken: string;
@@ -56,6 +57,17 @@ function parseBooleanEnvVariable(varName: string, defaultValue: boolean): boolea
     throw new Error(`${varName} environment variable must be either 'true' or 'false'`);
 }
 
+export function validateOptionalConfigGroup(groupName: string, values: Record<string, string | undefined>): void {
+    const configuredValues = Object.entries(values).filter(([, value]) => value !== undefined);
+    if (configuredValues.length > 0 && configuredValues.length !== Object.keys(values).length) {
+        const missingNames = Object.entries(values)
+            .filter(([, value]) => value === undefined)
+            .map(([name]) => name)
+            .join(', ');
+        throw new Error(`${groupName} configuration is incomplete. Missing: ${missingNames}`);
+    }
+}
+
 const env = getRequiredStringEnvVariable('NODE_ENV');
 
 const globalLogsChatId = tryParseIntEnvVariable('GLOBAL_LOGS_CHAT_ID');
@@ -67,6 +79,12 @@ if (env === 'production') {
 }
 
 const tournamentMode = process.env['TOURNAMENT_MODE'] === 'true';
+const discordConfig = {
+    DISCORD_CLIENT_ID: process.env['DISCORD_CLIENT_ID'],
+    DISCORD_CLIENT_SECRET: process.env['DISCORD_CLIENT_SECRET'],
+    DISCORD_BROWSER_REDIRECT_URI: process.env['DISCORD_BROWSER_REDIRECT_URI'],
+};
+validateOptionalConfigGroup('Discord', discordConfig);
 
 const config: Config = {
     env: getRequiredStringEnvVariable('NODE_ENV'),
@@ -78,8 +96,9 @@ const config: Config = {
     authInitDataValiditySeconds: tryParseIntEnvVariable('AUTH_INIT_DATA_VALIDITY_SECONDS') || 86400,
     googleClientId: process.env['GOOGLE_CLIENT_ID'],
     telegramLoginClientId: process.env['TELEGRAM_LOGIN_CLIENT_ID'],
-    discordClientId: process.env['DISCORD_CLIENT_ID'],
-    discordClientSecret: process.env['DISCORD_CLIENT_SECRET'],
+    discordClientId: discordConfig.DISCORD_CLIENT_ID,
+    discordClientSecret: discordConfig.DISCORD_CLIENT_SECRET,
+    discordBrowserRedirectUri: discordConfig.DISCORD_BROWSER_REDIRECT_URI,
     frontendUrl: getRequiredStringEnvVariable('FRONTEND_URL'),
     botUrl: getRequiredStringEnvVariable('BOT_URL'),
     globalLogsChatId: globalLogsChatId,

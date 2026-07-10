@@ -1,7 +1,12 @@
 import { OAuth2Client } from 'google-auth-library';
 import { createRemoteJWKSet, errors, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import config from '../../config/config.ts';
-import { AuthProvider, type VerifiedExternalProfile } from '../model/AuthProviderModels.ts';
+import {
+    AuthProvider,
+    type DiscordExternalAuthInput,
+    type VerifiedExternalAuth,
+    type VerifiedExternalProfile,
+} from '../model/AuthProviderModels.ts';
 import {
     AuthProviderNotConfiguredError,
     ExternalAuthProviderUnavailableError,
@@ -134,89 +139,111 @@ export class TelegramAuthTokenVerifier {
 }
 
 export class DiscordAuthTokenVerifier {
-    async verify(code: string): Promise<VerifiedExternalProfile> {
+    private fetch: typeof fetch;
+
+    constructor(fetchImplementation: typeof fetch = globalThis.fetch) {
+        this.fetch = fetchImplementation;
+    }
+
+    async verify(input: DiscordExternalAuthInput): Promise<VerifiedExternalAuth> {
         if (
             config.discordClientId === undefined ||
-            config.discordClientSecret === undefined
+            config.discordClientSecret === undefined ||
+            config.discordBrowserRedirectUri === undefined
         ) {
             throw new AuthProviderNotConfiguredError(AuthProvider.DISCORD);
         }
 
         try {
-            const redirectUri = `${config.frontendUrl}/auth/discord/callback`;
-            const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+            const tokenRequest = new URLSearchParams({
+                client_id: config.discordClientId,
+                client_secret: config.discordClientSecret,
+                grant_type: 'authorization_code',
+                code: input.code,
+            });
+            if (input.flow === 'BROWSER') {
+                tokenRequest.set('redirect_uri', config.discordBrowserRedirectUri);
+                tokenRequest.set('code_verifier', input.codeVerifier);
+            }
+
+            const tokenResponse = await this.fetch('https://discord.com/api/oauth2/token', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: new URLSearchParams({
-                    client_id: config.discordClientId,
-                    client_secret: config.discordClientSecret,
-                    grant_type: 'authorization_code',
-                    code: code,
-                    redirect_uri: redirectUri,
-                }).toString(),
+                body: tokenRequest.toString(),
             });
 
             if (!tokenResponse.ok) {
-                throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
+                this.throwDiscordResponseError(tokenResponse.status);
             }
 
-            const tokenData = await tokenResponse.json() as { access_token: string };
+            const tokenData = await tokenResponse.json() as { access_token?: unknown, expires_in?: unknown };
             const accessToken = tokenData.access_token;
-            if (!accessToken) {
-                throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
+            const expiresIn = tokenData.expires_in;
+            if (typeof accessToken !== 'string' || typeof expiresIn !== 'number' || expiresIn <= 0) {
+                throw new ExternalAuthProviderUnavailableError(AuthProvider.DISCORD);
             }
 
-            const userResponse = await fetch('https://discord.com/api/v10/users/@me', {
+            const userResponse = await this.fetch('https://discord.com/api/v10/users/@me', {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
                 },
             });
 
             if (!userResponse.ok) {
-                throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
+                this.throwDiscordResponseError(userResponse.status);
             }
 
             const userData = await userResponse.json() as {
-                id: string;
-                username: string;
-                global_name?: string;
-                email?: string;
+                id?: unknown;
+                username?: unknown;
+                global_name?: unknown;
             };
 
-            if (!userData.id) {
-                throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
+            if (
+                typeof userData.id !== 'string' ||
+                !/^\d+$/.test(userData.id) ||
+                typeof userData.username !== 'string'
+            ) {
+                throw new ExternalAuthProviderUnavailableError(AuthProvider.DISCORD);
             }
 
             const profile: VerifiedExternalProfile = {
                 provider: AuthProvider.DISCORD,
                 providerUserId: userData.id,
+                displayName: typeof userData.global_name === 'string' ? userData.global_name : userData.username,
+                username: userData.username,
             };
 
-            if (userData.global_name !== undefined) {
-                profile.displayName = userData.global_name;
-            } else if (userData.username !== undefined) {
-                profile.displayName = userData.username;
+            const result: VerifiedExternalAuth = { profile };
+            if (input.flow === 'ACTIVITY') {
+                result.providerSession = {
+                    provider: AuthProvider.DISCORD,
+                    accessToken,
+                    expiresIn,
+                };
             }
-
-            if (userData.email !== undefined) {
-                profile.email = userData.email;
-            }
-
-            if (userData.username !== undefined) {
-                profile.username = userData.username;
-            }
-
-            return profile;
+            return result;
         } catch (error) {
             if (
                 error instanceof AuthProviderNotConfiguredError ||
-                error instanceof InvalidExternalAuthTokenError
+                error instanceof InvalidExternalAuthTokenError ||
+                error instanceof ExternalAuthProviderUnavailableError
             ) {
                 throw error;
             }
-            throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
+            if (isProviderUnavailableError(error)) {
+                throw new ExternalAuthProviderUnavailableError(AuthProvider.DISCORD);
+            }
+            throw new ExternalAuthProviderUnavailableError(AuthProvider.DISCORD);
         }
+    }
+
+    private throwDiscordResponseError(status: number): never {
+        if (status === 429 || status >= 500) {
+            throw new ExternalAuthProviderUnavailableError(AuthProvider.DISCORD);
+        }
+        throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
     }
 }

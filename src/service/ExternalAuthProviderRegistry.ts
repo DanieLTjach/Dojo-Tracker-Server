@@ -25,6 +25,10 @@ interface ExternalProfileVerifier {
     verify(value: string): Promise<VerifiedExternalProfile>;
 }
 
+interface DiscordExternalAuthVerifier {
+    verify(input: Extract<ExternalAuthProviderInput, { code: string }>): Promise<VerifiedExternalAuth>;
+}
+
 export interface ExternalAuthRegistrationUserFields {
     telegramUsername?: string;
     telegramId?: number;
@@ -121,23 +125,25 @@ export class TelegramAuthProviderAdapter implements ExternalAuthProviderAdapter 
 
 export class DiscordAuthProviderAdapter implements ExternalAuthProviderAdapter {
     readonly provider = AuthProvider.DISCORD;
-    readonly flows: ExternalAuthFlow[] = ['BROWSER'];
+    readonly flows: ExternalAuthFlow[] = ['BROWSER', 'ACTIVITY'];
 
-    private verifier: ExternalProfileVerifier;
+    private verifier: DiscordExternalAuthVerifier;
 
-    constructor(verifier: ExternalProfileVerifier = new DiscordAuthTokenVerifier()) {
+    constructor(verifier: DiscordExternalAuthVerifier = new DiscordAuthTokenVerifier()) {
         this.verifier = verifier;
     }
 
     isConfigured(): boolean {
-        return config.discordClientId !== undefined && config.discordClientSecret !== undefined;
+        return config.discordClientId !== undefined &&
+            config.discordClientSecret !== undefined &&
+            config.discordBrowserRedirectUri !== undefined;
     }
 
     async verify(input: ExternalAuthProviderInput): Promise<VerifiedExternalAuth> {
         if (!('code' in input)) {
             throw new InvalidExternalAuthTokenError(this.provider);
         }
-        return { profile: await this.verifier.verify(input.code) };
+        return this.verifier.verify(input);
     }
 }
 

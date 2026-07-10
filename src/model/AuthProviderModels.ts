@@ -29,13 +29,24 @@ export interface VerifiedExternalProfile {
 
 export type ExternalAuthFlow = 'BROWSER' | 'ACTIVITY';
 
+export type DiscordExternalAuthInput =
+    | { flow: 'BROWSER', code: string, codeVerifier: string }
+    | { flow: 'ACTIVITY', code: string };
+
 export type ExternalAuthProviderInput =
     | { credential: string }
     | { idToken: string }
-    | { code: string };
+    | DiscordExternalAuthInput;
+
+export interface ExternalAuthProviderSession {
+    provider: AuthProvider;
+    accessToken: string;
+    expiresIn: number;
+}
 
 export interface VerifiedExternalAuth {
     profile: VerifiedExternalProfile;
+    providerSession?: ExternalAuthProviderSession;
 }
 
 export interface AvailableAuthProviderDTO {
