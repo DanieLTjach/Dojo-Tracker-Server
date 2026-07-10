@@ -36,7 +36,7 @@ import { EventService } from './EventService.ts';
 import { GameService } from './GameService.ts';
 import { RatingService } from './RatingService.ts';
 import { UserService } from './UserService.ts';
-import { SupportedLocale, t } from '../i18n/index.ts';
+import { type SupportedLocale, t } from '../i18n/index.ts';
 
 const TRACKED_GAME_LOG_ACTIONS = {
     CREATED: {

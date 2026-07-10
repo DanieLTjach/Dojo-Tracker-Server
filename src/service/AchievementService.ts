@@ -14,7 +14,7 @@ import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
-import { SupportedLocale, t } from '../i18n/index.ts';
+import { type SupportedLocale, t } from '../i18n/index.ts';
 import { UserService } from './UserService.ts';
 import { resolveUserLocale } from '../util/LocaleResolver.ts';
 

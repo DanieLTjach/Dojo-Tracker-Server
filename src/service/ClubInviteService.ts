@@ -23,7 +23,7 @@ import {
     NameRequiredForNewUserError,
 } from '../error/ClubErrors.ts';
 import { generateInviteCode } from '../util/InviteCodeUtil.ts';
-import { SupportedLocale, t } from '../i18n/index.ts';
+import { type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 const CODE_GENERATION_ATTEMPTS = 10;

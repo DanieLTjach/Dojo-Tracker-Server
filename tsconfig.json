@@ -20,7 +20,7 @@
         "noPropertyAccessFromIndexSignature": true,
 
         "strict": true,
-        "verbatimModuleSyntax": false,
+        "verbatimModuleSyntax": true,
         "isolatedModules": true,
         "noUncheckedSideEffectImports": true,
         "moduleDetection": "force",
