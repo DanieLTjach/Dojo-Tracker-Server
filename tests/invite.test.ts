@@ -49,6 +49,8 @@ describe('Invite API Endpoints', () => {
             name: 'Invite API Club',
             address: null,
             city: null,
+            country: 'UA',
+            locale: 'uk',
             description: null,
             contactInfo: null,
             isActive: true,

@@ -1,4 +1,5 @@
 import config from '../../config/config.ts';
+import type { SupportedLocale } from '../i18n/index.ts';
 
 export const ClubTelegramTopicType = {
     RATING: 'RATING',
@@ -61,3 +62,5 @@ export const globalErrorLogsTopic: TelegramTopic | null = config.globalLogsChatI
         topicId: config.globalErrorLogsTopicId,
     }
     : null;
+
+export const GLOBAL_LOGS_LOCALE: SupportedLocale = 'en';

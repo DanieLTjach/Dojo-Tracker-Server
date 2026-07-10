@@ -662,7 +662,7 @@ describe('Event API Endpoints', () => {
                     config: { minParticipants: 6, teamConfig: { teamSize: 2, teamCount: 3 } },
                 });
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('invalidTeamConfig');
+            expect(response.body.errorCode).toBe('teamCountNotDivisibleByFour');
         });
 
         test('rejects minParticipants that does not equal teamSize * teamCount', async () => {
@@ -674,7 +674,7 @@ describe('Event API Endpoints', () => {
                     config: { minParticipants: 20, teamConfig: { teamSize: 4, teamCount: 4 } },
                 });
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('invalidTeamConfig');
+            expect(response.body.errorCode).toBe('minParticipantsMustMatchTeamConfig');
         });
     });
 

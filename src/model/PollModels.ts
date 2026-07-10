@@ -7,7 +7,7 @@ export interface ClubPollConfig {
     sendDay: number;
     /** Time to send in HH:MM format (Kyiv timezone) */
     sendTime: string;
-    /** Additional poll options like "Результати 👀", "У цей раз я пас" */
+    /** Additional poll options like "Results 👀" or "I will pass this time". */
     extraOptions: string[];
     isActive: boolean;
 }

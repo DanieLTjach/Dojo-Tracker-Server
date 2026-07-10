@@ -10,10 +10,7 @@ import { UserStatus } from '../model/UserModels.ts';
 
 class EnumParsingError extends InternalServerError {
     constructor(value: string, enumName: string, allowedValues: string[]) {
-        super(
-            `Неприпустиме значення '${value}' для enum ${enumName}. Дозволені значення: ${allowedValues.join(', ')}`,
-            'enumParsingError'
-        );
+        super('enumParsingError', { value, enumName, allowedValues: allowedValues.join(', ') });
     }
 }
 

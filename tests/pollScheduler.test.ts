@@ -4,6 +4,7 @@ import type { ClubPollConfig } from '../src/model/PollModels.ts';
 import { telegramBot } from '../src/service/TelegramBot.ts';
 import { TelegramTopicType, type TelegramTopic } from '../src/model/TelegramTopic.ts';
 import LogService from '../src/service/LogService.ts';
+import { DEFAULT_LOCALE, t } from '../src/i18n/index.ts';
 
 function makeConfig(overrides: Partial<ClubPollConfig> = {}): ClubPollConfig {
     return {
@@ -65,9 +66,9 @@ describe('buildPollTitle', () => {
         const now = new Date(2026, 3, 8);
         const config = makeConfig({ eventDays: [3, 5] });
 
-        const title = PollSchedulerService.buildPollTitle(config, now);
+        const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
-        expect(title).toBe('🀄 Маджонг 8, 10 квітня');
+        expect(title).toBe(t('telegram.poll.title', DEFAULT_LOCALE, { dates: '8, 10 квітня' }));
     });
 
     test('cross-month dates show full format for each date', () => {
@@ -75,28 +76,28 @@ describe('buildPollTitle', () => {
         const now = new Date(2026, 2, 30);
         const config = makeConfig({ eventDays: [1, 5] });
 
-        const title = PollSchedulerService.buildPollTitle(config, now);
+        const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
-        expect(title).toBe('🀄 Маджонг 30 березня, 3 квітня');
+        expect(title).toBe(t('telegram.poll.title', DEFAULT_LOCALE, { dates: '30 березня, 3 квітня' }));
     });
 
     test('single event day', () => {
         const now = new Date(2026, 3, 8); // Wednesday
         const config = makeConfig({ eventDays: [5] }); // Friday only
 
-        const title = PollSchedulerService.buildPollTitle(config, now);
+        const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
-        expect(title).toBe('🀄 Маджонг 10 квітня');
+        expect(title).toBe(t('telegram.poll.title', DEFAULT_LOCALE, { dates: '10 квітня' }));
     });
 
     test('event days are sorted chronologically regardless of input order', () => {
         const now = new Date(2026, 3, 8); // Wednesday
         const config = makeConfig({ eventDays: [5, 3] }); // Fri, Wed (reversed)
 
-        const title = PollSchedulerService.buildPollTitle(config, now);
+        const title = PollSchedulerService.buildPollTitle(config, 'uk', now);
 
         // Should still show Wed(8) before Fri(10)
-        expect(title).toBe('🀄 Маджонг 8, 10 квітня');
+        expect(title).toBe(t('telegram.poll.title', DEFAULT_LOCALE, { dates: '8, 10 квітня' }));
     });
 });
 
@@ -105,7 +106,7 @@ describe('buildPollOptions', () => {
         const now = new Date(2026, 3, 8); // Wednesday
         const config = makeConfig({ eventDays: [5, 3], extraOptions: [] }); // Fri, Wed
 
-        const options = PollSchedulerService.buildPollOptions(config, now);
+        const options = PollSchedulerService.buildPollOptions(config, 'uk', now);
 
         // Wed(today) comes before Fri(+2 days)
         expect(options).toEqual(['Середа', 'П\u02BCятниця']);
@@ -115,7 +116,7 @@ describe('buildPollOptions', () => {
         const now = new Date(2026, 3, 8);
         const config = makeConfig({ eventDays: [3], extraOptions: ['Результати 👀', 'У цей раз я пас'] });
 
-        const options = PollSchedulerService.buildPollOptions(config, now);
+        const options = PollSchedulerService.buildPollOptions(config, 'uk', now);
 
         expect(options).toEqual(['Середа', 'Результати 👀', 'У цей раз я пас']);
     });
@@ -124,7 +125,7 @@ describe('buildPollOptions', () => {
         const now = new Date(2026, 3, 8);
         const config = makeConfig({ eventDays: [3, 5], extraOptions: [] });
 
-        const options = PollSchedulerService.buildPollOptions(config, now);
+        const options = PollSchedulerService.buildPollOptions(config, 'uk', now);
 
         expect(options).toEqual(['Середа', 'П\u02BCятниця']);
     });
@@ -212,7 +213,7 @@ describe('sendTelegramPoll', () => {
 describe('formatDayName', () => {
     test('capitalizes the first letter', () => {
         const wednesday = new Date(2026, 3, 8);
-        const name = formatDayName(wednesday);
+        const name = formatDayName(wednesday, 'uk');
         expect(name.charAt(0)).toBe(name.charAt(0).toUpperCase());
         expect(name).toBe('Середа');
     });

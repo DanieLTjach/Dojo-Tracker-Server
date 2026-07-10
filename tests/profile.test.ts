@@ -167,6 +167,35 @@ describe('Profile API Endpoints', () => {
             expect(response.body.hideProfile).toBe(false);
         });
 
+        it('should allow admin to set profile locale', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', adminAuthHeader)
+                .send({ locale: 'en' })
+                .expect(200);
+
+            expect(response.body.locale).toBe('en');
+        });
+
+        it('should allow non-admin to update own profile locale', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ locale: 'uk' })
+                .expect(200);
+
+            expect(response.body.locale).toBe('uk');
+        });
+
+        it('should reject unsupported profile locale', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ locale: 'fr' });
+
+            expect(response.status).toBe(400);
+        });
+
         it('should fail when non-admin tries to update another users profile', async () => {
             const response = await request(app)
                 .patch(`/api/users/${testUser2Id}/profile`)

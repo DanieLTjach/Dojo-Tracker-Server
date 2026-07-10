@@ -711,4 +711,36 @@ describe('Database Migrations', () => {
 
         db.close();
     });
+
+    test('migration 11 adds club country/locale defaults and nullable profile locale', () => {
+        const db = createMigratedDb(11);
+
+        const club = db.prepare('SELECT country, locale FROM club WHERE id = 1').get() as Record<string, unknown>;
+        expect(club).toEqual({ country: 'UA', locale: 'uk' });
+
+        const clubColumns = db.prepare('PRAGMA table_info(club)').all() as Array<
+            { name: string, type: string, notnull: number, dflt_value: string | null }
+        >;
+        expect(clubColumns.find(column => column.name === 'country')).toMatchObject({
+            type: 'TEXT',
+            notnull: 1,
+            dflt_value: "'UA'",
+        });
+        expect(clubColumns.find(column => column.name === 'locale')).toMatchObject({
+            type: 'TEXT',
+            notnull: 1,
+            dflt_value: "'uk'",
+        });
+
+        const profileColumns = db.prepare('PRAGMA table_info(profile)').all() as Array<
+            { name: string, type: string, notnull: number, dflt_value: string | null }
+        >;
+        expect(profileColumns.find(column => column.name === 'locale')).toMatchObject({
+            type: 'TEXT',
+            notnull: 0,
+            dflt_value: null,
+        });
+
+        db.close();
+    });
 });

@@ -14,6 +14,9 @@ import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
+import { UserService } from './UserService.ts';
+import { resolveUserLocale } from '../util/LocaleResolver.ts';
 
 const DEFINITION_BY_METRIC = new Map<AchievementMetric, AchievementDefinition>(
     ACHIEVEMENTS.map(definition => [definition.metric, definition])
@@ -22,6 +25,7 @@ const DEFINITION_BY_METRIC = new Map<AchievementMetric, AchievementDefinition>(
 export class AchievementService {
     private achievementRepository: AchievementRepository = new AchievementRepository();
     private gameRepository: GameRepository = new GameRepository();
+    private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
 
     /**
@@ -58,14 +62,16 @@ export class AchievementService {
      * Admin-triggered recompute. Unlike the defensive recompute that runs on game
      * changes, this throws on bad data so the admin sees what went wrong.
      */
-    forceRecomputeEventAchievements(eventId: number): EventAchievementResult[] {
+    forceRecomputeEventAchievements(eventId: number, requestingUserId: number): EventAchievementResult[] {
         const event = this.eventService.getEventById(eventId);
         if (event.type !== 'TOURNAMENT') {
             throw new AchievementsOnlyForTournamentsError();
         }
+        const user = this.userService.getUserById(requestingUserId);
+        const locale = resolveUserLocale(user);
 
         this.computeAndPersist(event);
-        return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId));
+        return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 
     private computeAndPersist(event: Event): void {
@@ -96,21 +102,26 @@ export class AchievementService {
     }
 
     /** Achievements for the tournament page. Computes lazily on first read for historical tournaments. */
-    getEventAchievements(eventId: number): EventAchievementResult[] {
+    getEventAchievements(eventId: number, requestingUserId: number): EventAchievementResult[] {
         const event = this.eventService.getEventById(eventId);
+        const user = this.userService.getUserById(requestingUserId);
+        const locale = resolveUserLocale(user);
 
         if (!this.achievementRepository.areEventAchievementsComputed(eventId)) {
             this.recomputeEventAchievements(event);
         }
 
-        return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId));
+        return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 
     /** Achievements a user has won across all tournaments, for the profile page. */
-    getUserAchievements(userId: number): UserAchievement[] {
+    getUserAchievements(userId: number, requestingUserId: number): UserAchievement[] {
         for (const eventId of this.achievementRepository.findUncomputedTournamentEventIdsForUser(userId)) {
             this.recomputeEventAchievements(this.eventService.getEventById(eventId));
         }
+
+        const requestingUser = this.userService.getUserById(requestingUserId);
+        const locale = resolveUserLocale(requestingUser);
 
         return this.achievementRepository.findByUserId(userId).flatMap(row => {
             const definition = DEFINITION_BY_METRIC.get(row.metric);
@@ -123,26 +134,29 @@ export class AchievementService {
                 eventName: row.eventName,
                 metric: row.metric,
                 name: definition.name,
-                description: definition.description,
+                description: achievementDescription(definition, locale),
                 valueUnit: definition.valueUnit,
                 value,
-                valueFormatted: formatValue(value, definition.valueUnit),
+                valueFormatted: formatValue(value, definition.valueUnit, locale),
             }];
         });
     }
 
-    private buildEventResults(winnerRows: EventAchievementWinnerRow[]): EventAchievementResult[] {
+    private buildEventResults(
+        winnerRows: EventAchievementWinnerRow[],
+        locale: SupportedLocale
+    ): EventAchievementResult[] {
         return ACHIEVEMENTS.map(definition => {
             const winners = winnerRows.filter(row => row.metric === definition.metric);
             const value = winners[0]?.value ?? undefined;
             return {
                 metric: definition.metric,
                 name: definition.name,
-                description: definition.description,
+                description: achievementDescription(definition, locale),
                 criterion: definition.criterion,
                 valueUnit: definition.valueUnit,
                 value,
-                valueFormatted: formatValue(value, definition.valueUnit),
+                valueFormatted: formatValue(value, definition.valueUnit, locale),
                 tied: definition.criterion !== AchievementCriterion.AllQualifiers && winners.length > 1,
                 winners: winners.map(row => ({
                     userId: row.userId,
@@ -155,6 +169,17 @@ export class AchievementService {
     }
 }
 
-function formatValue(value: number | undefined, unit: AchievementValueUnit): string | undefined {
-    return value === undefined ? undefined : `${value.toLocaleString('en-US')} ${unit}`;
+function achievementDescription(definition: AchievementDefinition, locale: SupportedLocale): string {
+    return t(`achievements.descriptions.${definition.metric}`, locale);
+}
+
+function formatValue(
+    value: number | undefined,
+    unit: AchievementValueUnit,
+    locale: SupportedLocale
+): string | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+    return t(`achievements.units.${unit}`, locale, { value: value.toLocaleString('en-US') });
 }

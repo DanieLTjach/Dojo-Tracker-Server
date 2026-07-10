@@ -24,7 +24,12 @@ import {
     InvalidEventFormatForTypeError,
     TeamConfigOnlyForTeamTournamentError,
     TeamConfigRequiredError,
-    InvalidTeamConfigError,
+    InvalidTeamSizeError,
+    InvalidTeamCountError,
+    TeamCountNotDivisibleByFourError,
+    MinParticipantsRequiredForTeamConfigError,
+    MinParticipantsMustMatchTeamConfigError,
+    TournamentRoundNotStartedError,
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
@@ -275,6 +280,9 @@ export class EventService {
 
         // Only the round that is actually current can be cancelled. A null currentRound (nothing
         // started) or any other round id is rejected.
+        if (tournament.currentRound === null) {
+            throw new TournamentRoundNotStartedError(event.name, roundId);
+        }
         if (tournament.currentRound !== roundId) {
             throw new TournamentRoundNotCurrentError(event.name, tournament.currentRound, roundId);
         }
@@ -602,23 +610,21 @@ export class EventService {
             throw new TeamConfigRequiredError();
         }
         if (!Number.isInteger(teamConfig.teamSize) || teamConfig.teamSize < 1) {
-            throw new InvalidTeamConfigError('teamSize має бути цілим числом ≥ 1');
+            throw new InvalidTeamSizeError();
         }
         if (!Number.isInteger(teamConfig.teamCount) || teamConfig.teamCount < 1) {
-            throw new InvalidTeamConfigError('teamCount має бути цілим числом ≥ 1');
+            throw new InvalidTeamCountError();
         }
         if (teamConfig.teamCount % 4 !== 0) {
-            throw new InvalidTeamConfigError('teamCount має ділитися на 4');
+            throw new TeamCountNotDivisibleByFourError();
         }
         const minParticipants = data.config?.minParticipants;
         const expected = teamConfig.teamSize * teamConfig.teamCount;
         if (minParticipants === undefined) {
-            throw new InvalidTeamConfigError(`вкажіть minParticipants = teamSize * teamCount (${expected})`);
+            throw new MinParticipantsRequiredForTeamConfigError(expected);
         }
         if (minParticipants !== expected) {
-            throw new InvalidTeamConfigError(
-                `minParticipants (${minParticipants}) має дорівнювати teamSize * teamCount (${expected})`
-            );
+            throw new MinParticipantsMustMatchTeamConfigError(minParticipants, expected);
         }
     }
 

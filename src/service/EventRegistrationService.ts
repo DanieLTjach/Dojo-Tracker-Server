@@ -14,7 +14,7 @@ import { PlayerNameDisplay } from '../model/EventModels.ts';
 import type { EventRegistration, EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
 import type { Profile } from '../model/ProfileModels.ts';
 import type { User } from '../model/UserModels.ts';
-import { globalClubLogsTopic } from '../model/TelegramTopic.ts';
+import { GLOBAL_LOGS_LOCALE, globalClubLogsTopic } from '../model/TelegramTopic.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
@@ -24,6 +24,8 @@ import LogService from './LogService.ts';
 import { ProfileService } from './ProfileService.ts';
 import TelegramMessageService from './TelegramMessageService.ts';
 import { UserService } from './UserService.ts';
+import { SupportedLocale, t, translationRef } from '../i18n/index.ts';
+import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 
 export class EventRegistrationService {
     private registrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
@@ -77,7 +79,14 @@ export class EventRegistrationService {
             throw new EventRegistrationNotFoundError(event.name, applicantId);
         }
         if (registration.status !== 'PENDING' && registration.status !== 'APPROVED') {
-            throw new InvalidEventRegistrationStateError('скасувати', registration.status, ['PENDING', 'APPROVED']);
+            throw new InvalidEventRegistrationStateError(
+                translationRef('telegram.actions.withdraw'),
+                registration.status,
+                [
+                    'PENDING',
+                    'APPROVED',
+                ]
+            );
         }
 
         this.registrationRepository.deleteRegistration(eventId, applicantId);
@@ -96,7 +105,13 @@ export class EventRegistrationService {
             throw new EventRegistrationNotFoundError(event.name, targetUserId);
         }
         if (registration.status !== 'PENDING') {
-            throw new InvalidEventRegistrationStateError('схвалити', registration.status, ['PENDING']);
+            throw new InvalidEventRegistrationStateError(
+                translationRef('telegram.actions.approve'),
+                registration.status,
+                [
+                    'PENDING',
+                ]
+            );
         }
 
         this.enforceCapacity(event);
@@ -108,7 +123,7 @@ export class EventRegistrationService {
         }
 
         const updated = this.getRegistration(eventId, targetUserId);
-        this.notifyTargetUser(target, event, '✅ Вашу заявку на турнір схвалено');
+        this.notifyTargetUser(target, event, 'telegram.notify.registrationApproved');
         this.logApproved(event, target, modifier);
         return updated;
     }
@@ -124,13 +139,20 @@ export class EventRegistrationService {
             throw new EventRegistrationNotFoundError(event.name, targetUserId);
         }
         if (registration.status !== 'PENDING' && registration.status !== 'APPROVED') {
-            throw new InvalidEventRegistrationStateError('відхилити', registration.status, ['PENDING', 'APPROVED']);
+            throw new InvalidEventRegistrationStateError(
+                translationRef('telegram.actions.reject'),
+                registration.status,
+                [
+                    'PENDING',
+                    'APPROVED',
+                ]
+            );
         }
 
         this.registrationRepository.updateRegistrationStatus(eventId, targetUserId, 'REJECTED', modifierId);
 
         const updated = this.getRegistration(eventId, targetUserId);
-        this.notifyTargetUser(target, event, '❌ Вашу заявку на турнір відхилено');
+        this.notifyTargetUser(target, event, 'telegram.notify.registrationRejected');
         this.logRejected(event, target, modifier);
         return updated;
     }
@@ -193,7 +215,7 @@ export class EventRegistrationService {
         }
 
         const updated = this.getRegistration(eventId, targetUserId);
-        this.notifyTargetUser(target, event, '📝 Вас зареєстровано на турнір');
+        this.notifyTargetUser(target, event, 'telegram.notify.registeredForTournament');
         this.logManualRegistered(event, target, modifier);
         return updated;
     }
@@ -286,10 +308,7 @@ export class EventRegistrationService {
 
     private validateEventIsTournament(event: Event): void {
         if (event.type !== 'TOURNAMENT') {
-            throw new BadRequestError(
-                `Реєстрація доступна лише для подій типу TOURNAMENT (поточний тип: ${event.type})`,
-                'eventNotTournament'
-            );
+            throw new BadRequestError('eventNotTournament', { type: event.type });
         }
     }
 
@@ -378,87 +397,101 @@ export class EventRegistrationService {
         }
     }
 
-    private notifyTargetUser(target: User, event: Event, headline: string): void {
+    private notifyTargetUser(target: User, event: Event, headlineKey: string): void {
         if (target.telegramId === null) {
             return;
         }
+        const locale = resolveUserLocale(target);
         const message = dedent`
-            <b>${headline}</b>
+            <b>${t(headlineKey, locale)}</b>
 
-            <b>Турнір:</b> ${event.name}
-            <a href="${config.botUrl}?startapp=event_${event.id}">Відкрити сторінку турніру</a>
+            <b>${t('telegram.notify.tournamentLabel', locale)}</b> ${event.name}
+            <a href="${config.botUrl}?startapp=event_${event.id}">${t('telegram.notify.openTournamentPage', locale)}</a>
         `;
         void TelegramMessageService.sendDirectMessage(target.telegramId, message);
     }
 
-    private logEvent(event: Event, message: string): void {
-        LogService.logInfo(message, globalClubLogsTopic);
+    private logEvent(event: Event, buildMessage: (locale: SupportedLocale) => string): void {
+        LogService.logInfo(buildMessage(GLOBAL_LOGS_LOCALE), globalClubLogsTopic);
         if (event.clubId !== null) {
             const clubLogsTopic = this.clubService.getClubTelegramTopics(event.clubId).clubLogs;
             if (clubLogsTopic !== null) {
-                LogService.logInfo(message, clubLogsTopic);
+                const locale = resolveClubLocale(this.clubService.getClubById(event.clubId));
+                LogService.logInfo(buildMessage(locale), clubLogsTopic);
             }
         }
     }
 
-    private formatParticipant(user: User): string {
+    private formatParticipant(user: User, locale: SupportedLocale): string {
         const profile = this.profileService.getProfileByUserId(user.id);
         const firstName = profile?.firstName ?? '—';
         const lastName = profile?.lastName ?? '—';
-        return `${user.name} <code>(ID: ${user.id})</code>\n<b>Імʼя:</b> ${firstName} ${lastName}`;
+        return `${user.name} <code>(ID: ${user.id})</code>\n<b>${
+            t('telegram.registrationLog.nameLabel', locale)
+        }</b> ${firstName} ${lastName}`;
     }
 
     private logApplied(event: Event, applicant: User): void {
-        const message = dedent`
-            <b>🔔 Заявка на турнір</b>
+        this.logEvent(event, locale =>
+            dedent`
+            <b>${t('telegram.registrationLog.titleApplied', locale)}</b>
 
-            <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${this.formatParticipant(applicant)}
-        `;
-        this.logEvent(event, message);
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${t('telegram.registrationLog.participantLabel', locale)}</b> ${
+                this.formatParticipant(applicant, locale)
+            }
+        `);
     }
 
     private logApproved(event: Event, target: User, modifier: User): void {
-        const message = dedent`
-            <b>✅ Заявку на турнір схвалено</b>
+        this.logEvent(event, locale =>
+            dedent`
+            <b>${t('telegram.registrationLog.titleApproved', locale)}</b>
 
-            <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${this.formatParticipant(target)}
-            <b>Схвалив:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
-        `;
-        this.logEvent(event, message);
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${t('telegram.registrationLog.participantLabel', locale)}</b> ${this.formatParticipant(target, locale)}
+            <b>${
+                t('telegram.registrationLog.approvedByLabel', locale)
+            }</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+        `);
     }
 
     private logRejected(event: Event, target: User, modifier: User): void {
-        const message = dedent`
-            <b>❌ Заявку на турнір відхилено</b>
+        this.logEvent(event, locale =>
+            dedent`
+            <b>${t('telegram.registrationLog.titleRejected', locale)}</b>
 
-            <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${this.formatParticipant(target)}
-            <b>Відхилив:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
-        `;
-        this.logEvent(event, message);
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${t('telegram.registrationLog.participantLabel', locale)}</b> ${this.formatParticipant(target, locale)}
+            <b>${
+                t('telegram.registrationLog.rejectedByLabel', locale)
+            }</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+        `);
     }
 
     private logWithdrawn(event: Event, applicant: User): void {
-        const message = dedent`
-            <b>🚪 Учасник скасував заявку на турнір</b>
+        this.logEvent(event, locale =>
+            dedent`
+            <b>${t('telegram.registrationLog.titleWithdrawn', locale)}</b>
 
-            <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${this.formatParticipant(applicant)}
-        `;
-        this.logEvent(event, message);
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${t('telegram.registrationLog.participantLabel', locale)}</b> ${
+                this.formatParticipant(applicant, locale)
+            }
+        `);
     }
 
     private logManualRegistered(event: Event, target: User, modifier: User): void {
-        const message = dedent`
-            <b>📝 Учасника додано вручну</b>
+        this.logEvent(event, locale =>
+            dedent`
+            <b>${t('telegram.registrationLog.titleManualRegistered', locale)}</b>
 
-            <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${this.formatParticipant(target)}
-            <b>Додав:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
-        `;
-        this.logEvent(event, message);
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${t('telegram.registrationLog.participantLabel', locale)}</b> ${this.formatParticipant(target, locale)}
+            <b>${
+                t('telegram.registrationLog.addedByLabel', locale)
+            }</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+        `);
     }
 
     private logProfileNamesUpdated(
@@ -469,15 +502,19 @@ export class EventRegistrationService {
         after: { firstName: string | null, lastName: string | null }
     ): void {
         const fmt = (n: string | null): string => n ?? '—';
-        const message = dedent`
-            <b>📝 Оновлено імʼя учасника</b>
+        this.logEvent(event, locale =>
+            dedent`
+            <b>${t('telegram.registrationLog.titleProfileNamesUpdated', locale)}</b>
 
-            <b>Турнір:</b> ${event.name} <code>(ID: ${event.id})</code>
-            <b>Учасник:</b> ${target.name} <code>(ID: ${target.id})</code>
-            <b>Було:</b> ${fmt(before.firstName)} ${fmt(before.lastName)}
-            <b>Стало:</b> ${fmt(after.firstName)} ${fmt(after.lastName)}
-            <b>Оновив:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
-        `;
-        this.logEvent(event, message);
+            <b>${t('telegram.registrationLog.tournamentLabel', locale)}</b> ${event.name} <code>(ID: ${event.id})</code>
+            <b>${
+                t('telegram.registrationLog.participantLabel', locale)
+            }</b> ${target.name} <code>(ID: ${target.id})</code>
+            <b>${t('telegram.registrationLog.beforeLabel', locale)}</b> ${fmt(before.firstName)} ${fmt(before.lastName)}
+            <b>${t('telegram.registrationLog.afterLabel', locale)}</b> ${fmt(after.firstName)} ${fmt(after.lastName)}
+            <b>${
+                t('telegram.registrationLog.updatedByLabel', locale)
+            }</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+        `);
     }
 }

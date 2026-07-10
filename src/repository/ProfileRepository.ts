@@ -20,19 +20,21 @@ export class ProfileRepository {
         firstName: string | null;
         lastName: string | null;
         emaNumber: string | null;
+        locale: string | null;
         hideProfile: number;
         modifiedBy: number;
         timestamp: string;
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO profile (userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, hideProfile, modifiedBy, modifiedAt)
-            VALUES (:userId, :firstNameEn, :lastNameEn, :firstName, :lastName, :emaNumber, :hideProfile, :modifiedBy, :timestamp)
+            INSERT INTO profile (userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, locale, hideProfile, modifiedBy, modifiedAt)
+            VALUES (:userId, :firstNameEn, :lastNameEn, :firstName, :lastName, :emaNumber, :locale, :hideProfile, :modifiedBy, :timestamp)
             ON CONFLICT(userId) DO UPDATE SET
                 firstNameEn = :firstNameEn,
                 lastNameEn = :lastNameEn,
                 firstName = :firstName,
                 lastName = :lastName,
                 emaNumber = :emaNumber,
+                locale = :locale,
                 hideProfile = :hideProfile,
                 modifiedBy = :modifiedBy,
                 modifiedAt = :timestamp`);
@@ -46,7 +48,8 @@ export class ProfileRepository {
         lastName: string | null,
         emaNumber: string | null,
         hideProfile: boolean,
-        modifiedBy: number
+        modifiedBy: number,
+        locale?: string | null
     ): void {
         this.upsertProfileStatement().run({
             userId,
@@ -55,6 +58,7 @@ export class ProfileRepository {
             firstName,
             lastName,
             emaNumber,
+            locale: locale ?? null,
             hideProfile: booleanToInteger(hideProfile),
             modifiedBy,
             timestamp: new Date().toISOString(),
@@ -101,6 +105,7 @@ interface ProfileDBEntity {
     firstName: string | null;
     lastName: string | null;
     emaNumber: string | null;
+    locale: string | null;
     hideProfile: number;
     modifiedAt: string;
     modifiedBy: number;
@@ -114,6 +119,7 @@ function profileFromDBEntity(dbEntity: ProfileDBEntity): Profile {
         firstName: dbEntity.firstName,
         lastName: dbEntity.lastName,
         emaNumber: dbEntity.emaNumber,
+        locale: dbEntity.locale,
         hideProfile: Boolean(dbEntity.hideProfile),
     };
 }

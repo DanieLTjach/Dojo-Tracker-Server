@@ -2,96 +2,96 @@ import { BadRequestError, ForbiddenError, NotFoundError } from './BaseErrors.ts'
 
 export class TeamNotFoundError extends NotFoundError {
     constructor(teamId: number) {
-        super(`Команду з ID ${teamId} не знайдено`, 'teamNotFound');
+        super('teamNotFound', { teamId });
     }
 }
 
 export class TeamNotInEventError extends BadRequestError {
     constructor(teamId: number, eventId: number) {
-        super(`Команда ${teamId} не належить події ${eventId}`, 'teamNotInEvent');
+        super('teamNotInEvent', { teamId, eventId });
     }
 }
 
 export class TeamsNotAllowedForFormatError extends BadRequestError {
     constructor(eventName: string) {
-        super(`Команди доступні лише для командних подій ("${eventName}")`, 'teamsNotAllowedForFormat');
+        super('teamsNotAllowedForFormat', { eventName });
     }
 }
 
 export class InsufficientTeamPermissionsError extends ForbiddenError {
     constructor(eventName: string) {
-        super(
-            `Недостатньо прав для керування командами турніру "${eventName}"`,
-            'insufficientTeamPermissions'
-        );
+        super('insufficientTeamPermissions', { eventName });
     }
 }
 
 export class TeamCountLimitReachedError extends BadRequestError {
     constructor(limit: number) {
-        super(`Досягнуто межу кількості команд (${limit})`, 'teamCountLimitReached');
+        super('teamCountLimitReached', { limit });
     }
 }
 
 export class TeamFullError extends BadRequestError {
     constructor(teamName: string, teamSize: number) {
-        super(`Команда "${teamName}" вже заповнена (${teamSize})`, 'teamFull');
+        super('teamFull', { teamName, teamSize });
     }
 }
 
 export class UserAlreadyInTeamForEventError extends BadRequestError {
     constructor(userId: number) {
-        super(`Гравець ${userId} вже у команді цієї події`, 'userAlreadyInTeamForEvent');
+        super('userAlreadyInTeamForEvent', { userId });
     }
 }
 
 export class UserNotApprovedParticipantError extends BadRequestError {
     constructor(userId: number) {
-        super(`Гравець ${userId} не є схваленим учасником турніру`, 'userNotApprovedParticipant');
+        super('userNotApprovedParticipant', { userId });
     }
 }
 
 export class TeamCompositionLockedError extends BadRequestError {
     constructor(eventName: string) {
-        super(`Склад команд турніру "${eventName}" вже не можна змінювати`, 'teamCompositionLocked');
+        super('teamCompositionLocked', { eventName });
     }
 }
 
 export class TeamMemberNotFoundError extends NotFoundError {
     constructor(teamId: number, userId: number) {
-        super(`Гравця ${userId} немає в команді ${teamId}`, 'teamMemberNotFound');
+        super('teamMemberNotFound', { teamId, userId });
     }
 }
 
 export class NotEnoughApprovedForDraftError extends BadRequestError {
     constructor(eventName: string, required: number, approved: number) {
-        super(
-            `Для старту драфту турніру "${eventName}" потрібно щонайменше ${required} схвалених учасників (наразі ${approved})`,
-            'notEnoughApprovedForDraft'
-        );
+        super('notEnoughApprovedForDraft', { eventName, required, approved });
     }
 }
 
 export class DraftNotStartableError extends BadRequestError {
     constructor(eventName: string) {
-        super(`Драфт турніру "${eventName}" не можна розпочати з поточного стану`, 'draftNotStartable');
+        super('draftNotStartable', { eventName });
+    }
+}
+
+export class TeamDraftHasUnteamedPlayersError extends BadRequestError {
+    constructor(eventName: string, unteamedCount: number) {
+        super('teamDraftHasUnteamedPlayers', { eventName, unteamedCount });
+    }
+}
+
+export class TeamDraftUnevenTeamsError extends BadRequestError {
+    constructor(eventName: string) {
+        super('teamDraftUnevenTeams', { eventName });
     }
 }
 
 export class TeamCountMustBeDivisibleByFourError extends BadRequestError {
     constructor(eventName: string, teamCount: number) {
-        super(
-            `Кількість команд у турнірі "${eventName}" (${teamCount}) має ділитися на 4`,
-            'teamCountMustBeDivisibleByFour'
-        );
+        super('teamCountMustBeDivisibleByFour', { eventName, teamCount });
     }
 }
 
 export class TeamDraftIncompleteError extends BadRequestError {
     constructor(eventName: string, teamCount: number, teamSize: number) {
-        super(
-            `Щоб почати командний турнір "${eventName}", сформуйте ${teamCount} повних команд по ${teamSize} гравців`,
-            'teamDraftIncomplete'
-        );
+        super('teamDraftIncomplete', { eventName, teamCount, teamSize });
     }
 }

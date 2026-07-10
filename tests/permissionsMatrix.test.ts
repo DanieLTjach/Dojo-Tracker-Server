@@ -199,9 +199,11 @@ describe('Permissions matrix integration specification', () => {
         dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
     }
 
-    function buildClubCreatePayload(): { name: string } {
+    function buildClubCreatePayload(): { name: string, country: string, locale: string } {
         return {
             name: `Permissions Matrix Club ${nextId()}`,
+            country: 'UA',
+            locale: 'uk',
         };
     }
 
@@ -209,6 +211,8 @@ describe('Permissions matrix integration specification', () => {
         name: string;
         address: string | null;
         city: string | null;
+        country: string;
+        locale: string;
         description: string | null;
         contactInfo: string | null;
         isActive: boolean;
@@ -217,6 +221,8 @@ describe('Permissions matrix integration specification', () => {
             name: `Permissions Matrix Club Updated ${nextId()}`,
             address: null,
             city: null,
+            country: 'UA',
+            locale: 'uk',
             description: null,
             contactInfo: null,
             isActive: true,
@@ -1467,6 +1473,8 @@ describe('Permissions matrix integration specification', () => {
                     name: 'Permissions Matrix Club B',
                     address: null,
                     city: null,
+                    country: 'UA',
+                    locale: 'uk',
                     description: null,
                     contactInfo: null,
                     isActive: true,

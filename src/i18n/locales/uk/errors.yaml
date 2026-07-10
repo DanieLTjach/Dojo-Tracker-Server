@@ -1,0 +1,165 @@
+errors:
+  invalidRequestData: Некоректні дані запиту
+  databaseError: "Помилка бази даних: {{message}}"
+  internalServerError: Внутрішня помилка сервера
+
+  invalidInitData: "Невалідні дані автентифікації Telegram: {{reason}}"
+  expiredAuthData: Термін дії даних автентифікації минув. Будь ласка, закрийте та відкрийте додаток заново.
+  missingAuthToken: Необхідний токен автентифікації
+  invalidAuthToken: "Невалідний токен автентифікації: {{reason}}"
+  insufficientPermissions: Недостатньо прав для виконання цієї дії
+  tokenExpired: Термін дії токена автентифікації минув. Перезайдіть в додаток
+  invalidToken: Невалідний токен автентифікації. Перезайдіть в додаток
+
+  clubNotFound: Клуб з id {{clubId}} не знайдено
+  clubMembershipNotFound: "Учасника з userId {{userId}} не знайдено в клубі '{{clubName}}'"
+  clubNameAlreadyExists: "Клуб з назвою '{{name}}' вже існує"
+  clubMembershipAlreadyExists: "Користувач з id {{userId}} вже є учасником клубу '{{clubName}}'"
+  insufficientClubPermissions: "Недостатньо прав для виконання цієї дії. Потрібна роль: {{rolesText}}"
+  youHaveToBeClubMember: Ви повинні бути учасником клубу для виконання цієї дії
+  needModeratorForNonClubMembers: Для створення гри з гравцями, які не є учасниками клубу, потрібна роль OWNER або MODERATOR
+  invalidClubMembershipState: "Неможливо {{action}} учасника клубу зі статусом {{currentStatus}}. Дозволені статуси: {{allowedStatuses}}"
+  inviteNotFound: "Запрошення з кодом '{{code}}' не знайдено"
+  inviteRevoked: Це запрошення більше не активне
+  inviteExpired: Термін дії цього запрошення сплив
+  inviteExhausted: Це запрошення вичерпало ліміт використань
+  nameRequiredForNewUser: Для реєстрації потрібно вказати імʼя
+
+  eventNotFound: Подію з id {{eventId}} не знайдено
+  gameRulesNotFound: Правила гри з id {{gameRulesId}} не знайдено
+  cannotDeleteGameRulesInUse: 'Неможливо видалити правила "{{gameRulesName}}" — вони використовуються в {{eventCount}} подіях'
+  cannotUpdateGameRulesInUse: 'Неможливо оновити правила "{{gameRulesName}}" — за ними вже зіграно {{gameCount}} ігор'
+  cannotDeleteEventWithGames: 'Неможливо видалити подію з існуючими іграми. Подія "{{eventName}}" має {{gameCount}} ігор'
+  cannotDeleteEventWithRegistrations: 'Неможливо видалити подію "{{eventName}}" — існує {{registrationCount}} реєстрацій. Видаліть реєстрації перед видаленням події.'
+  currentRatingEventMustBeClubScoped: Поточний рейтинговий сезон можна встановити лише для клубної події
+  tournamentMustHaveClub: Турнір повинен належати клубу
+  gameCreationBlocked: 'Створення ігор для події "{{eventName}}" заблоковано'
+  achievementsOnlyForTournaments: Досягнення доступні лише для турнірів
+  tournamentConfigRequired: Для турніру потрібно вказати налаштування турніру
+  invalidEventDateRange: Дата початку має бути раніше за дату завершення
+  minParticipantsExceedsMax: Мінімальна кількість учасників не може перевищувати максимальну
+  participantConfigOnlyForTournament: Налаштування кількості учасників і терміну реєстрації можна вказувати лише для турнірів
+  tournamentConfigOnlyForTournament: Налаштування турніру можна вказувати лише для турнірів
+  eventIsNotTournament: 'Подія "{{eventName}}" не є турніром'
+  tournamentMisconfigured: Цей турнір був неправильно сконфігурований. Будь ласка, звʼяжіться з підтримкою
+  tournamentTotalRoundsLessThanCurrentRound: Кількість раундів ({{totalRounds}}) не може бути меншою за поточний раунд ({{currentRound}})
+  tournamentRoundOutOfSequence: 'Не можна розпочати раунд {{requestedRound}} турніру "{{eventName}}": наступний доступний раунд — {{expectedRound}}'
+  tournamentRoundNotStarted: 'Не можна скасувати раунд {{requestedRound}} турніру "{{eventName}}": жоден раунд не розпочато'
+  tournamentRoundNotCurrent: 'Не можна скасувати раунд {{requestedRound}} турніру "{{eventName}}": поточний раунд — {{currentRound}}'
+  tournamentRoundGamesNotFinished: 'У раунді {{round}} турніру "{{eventName}}" ще не завершено {{unfinishedCount}} ігор'
+  tournamentHasNoMoreRounds: 'У турнірі "{{eventName}}" більше немає раундів для запуску'
+  tournamentRoundAlreadyPlayed: 'Не можна скасувати раунд {{round}} турніру "{{eventName}}": {{startedCount}} ігор вже розпочато або завершено'
+  tournamentAlreadyFinished: 'Турнір "{{eventName}}" вже завершено'
+  tournamentNotInLastRound: 'Турнір "{{eventName}}" ще не знаходиться в останньому раунді'
+  tournamentGameNotInCurrentRound: "Цю гру не можна розпочати зараз. Поточний раунд турніру: {{currentRound}}, раунд гри: {{gameRound}}"
+  seatingNotEnoughParticipants: 'Для розсадки турніру "{{eventName}}" потрібно щонайменше {{required}} учасників (зараз {{actual}})'
+  seatingParticipantsNotMultipleOfTableSize: 'Кількість учасників турніру "{{eventName}}" ({{count}}) має ділитися на 4 для розсадки'
+  seatingGenerationFailed: 'Не вдалося згенерувати розсадку для турніру "{{eventName}}" за відведений час. Спробуйте ще раз'
+  seatingCannotBeModifiedAfterTournamentStarted: 'Розсадку турніру "{{eventName}}" не можна змінювати після початку турніру'
+  seatingAlreadyApplied: 'Для турніру "{{eventName}}" вже створено ігри. Очистіть розсадку перед повторною генерацією'
+  seatingRoundCountMismatch: 'Розсадка для турніру "{{eventName}}" має містити {{expected}} раундів (надіслано {{actual}})'
+  seatingTableSizeMismatch: 'Стіл {{table}} у раунді {{round}} турніру "{{eventName}}" має містити {{expected}} гравців (надіслано {{actual}})'
+  seatingInvalidParticipant: 'Учасник {{userId}} не є схваленим учасником турніру "{{eventName}}" (раунд {{round}})'
+  seatingDuplicateParticipantInRound: 'Учасник {{userId}} зустрічається в розсадці більше одного разу в раунді {{round}} турніру "{{eventName}}"'
+  seatingMissingParticipantsInRound: 'У раунді {{round}} турніру "{{eventName}}" мають бути всі {{expected}} учасників (надіслано {{actual}})'
+  seatingSameTeamAtTable: 'У раунді {{round}} турніру "{{eventName}}" за столом {{table}} опинились двоє гравців однієї команди'
+  invalidEventFormatForType: 'Формат "{{format}}" недоступний для події типу "{{type}}"'
+  teamConfigOnlyForTeamTournament: Конфіг команд (teamConfig) доступний лише для командних турнірів
+  teamConfigRequired: Командний турнір потребує конфіг команд (teamConfig)
+  invalidTeamSize: teamSize має бути цілим числом ≥ 1
+  invalidTeamCount: teamCount має бути цілим числом ≥ 1
+  teamCountNotDivisibleByFour: teamCount має ділитися на 4
+  minParticipantsRequiredForTeamConfig: "Вкажіть minParticipants = teamSize * teamCount ({{expected}})"
+  minParticipantsMustMatchTeamConfig: "minParticipants ({{minParticipants}}) має дорівнювати teamSize * teamCount ({{expected}})"
+
+  teamNotFound: Команду з ID {{teamId}} не знайдено
+  teamNotInEvent: Команда {{teamId}} не належить події {{eventId}}
+  teamsNotAllowedForFormat: 'Команди доступні лише для командних подій ("{{eventName}}")'
+  insufficientTeamPermissions: 'Недостатньо прав для керування командами турніру "{{eventName}}"'
+  teamCountLimitReached: Досягнуто межу кількості команд ({{limit}})
+  teamFull: 'Команда "{{teamName}}" вже заповнена ({{teamSize}})'
+  userAlreadyInTeamForEvent: Гравець {{userId}} вже у команді цієї події
+  userNotApprovedParticipant: Гравець {{userId}} не є схваленим учасником турніру
+  teamCompositionLocked: 'Склад команд турніру "{{eventName}}" вже не можна змінювати'
+  teamMemberNotFound: Гравця {{userId}} немає в команді {{teamId}}
+  notEnoughApprovedForDraft: 'Для старту драфту турніру "{{eventName}}" потрібно щонайменше {{required}} схвалених учасників (наразі {{approved}})'
+  draftNotStartable: 'Драфт турніру "{{eventName}}" не можна розпочати з поточного стану'
+  teamDraftHasUnteamedPlayers: 'У командному турнірі "{{eventName}}" є {{unteamedCount}} схвалених учасників без команди'
+  teamDraftUnevenTeams: 'У командному турнірі "{{eventName}}" команди мають різну кількість учасників'
+  teamCountMustBeDivisibleByFour: 'Кількість команд у турнірі "{{eventName}}" ({{teamCount}}) має ділитися на 4'
+  teamDraftIncomplete: 'Щоб почати командний турнір "{{eventName}}", сформуйте {{teamCount}} повних команд по {{teamSize}} гравців'
+
+  eventRegistrationNotFound: "Реєстрацію користувача з id {{userId}} на подію '{{eventName}}' не знайдено"
+  userNotRegisteredForTournament: 'Користувач {{userId}} не зареєстрований на турнір "{{eventName}}"'
+  userNotApprovedForTournament: 'Користувач {{userId}} не схвалений для турніру "{{eventName}}" (статус реєстрації: {{status}})'
+  invalidEventRegistrationState: "Неможливо {{action}} реєстрацію зі статусом {{currentStatus}}. Дозволені статуси: {{allowedStatuses}}"
+  missingProfileNamesForTournamentRegistration: Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі
+  eventNotTournament: "Реєстрація доступна лише для подій типу TOURNAMENT (поточний тип: {{type}})"
+  eventCapacityReached: 'Турнір "{{eventName}}" вже досяг максимальної кількості учасників ({{maxParticipants}})'
+  insufficientEventRegistrationManagementPermissions: Недостатньо прав для управління реєстраціями на цю подію. Потрібна роль адміна або OWNER/MODERATOR клубу події.
+
+  gameNotFoundById: Гру з id {{id}} не знайдено
+  tooManyGamesFound: Знайдено забагато ігор. Будь ласка, звузьте критерії пошуку.
+  incorrectPlayerCount: Для гри потрібно {{requiredPlayers}} гравців
+  duplicatePlayer: Гравець {{playerName}} присутній більше одного разу в цій грі
+  duplicateGameTimestampInEvent: Хтось намагається додати гру одночасно з вами. Будь ласка, спробуйте ще раз
+  duplicateTournamentRoundTable: Гра для раунду {{tournamentRound}} та столу {{tournamentTable}} вже існує в цьому турнірі
+  incorrectTotalPoints: Сума очок повинна дорівнювати {{expectedTotal}}, у вас {{actualTotal}}
+  invalidPoints: Очки гравця ({{points}}) повинні бути в діапазоні від {{minPoints}} до {{maxPoints}}
+  eventHasntStarted: "{{eventName}} ще не розпочався"
+  eventHasEnded: "{{eventName}} вже закінчився"
+  youHaveToBeAdminToCreateGameWithCustomTime: Щоб створити гру з заданим часом, ви повинні бути адміністратором
+  youHaveToBeAdminToHideNewGameMessage: Щоб сховати повідомлення про нову гру, ви повинні бути адміністратором
+  gameNotInProgress: Результат раунду можна додати лише до гри, що триває
+  gameNotInProgressWhenDeletingRound: Результат раунду можна видалити лише з гри, що триває
+  gameNotInProgressWhenFinishing: Можна завершити лише гру, що триває
+  invalidRoundId: Очікується раунд {{expectedRoundId}}, отримано {{actualRoundId}}
+  roundAlreadyExists: Цей раунд вже завершено
+  notAuthorizedToModifyGame: Лише гравці, модератори клубу та адміністратори можуть змінювати гру
+  gamePlayerNotFound: Гравець з id {{userId}} не знайдений у грі {{gameId}}
+  noRoundsToRollback: У цій грі немає раундів для відкату
+  lastRoundRollbackAlreadyUsed: Ви вже відкатували останній раунд у цій грі
+  noRoundsCompleted: Гру можна завершити лише після щонайменше одного раунду
+  gameNotFinishedWhenUpdating: Гру можна редагувати лише після завершення
+  gameNotFinishedWhenUndoingFinish: Скасувати завершення можна лише для завершеної гри
+  cannotUndoFinishOnNonTrackedGame: Скасувати завершення можна лише для відстежуваної гри з раундами
+  gameNotCreatedWhenStarting: Можна розпочати лише гру в статусі CREATED
+  notGamePlayer: Лише гравці цієї гри можуть виконати цю дію
+
+  userNotFoundByUsername: Користувача з Telegram username {{username}} не знайдено
+  noValidGamesInCsv: У CSV файлі не знайдено жодної валідної гри
+
+  rulesetShouldContainDetailedRules: Для відстежуваної гри правила повинні містити детальні налаштування
+  yakumanLiabilityRequiresYakuman: Відповідальність за якуман можна вказати лише для якуману
+  noDoubleRonFirstWinsOnly: "Подвійний рон заборонено: перемагає лише перший, хто оголосив рон"
+  noTripleRonFirstWinsOnly: "Потрійний рон заборонено: перемагає лише перший, хто оголосив рон"
+  tripleRonShouldBeAbortiveDraw: Потрійний рон за цими правилами слід записати як нічию
+  dealInPlayerCannotBeWinner: Гравець, який накинув, не може бути переможцем
+  abortiveDrawNotInRuleset: Перездачі не передбачено в цьому наборі правил
+  nagashiManganNotInRuleset: Нагаші манган не передбачено в цьому наборі правил
+  hanRequiredForNonYakumanHand: Для руки, що не є якуманом, потрібно вказати кількість хан
+  handShouldBeRecordedAsCountedYakuman: Цю руку слід записати як підрахований якуман
+  fuRequiredForLowHanHand: Для рук з менш ніж п’ятьма хан потрібно вказати фу
+  twoHanMinimumIsRequired: За цими правилами рука повинна мати хоча б два хани
+  dealInPlayerNotInGame: Гравець, який накинув, відсутній у грі
+  missingPlayerForWind: Відсутній гравець для вітру {{wind}}
+  cannotFindHeadBumpPlayer: Не вдалося визначити head bump гравця
+  cannotDetermineDealer: "Не вдалося визначити дилера: некоректний стан гри"
+  cannotDeterminePlayerPlacement: "Не вдалося визначити місце гравця в грі: некоректний стан гри"
+  invalidHonbaFormat: Некоректний формат значення хонби в правилах
+  noPlayersInTheGame: Гра не має гравців
+  playerNotInGame: Гравець {{playerId}} відсутній у грі
+
+  userRatingChangeInGameNotFound: Зміну рейтингу користувача {{userId}} в грі {{gameId}} не знайдено
+  userHasNoRatingDespiteHavingPlayedGames: Користувач {{userId}} не має рейтингу в події {{eventId}} попри те, що має зіграні ігри
+  pleaseProvideStartPlaceForAllPlayersToResolveTie: Будь ласка, вкажіть стартове місце (вітер) для всіх гравців, щоб розв'язати нічию
+
+  nameAlreadyTakenByAnotherUser: "Ім'я '{{name}}' вже зайняте іншим користувачем"
+  telegramUsernameAlreadyTakenByAnotherUser: "Telegram юзернейм '{{telegramUsername}}' вже зайнятий іншим користувачем"
+  userWithThisTelegramIdAlreadyExists: Користувач з Telegram id {{telegramId}} вже існує
+  userNotFoundById: Користувача з id {{id}} не знайдено
+  userNotFoundByTelegramId: Користувача з Telegram id {{telegramId}} не знайдено
+  youHaveToBeAdminToEditAnotherUser: Щоб редагувати іншого користувача, ви повинні бути адміністратором
+  userIsNotActive: Користувач з id {{id}} не активний
+
+  enumParsingError: "Неприпустиме значення '{{value}}' для enum {{enumName}}. Дозволені значення: {{allowedValues}}"

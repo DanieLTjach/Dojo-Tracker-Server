@@ -1,7 +1,7 @@
 import z from 'zod';
 import { ClubRole } from '../model/ClubModels.ts';
 import { userIdParamSchema } from './UserSchemas.ts';
-import { optionalTextFieldSchema, clubIdParamSchema } from './CommonSchemas.ts';
+import { optionalTextFieldSchema, clubIdParamSchema, countrySchema, localeSchema } from './CommonSchemas.ts';
 
 export const clubIdSchema = z.number().int('Club ID must be an integer');
 export { clubIdParamSchema };
@@ -12,6 +12,8 @@ const clubBodySchema = z.object({
     name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
     address: optionalTextFieldSchema,
     city: optionalTextFieldSchema,
+    country: countrySchema,
+    locale: localeSchema,
     description: optionalTextFieldSchema,
     contactInfo: optionalTextFieldSchema,
     isActive: z.boolean().nullish(),

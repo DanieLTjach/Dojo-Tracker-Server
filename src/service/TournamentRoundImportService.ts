@@ -7,6 +7,8 @@ import { GameService } from './GameService.ts';
 import LogService from './LogService.ts';
 import { TrackedGameService } from './TrackedGameService.ts';
 import { UserService } from './UserService.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
+import { resolveUserLocale } from '../util/LocaleResolver.ts';
 
 export interface TournamentRoundImportResult {
     imported: number;
@@ -37,20 +39,26 @@ export class TournamentRoundImportService {
         importedBy: number
     ): TournamentRoundImportResult {
         const errors: string[] = [];
+        const user = this.userService.getUserById(importedBy);
+        const locale = resolveUserLocale(user);
 
         const event = this.eventService.getEventById(eventId);
         if (event.type !== 'TOURNAMENT') {
-            return { imported: 0, errors: ['Подія не є турніром'], games: [] };
+            return { imported: 0, errors: [t('telegram.importParse.notTournament', locale)], games: [] };
         }
         if (this.eventService.hasEventEnded(event)) {
-            return { imported: 0, errors: [`${event.name} вже закінчився`], games: [] };
+            return {
+                imported: 0,
+                errors: [t('telegram.importParse.eventEnded', locale, { eventName: event.name })],
+                games: [],
+            };
         }
 
         const playerCount = event.gameRules.numberOfPlayers as 3 | 4;
 
         let tables: ParsedTable[];
         try {
-            tables = this.parseSeatingBlock(eventId, text, expectedRound, playerCount, errors);
+            tables = this.parseSeatingBlock(eventId, text, expectedRound, playerCount, errors, locale);
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : String(error);
             return { imported: 0, errors: [message], games: [] };
@@ -61,10 +69,10 @@ export class TournamentRoundImportService {
         }
 
         if (tables.length === 0) {
-            return { imported: 0, errors: ['Немає рядків з гравцями'], games: [] };
+            return { imported: 0, errors: [t('telegram.importParse.noPlayerRows', locale)], games: [] };
         }
 
-        this.validateTables(eventId, expectedRound, tables, errors);
+        this.validateTables(eventId, expectedRound, tables, errors, locale);
         if (errors.length > 0) {
             return { imported: 0, errors, games: [] };
         }
@@ -95,7 +103,9 @@ export class TournamentRoundImportService {
                             `Tournament round import failed for event ${eventId} round ${expectedRound} table ${table.tableNumber} (importedBy=${importedBy})`,
                             error
                         );
-                        errors.push(`Стіл ${table.tableNumber}: ${message}`);
+                        errors.push(
+                            t('telegram.importParse.tablePrefix', locale, { table: table.tableNumber, message })
+                        );
                     }
                 }
                 if (errors.length > 0) {
@@ -117,22 +127,23 @@ export class TournamentRoundImportService {
         text: string,
         expectedRound: number,
         playerCount: 3 | 4,
-        errors: string[]
+        errors: string[],
+        locale: SupportedLocale
     ): ParsedTable[] {
         const lines = text.trim().split('\n').map(line => line.trim()).filter(line => line.length > 0);
 
         if (lines.length < 2) {
-            throw new Error('Очікується заголовок "Round N" і хоча б один рядок з гравцями');
+            throw new Error(t('telegram.importParse.expectHeaderAndRows', locale));
         }
 
         const headerMatch = lines[0]!.match(ROUND_HEADER_PATTERN);
         if (!headerMatch) {
-            throw new Error('Перший рядок має бути у форматі "Round N" (наприклад, Round 3)');
+            throw new Error(t('telegram.importParse.firstLineFormat', locale));
         }
 
         const roundInPaste = Number(headerMatch[1]);
         if (roundInPaste !== expectedRound) {
-            throw new Error(`Номер раунду в даних (${roundInPaste}) не збігається з введеним (${expectedRound})`);
+            throw new Error(t('telegram.importParse.roundMismatch', locale, { roundInPaste, expectedRound }));
         }
 
         const tables: ParsedTable[] = [];
@@ -143,7 +154,13 @@ export class TournamentRoundImportService {
 
             const tokens = line.split(/\s+/).filter(token => token.length > 0);
             if (tokens.length !== playerCount) {
-                errors.push(`Рядок ${tableNumber}: очікується ${playerCount} id гравців, отримано ${tokens.length}`);
+                errors.push(
+                    t('telegram.importParse.rowWrongPlayerCount', locale, {
+                        table: tableNumber,
+                        playerCount,
+                        actual: tokens.length,
+                    })
+                );
                 continue;
             }
 
@@ -154,7 +171,7 @@ export class TournamentRoundImportService {
                 const token = tokens[p]!;
                 const userId = Number(token);
                 if (!Number.isInteger(userId) || userId <= 0) {
-                    errors.push(`Рядок ${tableNumber}: "${token}" не є коректним id користувача`);
+                    errors.push(t('telegram.importParse.rowInvalidUserId', locale, { table: tableNumber, token }));
                     rowValid = false;
                     break;
                 }
@@ -164,7 +181,7 @@ export class TournamentRoundImportService {
                     this.eventRegistrationService.validateUserIsApprovedParticipant(eventId, userId);
                 } catch (error: unknown) {
                     const message = error instanceof Error ? error.message : String(error);
-                    errors.push(`Рядок ${tableNumber}: ${message}`);
+                    errors.push(t('telegram.importParse.rowPrefix', locale, { table: tableNumber, message }));
                     rowValid = false;
                     break;
                 }
@@ -184,7 +201,8 @@ export class TournamentRoundImportService {
         eventId: number,
         tournamentRound: number,
         tables: ParsedTable[],
-        errors: string[]
+        errors: string[],
+        locale: SupportedLocale
     ): void {
         const seenUserIds = new Set<number>();
 
@@ -192,18 +210,29 @@ export class TournamentRoundImportService {
             const tableKey = String(table.tableNumber);
             const existing = this.gameService.findGameByEventRoundAndTable(eventId, tournamentRound, tableKey);
             if (existing !== undefined) {
-                errors.push(`Стіл ${table.tableNumber}: гра для раунду ${tournamentRound} вже існує`);
+                errors.push(
+                    t(
+                        'telegram.importParse.tableGameExists',
+                        locale,
+                        { table: table.tableNumber, round: tournamentRound }
+                    )
+                );
             }
 
             const tableUserIds = new Set<number>();
             for (const player of table.players) {
                 if (tableUserIds.has(player.userId)) {
-                    errors.push(`Стіл ${table.tableNumber}: гравець ${player.userId} повторюється`);
+                    errors.push(
+                        t('telegram.importParse.tablePlayerDuplicate', locale, {
+                            table: table.tableNumber,
+                            userId: player.userId,
+                        })
+                    );
                 }
                 tableUserIds.add(player.userId);
 
                 if (seenUserIds.has(player.userId)) {
-                    errors.push(`Гравець ${player.userId} зустрічається на кількох столах`);
+                    errors.push(t('telegram.importParse.playerOnMultipleTables', locale, { userId: player.userId }));
                 }
                 seenUserIds.add(player.userId);
             }

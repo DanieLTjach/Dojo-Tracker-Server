@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { StatusCodes } from 'http-status-codes';
-import { BadRequestError, NotFoundError } from '../src/error/BaseErrors.ts';
+import { ResponseStatusError } from '../src/error/BaseErrors.ts';
 import { ZodError } from 'zod';
 import { SqliteError } from 'better-sqlite3';
 import { jest } from '@jest/globals';
@@ -47,6 +47,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
         expect(mockRes.json).toHaveBeenCalledWith({
             error: 'Invalid request data',
+            message: 'Некоректні дані запиту',
             details: zodError.issues,
         });
         expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
@@ -60,31 +61,32 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.INTERNAL_SERVER_ERROR);
         expect(mockRes.json).toHaveBeenCalledWith({
             error: 'Database error',
+            message: 'Помилка бази даних: UNIQUE constraint failed',
             details: sqliteError.message,
         });
     });
 
     it('should handle ResponseStatusError with correct status code and error code', () => {
-        const customError = new BadRequestError('Invalid input', 'invalidInput');
+        const customError = new ResponseStatusError(StatusCodes.BAD_REQUEST, 'invalidInput');
 
         handleErrors(customError, mockReq as Request, mockRes as Response, mockNext);
 
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
         expect(mockRes.json).toHaveBeenCalledWith({
             errorCode: 'invalidInput',
-            message: 'Invalid input',
+            message: 'errors.invalidInput',
         });
     });
 
     it('should handle NotFoundError with 404 status', () => {
-        const notFoundError = new NotFoundError('Resource not found', 'notFound');
+        const notFoundError = new ResponseStatusError(StatusCodes.NOT_FOUND, 'notFound');
 
         handleErrors(notFoundError, mockReq as Request, mockRes as Response, mockNext);
 
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.NOT_FOUND);
         expect(mockRes.json).toHaveBeenCalledWith({
             errorCode: 'notFound',
-            message: 'Resource not found',
+            message: 'errors.notFound',
         });
     });
 
@@ -109,7 +111,7 @@ describe('ErrorHandling Middleware', () => {
         expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.INTERNAL_SERVER_ERROR);
         expect(mockRes.json).toHaveBeenCalledWith({
             errorCode: undefined,
-            message: 'Internal Server Error',
+            message: 'Внутрішня помилка сервера',
         });
     });
 

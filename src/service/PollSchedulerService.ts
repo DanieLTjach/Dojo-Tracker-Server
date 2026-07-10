@@ -5,20 +5,39 @@ import { ClubService } from './ClubService.ts';
 import type { ClubPollConfig } from '../model/PollModels.ts';
 import type { TelegramTopic } from '../model/TelegramTopic.ts';
 import LogService from './LogService.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
+import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 const KYIV_TIMEZONE = 'Europe/Kyiv';
-const LOCALE = 'uk-UA';
 
-const dayFormatter = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', timeZone: KYIV_TIMEZONE });
-const monthDayFormatter = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long', timeZone: KYIV_TIMEZONE });
+const dayFormatters = new Map<SupportedLocale, Intl.DateTimeFormat>();
+const monthDayFormatters = new Map<SupportedLocale, Intl.DateTimeFormat>();
 
-export function formatDayName(date: Date): string {
-    const name = dayFormatter.format(date);
+function dayFormatter(locale: SupportedLocale): Intl.DateTimeFormat {
+    let formatter = dayFormatters.get(locale);
+    if (formatter === undefined) {
+        formatter = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: KYIV_TIMEZONE });
+        dayFormatters.set(locale, formatter);
+    }
+    return formatter;
+}
+
+function monthDayFormatter(locale: SupportedLocale): Intl.DateTimeFormat {
+    let formatter = monthDayFormatters.get(locale);
+    if (formatter === undefined) {
+        formatter = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: KYIV_TIMEZONE });
+        monthDayFormatters.set(locale, formatter);
+    }
+    return formatter;
+}
+
+export function formatDayName(date: Date, locale: SupportedLocale): string {
+    const name = dayFormatter(locale).format(date);
     return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-function formatMonthName(date: Date): string {
-    const parts = monthDayFormatter.formatToParts(date);
+function formatMonthName(date: Date, locale: SupportedLocale): string {
+    const parts = monthDayFormatter(locale).formatToParts(date);
     return parts.find(p => p.type === 'month')!.value;
 }
 
@@ -59,7 +78,12 @@ class PollSchedulerService {
             throw new Error(`No main topic configured for club ${config.clubId}`);
         }
 
-        return await this.sendTelegramPoll(pollTopic, this.buildPollTitle(config), this.buildPollOptions(config));
+        const locale = resolveClubLocale(this.clubService.getClubById(config.clubId));
+        return await this.sendTelegramPoll(
+            pollTopic,
+            this.buildPollTitle(config, locale),
+            this.buildPollOptions(config, locale)
+        );
     }
 
     private sendScheduledPoll(config: ClubPollConfig) {
@@ -69,10 +93,15 @@ class PollSchedulerService {
             return;
         }
 
-        void this.sendTelegramPoll(pollTopic, this.buildPollTitle(config), this.buildPollOptions(config));
+        const locale = resolveClubLocale(this.clubService.getClubById(config.clubId));
+        void this.sendTelegramPoll(
+            pollTopic,
+            this.buildPollTitle(config, locale),
+            this.buildPollOptions(config, locale)
+        );
     }
 
-    buildPollTitle(config: ClubPollConfig, now: Date = nowInKyiv()): string {
+    buildPollTitle(config: ClubPollConfig, locale: SupportedLocale, now: Date = nowInKyiv()): string {
         const dates = config.eventDays.map(day => getNextDayOfWeek(now, day));
         dates.sort((a, b) => a.getTime() - b.getTime());
 
@@ -80,17 +109,17 @@ class PollSchedulerService {
         const sameMonth = dates.every(d => d.getMonth() === firstMonth);
 
         const datesText = sameMonth
-            ? `${dates.map(d => d.getDate()).join(', ')} ${formatMonthName(dates[0]!)}`
-            : dates.map(d => `${d.getDate()} ${formatMonthName(d)}`).join(', ');
+            ? `${dates.map(d => d.getDate()).join(', ')} ${formatMonthName(dates[0]!, locale)}`
+            : dates.map(d => `${d.getDate()} ${formatMonthName(d, locale)}`).join(', ');
 
-        return `🀄 Маджонг ${datesText}`;
+        return t('telegram.poll.title', locale, { dates: datesText });
     }
 
-    buildPollOptions(config: ClubPollConfig, now: Date = nowInKyiv()): string[] {
+    buildPollOptions(config: ClubPollConfig, locale: SupportedLocale, now: Date = nowInKyiv()): string[] {
         const sortedDates = config.eventDays
             .map(day => ({ day, date: getNextDayOfWeek(now, day) }))
             .sort((a, b) => a.date.getTime() - b.date.getTime());
-        const options: string[] = sortedDates.map(({ date }) => formatDayName(date));
+        const options: string[] = sortedDates.map(({ date }) => formatDayName(date, locale));
         options.push(...config.extraOptions);
         return options;
     }
