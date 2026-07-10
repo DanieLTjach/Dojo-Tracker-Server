@@ -14,10 +14,16 @@ const sensitiveRequestBodyKeys = new Set([
     'idToken',
     'id_token',
     'access_token',
+    'accessToken',
     'refresh_token',
+    'refreshToken',
     'g_csrf_token',
     'code_verifier',
+    'codeVerifier',
     'code',
+    'registrationToken',
+    'client_secret',
+    'clientSecret',
 ]);
 
 export const handleErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {

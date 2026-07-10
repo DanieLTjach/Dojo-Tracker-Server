@@ -1,5 +1,11 @@
 import type { AuthProvider } from '../model/AuthProviderModels.ts';
-import { UnauthorizedError, ForbiddenError, ConflictError, InternalServerError } from './BaseErrors.ts';
+import {
+    UnauthorizedError,
+    ForbiddenError,
+    ConflictError,
+    InternalServerError,
+    ServiceUnavailableError,
+} from './BaseErrors.ts';
 
 export class InvalidInitDataError extends UnauthorizedError {
     constructor(reason: string) {
@@ -52,6 +58,12 @@ export class AuthProviderNotConfiguredError extends InternalServerError {
 export class InvalidExternalAuthTokenError extends UnauthorizedError {
     constructor(provider: AuthProvider) {
         super('invalidExternalAuthToken', { provider });
+    }
+}
+
+export class ExternalAuthProviderUnavailableError extends ServiceUnavailableError {
+    constructor(provider: AuthProvider) {
+        super('externalAuthProviderUnavailable', { provider });
     }
 }
 

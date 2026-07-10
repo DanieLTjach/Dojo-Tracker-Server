@@ -67,3 +67,10 @@ export class InternalServerError extends ResponseStatusError {
         this.name = 'InternalServerError';
     }
 }
+
+export class ServiceUnavailableError extends ResponseStatusError {
+    constructor(errorCode: string, params?: TranslationParams) {
+        super(StatusCodes.SERVICE_UNAVAILABLE, errorCode, params);
+        this.name = 'ServiceUnavailableError';
+    }
+}

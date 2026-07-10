@@ -144,6 +144,9 @@ describe('ErrorHandling Middleware', () => {
             idToken: 'telegram.jwt',
             nested: {
                 access_token: 'access',
+                accessToken: 'camel-access',
+                registrationToken: 'registration',
+                codeVerifier: 'pkce',
                 normal: 'visible',
             },
         };
@@ -152,7 +155,9 @@ describe('ErrorHandling Middleware', () => {
 
         expect(consoleErrorSpy).toHaveBeenCalledWith(
             'Error while processing request GET /test from user (ID: 123) with body ' +
-                '{"credential":"[REDACTED]","idToken":"[REDACTED]","nested":{"access_token":"[REDACTED]","normal":"visible"}}',
+                '{"credential":"[REDACTED]","idToken":"[REDACTED]","nested":' +
+                '{"access_token":"[REDACTED]","accessToken":"[REDACTED]","registrationToken":"[REDACTED]",' +
+                '"codeVerifier":"[REDACTED]","normal":"visible"}}',
             error
         );
     });

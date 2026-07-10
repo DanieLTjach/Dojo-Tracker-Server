@@ -1,11 +1,36 @@
 import { OAuth2Client } from 'google-auth-library';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, errors, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import config from '../../config/config.ts';
 import { AuthProvider, type VerifiedExternalProfile } from '../model/AuthProviderModels.ts';
 import {
     AuthProviderNotConfiguredError,
+    ExternalAuthProviderUnavailableError,
     InvalidExternalAuthTokenError,
 } from '../error/AuthErrors.ts';
+
+function isProviderUnavailableError(error: unknown): boolean {
+    if (error instanceof errors.JWKSTimeout) {
+        return true;
+    }
+    if (error instanceof TypeError && /fetch|network/i.test(error.message)) {
+        return true;
+    }
+    if (typeof error !== 'object' || error === null) {
+        return false;
+    }
+
+    const code = 'code' in error ? error.code : undefined;
+    if (typeof code === 'string' && ['ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT'].includes(code)) {
+        return true;
+    }
+
+    const response = 'response' in error ? error.response : undefined;
+    if (typeof response !== 'object' || response === null || !('status' in response)) {
+        return false;
+    }
+    const status = response.status;
+    return typeof status === 'number' && (status === 429 || status >= 500);
+}
 
 export interface ExternalAuthTokenVerifier {
     verifyGoogleCredential(credential: string): Promise<VerifiedExternalProfile>;
@@ -46,13 +71,22 @@ export class GoogleAuthTokenVerifier {
             if (error instanceof AuthProviderNotConfiguredError) {
                 throw error;
             }
+            if (isProviderUnavailableError(error)) {
+                throw new ExternalAuthProviderUnavailableError(AuthProvider.GOOGLE);
+            }
             throw new InvalidExternalAuthTokenError(AuthProvider.GOOGLE);
         }
     }
 }
 
 export class TelegramAuthTokenVerifier {
-    private jwks = createRemoteJWKSet(new URL('https://oauth.telegram.org/.well-known/jwks.json'));
+    private jwks: JWTVerifyGetKey;
+
+    constructor(
+        jwks: JWTVerifyGetKey = createRemoteJWKSet(new URL('https://oauth.telegram.org/.well-known/jwks.json'))
+    ) {
+        this.jwks = jwks;
+    }
 
     async verify(idToken: string): Promise<VerifiedExternalProfile> {
         if (config.telegramLoginClientId === undefined) {
@@ -65,10 +99,13 @@ export class TelegramAuthTokenVerifier {
                 audience: config.telegramLoginClientId,
             });
             const telegramId = this.parseTelegramId(payload['id']);
-            const username = typeof payload['username'] === 'string' ? payload['username'] : undefined;
-            const firstName = typeof payload['first_name'] === 'string' ? payload['first_name'] : undefined;
-            const lastName = typeof payload['last_name'] === 'string' ? payload['last_name'] : undefined;
-            const displayName = [firstName, lastName].filter(Boolean).join(' ').trim() || undefined;
+            const username = typeof payload['preferred_username'] === 'string'
+                ? payload['preferred_username']
+                : undefined;
+            const fullName = typeof payload['name'] === 'string' ? payload['name'].trim() : '';
+            const givenName = typeof payload['given_name'] === 'string' ? payload['given_name'] : undefined;
+            const familyName = typeof payload['family_name'] === 'string' ? payload['family_name'] : undefined;
+            const displayName = fullName || [givenName, familyName].filter(Boolean).join(' ').trim() || undefined;
 
             const profile: VerifiedExternalProfile = {
                 provider: AuthProvider.TELEGRAM,
@@ -79,12 +116,15 @@ export class TelegramAuthTokenVerifier {
                 profile.displayName = displayName;
             }
             if (username !== undefined) {
-                profile.username = `@${username}`;
+                profile.username = username.startsWith('@') ? username : `@${username}`;
             }
             return profile;
         } catch (error) {
             if (error instanceof AuthProviderNotConfiguredError) {
                 throw error;
+            }
+            if (isProviderUnavailableError(error)) {
+                throw new ExternalAuthProviderUnavailableError(AuthProvider.TELEGRAM);
             }
             throw new InvalidExternalAuthTokenError(AuthProvider.TELEGRAM);
         }
