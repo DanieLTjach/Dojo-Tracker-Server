@@ -24,7 +24,7 @@ import LogService from './LogService.ts';
 import { ProfileService } from './ProfileService.ts';
 import TelegramMessageService from './TelegramMessageService.ts';
 import { UserService } from './UserService.ts';
-import { SupportedLocale, t, translationRef } from '../i18n/index.ts';
+import { type SupportedLocale, t, translationRef } from '../i18n/index.ts';
 import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 
 export class EventRegistrationService {

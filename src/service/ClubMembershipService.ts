@@ -14,7 +14,7 @@ import { UserService } from './UserService.ts';
 import TelegramMessageService from './TelegramMessageService.ts';
 import LogService from './LogService.ts';
 import { GLOBAL_LOGS_LOCALE, globalClubLogsTopic } from '../model/TelegramTopic.ts';
-import { SupportedLocale, t, translationRef } from '../i18n/index.ts';
+import { type SupportedLocale, t, translationRef } from '../i18n/index.ts';
 import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 export class ClubMembershipService {
     private clubService: ClubService = new ClubService();

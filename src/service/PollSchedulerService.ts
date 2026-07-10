@@ -5,7 +5,7 @@ import { ClubService } from './ClubService.ts';
 import type { ClubPollConfig } from '../model/PollModels.ts';
 import type { TelegramTopic } from '../model/TelegramTopic.ts';
 import LogService from './LogService.ts';
-import { SupportedLocale, t } from '../i18n/index.ts';
+import { type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 const KYIV_TIMEZONE = 'Europe/Kyiv';

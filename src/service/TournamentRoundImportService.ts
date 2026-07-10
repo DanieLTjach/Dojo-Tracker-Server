@@ -7,7 +7,7 @@ import { GameService } from './GameService.ts';
 import LogService from './LogService.ts';
 import { TrackedGameService } from './TrackedGameService.ts';
 import { UserService } from './UserService.ts';
-import { SupportedLocale, t } from '../i18n/index.ts';
+import { type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveUserLocale } from '../util/LocaleResolver.ts';
 
 export interface TournamentRoundImportResult {

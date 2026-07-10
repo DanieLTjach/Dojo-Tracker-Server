@@ -17,7 +17,7 @@ import { ClubMembershipRepository } from '../repository/ClubMembershipRepository
 import { InsufficientPermissionsError, TelegramAccountAlreadyUsedError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
-import { SupportedLocale, t } from '../i18n/index.ts';
+import { type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 export class UserService {
