@@ -44,13 +44,6 @@ type TelegramCommandContext =
 type TelegramCallbackQueryRawContext = Context<Update.CallbackQueryUpdate<CallbackQuery>> & { match: RegExpExecArray };
 type TelegramCallbackQueryContext = TelegramCallbackQueryRawContext & { locale: SupportedLocale };
 
-export function attachLocale<C extends object>(
-    ctx: C,
-    locale: SupportedLocale
-): C & { locale: SupportedLocale } {
-    return Object.assign(ctx, { locale });
-}
-
 type ClubData = { clubId: number, clubName: string };
 
 type TournamentImportStep = 'awaiting_round' | 'awaiting_data';
@@ -1249,7 +1242,8 @@ class TelegramCommandService {
         const locale = resolveUserLocale(user);
 
         try {
-            await code(attachLocale(ctx, locale));
+            // Object.assign (not spread) so ctx's prototype methods (reply, etc.) survive
+            await code(Object.assign(ctx, { locale }));
         } catch (e) {
             if (e instanceof TelegramReplyError) {
                 ctx.reply(t(e.key, locale, e.params));
