@@ -39,7 +39,7 @@ describe('Club API Endpoints', () => {
         const response = await request(app)
             .post('/api/clubs')
             .set('Authorization', adminAuthHeader)
-            .send({ name });
+            .send({ name, country: 'UA', locale: 'uk' });
         return response.body.id;
     }
 
@@ -111,6 +111,8 @@ describe('Club API Endpoints', () => {
                     name: 'Integration Club Create',
                     description: 'Created in tests',
                     city: 'Kyiv',
+                    country: 'UA',
+                    locale: 'uk',
                 });
 
             createdClubId = response.body.id;
@@ -119,6 +121,41 @@ describe('Club API Endpoints', () => {
             expect(typeof response.body.id).toBe('number');
             expect(response.body.name).toBe('Integration Club Create');
             expect(response.body.city).toBe('Kyiv');
+            expect(response.body.country).toBe('UA');
+            expect(response.body.locale).toBe('uk');
+        });
+
+        test('should create club with explicit country and locale', async () => {
+            const response = await request(app)
+                .post('/api/clubs')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Integration Club Locale Create',
+                    country: 'US',
+                    locale: 'en',
+                });
+
+            createdClubId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.country).toBe('US');
+            expect(response.body.locale).toBe('en');
+        });
+
+        test('should reject invalid country and locale values', async () => {
+            const invalidCountryResponse = await request(app)
+                .post('/api/clubs')
+                .set('Authorization', adminAuthHeader)
+                .send({ name: 'Invalid Country Club', country: 'ua' });
+
+            expect(invalidCountryResponse.status).toBe(400);
+
+            const invalidLocaleResponse = await request(app)
+                .post('/api/clubs')
+                .set('Authorization', adminAuthHeader)
+                .send({ name: 'Invalid Locale Club', locale: 'fr' });
+
+            expect(invalidLocaleResponse.status).toBe(400);
         });
 
         test('should reject when not admin', async () => {
@@ -339,6 +376,8 @@ describe('Club API Endpoints', () => {
                     name: 'Integration Club Updated',
                     address: 'Main st 1',
                     city: 'Lviv',
+                    country: 'UA',
+                    locale: 'uk',
                     description: 'Updated',
                     contactInfo: '+380...',
                     isActive: true,

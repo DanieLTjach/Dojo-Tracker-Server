@@ -1,0 +1,32 @@
+achievements:
+  descriptions:
+    dealer_wins: Most dealer wins
+    one_han_wins: Most 1-han wins
+    riichi_nomi_wins: Most riichi-only wins
+    mangan_plus_wins_except_yakumans: Most mangan+ wins excluding yakuman
+    thirteen_plus_han_wins: Most wins with 13+ han
+    points_fed_to_dealer: Most points fed to dealer
+    lost_riichi_sticks: Most lost riichi sticks
+    tsumo_wins: Most tsumo wins
+    max_fu_hand: Hand with the most fu
+    haneman_wins: Most haneman wins
+    points_lost_on_tsumo: Most points lost to tsumo
+    riichi_declarations: Most riichi declarations
+    baiman_wins: Most baiman wins
+    saki_zero_after_uma_games: Zero points after uma
+    chiitoi_nomi_wins: Most 2-han 25-fu wins
+    points_lost_on_ron: Fewest points lost to ron
+    best_game_points: Most points won in a single game
+    yakuman_wins: Most yakuman wins
+    best_hand_han_points: Best hand by han count
+    chombo_count: Most chombo
+    biggest_deal_in: Biggest deal-in of the tournament
+  units:
+    wins: "{{value}} wins"
+    points: "{{value}} points"
+    sticks: "{{value}} sticks"
+    fu: "{{value}} fu"
+    han: "{{value}} han"
+    declarations: "{{value}} declarations"
+    chombo: "{{value}} chombo"
+    players: "{{value}} players"

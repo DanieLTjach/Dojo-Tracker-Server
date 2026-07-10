@@ -46,6 +46,8 @@ describe('ClubInviteService', () => {
             name: 'Invite Service Club',
             address: null,
             city: null,
+            country: 'UA',
+            locale: 'uk',
             description: null,
             contactInfo: null,
             isActive: true,

@@ -42,6 +42,33 @@ export class RatingRepository {
             : undefined;
     }
 
+    private findTeamLatestRatingChangeBeforeDateStatement(): Statement<{
+        teamId: number;
+        eventId: number;
+        beforeDate: string;
+    }, UserRatingChangeDBEntity> {
+        return dbManager.db.prepare(`
+            SELECT * FROM userRatingChange
+            WHERE teamId = :teamId
+              AND eventId = :eventId
+              AND teamRating IS NOT NULL
+              AND timestamp < :beforeDate
+            ORDER BY timestamp DESC
+            LIMIT 1`);
+    }
+
+    findTeamLatestRatingChangeBeforeDate(
+        teamId: number,
+        eventId: number,
+        beforeDate: Date
+    ): UserRatingChange | undefined {
+        const userRatingChangeDBEntity = this.findTeamLatestRatingChangeBeforeDateStatement()
+            .get({ teamId, eventId, beforeDate: beforeDate.toISOString() });
+        return userRatingChangeDBEntity !== undefined
+            ? userRatingChangeFromDBEntity(userRatingChangeDBEntity)
+            : undefined;
+    }
+
     private findAllUsersCurrentRatingStatement(): Statement<{ eventId: number }, UserRatingDBEntity> {
         return dbManager.db.prepare(`
             SELECT u.id as userId, u.name as userName, urc.rating as rating, gc.gamesPlayed as gamesPlayed,
@@ -119,8 +146,8 @@ export class RatingRepository {
 
     private addUserRatingChangeStatement(): Statement<UserRatingChangeDBEntity, void> {
         return dbManager.db.prepare(`
-            INSERT INTO userRatingChange (userId, eventId, gameId, ratingChange, rating, timestamp)
-            VALUES (:userId, :eventId, :gameId, :ratingChange, :rating, :timestamp)`);
+            INSERT INTO userRatingChange (userId, eventId, gameId, ratingChange, rating, timestamp, teamId, teamRating)
+            VALUES (:userId, :eventId, :gameId, :ratingChange, :rating, :timestamp, :teamId, :teamRating)`);
     }
 
     addUserRatingChange(userRatingChange: UserRatingChange): void {
@@ -164,6 +191,37 @@ export class RatingRepository {
             }
         );
     }
+
+    private updateTeamRatingChangesAfterDateStatement(): Statement<{
+        teamId: number;
+        eventId: number;
+        ratingDelta: number;
+        afterDate: string;
+    }> {
+        return dbManager.db.prepare(`
+            UPDATE userRatingChange
+            SET teamRating = teamRating + :ratingDelta
+            WHERE teamId = :teamId
+              AND eventId = :eventId
+              AND teamRating IS NOT NULL
+              AND timestamp > :afterDate`);
+    }
+
+    updateTeamRatingChangesAfterDate(
+        teamId: number,
+        eventId: number,
+        ratingDelta: number,
+        afterDate: Date
+    ): void {
+        this.updateTeamRatingChangesAfterDateStatement().run(
+            {
+                teamId,
+                eventId,
+                ratingDelta,
+                afterDate: afterDate.toISOString(),
+            }
+        );
+    }
 }
 
 interface UserRatingChangeDBEntity {
@@ -173,14 +231,26 @@ interface UserRatingChangeDBEntity {
     ratingChange: number;
     rating: number;
     timestamp: string;
+    teamId: number | null;
+    teamRating: number | null;
 }
 
 function userRatingChangeToDBEntity(userRatingChange: UserRatingChange): UserRatingChangeDBEntity {
-    return { ...userRatingChange, timestamp: userRatingChange.timestamp.toISOString() };
+    return {
+        ...userRatingChange,
+        timestamp: userRatingChange.timestamp.toISOString(),
+        teamId: userRatingChange.teamId ?? null,
+        teamRating: userRatingChange.teamRating ?? null,
+    };
 }
 
 function userRatingChangeFromDBEntity(dbEntity: UserRatingChangeDBEntity): UserRatingChange {
-    return { ...dbEntity, timestamp: new Date(dbEntity.timestamp) };
+    return {
+        ...dbEntity,
+        timestamp: new Date(dbEntity.timestamp),
+        teamId: dbEntity.teamId,
+        teamRating: dbEntity.teamRating,
+    };
 }
 
 interface UserRatingDBEntity {

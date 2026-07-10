@@ -36,11 +36,21 @@ import { EventService } from './EventService.ts';
 import { GameService } from './GameService.ts';
 import { RatingService } from './RatingService.ts';
 import { UserService } from './UserService.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
 
 const TRACKED_GAME_LOG_ACTIONS = {
-    CREATED: { heading: 'New Tracked Game Created', actorLabel: 'Created by' },
-    STARTED_ON_CREATE: { heading: 'New Tracked Game Started', actorLabel: 'Created by' },
-    STARTED: { heading: 'Tracked Game Started', actorLabel: 'Started by' },
+    CREATED: {
+        headingKey: 'telegram.trackedGameLog.createdTitle',
+        actorLabelKey: 'telegram.gameLog.createdByLabel',
+    },
+    STARTED_ON_CREATE: {
+        headingKey: 'telegram.trackedGameLog.startedOnCreateTitle',
+        actorLabelKey: 'telegram.gameLog.createdByLabel',
+    },
+    STARTED: {
+        headingKey: 'telegram.trackedGameLog.startedTitle',
+        actorLabelKey: 'telegram.trackedGameLog.startedByLabel',
+    },
 } as const;
 
 type TrackedGameLogAction = keyof typeof TRACKED_GAME_LOG_ACTIONS;
@@ -439,19 +449,21 @@ export class TrackedGameService {
         action: TrackedGameLogAction,
         actorId: number
     ): void {
-        const { heading, actorLabel } = TRACKED_GAME_LOG_ACTIONS[action];
+        const { headingKey, actorLabelKey } = TRACKED_GAME_LOG_ACTIONS[action];
         const user = this.userService.getUserById(actorId);
-        const message = dedent`
-            <b>🎮 ${heading}</b>
+        this.gameService.logMessageToGameLogsTopics(locale => {
+            const tr = (key: string) => t(key, locale);
+            return dedent`
+                <b>${tr(headingKey)}</b>
 
-            <b>Game ID:</b> <code>${game.id}</code>
-            ${this.gameService.formatEventGameLogSection(game, event)}
-            <b>Timestamp:</b> <code>${game.createdAt.toISOString()}</code>
-            <b>${actorLabel}:</b> ${user.name} <code>(ID: ${user.id})</code>
+                <b>${tr('telegram.gameLog.gameIdLabel')}</b> <code>${game.id}</code>
+                ${this.gameService.formatEventGameLogSection(game, event, locale)}
+                <b>${tr('telegram.gameLog.timestampLabel')}</b> <code>${game.createdAt.toISOString()}</code>
+                <b>${tr(actorLabelKey)}:</b> ${user.name} <code>(ID: ${user.id})</code>
 
-            <b>Players:</b>\n
-        ` + this.printTrackedGamePlayersLog(game.players);
-        this.gameService.logMessageToGameLogsTopics(message, event);
+                <b>${tr('telegram.gameLog.playersLabel')}</b>\n
+            ` + this.printTrackedGamePlayersLog(game.players, locale);
+        }, event);
     }
 
     private logGameRoundRollback(
@@ -461,29 +473,33 @@ export class TrackedGameService {
         modifiedBy: number
     ): void {
         const user = this.userService.getUserById(modifiedBy);
-        const pointChangesSection = deletedRound.result.playerPointChanges.length > 0
-            ? `\n\n<b>Point changes removed:</b>\n` +
-                this.printRoundPointChangesLog(deletedRound.result.playerPointChanges)
-            : '';
+        this.gameService.logMessageToGameLogsTopics(locale => {
+            const tr = (key: string) => t(key, locale);
+            const pointChangesSection = deletedRound.result.playerPointChanges.length > 0
+                ? `\n\n<b>${tr('telegram.trackedGameLog.pointChangesRemovedLabel')}</b>\n` +
+                    this.printRoundPointChangesLog(deletedRound.result.playerPointChanges)
+                : '';
 
-        const message = dedent`
-            <b>↩️ Last Round Rolled Back</b>
+            return dedent`
+                <b>${tr('telegram.trackedGameLog.rolledBackTitle')}</b>
 
-            <b>Game ID:</b> <code>${game.id}</code>
-            ${this.gameService.formatEventGameLogSection(game, event)}
-            <b>Round:</b> <code>${deletedRound.wind} ${deletedRound.dealerNumber} Repeat ${deletedRound.counters} (${deletedRound.roundNumber})</code>
-            <b>Result type:</b> <code>${deletedRound.result.type}</code>
-            <b>Rolled back by:</b> ${user.name} <code>(ID: ${user.id})</code>
-        ` + pointChangesSection;
-        this.gameService.logMessageToGameLogsTopics(message, event);
+                <b>${tr('telegram.gameLog.gameIdLabel')}</b> <code>${game.id}</code>
+                ${this.gameService.formatEventGameLogSection(game, event, locale)}
+                <b>${
+                tr('telegram.trackedGameLog.roundLabel')
+            }</b> <code>${deletedRound.wind} ${deletedRound.dealerNumber} Repeat ${deletedRound.counters} (${deletedRound.roundNumber})</code>
+                <b>${tr('telegram.trackedGameLog.resultTypeLabel')}</b> <code>${deletedRound.result.type}</code>
+                <b>${tr('telegram.trackedGameLog.rolledBackByLabel')}:</b> ${user.name} <code>(ID: ${user.id})</code>
+            ` + pointChangesSection;
+        }, event);
     }
 
-    private printTrackedGamePlayersLog(players: GamePlayer[]): string {
+    private printTrackedGamePlayersLog(players: GamePlayer[], locale: SupportedLocale): string {
         return players.map((p, index) => {
             const user = this.userService.getUserById(p.userId);
-            return `${
-                index + 1
-            }. <b>${user.name}</b> <code>(ID: ${user.id})</code>\n   • Start Place: <b>${p.startPlace}</b>`;
+            return `${index + 1}. <b>${user.name}</b> <code>(ID: ${user.id})</code>\n   • ${
+                t('telegram.gameLog.startPlaceLabel', locale)
+            } <b>${p.startPlace}</b>`;
         }).join('\n\n');
     }
 

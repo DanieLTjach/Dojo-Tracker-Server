@@ -1,0 +1,13 @@
+import:
+  # CsvParsingError keys (src/service/ImportService.ts)
+  csvMissingHeaderOrDataRow: CSV файл повинен мати рядок заголовків і хоча б один рядок з даними
+  csvMissingRequiredColumn: "Відсутній обовʼязковий стовпець: {{column}}"
+
+  # Per-row validation messages (src/service/ImportService.ts)
+  rowUsernameEmpty: "Рядок {{row}}: player{{player}}_username порожній"
+  rowUserNotFound: "Рядок {{row}}: користувача {{username}} не знайдено"
+  rowPointsNotInteger: "Рядок {{row}}: player{{player}}_points повинно бути цілим числом"
+  rowInvalidStartPlace: "Рядок {{row}}: player{{player}}_startPlace повинно бути одним з: {{validWinds}}"
+  rowChomboNotNonNegativeInteger: "Рядок {{row}}: player{{player}}_chombo повинно бути невідʼємним цілим числом"
+  rowInvalidCreatedAt: "Рядок {{row}}: createdAt не є коректною датою"
+  rowTournamentRoundNotPositiveInteger: "Рядок {{row}}: tournamentRound повинно бути додатним цілим числом"

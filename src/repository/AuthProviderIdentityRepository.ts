@@ -32,6 +32,7 @@ export class AuthProviderIdentityRepository {
                 p.firstName AS p_firstName,
                 p.lastName AS p_lastName,
                 p.emaNumber AS p_emaNumber,
+                p.locale AS p_locale,
                 p.hideProfile AS p_hideProfile
             FROM authProviderIdentity api
             JOIN user u ON api.userId = u.id
@@ -146,6 +147,7 @@ interface AuthProviderIdentityWithUserDBEntity extends AuthProviderIdentityDBEnt
     p_firstName: string | null;
     p_lastName: string | null;
     p_emaNumber: string | null;
+    p_locale: string | null;
     p_hideProfile: number | null;
 }
 
@@ -189,6 +191,7 @@ function userFromIdentityDBEntity(dbEntity: AuthProviderIdentityWithUserDBEntity
                 firstName: dbEntity.p_firstName,
                 lastName: dbEntity.p_lastName,
                 emaNumber: dbEntity.p_emaNumber,
+                locale: dbEntity.p_locale,
                 hideProfile: Boolean(dbEntity.p_hideProfile),
             }
             : null,

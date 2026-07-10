@@ -1,19 +1,25 @@
 import { BadRequestError } from './BaseErrors.ts';
 
-export class CsvParsingError extends BadRequestError {
-    constructor(message: string) {
-        super(message, 'csvParsingError');
+export class CsvMissingHeaderOrDataRowError extends BadRequestError {
+    constructor() {
+        super('import.csvMissingHeaderOrDataRow');
+    }
+}
+
+export class CsvMissingRequiredColumnError extends BadRequestError {
+    constructor(column: string) {
+        super('import.csvMissingRequiredColumn', { column });
     }
 }
 
 export class UserNotFoundByUsernameError extends BadRequestError {
     constructor(username: string) {
-        super(`Користувача з Telegram username ${username} не знайдено`, 'userNotFoundByUsername');
+        super('userNotFoundByUsername', { username });
     }
 }
 
 export class NoValidGamesInCsvError extends BadRequestError {
     constructor() {
-        super('У CSV файлі не знайдено жодної валідної гри', 'noValidGamesInCsv');
+        super('noValidGamesInCsv');
     }
 }

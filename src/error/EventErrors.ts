@@ -2,289 +2,279 @@ import { NotFoundError, BadRequestError, InternalServerError } from './BaseError
 
 export class EventNotFoundError extends NotFoundError {
     constructor(eventId: number) {
-        super(`Подію з id ${eventId} не знайдено`, 'eventNotFound');
+        super('eventNotFound', { eventId });
     }
 }
 
 export class GameRulesNotFoundError extends NotFoundError {
     constructor(gameRulesId: number) {
-        super(`Правила гри з id ${gameRulesId} не знайдено`, 'gameRulesNotFound');
+        super('gameRulesNotFound', { gameRulesId });
     }
 }
 
 export class CannotDeleteGameRulesInUseError extends BadRequestError {
     constructor(gameRulesName: string, eventCount: number) {
-        super(
-            `Неможливо видалити правила "${gameRulesName}" — вони використовуються в ${eventCount} подіях`,
-            'cannotDeleteGameRulesInUse'
-        );
+        super('cannotDeleteGameRulesInUse', { gameRulesName, eventCount });
     }
 }
 
 export class CannotUpdateGameRulesInUseError extends BadRequestError {
     constructor(gameRulesName: string, gameCount: number) {
-        super(
-            `Неможливо оновити правила "${gameRulesName}" — за ними вже зіграно ${gameCount} ігор`,
-            'cannotUpdateGameRulesInUse'
-        );
+        super('cannotUpdateGameRulesInUse', { gameRulesName, gameCount });
     }
 }
 
 export class CannotDeleteEventWithGamesError extends BadRequestError {
     constructor(eventName: string, gameCount: number) {
-        super(
-            `Неможливо видалити подію з існуючими іграми. Подія "${eventName}" має ${gameCount} ігор`,
-            'cannotDeleteEventWithGames'
-        );
+        super('cannotDeleteEventWithGames', { eventName, gameCount });
     }
 }
 
 export class CannotDeleteEventWithRegistrationsError extends BadRequestError {
     constructor(eventName: string, registrationCount: number) {
-        super(
-            `Неможливо видалити подію "${eventName}" — існує ${registrationCount} реєстрацій. Видаліть реєстрації перед видаленням події.`,
-            'cannotDeleteEventWithRegistrations'
-        );
+        super('cannotDeleteEventWithRegistrations', { eventName, registrationCount });
     }
 }
 
 export class CurrentRatingEventMustBeClubScopedError extends BadRequestError {
     constructor() {
-        super(
-            'Поточний рейтинговий сезон можна встановити лише для клубної події',
-            'currentRatingEventMustBeClubScoped'
-        );
+        super('currentRatingEventMustBeClubScoped');
     }
 }
 
 export class TournamentMustHaveClubError extends BadRequestError {
     constructor() {
-        super('Турнір повинен належати клубу', 'tournamentMustHaveClub');
+        super('tournamentMustHaveClub');
     }
 }
 
 export class GameCreationBlockedError extends BadRequestError {
     constructor(eventName: string) {
-        super(`Створення ігор для події "${eventName}" заблоковано`, 'gameCreationBlocked');
+        super('gameCreationBlocked', { eventName });
     }
 }
 
 export class AchievementsOnlyForTournamentsError extends BadRequestError {
     constructor() {
-        super('Досягнення доступні лише для турнірів', 'achievementsOnlyForTournaments');
+        super('achievementsOnlyForTournaments');
     }
 }
 
 export class TournamentConfigRequiredError extends BadRequestError {
     constructor() {
-        super('Для турніру потрібно вказати налаштування турніру', 'tournamentConfigRequired');
+        super('tournamentConfigRequired');
     }
 }
 
 export class InvalidEventDateRangeError extends BadRequestError {
     constructor() {
-        super('Дата початку має бути раніше за дату завершення', 'invalidEventDateRange');
+        super('invalidEventDateRange');
     }
 }
 
 export class MinParticipantsExceedsMaxError extends BadRequestError {
     constructor() {
-        super('Мінімальна кількість учасників не може перевищувати максимальну', 'minParticipantsExceedsMax');
+        super('minParticipantsExceedsMax');
     }
 }
 
 export class ParticipantConfigOnlyForTournamentError extends BadRequestError {
     constructor() {
-        super(
-            'Налаштування кількості учасників і терміну реєстрації можна вказувати лише для турнірів',
-            'participantConfigOnlyForTournament'
-        );
+        super('participantConfigOnlyForTournament');
     }
 }
 
 export class TournamentConfigOnlyForTournamentError extends BadRequestError {
     constructor() {
-        super('Налаштування турніру можна вказувати лише для турнірів', 'tournamentConfigOnlyForTournament');
+        super('tournamentConfigOnlyForTournament');
     }
 }
 
 export class EventIsNotTournamentError extends BadRequestError {
     constructor(eventName: string) {
-        super(`Подія "${eventName}" не є турніром`, 'eventIsNotTournament');
+        super('eventIsNotTournament', { eventName });
     }
 }
 
 export class TournamentMisconfigured extends InternalServerError {
     constructor() {
-        super(
-            'Цей турнір був неправильно сконфігурований. Будь ласка, звʼяжіться з підтримкою',
-            'tournamentMisconfigured'
-        );
+        super('tournamentMisconfigured');
     }
 }
 
 export class TournamentTotalRoundsLessThanCurrentRoundError extends BadRequestError {
     constructor(totalRounds: number, currentRound: number) {
-        super(
-            `Кількість раундів (${totalRounds}) не може бути меншою за поточний раунд (${currentRound})`,
-            'tournamentTotalRoundsLessThanCurrentRound'
-        );
+        super('tournamentTotalRoundsLessThanCurrentRound', { totalRounds, currentRound });
     }
 }
 
 export class TournamentRoundOutOfSequenceError extends BadRequestError {
     constructor(eventName: string, expectedRound: number, requestedRound: number) {
-        super(
-            `Не можна розпочати раунд ${requestedRound} турніру "${eventName}": наступний доступний раунд — ${expectedRound}`,
-            'tournamentRoundOutOfSequence'
-        );
+        super('tournamentRoundOutOfSequence', { eventName, expectedRound, requestedRound });
     }
 }
 
 export class TournamentRoundNotCurrentError extends BadRequestError {
-    constructor(eventName: string, currentRound: number | null, requestedRound: number) {
-        super(
-            currentRound === null
-                ? `Не можна скасувати раунд ${requestedRound} турніру "${eventName}": жоден раунд не розпочато`
-                : `Не можна скасувати раунд ${requestedRound} турніру "${eventName}": поточний раунд — ${currentRound}`,
-            'tournamentRoundNotCurrent'
-        );
+    constructor(eventName: string, currentRound: number, requestedRound: number) {
+        super('tournamentRoundNotCurrent', { eventName, currentRound, requestedRound });
+    }
+}
+
+export class TournamentRoundNotStartedError extends BadRequestError {
+    constructor(eventName: string, requestedRound: number) {
+        super('tournamentRoundNotStarted', { eventName, requestedRound });
     }
 }
 
 export class TournamentRoundGamesNotFinishedError extends BadRequestError {
     constructor(eventName: string, round: number, unfinishedCount: number) {
-        super(
-            `У раунді ${round} турніру "${eventName}" ще не завершено ${unfinishedCount} ігор`,
-            'tournamentRoundGamesNotFinished'
-        );
+        super('tournamentRoundGamesNotFinished', { eventName, round, unfinishedCount });
     }
 }
 
 export class TournamentHasNoMoreRoundsError extends BadRequestError {
     constructor(eventName: string) {
-        super(`У турнірі "${eventName}" більше немає раундів для запуску`, 'tournamentHasNoMoreRounds');
+        super('tournamentHasNoMoreRounds', { eventName });
     }
 }
 
 export class TournamentRoundAlreadyPlayedError extends BadRequestError {
     constructor(eventName: string, round: number, startedCount: number) {
-        super(
-            `Не можна скасувати раунд ${round} турніру "${eventName}": ${startedCount} ігор вже розпочато або завершено`,
-            'tournamentRoundAlreadyPlayed'
-        );
+        super('tournamentRoundAlreadyPlayed', { eventName, round, startedCount });
     }
 }
 
 export class TournamentAlreadyFinishedError extends BadRequestError {
     constructor(eventName: string) {
-        super(`Турнір "${eventName}" вже завершено`, 'tournamentAlreadyFinished');
+        super('tournamentAlreadyFinished', { eventName });
     }
 }
 
 export class TournamentNotInLastRoundError extends BadRequestError {
     constructor(eventName: string) {
-        super(`Турнір "${eventName}" ще не знаходиться в останньому раунді`, 'tournamentNotInLastRound');
+        super('tournamentNotInLastRound', { eventName });
     }
 }
 
 export class TournamentGameNotInCurrentRoundError extends BadRequestError {
     constructor(currentRound: number | null, gameRound: number | null) {
-        super(
-            `Цю гру не можна розпочати зараз. Поточний раунд турніру: ${currentRound ?? '—'}, раунд гри: ${
-                gameRound ?? '—'
-            }`,
-            'tournamentGameNotInCurrentRound'
-        );
+        super('tournamentGameNotInCurrentRound', {
+            currentRound: currentRound ?? '-',
+            gameRound: gameRound ?? '-',
+        });
     }
 }
 
 export class SeatingNotEnoughParticipantsError extends BadRequestError {
     constructor(eventName: string, required: number, actual: number) {
-        super(
-            `Для розсадки турніру "${eventName}" потрібно щонайменше ${required} учасників (зараз ${actual})`,
-            'seatingNotEnoughParticipants'
-        );
+        super('seatingNotEnoughParticipants', { eventName, required, actual });
     }
 }
 
 export class SeatingParticipantsNotMultipleOfTableSizeError extends BadRequestError {
     constructor(eventName: string, count: number) {
-        super(
-            `Кількість учасників турніру "${eventName}" (${count}) має ділитися на 4 для розсадки`,
-            'seatingParticipantsNotMultipleOfTableSize'
-        );
+        super('seatingParticipantsNotMultipleOfTableSize', { eventName, count });
     }
 }
 
 export class SeatingGenerationFailedError extends BadRequestError {
     constructor(eventName: string) {
-        super(
-            `Не вдалося згенерувати розсадку для турніру "${eventName}" за відведений час. Спробуйте ще раз`,
-            'seatingGenerationFailed'
-        );
+        super('seatingGenerationFailed', { eventName });
     }
 }
 
 export class SeatingCannotBeModifiedAfterTournamentStartedError extends BadRequestError {
     constructor(eventName: string) {
-        super(
-            `Розсадку турніру "${eventName}" не можна змінювати після початку турніру`,
-            'seatingCannotBeModifiedAfterTournamentStarted'
-        );
+        super('seatingCannotBeModifiedAfterTournamentStarted', { eventName });
     }
 }
 
 export class SeatingAlreadyAppliedError extends BadRequestError {
     constructor(eventName: string) {
-        super(
-            `Для турніру "${eventName}" вже створено ігри. Очистіть розсадку перед повторною генерацією`,
-            'seatingAlreadyApplied'
-        );
+        super('seatingAlreadyApplied', { eventName });
     }
 }
 
 export class SeatingRoundCountMismatchError extends BadRequestError {
     constructor(eventName: string, expected: number, actual: number) {
-        super(
-            `Розсадка для турніру "${eventName}" має містити ${expected} раундів (надіслано ${actual})`,
-            'seatingRoundCountMismatch'
-        );
+        super('seatingRoundCountMismatch', { eventName, expected, actual });
     }
 }
 
 export class SeatingTableSizeMismatchError extends BadRequestError {
     constructor(eventName: string, round: number, table: number, expected: number, actual: number) {
-        super(
-            `Стіл ${table} у раунді ${round} турніру "${eventName}" має містити ${expected} гравців (надіслано ${actual})`,
-            'seatingTableSizeMismatch'
-        );
+        super('seatingTableSizeMismatch', { eventName, round, table, expected, actual });
     }
 }
 
 export class SeatingInvalidParticipantError extends BadRequestError {
     constructor(eventName: string, userId: number, round: number) {
-        super(
-            `Учасник ${userId} не є схваленим учасником турніру "${eventName}" (раунд ${round})`,
-            'seatingInvalidParticipant'
-        );
+        super('seatingInvalidParticipant', { eventName, userId, round });
     }
 }
 
 export class SeatingDuplicateParticipantInRoundError extends BadRequestError {
     constructor(eventName: string, userId: number, round: number) {
-        super(
-            `Учасник ${userId} зустрічається в розсадці більше одного разу в раунді ${round} турніру "${eventName}"`,
-            'seatingDuplicateParticipantInRound'
-        );
+        super('seatingDuplicateParticipantInRound', { eventName, userId, round });
     }
 }
 
 export class SeatingMissingParticipantsInRoundError extends BadRequestError {
     constructor(eventName: string, round: number, expected: number, actual: number) {
-        super(
-            `У раунді ${round} турніру "${eventName}" мають бути всі ${expected} учасників (надіслано ${actual})`,
-            'seatingMissingParticipantsInRound'
-        );
+        super('seatingMissingParticipantsInRound', { eventName, round, expected, actual });
+    }
+}
+
+export class SeatingSameTeamAtTableError extends BadRequestError {
+    constructor(eventName: string, round: number, table: number) {
+        super('seatingSameTeamAtTable', { eventName, round, table });
+    }
+}
+
+export class InvalidEventFormatForTypeError extends BadRequestError {
+    constructor(type: string, format: string) {
+        super('invalidEventFormatForType', { type, format });
+    }
+}
+
+export class TeamConfigOnlyForTeamTournamentError extends BadRequestError {
+    constructor() {
+        super('teamConfigOnlyForTeamTournament');
+    }
+}
+
+export class TeamConfigRequiredError extends BadRequestError {
+    constructor() {
+        super('teamConfigRequired');
+    }
+}
+
+export class InvalidTeamSizeError extends BadRequestError {
+    constructor() {
+        super('invalidTeamSize');
+    }
+}
+
+export class InvalidTeamCountError extends BadRequestError {
+    constructor() {
+        super('invalidTeamCount');
+    }
+}
+
+export class TeamCountNotDivisibleByFourError extends BadRequestError {
+    constructor() {
+        super('teamCountNotDivisibleByFour');
+    }
+}
+
+export class MinParticipantsRequiredForTeamConfigError extends BadRequestError {
+    constructor(expected: number) {
+        super('minParticipantsRequiredForTeamConfig', { expected });
+    }
+}
+
+export class MinParticipantsMustMatchTeamConfigError extends BadRequestError {
+    constructor(minParticipants: number, expected: number) {
+        super('minParticipantsMustMatchTeamConfig', { minParticipants, expected });
     }
 }

@@ -1,0 +1,170 @@
+errors:
+  invalidRequestData: Invalid request data
+  databaseError: "Database error: {{message}}"
+  internalServerError: Internal Server Error
+
+  invalidInitData: "Invalid Telegram authentication data: {{reason}}"
+  expiredAuthData: Authentication data has expired. Please close and reopen the app.
+  missingAuthToken: Authentication token is required
+  invalidAuthToken: "Invalid authentication token: {{reason}}"
+  insufficientPermissions: You do not have permission to perform this action
+  tokenExpired: Authentication token has expired. Please sign in again
+  invalidToken: Invalid authentication token. Please sign in again
+  authProviderNotConfigured: Authentication provider {{provider}} is not configured
+  invalidExternalAuthToken: Invalid {{provider}} authentication token
+  authProviderIdentityAlreadyLinked: The {{provider}} account is already linked to another user
+  userAlreadyHasAuthProvider: The user already has a linked {{provider}} account
+  telegramAccountAlreadyUsed: This Telegram account already belongs to another user
+
+  clubNotFound: Club with id {{clubId}} was not found
+  clubMembershipNotFound: "Member with userId {{userId}} was not found in club '{{clubName}}'"
+  clubNameAlreadyExists: "A club named '{{name}}' already exists"
+  clubMembershipAlreadyExists: "User with id {{userId}} is already a member of club '{{clubName}}'"
+  insufficientClubPermissions: "You do not have permission to perform this action. Required role: {{rolesText}}"
+  youHaveToBeClubMember: You must be a club member to perform this action
+  needModeratorForNonClubMembers: Creating a game with non-club members requires OWNER or MODERATOR role
+  invalidClubMembershipState: "Cannot {{action}} a club member with status {{currentStatus}}. Allowed statuses: {{allowedStatuses}}"
+  inviteNotFound: "Invite with code '{{code}}' was not found"
+  inviteRevoked: This invite is no longer active
+  inviteExpired: This invite has expired
+  inviteExhausted: This invite has reached its usage limit
+  nameRequiredForNewUser: Name is required for registration
+
+  eventNotFound: Event with id {{eventId}} was not found
+  gameRulesNotFound: Game rules with id {{gameRulesId}} were not found
+  cannotDeleteGameRulesInUse: 'Cannot delete rules "{{gameRulesName}}" because they are used in {{eventCount}} events'
+  cannotUpdateGameRulesInUse: 'Cannot update rules "{{gameRulesName}}" because {{gameCount}} games have already been played with them'
+  cannotDeleteEventWithGames: 'Cannot delete an event with existing games. Event "{{eventName}}" has {{gameCount}} games'
+  cannotDeleteEventWithRegistrations: 'Cannot delete event "{{eventName}}" because {{registrationCount}} registrations exist. Delete registrations before deleting the event.'
+  currentRatingEventMustBeClubScoped: Current rating season can only be set to a club-scoped event
+  tournamentMustHaveClub: Tournament must belong to a club
+  gameCreationBlocked: 'Game creation is blocked for event "{{eventName}}"'
+  achievementsOnlyForTournaments: Achievements are only available for tournaments
+  tournamentConfigRequired: Tournament settings are required for tournaments
+  invalidEventDateRange: Start date must be before end date
+  minParticipantsExceedsMax: Minimum participants cannot exceed maximum participants
+  participantConfigOnlyForTournament: Participant count and registration deadline settings can only be set for tournaments
+  tournamentConfigOnlyForTournament: Tournament settings can only be set for tournaments
+  eventIsNotTournament: 'Event "{{eventName}}" is not a tournament'
+  tournamentMisconfigured: This tournament is misconfigured. Please contact support
+  tournamentTotalRoundsLessThanCurrentRound: Total rounds ({{totalRounds}}) cannot be less than current round ({{currentRound}})
+  tournamentRoundOutOfSequence: 'Cannot start round {{requestedRound}} of tournament "{{eventName}}": the next available round is {{expectedRound}}'
+  tournamentRoundNotStarted: 'Cannot undo round {{requestedRound}} of tournament "{{eventName}}": no round has been started'
+  tournamentRoundNotCurrent: 'Cannot undo round {{requestedRound}} of tournament "{{eventName}}": current round is {{currentRound}}'
+  tournamentRoundGamesNotFinished: 'Round {{round}} of tournament "{{eventName}}" still has {{unfinishedCount}} unfinished games'
+  tournamentHasNoMoreRounds: 'Tournament "{{eventName}}" has no more rounds to start'
+  tournamentRoundAlreadyPlayed: 'Cannot undo round {{round}} of tournament "{{eventName}}": {{startedCount}} games have already been started or finished'
+  tournamentAlreadyFinished: 'Tournament "{{eventName}}" is already finished'
+  tournamentNotInLastRound: 'Tournament "{{eventName}}" is not in the last round yet'
+  tournamentGameNotInCurrentRound: "This game cannot be started now. Current tournament round: {{currentRound}}, game round: {{gameRound}}"
+  seatingNotEnoughParticipants: 'Tournament "{{eventName}}" needs at least {{required}} participants for seating (currently {{actual}})'
+  seatingParticipantsNotMultipleOfTableSize: 'Participant count for tournament "{{eventName}}" ({{count}}) must be divisible by 4 for seating'
+  seatingGenerationFailed: 'Could not generate seating for tournament "{{eventName}}" in time. Please try again'
+  seatingCannotBeModifiedAfterTournamentStarted: 'Seating for tournament "{{eventName}}" cannot be changed after the tournament starts'
+  seatingAlreadyApplied: 'Games already exist for tournament "{{eventName}}". Clear seating before generating it again'
+  seatingRoundCountMismatch: 'Seating for tournament "{{eventName}}" must contain {{expected}} rounds (received {{actual}})'
+  seatingTableSizeMismatch: 'Table {{table}} in round {{round}} of tournament "{{eventName}}" must contain {{expected}} players (received {{actual}})'
+  seatingInvalidParticipant: 'Participant {{userId}} is not an approved participant in tournament "{{eventName}}" (round {{round}})'
+  seatingDuplicateParticipantInRound: 'Participant {{userId}} appears more than once in round {{round}} of tournament "{{eventName}}"'
+  seatingMissingParticipantsInRound: 'Round {{round}} of tournament "{{eventName}}" must include all {{expected}} participants (received {{actual}})'
+  seatingSameTeamAtTable: 'In round {{round}} of tournament "{{eventName}}", table {{table}} has two players from the same team'
+  invalidEventFormatForType: 'Format "{{format}}" is not available for event type "{{type}}"'
+  teamConfigOnlyForTeamTournament: Team config (teamConfig) is only available for team tournaments
+  teamConfigRequired: Team tournaments require a team config (teamConfig)
+  invalidTeamSize: teamSize must be an integer >= 1
+  invalidTeamCount: teamCount must be an integer >= 1
+  teamCountNotDivisibleByFour: teamCount must be divisible by 4
+  minParticipantsRequiredForTeamConfig: "Please set minParticipants = teamSize * teamCount ({{expected}})"
+  minParticipantsMustMatchTeamConfig: "minParticipants ({{minParticipants}}) must equal teamSize * teamCount ({{expected}})"
+
+  teamNotFound: Team with ID {{teamId}} was not found
+  teamNotInEvent: Team {{teamId}} does not belong to event {{eventId}}
+  teamsNotAllowedForFormat: 'Teams are only available for team events ("{{eventName}}")'
+  insufficientTeamPermissions: 'You do not have permission to manage teams for tournament "{{eventName}}"'
+  teamCountLimitReached: Team count limit reached ({{limit}})
+  teamFull: 'Team "{{teamName}}" is already full ({{teamSize}})'
+  userAlreadyInTeamForEvent: Player {{userId}} is already on a team for this event
+  userNotApprovedParticipant: Player {{userId}} is not an approved participant of the tournament
+  teamCompositionLocked: 'Team composition for tournament "{{eventName}}" can no longer be changed'
+  teamMemberNotFound: Player {{userId}} is not on team {{teamId}}
+  notEnoughApprovedForDraft: 'Starting the draft for tournament "{{eventName}}" requires at least {{required}} approved participants (currently {{approved}})'
+  draftNotStartable: 'The draft for tournament "{{eventName}}" cannot be started from its current state'
+  teamDraftHasUnteamedPlayers: 'Team tournament "{{eventName}}" has {{unteamedCount}} approved participants without a team'
+  teamDraftUnevenTeams: 'Teams in team tournament "{{eventName}}" have different numbers of members'
+  teamCountMustBeDivisibleByFour: 'The number of teams in tournament "{{eventName}}" ({{teamCount}}) must be divisible by 4'
+  teamDraftIncomplete: 'To start the team tournament "{{eventName}}", form {{teamCount}} full teams of {{teamSize}} players each'
+
+  eventRegistrationNotFound: "Registration for user with id {{userId}} in event '{{eventName}}' was not found"
+  userNotRegisteredForTournament: 'User {{userId}} is not registered for tournament "{{eventName}}"'
+  userNotApprovedForTournament: 'User {{userId}} is not approved for tournament "{{eventName}}" (registration status: {{status}})'
+  invalidEventRegistrationState: "Cannot {{action}} registration with status {{currentStatus}}. Allowed statuses: {{allowedStatuses}}"
+  missingProfileNamesForTournamentRegistration: First and last name must be filled in the profile to apply for a tournament
+  eventNotTournament: "Registration is only available for TOURNAMENT events (current type: {{type}})"
+  eventCapacityReached: 'Tournament "{{eventName}}" has already reached the participant limit ({{maxParticipants}})'
+  insufficientEventRegistrationManagementPermissions: You do not have permission to manage registrations for this event. Admin or event club OWNER/MODERATOR role is required.
+
+  gameNotFoundById: Game with id {{id}} was not found
+  tooManyGamesFound: Too many games found. Please narrow your search criteria.
+  incorrectPlayerCount: Game requires {{requiredPlayers}} players
+  duplicatePlayer: Player {{playerName}} appears more than once in this game
+  duplicateGameTimestampInEvent: Someone is trying to add a game at the same time as you. Please try again
+  duplicateTournamentRoundTable: A game for round {{tournamentRound}} and table {{tournamentTable}} already exists in this tournament
+  incorrectTotalPoints: Total points must equal {{expectedTotal}}, got {{actualTotal}}
+  invalidPoints: Player points ({{points}}) must be between {{minPoints}} and {{maxPoints}}
+  eventHasntStarted: "{{eventName}} has not started yet"
+  eventHasEnded: "{{eventName}} has already ended"
+  youHaveToBeAdminToCreateGameWithCustomTime: You must be an admin to create a game with custom time
+  youHaveToBeAdminToHideNewGameMessage: You must be an admin to hide a new-game message
+  gameNotInProgress: Round result can only be added to a game in progress
+  gameNotInProgressWhenDeletingRound: Round result can only be deleted from a game in progress
+  gameNotInProgressWhenFinishing: Only a game in progress can be finished
+  invalidRoundId: Expected round {{expectedRoundId}}, got {{actualRoundId}}
+  roundAlreadyExists: This round is already finished
+  notAuthorizedToModifyGame: Only players in the game, club moderators, and admins can modify the game
+  gamePlayerNotFound: Player with id {{userId}} was not found in game {{gameId}}
+  noRoundsToRollback: This game has no rounds to roll back
+  lastRoundRollbackAlreadyUsed: You have already rolled back the last round in this game
+  noRoundsCompleted: Game can only be finished after at least one completed round
+  gameNotFinishedWhenUpdating: Game can only be edited after it is finished
+  gameNotFinishedWhenUndoingFinish: Finish can only be undone for a finished game
+  cannotUndoFinishOnNonTrackedGame: Finish can only be undone for a tracked game with rounds
+  gameNotCreatedWhenStarting: Only a game in CREATED status can be started
+  notGamePlayer: Only players in this game can perform this action
+
+  userNotFoundByUsername: User with Telegram username {{username}} was not found
+  noValidGamesInCsv: CSV file does not contain any valid games
+
+  rulesetShouldContainDetailedRules: Tracked game rules must contain detailed settings
+  yakumanLiabilityRequiresYakuman: Yakuman liability can only be set for yakuman
+  noDoubleRonFirstWinsOnly: "Double ron is not allowed: only the first ron wins"
+  noTripleRonFirstWinsOnly: "Triple ron is not allowed: only the first ron wins"
+  tripleRonShouldBeAbortiveDraw: Triple ron under these rules should be recorded as an abortive draw
+  dealInPlayerCannotBeWinner: The deal-in player cannot be a winner
+  abortiveDrawNotInRuleset: Abortive draw is not enabled in this ruleset
+  nagashiManganNotInRuleset: Nagashi mangan is not enabled in this ruleset
+  hanRequiredForNonYakumanHand: Han count is required for a non-yakuman hand
+  handShouldBeRecordedAsCountedYakuman: This hand should be recorded as counted yakuman
+  fuRequiredForLowHanHand: Fu is required for hands with fewer than five han
+  twoHanMinimumIsRequired: This ruleset requires at least two han
+  dealInPlayerNotInGame: The deal-in player is not in the game
+  missingPlayerForWind: Missing player for wind {{wind}}
+  cannotFindHeadBumpPlayer: Could not determine the head-bump player
+  cannotDetermineDealer: "Could not determine dealer: invalid game state"
+  cannotDeterminePlayerPlacement: "Could not determine player placement: invalid game state"
+  invalidHonbaFormat: Invalid honba value format in rules
+  noPlayersInTheGame: Game has no players
+  playerNotInGame: Player {{playerId}} is not in the game
+
+  userRatingChangeInGameNotFound: Rating change for user {{userId}} in game {{gameId}} was not found
+  userHasNoRatingDespiteHavingPlayedGames: User {{userId}} has no rating in event {{eventId}} despite having played games
+  pleaseProvideStartPlaceForAllPlayersToResolveTie: Please provide start place (wind) for all players to resolve the tie
+
+  nameAlreadyTakenByAnotherUser: "Name '{{name}}' is already taken by another user"
+  telegramUsernameAlreadyTakenByAnotherUser: "Telegram username '{{telegramUsername}}' is already taken by another user"
+  userWithThisTelegramIdAlreadyExists: User with Telegram id {{telegramId}} already exists
+  userNotFoundById: User with id {{id}} was not found
+  userNotFoundByTelegramId: User with Telegram id {{telegramId}} was not found
+  youHaveToBeAdminToEditAnotherUser: You must be an admin to edit another user
+  userIsNotActive: User with id {{id}} is not active
+
+  enumParsingError: "Invalid value '{{value}}' for enum {{enumName}}. Allowed values: {{allowedValues}}"

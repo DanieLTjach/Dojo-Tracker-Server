@@ -1,0 +1,346 @@
+telegram:
+  # ── Generic ──
+  genericCommandError: Сталася помилка при виконанні команди. Спробуйте ще раз пізніше.
+
+  # ── TelegramReplyError messages (src/error/TelegramErrors.ts) ──
+  errors:
+    userNotRegistered: Ви повинні бути зареєстровані в додатку, щоб виконати цю дію
+    userNotClubOwner: Ви повинні бути власником клубу, щоб виконати цю дію
+    userNotAdmin: Ця команда доступна лише адміністраторам
+    noActiveInvites: У цьому клубі немає активних запрошень
+
+  # ── Bot command descriptions (setMyCommands) ──
+  commands:
+    help: Показати список команд
+    postAppLink: Опублікувати посилання на додаток
+    setTopic: Налаштувати сповіщення в поточному топіку
+    unsetTopic: Видалити налаштування топіка
+    diagnoseTopics: Перевірити налаштування топіків
+    setupPoll: Налаштувати опитування для клубу
+    previewPoll: Попередній перегляд опитування
+    sendPoll: Відправити опитування зараз
+    createInvite: Створити запрошення до клубу (посилання + QR)
+    listInvites: Список запрошень клубу
+    revokeInvite: Відкликати запрошення
+
+  # ── /help menu ──
+  help:
+    title: 📋 Доступні команди
+    cmdHelp: Показати список команд
+    sectionAdmin: Адміністрування
+    cmdPostAppLink: Опублікувати посилання на додаток
+    sectionPolls: Опитування
+    cmdSetupPoll: Налаштувати опитування для клубу
+    cmdPreviewPoll: Попередній перегляд опитування
+    cmdSendPoll: Відправити опитування зараз
+    sectionInvites: Запрошення
+    cmdCreateInvite: Створити запрошення (посилання + QR)
+    cmdListInvites: Список запрошень клубу
+    cmdRevokeInvite: Відкликати запрошення
+    sectionNotifications: Сповіщення
+    cmdSetTopic: Налаштувати сповіщення в поточному топіку
+    cmdUnsetTopic: Скинути налаштування топіка
+    cmdDiagnoseTopics: Перевірити налаштування топіків
+    sectionTournament: Турнір
+    cmdImportTournamentRound: Імпорт розсадки раунду турніру
+
+  # ── App link ──
+  appLink:
+    title: 🀄 Japan Dojo Tracker
+    body: Натисніть кнопку, щоб відкрити додаток
+    openButton: 📱 Відкрити
+
+  # ── Topic setup ──
+  topic:
+    selectClubToSet: "Виберіть клуб, для якого хочете встановити топік:"
+    selectTopicToSet: "Виберіть, який топік ви хочете встановити:"
+    selectClubToUnset: "Виберіть клуб, для якого хочете скинути топік:"
+    selectTopicToUnset: "Виберіть топік, який хочете скинути:"
+    noTopicsConfigured: Для цього клубу не налаштовано жодного топіка.
+    diagnoseTitle: 🩺 Діагностика топіків
+    diagnoseSelectClub: "Виберіть клуб для діагностики топіків:"
+    diagnoseNotConfigured: ❌ не налаштовано
+    diagnoseGeneral: " (general)"
+    diagnoseThread: " / thread"
+    testButton: "📨 Тест:"
+    testNotConfigured: Топік не налаштовано
+    testMessageTitle: 🧪 Тестове повідомлення
+    testMessageTopic: "Топік:"
+    testMessageBody: Якщо ви бачите це повідомлення — топік налаштовано правильно.
+    testMessageSent: Тестове повідомлення надіслано ✅
+
+  # ── Topic type labels (clubTelegramTopicDescription) ──
+  topicType:
+    rating: 📈 Рейтинг
+    userLogs: 👤 Логи користувачів
+    gameLogs: 🀄 Логи ігр
+    clubLogs: 🏛️ Логи клубу
+    main: 📌 Основний
+
+  # ── Topic set/unset success ──
+  topicSet:
+    rating: Топік для рейтингу успішно встановлено!
+    userLogs: Топік для логів користувачів успішно встановлено!
+    gameLogs: Топік для логів ігр успішно встановлено!
+    clubLogs: Топік для логів клубу успішно встановлено!
+    main: Основний топік успішно встановлено!
+  topicUnset:
+    rating: Топік для рейтингу скинуто.
+    userLogs: Топік для логів користувачів скинуто.
+    gameLogs: Топік для логів ігр скинуто.
+    clubLogs: Топік для логів клубу скинуто.
+    main: Основний топік скинуто.
+
+  # ── Poll wizard ──
+  poll:
+    setupIntro: |-
+      📊 Налаштування опитування.
+      Виберіть клуб:
+    selectEventDays: "Виберіть дні подій (натисніть щоб обрати/зняти):"
+    selectSendDay: В який день тижня відправляти опитування?
+    selectSendTime: О котрій годині відправляти? (за київським часом)
+    selectExtraOptions: "Виберіть додаткові варіанти для опитування:"
+    next: ➡️ Далі
+    saveAndContinue: ➡️ Зберегти
+    reconfigure: 🔄 Переналаштувати
+    enable: ✅ Увімкнути
+    disable: ❌ Вимкнути
+    enabledNotice: ✅ Опитування увімкнено!
+    disabledNotice: ❌ Опитування вимкнено!
+    existingTitle: "📊 Опитування для <b>{{clubName}}</b> вже налаштовано:"
+    titleLabel: "📝"
+    eventDaysLabel: "📅 Дні подій:"
+    sendLabel: "📤 Відправка:"
+    sendAtConnector: о
+    extrasLabel: "📋 Додаткові:"
+    statusActive: ✅ Активне
+    statusInactive: ❌ Вимкнене
+    savedTitle: ✅ Опитування налаштовано!
+    savedReminder: Не забудьте встановити основний топік через /set_topic → 📌 Основний
+    none: немає
+    noConfigsUseSetup: Немає налаштованих опитувань. Використайте /setup_poll
+    previewIntro: "Попередній перегляд опитування:"
+    sendNowConfirm: Відправити опитування зараз?
+    notConfiguredForClub: Опитування не налаштовано для цього клубу.
+    mainTopicNotSet: ❌ Основний топік не встановлено. Використайте /set_topic → 📌 Основний
+    sendFailed: ❌ Не вдалося відправити опитування. Перевірте, що бот має доступ до чату
+    sentAndPinned: ✅ Опитування відправлено і закріплено!
+    sentNotPinned: ✅ Опитування відправлено, але не вдалося закріпити. Перевірте, що бот має право закріплювати повідомлення.
+    title: 🀄 Маджонг {{dates}}
+    extraResults: Результати 👀
+    extraPass: У цей раз я пас 🙅
+    extraMaybe: Під питанням 🤔
+    extraLate: Запізнюся ⏰
+
+  # ── Day names (short) ──
+  daysShort:
+    mon: Пн
+    tue: Вт
+    wed: Ср
+    thu: Чт
+    fri: Пт
+    sat: Сб
+    sun: Нд
+
+  # ── Club invites ──
+  invite:
+    selectClubToCreate: "Виберіть клуб, для якого хочете створити запрошення:"
+    selectType: "Виберіть тип запрошення:"
+    selectSource: "Звідки прийде користувач (джерело)?"
+    unknownSource: Невідоме джерело запрошення.
+    selectClubToList: "Виберіть клуб для перегляду запрошень:"
+    noInvites: У цьому клубі ще немає запрошень.
+    listTitle: Запрошення клубу
+    selectClubToRevoke: "Виберіть клуб, у якому хочете відкликати запрошення:"
+    selectToRevoke: "Виберіть запрошення для відкликання:"
+    revokeConfirmPrompt: Відкликати запрошення {{code}}?
+    revokeButton: 🚫 Відкликати
+    revoked: ✅ Запрошення {{code}} відкликано.
+    captionTitle: 🎟 Запрошення створено
+    captionClub: "Клуб:"
+    captionType: "Тип:"
+    captionSource: "Джерело:"
+    captionCode: "Код:"
+    lineSource: "Джерело:"
+    lineUses: "Використань:"
+    lineLabel: "Мітка:"
+    lineExpires: "Діє до:"
+    typeJoinClub: ✅ Авто-приєднання до клубу
+    typeRegistrationOnly: 📚 Лише реєстрація (туторіал)
+    sourcePerson: 🧑 Особа
+    sourceTutorial: 📚 Туторіал
+    sourceFestival: 🎪 Фестиваль
+    sourceSocialNetwork: 🌐 Соцмережа
+    sourceOther: ❓ Інше
+
+  # ── Tournament round import wizard ──
+  tournamentImport:
+    noActiveTournaments: Немає активних турнірів.
+    selectTournament: "Виберіть турнір:"
+    notTournament: Вибрана подія не є турніром.
+    tournamentEnded: Цей турнір вже закінчився.
+    sendRoundNumber: "Надішліть номер раунду (наприклад, 3):"
+    roundMustBePositive: Номер раунду має бути додатним цілим числом.
+    sendSeating: |-
+      Надішліть розсадку одним повідомленням:
+      Round {{round}}
+      <id1> <id2> <id3> <id4>
+      ...
+    importErrorsTitle: "❌ Помилки імпорту:"
+    imported: ✅ Імпортовано {{count}} ігор
+
+  # ── Tournament round import parsing errors (TournamentRoundImportService) ──
+  importParse:
+    notTournament: Подія не є турніром
+    eventEnded: "{{eventName}} вже закінчився"
+    noPlayerRows: Немає рядків з гравцями
+    expectHeaderAndRows: 'Очікується заголовок "Round N" і хоча б один рядок з гравцями'
+    firstLineFormat: 'Перший рядок має бути у форматі "Round N" (наприклад, Round 3)'
+    roundMismatch: Номер раунду в даних ({{roundInPaste}}) не збігається з введеним ({{expectedRound}})
+    rowWrongPlayerCount: "Рядок {{table}}: очікується {{playerCount}} id гравців, отримано {{actual}}"
+    rowInvalidUserId: 'Рядок {{table}}: "{{token}}" не є коректним id користувача'
+    rowPrefix: "Рядок {{table}}: {{message}}"
+    tablePrefix: "Стіл {{table}}: {{message}}"
+    tableGameExists: "Стіл {{table}}: гра для раунду {{round}} вже існує"
+    tablePlayerDuplicate: "Стіл {{table}}: гравець {{userId}} повторюється"
+    playerOnMultipleTables: Гравець {{userId}} зустрічається на кількох столах
+
+  # ── Action verbs (passed into Invalid*StateError messages) ──
+  actions:
+    withdraw: скасувати
+    approve: схвалити
+    reject: відхилити
+    activate: активувати
+    changeRole: змінити роль
+
+  # ── Direct-message notifications to participants ──
+  notify:
+    registrationApproved: ✅ Вашу заявку на турнір схвалено
+    registrationRejected: ❌ Вашу заявку на турнір відхилено
+    registeredForTournament: 📝 Вас зареєстровано на турнір
+    tournamentLabel: "Турнір:"
+    openTournamentPage: Відкрити сторінку турніру
+    addedToClubTitle: "Ваc додано до клубу {{clubName}}!"
+    addedToClubBody: Тепер ви є повноцінним членом клубу та можете додавати нові ігри.
+    openApp: Відкрити додаток
+
+  # ── Tournament registration log posts ──
+  registrationLog:
+    titleApplied: 🔔 Заявка на турнір
+    titleApproved: ✅ Заявку на турнір схвалено
+    titleRejected: ❌ Заявку на турнір відхилено
+    titleWithdrawn: 🚪 Учасник скасував заявку на турнір
+    titleManualRegistered: 📝 Учасника додано вручну
+    titleProfileNamesUpdated: 📝 Оновлено імʼя учасника
+    tournamentLabel: "Турнір:"
+    participantLabel: "Учасник:"
+    nameLabel: "Імʼя:"
+    approvedByLabel: "Схвалив:"
+    rejectedByLabel: "Відхилив:"
+    addedByLabel: "Додав:"
+    updatedByLabel: "Оновив:"
+    beforeLabel: "Було:"
+    afterLabel: "Стало:"
+
+  # ── Club log posts (ClubService) ──
+  clubLog:
+    createdTitle: 🏛️ Створено новий клуб
+    editedTitle: ✏️ Клуб оновлено
+    deletedTitle: 🗑️ Клуб видалено (деактивовано)
+    clubIdLabel: "ID клубу:"
+    nameLabel: "Назва:"
+    cityLabel: "Місто:"
+    countryLabel: "Країна:"
+    localeLabel: "Локаль:"
+    addressLabel: "Адреса:"
+    descriptionLabel: "Опис:"
+    contactInfoLabel: "Контакти:"
+    isActiveLabel: "Активний:"
+    createdByLabel: "Створив:"
+    editedByLabel: "Оновив:"
+    deletedByLabel: "Видалив:"
+    noValue: Н/Д
+
+  # ── New game rating post (GameService) ──
+  gameLog:
+    addedNewGame: нову гру
+    addedBy: Додано {{gameLink}} користувачем {{userLink}}
+    newGameTitle: 🎮 Додано нову гру
+    editedTitle: ✏️ Гру відредаговано
+    deletedTitle: 🗑️ Гру видалено
+    createdByLabel: Створив
+    editedByLabel: Відредагував
+    deletedByLabel: Видалив
+    gameIdLabel: "ID гри:"
+    eventLabel: "Подія:"
+    tournamentRoundLabel: "Раунд турніру:"
+    tournamentTableLabel: "Стіл турніру:"
+    timestampLabel: "Час:"
+    playersLabel: "Гравці:"
+    playersBeforeLabel: "Гравці (до):"
+    playersAfterLabel: "Гравці (після):"
+    pointsLabel: "Очки:"
+    startPlaceLabel: "Стартове місце:"
+    chomboCountLabel: "Кількість чомбо:"
+    ratingLabel: "Рейтинг:"
+    clubPrefix: "Клуб {{clubName}}"
+
+  # ── Tracked (live) game log posts (TrackedGameService) ──
+  trackedGameLog:
+    createdTitle: 🎮 Створено нову відстежувану гру
+    startedOnCreateTitle: 🎮 Розпочато нову відстежувану гру
+    startedTitle: 🎮 Відстежувану гру розпочато
+    rolledBackTitle: ↩️ Останній раунд скасовано
+    startedByLabel: Розпочав
+    rolledBackByLabel: Скасував
+    roundLabel: "Раунд:"
+    resultTypeLabel: "Тип результату:"
+    pointChangesRemovedLabel: "Видалені зміни очок:"
+
+  # ── Club invite log posts (ClubInviteService) ──
+  inviteLog:
+    createdTitle: 🎟 Створено запрошення
+    revokedTitle: 🚫 Запрошення відкликано
+    redeemedTitle: ✨ Запрошення використано
+    clubLabel: "Клуб:"
+    codeLabel: "Код:"
+    typeLabel: "Тип:"
+    sourceLabel: "Джерело:"
+    labelLabel: "Мітка:"
+    createdByLabel: "Створив:"
+    revokedByLabel: "Відкликав:"
+    userLabel: "Користувач:"
+    telegramLabel: "Telegram:"
+
+  # ── Club membership log posts (ClubMembershipService) ──
+  membershipLog:
+    joinRequestTitle: 🔔 Запит на вступ до клубу
+    leftClubTitle: 🚪 Учасник залишив клуб
+    memberApprovedTitle: ✅ Учасника схвалено
+    memberRemovedTitle: ❌ Учасника видалено
+    roleChangedTitle: 🔄 Змінено роль учасника
+    clubLabel: "Клуб:"
+    userLabel: "Користувач:"
+    statusLabel: "Статус:"
+    roleLabel: "Роль:"
+    previousRoleLabel: "Попередня роль:"
+    approvedByLabel: "Схвалив:"
+    removedByLabel: "Видалив:"
+    changedByLabel: "Змінив:"
+
+  # ── User log posts (UserService) ──
+  userLog:
+    registeredTitle: 👤 Зареєстровано нового користувача
+    editedTitle: ✏️ Користувача відредаговано
+    activatedTitle: ✅ Користувача активовано
+    deactivatedTitle: ❌ Користувача деактивовано
+    userIdLabel: "ID користувача:"
+    nameLabel: "Імʼя:"
+    telegramUsernameLabel: "Telegram username:"
+    telegramIdLabel: "Telegram ID:"
+    isActiveLabel: "Активний:"
+    statusLabel: "Статус:"
+    registeredByLabel: "Зареєстрував:"
+    editedByLabel: "Відредагував:"
+    updatedByLabel: "Оновив:"
+    noValue: Н/Д

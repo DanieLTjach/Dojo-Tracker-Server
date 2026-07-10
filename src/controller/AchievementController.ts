@@ -9,19 +9,22 @@ export class AchievementController {
 
     getEventAchievements(req: Request, res: Response) {
         const { params: { eventId } } = getEventAchievementsSchema.parse(req);
-        const achievements = this.achievementService.getEventAchievements(eventId);
+        const userId = req.user!.userId;
+        const achievements = this.achievementService.getEventAchievements(eventId, userId);
         return res.status(StatusCodes.OK).json({ achievements });
     }
 
     recomputeEventAchievements(req: Request, res: Response) {
         const { params: { eventId } } = recomputeEventAchievementsSchema.parse(req);
-        const achievements = this.achievementService.forceRecomputeEventAchievements(eventId);
+        const userId = req.user!.userId;
+        const achievements = this.achievementService.forceRecomputeEventAchievements(eventId, userId);
         return res.status(StatusCodes.OK).json({ achievements });
     }
 
     getUserAchievements(req: Request, res: Response) {
         const { params: { id } } = getUserAchievementsSchema.parse(req);
-        const achievements = this.achievementService.getUserAchievements(id);
+        const requestingUserId = req.user!.userId;
+        const achievements = this.achievementService.getUserAchievements(id, requestingUserId);
         return res.status(StatusCodes.OK).json({ achievements });
     }
 }

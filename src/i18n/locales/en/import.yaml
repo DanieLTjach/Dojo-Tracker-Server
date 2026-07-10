@@ -1,0 +1,10 @@
+import:
+  csvMissingHeaderOrDataRow: CSV file must have a header row and at least one data row
+  csvMissingRequiredColumn: "Missing required column: {{column}}"
+  rowUsernameEmpty: "Row {{row}}: player{{player}}_username is empty"
+  rowUserNotFound: "Row {{row}}: user {{username}} was not found"
+  rowPointsNotInteger: "Row {{row}}: player{{player}}_points must be an integer"
+  rowInvalidStartPlace: "Row {{row}}: player{{player}}_startPlace must be one of: {{validWinds}}"
+  rowChomboNotNonNegativeInteger: "Row {{row}}: player{{player}}_chombo must be a non-negative integer"
+  rowInvalidCreatedAt: "Row {{row}}: createdAt is not a valid date"
+  rowTournamentRoundNotPositiveInteger: "Row {{row}}: tournamentRound must be a positive integer"

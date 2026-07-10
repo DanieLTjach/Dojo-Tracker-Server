@@ -1,5 +1,5 @@
 import z from 'zod';
-import { EventType, PlayerNameDisplay } from '../model/EventModels.ts';
+import { EventFormat, EventType, PlayerNameDisplay } from '../model/EventModels.ts';
 import { dateSchema } from './CommonSchemas.ts';
 import { clubIdParamSchema, clubIdSchema } from './ClubSchemas.ts';
 
@@ -13,7 +13,13 @@ export const eventGetByIdSchema = z.object({
 });
 
 const eventTypeEnum = z.enum(Object.values(EventType));
+const eventFormatEnum = z.enum(Object.values(EventFormat));
 const eventDescriptionSchema = z.string().max(5000, 'Description must be 5000 characters or less');
+
+const teamConfigSchema = z.strictObject({
+    teamSize: z.number().int('teamSize must be an integer').positive('teamSize must be positive'),
+    teamCount: z.number().int('teamCount must be an integer').positive('teamCount must be positive'),
+});
 
 const tournamentConfigSchema = z.strictObject({
     totalRounds: z.number().int('totalRounds must be an integer').positive('totalRounds must be positive'),
@@ -31,6 +37,7 @@ const eventConfigSchema = z.strictObject({
     minParticipants: minParticipantsSchema.optional(),
     maxParticipants: maxParticipantsSchema.optional(),
     registrationDeadline: registrationDeadlineSchema.optional(),
+    teamConfig: teamConfigSchema.optional(),
 });
 
 const eventConfigPatchSchema = z.strictObject({
@@ -38,6 +45,7 @@ const eventConfigPatchSchema = z.strictObject({
     minParticipants: minParticipantsSchema.nullish(),
     maxParticipants: maxParticipantsSchema.nullish(),
     registrationDeadline: registrationDeadlineSchema.nullish(),
+    teamConfig: teamConfigSchema.nullish(),
 });
 
 const scheduleItemKindSchema = z.enum(['default', 'muted', 'milestone']);
@@ -80,32 +88,18 @@ const linksSchema = z.strictObject({
     googleMaps: z.url('links.googleMaps must be a valid URL').optional(),
 });
 
-const pairingsSchema = z.array(
-    z.array(
-        z.array(z.number().int('Pairing player id must be an integer'))
-            .length(4, 'Each table must have exactly 4 players')
-    )
-).refine(
-    rounds => {
-        if (rounds.length === 0) return true;
-        const firstTableCount = rounds[0]!.length;
-        return rounds.every(r => r.length === firstTableCount);
-    },
-    { error: 'All rounds must have the same number of tables' }
-);
-
 export const eventInfoSchema = z.strictObject({
     schedule: z.array(scheduleDaySchema).optional(),
     venue: venueSchema.optional(),
     contacts: contactsSchema.optional(),
     links: linksSchema.optional(),
-    pairings: pairingsSchema.optional(),
 });
 
 const eventSchema = z.object({
     name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
     description: eventDescriptionSchema.nullish(),
     type: eventTypeEnum,
+    format: eventFormatEnum.default(EventFormat.INDIVIDUAL),
     isCurrentRating: z.boolean().nullish(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
@@ -192,6 +186,7 @@ export const eventPatchBodySchema = z.strictObject({
     name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').optional(),
     description: eventDescriptionSchema.nullish(),
     type: eventTypeEnum.optional(),
+    format: eventFormatEnum.optional(),
     isCurrentRating: z.boolean().nullish(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),

@@ -5,31 +5,35 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../src/util/GameRulesDetailsUtil.ts';
+import { getMigrationFiles, type MigrationFile } from '../src/db/MigrationFiles.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const migrationsDir = path.join(__dirname, '..', 'db', 'migrations');
 
-function getMigrationFiles() {
-    return fs.readdirSync(migrationsDir)
-        .filter(file => file.match(/^\d+\.sql$/))
-        .sort((a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10));
+function getMigrationFile(version: number) {
+    const migration = getMigrationFiles(migrationsDir).find(file => file.version === version);
+    if (migration === undefined) {
+        throw new Error(`Migration ${version} not found`);
+    }
+
+    return migration;
 }
 
-function runMigration(db: BetterSqlite3Database, fileName: string) {
-    const filePath = path.join(migrationsDir, fileName);
-    const sql = fs.readFileSync(filePath, 'utf-8');
+function runMigration(db: BetterSqlite3Database, migration: MigrationFile | number) {
+    const migrationFile = typeof migration === 'number' ? getMigrationFile(migration) : migration;
+    const sql = fs.readFileSync(migrationFile.path, 'utf-8');
     db.exec(sql);
 }
 
-function createMigratedDb(lastMigrationFile: string) {
+function createMigratedDb(lastMigrationVersion: number) {
     const db = new Database(':memory:');
     db.pragma('foreign_keys = OFF');
 
-    for (const file of getMigrationFiles()) {
-        runMigration(db, file);
-        if (file === lastMigrationFile) {
+    for (const migration of getMigrationFiles(migrationsDir)) {
+        runMigration(db, migration);
+        if (migration.version === lastMigrationVersion) {
             break;
         }
     }
@@ -39,13 +43,12 @@ function createMigratedDb(lastMigrationFile: string) {
 
 describe('Database Migrations', () => {
     test('migration files should not contain CURRENT_TIMESTAMP', () => {
-        const sqlFiles = getMigrationFiles();
+        const sqlFiles = getMigrationFiles(migrationsDir);
 
         expect(sqlFiles.length).toBeGreaterThan(0);
 
         const filesWithCurrentTimestamp = sqlFiles.filter(file => {
-            const filePath = path.join(migrationsDir, file);
-            const content = fs.readFileSync(filePath, 'utf-8');
+            const content = fs.readFileSync(file.path, 'utf-8');
             return content.includes('CURRENT_TIMESTAMP');
         });
 
@@ -53,7 +56,7 @@ describe('Database Migrations', () => {
     });
 
     test('migration 4 creates club schema and migrates existing data into Japan Dojo', () => {
-        const db = createMigratedDb('3.sql');
+        const db = createMigratedDb(3);
 
         db.prepare(`
       INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
@@ -64,7 +67,7 @@ describe('Database Migrations', () => {
         (42, 'Second Admin', 'second_admin', 42, '2026-02-20T00:00:00.000Z', '2026-02-20T00:00:00.000Z', 0, 1, 1, 'ACTIVE')
     `).run();
 
-        runMigration(db, '4.sql');
+        runMigration(db, 4);
         db.pragma('foreign_keys = ON');
 
         const club = db.prepare('SELECT * FROM club WHERE id = 1').get() as Record<string, unknown>;
@@ -216,7 +219,7 @@ describe('Database Migrations', () => {
     });
 
     test('migration 7 renames gameStartPlace to wind and tournament columns on game', () => {
-        const db = createMigratedDb('6.sql');
+        const db = createMigratedDb(6);
 
         db.prepare(`
       INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, tournamentHanchanNumber, tournamentTableNumber)
@@ -228,7 +231,7 @@ describe('Database Migrations', () => {
       VALUES (0, 1, 'EAST', 30000, 0, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
     `).run();
 
-        runMigration(db, '7.sql');
+        runMigration(db, 7);
         db.pragma('foreign_keys = ON');
 
         const winds = db.prepare('SELECT wind FROM wind ORDER BY wind').all() as Array<{ wind: string }>;
@@ -302,7 +305,7 @@ describe('Database Migrations', () => {
     });
 
     test('migration 8 creates club invite tables, enums and indexes', () => {
-        const db = createMigratedDb('8.sql');
+        const db = createMigratedDb(8);
         db.pragma('foreign_keys = ON');
 
         const types = db.prepare('SELECT type FROM clubInviteType ORDER BY type').all() as Array<{ type: string }>;
@@ -363,7 +366,7 @@ describe('Database Migrations', () => {
     });
 
     test('migration 8 removes duplicate chomboPointsAfterUma from game rules', () => {
-        const db = createMigratedDb('8.sql');
+        const db = createMigratedDb(8);
         db.pragma('foreign_keys = ON');
 
         const gameRulesColumns =
@@ -395,7 +398,7 @@ describe('Database Migrations', () => {
     });
 
     test('migration 9 creates achievement storage', () => {
-        const db = createMigratedDb('9.sql');
+        const db = createMigratedDb(9);
         db.pragma('foreign_keys = ON');
 
         const achievementColumns = (db.prepare('PRAGMA table_info(eventAchievement)').all() as Array<
@@ -430,7 +433,7 @@ describe('Database Migrations', () => {
     });
 
     test('migration 9 creates tournament state and backfills tournament events', () => {
-        const db = createMigratedDb('8.sql');
+        const db = createMigratedDb(8);
 
         db.prepare(`
       INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
@@ -448,7 +451,7 @@ describe('Database Migrations', () => {
         (9203, 9101, '2026-04-01T14:00:00.000Z', '2026-04-01T14:00:00.000Z', 0, NULL, NULL, 'FINISHED', '2026-04-01T14:00:00.000Z', '2026-04-01T15:00:00.000Z', 0)
     `).run();
 
-        runMigration(db, '9.sql');
+        runMigration(db, 9);
         db.pragma('foreign_keys = ON');
 
         const statuses = db.prepare('SELECT status FROM tournamentStatus ORDER BY status').all() as Array<
@@ -511,7 +514,7 @@ describe('Database Migrations', () => {
     });
 
     test('migration 9 moves legacy participant settings into event config', () => {
-        const db = createMigratedDb('8.sql');
+        const db = createMigratedDb(8);
 
         db.prepare(`
       INSERT INTO event (
@@ -537,7 +540,7 @@ describe('Database Migrations', () => {
         )
     `).run();
 
-        runMigration(db, '9.sql');
+        runMigration(db, 9);
 
         const rows = db.prepare(`
       SELECT id, config
@@ -572,8 +575,8 @@ describe('Database Migrations', () => {
         db.close();
     });
 
-    test('migration 10 creates external auth identities and backfills Telegram users', () => {
-        const db = createMigratedDb('9.sql');
+    test('migration 12 creates external auth identities and backfills Telegram users', () => {
+        const db = createMigratedDb(11);
 
         db.prepare(`
       INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
@@ -582,7 +585,7 @@ describe('Database Migrations', () => {
         (502, 'Google Only Later', NULL, NULL, '2026-06-02T00:00:00.000Z', '2026-06-02T00:00:00.000Z', 0, 1, 0, 'ACTIVE')
     `).run();
 
-        runMigration(db, '10.sql');
+        runMigration(db, 12);
         db.pragma('foreign_keys = ON');
 
         const providers = db.prepare('SELECT provider FROM authProvider ORDER BY provider').all() as Array<
@@ -657,8 +660,52 @@ describe('Database Migrations', () => {
         db.close();
     });
 
+    test('migration 10 removes legacy static pairings from event info', () => {
+        const db = createMigratedDb(9);
+
+        db.prepare(`
+      INSERT INTO event (id, name, type, gameRules, info, createdAt, modifiedAt, modifiedBy)
+      VALUES
+        (
+          10201, 'Pairings And Venue', 'TOURNAMENT', 1,
+          '{"venue":{"name":"Dojo"},"pairings":[[[1,2,3,4]]]}',
+          '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z', 0
+        ),
+        (
+          10202, 'Pairings Only', 'TOURNAMENT', 1,
+          '{"pairings":[[[1,2,3,4]]]}',
+          '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z', 0
+        ),
+        (
+          10203, 'Venue Only', 'TOURNAMENT', 1,
+          '{"venue":{"name":"Dojo"}}',
+          '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z', 0
+        )
+    `).run();
+
+        runMigration(db, 10);
+
+        const rows = db.prepare(`
+      SELECT id, info
+      FROM event
+      WHERE id IN (10201, 10202, 10203)
+      ORDER BY id
+    `).all() as Array<{ id: number, info: string | null }>;
+
+        expect(rows.map(row => ({
+            id: row.id,
+            info: row.info === null ? null : JSON.parse(row.info),
+        }))).toEqual([
+            { id: 10201, info: { venue: { name: 'Dojo' } } },
+            { id: 10202, info: null },
+            { id: 10203, info: { venue: { name: 'Dojo' } } },
+        ]);
+
+        db.close();
+    });
+
     test('seeded game rules details parse against the current schema after all migrations', () => {
-        const db = createMigratedDb(getMigrationFiles().at(-1)!);
+        const db = createMigratedDb(getMigrationFiles(migrationsDir).at(-1)!.version);
 
         const rows = db.prepare('SELECT id, details FROM gameRules WHERE details IS NOT NULL ORDER BY id')
             .all() as Array<{ id: number, details: string }>;
@@ -695,6 +742,89 @@ describe('Database Migrations', () => {
                 label: 'Mahjong Soul - 3P Mahjong',
             },
         ]);
+
+        db.close();
+    });
+
+    test('migration 10 adds team mode schema and backfills event.format', () => {
+        const db = createMigratedDb(9);
+
+        // An event created before migration 10 must keep working and default to INDIVIDUAL.
+        db.prepare(`
+            INSERT INTO event (id, name, description, type, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, createdAt, modifiedAt, modifiedBy)
+            VALUES (9301, 'Legacy Event', NULL, 'SEASON', 1, 1, NULL, NULL, 0, 0, '2026-05-01T00:00:00.000Z', '2026-05-01T00:00:00.000Z', 0)
+        `).run();
+
+        runMigration(db, 10);
+        db.pragma('foreign_keys = ON');
+
+        // format column exists, backfilled to INDIVIDUAL.
+        const event = db.prepare('SELECT format FROM event WHERE id = 9301').get() as { format: string };
+        expect(event.format).toBe('INDIVIDUAL');
+
+        // eventFormat enum is seeded.
+        const formats = db.prepare('SELECT format FROM eventFormat ORDER BY format').all() as Array<{ format: string }>;
+        expect(formats.map(f => f.format)).toEqual(['HYBRID', 'INDIVIDUAL', 'TEAM']);
+
+        // DRAFT status added (additive — existing statuses preserved).
+        const statuses = db.prepare('SELECT status FROM tournamentStatus ORDER BY status').all() as Array<
+            { status: string }
+        >;
+        expect(statuses.map(s => s.status)).toEqual(['CREATED', 'DRAFT', 'FINISHED', 'IN_PROGRESS', 'LAST_ROUND']);
+
+        // teamRole enum seeded.
+        const roles = db.prepare('SELECT role FROM teamRole ORDER BY role').all() as Array<{ role: string }>;
+        expect(roles.map(r => r.role)).toEqual(['CAPTAIN', 'MEMBER']);
+
+        // team / teamMembership tables exist with the one-team-per-player-per-event constraint.
+        db.prepare(`INSERT INTO team (id, eventId, name, createdAt, modifiedAt, modifiedBy)
+                    VALUES (1, 9301, 'Team A', '2026-05-02T00:00:00.000Z', '2026-05-02T00:00:00.000Z', 0)`).run();
+        db.prepare(`INSERT INTO team (id, eventId, name, createdAt, modifiedAt, modifiedBy)
+                    VALUES (2, 9301, 'Team B', '2026-05-02T00:00:00.000Z', '2026-05-02T00:00:00.000Z', 0)`).run();
+        db.prepare(`INSERT INTO teamMembership (teamId, eventId, userId, role, createdAt, modifiedAt, modifiedBy)
+                    VALUES (1, 9301, 0, 'CAPTAIN', '2026-05-02T00:00:00.000Z', '2026-05-02T00:00:00.000Z', 0)`).run();
+        expect(() =>
+            db.prepare(`INSERT INTO teamMembership (teamId, eventId, userId, role, createdAt, modifiedAt, modifiedBy)
+                        VALUES (2, 9301, 0, 'MEMBER', '2026-05-02T00:00:00.000Z', '2026-05-02T00:00:00.000Z', 0)`).run()
+        ).toThrow(); // UNIQUE (eventId, userId)
+
+        // userRatingChange gained nullable team attribution columns.
+        const cols = db.prepare('PRAGMA table_info(userRatingChange)').all() as Array<{ name: string }>;
+        const colNames = cols.map(c => c.name);
+        expect(colNames).toContain('teamId');
+        expect(colNames).toContain('teamRating');
+
+        db.close();
+    });
+
+    test('migration 11 adds club country/locale defaults and nullable profile locale', () => {
+        const db = createMigratedDb(11);
+
+        const club = db.prepare('SELECT country, locale FROM club WHERE id = 1').get() as Record<string, unknown>;
+        expect(club).toEqual({ country: 'UA', locale: 'uk' });
+
+        const clubColumns = db.prepare('PRAGMA table_info(club)').all() as Array<
+            { name: string, type: string, notnull: number, dflt_value: string | null }
+        >;
+        expect(clubColumns.find(column => column.name === 'country')).toMatchObject({
+            type: 'TEXT',
+            notnull: 1,
+            dflt_value: "'UA'",
+        });
+        expect(clubColumns.find(column => column.name === 'locale')).toMatchObject({
+            type: 'TEXT',
+            notnull: 1,
+            dflt_value: "'uk'",
+        });
+
+        const profileColumns = db.prepare('PRAGMA table_info(profile)').all() as Array<
+            { name: string, type: string, notnull: number, dflt_value: string | null }
+        >;
+        expect(profileColumns.find(column => column.name === 'locale')).toMatchObject({
+            type: 'TEXT',
+            notnull: 0,
+            dflt_value: null,
+        });
 
         db.close();
     });

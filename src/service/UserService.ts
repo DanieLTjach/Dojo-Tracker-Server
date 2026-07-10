@@ -12,11 +12,13 @@ import type { User, UserStatus } from '../model/UserModels.ts';
 import { ResponseStatusError } from '../error/BaseErrors.ts';
 import LogService from './LogService.ts';
 import dedent from 'dedent';
-import { globalUserLogsTopic } from '../model/TelegramTopic.ts';
+import { GLOBAL_LOGS_LOCALE, globalUserLogsTopic } from '../model/TelegramTopic.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { InsufficientPermissionsError, TelegramAccountAlreadyUsedError } from '../error/AuthErrors.ts';
 import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
+import { SupportedLocale, t } from '../i18n/index.ts';
+import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 export class UserService {
     private userRepository: UserRepository = new UserRepository();
@@ -223,66 +225,89 @@ export class UserService {
 
     private logRegisteredUser(user: User, createdBy: number): void {
         const creator = this.getUserById(createdBy);
-        const message = dedent`
-            <b>👤 New User Registered</b>
+        this.logMessageToUserLogsTopics(user, locale => {
+            const tr = (key: string) => t(key, locale);
+            const na = tr('telegram.userLog.noValue');
+            return dedent`
+                <b>${tr('telegram.userLog.registeredTitle')}</b>
 
-            <b>User ID:</b> <code>${user.id}</code>
-            <b>Name:</b> ${user.name}
-            <b>Telegram Username:</b> ${user.telegramUsername || 'N/A'}
-            <b>Telegram ID:</b> <code>${user.telegramId || 'N/A'}</code>
-            <b>Registered by:</b> ${creator.name} <code>(ID: ${creator.id})</code>
-        `;
-        this.logMessageToUserLogsTopics(message, user);
+                <b>${tr('telegram.userLog.userIdLabel')}</b> <code>${user.id}</code>
+                <b>${tr('telegram.userLog.nameLabel')}</b> ${user.name}
+                <b>${tr('telegram.userLog.telegramUsernameLabel')}</b> ${user.telegramUsername || na}
+                <b>${tr('telegram.userLog.telegramIdLabel')}</b> <code>${user.telegramId || na}</code>
+                <b>${tr('telegram.userLog.registeredByLabel')}</b> ${creator.name} <code>(ID: ${creator.id})</code>
+            `;
+        });
     }
 
     private logEditedUser(oldUser: User, newUser: User, modifiedBy: number): void {
         const modifier = this.getUserById(modifiedBy);
-        const changes: string[] = [];
-        if (oldUser.name !== newUser.name) {
-            changes.push(`<b>Name:</b> ${oldUser.name} → ${newUser.name}`);
-        }
-        if (oldUser.telegramUsername !== newUser.telegramUsername) {
-            changes.push(
-                `<b>Telegram Username:</b> ${oldUser.telegramUsername || 'N/A'} → ${newUser.telegramUsername || 'N/A'}`
-            );
-        }
-        if (oldUser.telegramId !== newUser.telegramId) {
-            changes.push(`<b>Telegram ID:</b> ${oldUser.telegramId || 'N/A'} → ${newUser.telegramId || 'N/A'}`);
-        }
+        this.logMessageToUserLogsTopics(newUser, locale => {
+            const tr = (key: string) => t(key, locale);
+            const na = tr('telegram.userLog.noValue');
+            const changes: string[] = [];
+            if (oldUser.name !== newUser.name) {
+                changes.push(`<b>${tr('telegram.userLog.nameLabel')}</b> ${oldUser.name} → ${newUser.name}`);
+            }
+            if (oldUser.telegramUsername !== newUser.telegramUsername) {
+                changes.push(
+                    `<b>${tr('telegram.userLog.telegramUsernameLabel')}</b> ${oldUser.telegramUsername || na} → ${
+                        newUser.telegramUsername || na
+                    }`
+                );
+            }
+            if (oldUser.telegramId !== newUser.telegramId) {
+                changes.push(
+                    `<b>${tr('telegram.userLog.telegramIdLabel')}</b> ${oldUser.telegramId || na} → ${
+                        newUser.telegramId || na
+                    }`
+                );
+            }
 
-        let message = dedent`
-            <b>✏️ User Edited</b>
+            let message = dedent`
+                <b>${tr('telegram.userLog.editedTitle')}</b>
 
-            <b>User ID:</b> <code>${newUser.id}</code>
-        `;
-        if (changes.length > 0) {
-            message += '\n' + changes.join('\n');
-        }
-        message += `\n<b>Edited by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>`;
-        this.logMessageToUserLogsTopics(message, newUser);
+                <b>${tr('telegram.userLog.userIdLabel')}</b> <code>${newUser.id}</code>
+            `;
+            if (changes.length > 0) {
+                message += '\n' + changes.join('\n');
+            }
+            message += `\n<b>${
+                tr('telegram.userLog.editedByLabel')
+            }</b> ${modifier.name} <code>(ID: ${modifier.id})</code>`;
+            return message;
+        });
     }
 
     private logActivationStatusChanged(oldUser: User, newUser: User, modifiedBy: number): void {
         const modifier = this.getUserById(modifiedBy);
-        const statusEmoji = newUser.isActive ? '✅' : '❌';
-        const statusText = newUser.isActive ? 'Activated' : 'Deactivated';
-        const message = dedent`
-            <b>${statusEmoji} User ${statusText}</b>
+        this.logMessageToUserLogsTopics(newUser, locale => {
+            const tr = (key: string) => t(key, locale);
+            const na = tr('telegram.userLog.noValue');
+            const title = newUser.isActive
+                ? tr('telegram.userLog.activatedTitle')
+                : tr('telegram.userLog.deactivatedTitle');
+            return dedent`
+                <b>${title}</b>
 
-            <b>User ID:</b> <code>${newUser.id}</code>
-            <b>Name:</b> ${newUser.name}
-            <b>Telegram Username:</b> ${newUser.telegramUsername || 'N/A'}
-            <b>Is active:</b> ${oldUser.isActive} → ${newUser.isActive}
-            <b>Status:</b> ${oldUser.status} → ${newUser.status}
-            <b>Updated by:</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
-        `;
-        this.logMessageToUserLogsTopics(message, newUser);
+                <b>${tr('telegram.userLog.userIdLabel')}</b> <code>${newUser.id}</code>
+                <b>${tr('telegram.userLog.nameLabel')}</b> ${newUser.name}
+                <b>${tr('telegram.userLog.telegramUsernameLabel')}</b> ${newUser.telegramUsername || na}
+                <b>${tr('telegram.userLog.isActiveLabel')}</b> ${oldUser.isActive} → ${newUser.isActive}
+                <b>${tr('telegram.userLog.statusLabel')}</b> ${oldUser.status} → ${newUser.status}
+                <b>${tr('telegram.userLog.updatedByLabel')}</b> ${modifier.name} <code>(ID: ${modifier.id})</code>
+            `;
+        });
     }
 
-    private logMessageToUserLogsTopics(message: string, user: User) {
+    private logMessageToUserLogsTopics(user: User, buildMessage: (locale: SupportedLocale) => string) {
         this.clubMembershipRepository.findActiveMembershipsByUserId(user.id).forEach(clubMembership => {
-            LogService.logInfo(message, this.clubService.getClubTelegramTopics(clubMembership.clubId).userLogs);
+            const locale = resolveClubLocale(this.clubService.getClubById(clubMembership.clubId));
+            LogService.logInfo(
+                buildMessage(locale),
+                this.clubService.getClubTelegramTopics(clubMembership.clubId).userLogs
+            );
         });
-        LogService.logInfo(message, globalUserLogsTopic);
+        LogService.logInfo(buildMessage(GLOBAL_LOGS_LOCALE), globalUserLogsTopic);
     }
 }

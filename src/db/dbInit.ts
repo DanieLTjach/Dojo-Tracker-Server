@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
 import type { Database as BetterSqlite3Database } from 'better-sqlite3';
 import config from '../../config/config.ts';
+import { getMigrationFiles } from './MigrationFiles.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,7 +30,7 @@ class DBManager {
         } catch (error) {
             console.error('Failed to initialize database:', error);
             this.closeDB();
-            process.exit(1);
+            throw error;
         }
     }
 
@@ -44,30 +45,27 @@ class DBManager {
 
     runMigrations() {
         const currentVersion = this.getCurrentDBVersion();
-        const migrationFiles = getMigrationFiles();
         const migrationsDir = path.join(__dirname, '../../db/migrations');
+        const migrationFiles = getMigrationFiles(migrationsDir);
 
         console.log(`Database version: ${currentVersion}`);
 
         let migrationsRun = 0;
 
-        for (const file of migrationFiles) {
-            const migrationNumber = parseInt(file.split('.')[0]!);
-
-            if (migrationNumber > currentVersion) {
-                const filePath = path.join(migrationsDir, file);
-                console.log(`Running migration: ${file}`);
+        for (const migration of migrationFiles) {
+            if (migration.version > currentVersion) {
+                console.log(`Running migration: ${migration.fileName}`);
 
                 try {
                     this.db.transaction(() => {
-                        this.runSqlFile(filePath);
+                        this.runSqlFile(migration.path);
                         this.validateForeignKeyConstraints();
-                        this.setDBVersion(migrationNumber);
+                        this.setDBVersion(migration.version);
                     })();
-                    console.log(`✓ Migration ${file} completed`);
+                    console.log(`✓ Migration ${migration.fileName} completed`);
                     migrationsRun++;
                 } catch (error) {
-                    console.error(`✗ Migration ${file} failed: `, error);
+                    console.error(`✗ Migration ${migration.fileName} failed: `, error);
                     throw error;
                 }
             }
@@ -104,24 +102,6 @@ class DBManager {
             throw new Error('Foreign key constraint violations found: ' + JSON.stringify(result));
         }
     }
-}
-
-function getMigrationFiles() {
-    const migrationsDir = path.join(__dirname, '../../db/migrations');
-
-    if (!fs.existsSync(migrationsDir)) {
-        return [];
-    }
-
-    const files = fs.readdirSync(migrationsDir)
-        .filter(file => file.match(/^\d+\.sql$/))
-        .sort((a, b) => {
-            const numA = parseInt(a.split('.')[0]!);
-            const numB = parseInt(b.split('.')[0]!);
-            return numA - numB;
-        });
-
-    return files;
 }
 
 export const dbManager = new DBManager();

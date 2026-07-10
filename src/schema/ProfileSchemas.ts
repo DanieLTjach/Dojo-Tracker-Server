@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { localeSchema } from './CommonSchemas.ts';
 import { userIdParamSchema } from './UserSchemas.ts';
 
 export const profileEditSchema = z.object({
@@ -11,6 +12,7 @@ export const profileEditSchema = z.object({
         firstName: z.string().trim().min(1).nullish(),
         lastName: z.string().trim().min(1).nullish(),
         emaNumber: z.string().regex(/^\d+$/, 'EMA number must contain only digits').nullish(),
+        locale: localeSchema.nullish(),
         hideProfile: z.boolean().optional(),
     }),
 });
