@@ -103,13 +103,13 @@ export class DiscordAuthTokenVerifier {
     async verify(code: string): Promise<VerifiedExternalProfile> {
         if (
             config.discordClientId === undefined ||
-            config.discordClientSecret === undefined ||
-            config.discordRedirectUri === undefined
+            config.discordClientSecret === undefined
         ) {
             throw new AuthProviderNotConfiguredError(AuthProvider.DISCORD);
         }
 
         try {
+            const redirectUri = `${config.frontendUrl}/auth/discord/callback`;
             const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
                 method: 'POST',
                 headers: {
@@ -120,7 +120,7 @@ export class DiscordAuthTokenVerifier {
                     client_secret: config.discordClientSecret,
                     grant_type: 'authorization_code',
                     code: code,
-                    redirect_uri: config.discordRedirectUri,
+                    redirect_uri: redirectUri,
                 }).toString(),
             });
 
