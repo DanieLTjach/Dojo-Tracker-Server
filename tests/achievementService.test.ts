@@ -161,8 +161,8 @@ describe('AchievementService (persisted tournament achievements)', () => {
             .toThrow(AchievementsOnlyForTournamentsError);
     });
 
-    it("returns a user's achievements across tournaments for the profile page", () => {
-        const achievements = achievementService.getUserAchievements(u1);
+    it("formats a user's achievements in the requesting user's locale", () => {
+        const achievements = achievementService.getUserAchievements(u1, u2);
         const metrics = achievements.map(a => a.metric);
         expect(metrics).toContain('dealer_wins');
         expect(metrics).toContain('best_game_points');
@@ -171,5 +171,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
         expect(dealerWins.eventId).toBe(EVENT_ID);
         expect(dealerWins.eventName).toBe('Achievements Cup');
         expect(dealerWins.value).toBe(1);
+        expect(dealerWins.description).toBe('Найбільше перемог на дилері');
+        expect(dealerWins.valueFormatted).toBe('1 перемог');
     });
 });

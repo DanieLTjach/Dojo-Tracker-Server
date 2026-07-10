@@ -115,13 +115,13 @@ export class AchievementService {
     }
 
     /** Achievements a user has won across all tournaments, for the profile page. */
-    getUserAchievements(userId: number): UserAchievement[] {
+    getUserAchievements(userId: number, requestingUserId: number): UserAchievement[] {
         for (const eventId of this.achievementRepository.findUncomputedTournamentEventIdsForUser(userId)) {
             this.recomputeEventAchievements(this.eventService.getEventById(eventId));
         }
 
-        const user = this.userService.getUserById(userId);
-        const locale = resolveUserLocale(user);
+        const requestingUser = this.userService.getUserById(requestingUserId);
+        const locale = resolveUserLocale(requestingUser);
 
         return this.achievementRepository.findByUserId(userId).flatMap(row => {
             const definition = DEFINITION_BY_METRIC.get(row.metric);

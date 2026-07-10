@@ -23,7 +23,8 @@ export class AchievementController {
 
     getUserAchievements(req: Request, res: Response) {
         const { params: { id } } = getUserAchievementsSchema.parse(req);
-        const achievements = this.achievementService.getUserAchievements(id);
+        const requestingUserId = req.user!.userId;
+        const achievements = this.achievementService.getUserAchievements(id, requestingUserId);
         return res.status(StatusCodes.OK).json({ achievements });
     }
 }
