@@ -1,4 +1,4 @@
-import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type JSONWebKeySet } from 'jose';
+import { createLocalJWKSet, errors, exportJWK, generateKeyPair, SignJWT, type JSONWebKeySet } from 'jose';
 import config from '../config/config.ts';
 import { TelegramAuthTokenVerifier } from '../src/service/ExternalAuthTokenVerifier.ts';
 
@@ -56,6 +56,25 @@ describe('TelegramAuthTokenVerifier', () => {
             const error = new Error('timed out') as Error & { code: string };
             error.code = 'ETIMEDOUT';
             throw error;
+        };
+
+        await expect(new TelegramAuthTokenVerifier(unavailableKeySet).verify(idToken))
+            .rejects.toMatchObject({
+                statusCode: 503,
+                errorCode: 'externalAuthProviderUnavailable',
+            });
+    });
+
+    it('returns 503 when Telegram key discovery returns an invalid HTTP response', async () => {
+        const { privateKey } = await generateKeyPair('RS256');
+        const idToken = await new SignJWT({ id: '123456789' })
+            .setProtectedHeader({ alg: 'RS256', kid: 'unavailable-key' })
+            .setIssuer('https://oauth.telegram.org')
+            .setAudience('telegram-test-client')
+            .setExpirationTime('5m')
+            .sign(privateKey);
+        const unavailableKeySet = async () => {
+            throw new errors.JOSEError('Expected 200 OK from the JSON Web Key Set HTTP response');
         };
 
         await expect(new TelegramAuthTokenVerifier(unavailableKeySet).verify(idToken))

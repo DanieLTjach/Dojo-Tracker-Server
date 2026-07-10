@@ -752,6 +752,19 @@ describe('Authentication API Endpoints', () => {
             expect(response.body).not.toHaveProperty('providerSession');
         });
 
+        it('rejects an invalid Discord browser PKCE verifier', async () => {
+            const externalAuthApp = createExternalAuthApp(new FakeExternalAuthTokenVerifier({}, {}, {}));
+
+            await request(externalAuthApp)
+                .post('/api/auth/discord')
+                .send({
+                    flow: 'BROWSER',
+                    code: 'discord-browser-code',
+                    codeVerifier: '*'.repeat(43),
+                })
+                .expect(400);
+        });
+
         it('requires explicit registration for an unknown Discord identity', async () => {
             const externalAuthApp = createExternalAuthApp(
                 new FakeExternalAuthTokenVerifier({}, {}, {

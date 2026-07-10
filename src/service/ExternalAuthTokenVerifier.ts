@@ -17,6 +17,15 @@ function isProviderUnavailableError(error: unknown): boolean {
     if (error instanceof errors.JWKSTimeout) {
         return true;
     }
+    if (
+        error instanceof errors.JOSEError &&
+        (
+            error.message === 'Expected 200 OK from the JSON Web Key Set HTTP response' ||
+            error.message === 'Failed to parse the JSON Web Key Set HTTP response as JSON'
+        )
+    ) {
+        return true;
+    }
     if (error instanceof TypeError && /fetch|network/i.test(error.message)) {
         return true;
     }

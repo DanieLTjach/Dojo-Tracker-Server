@@ -19,7 +19,9 @@ export const discordAuthSchema = z.object({
         z.object({
             flow: z.literal('BROWSER'),
             code: z.string().trim().min(1, 'Discord code is required'),
-            codeVerifier: z.string().trim().min(43, 'Discord PKCE code verifier is invalid').max(128),
+            codeVerifier: z.string()
+                .trim()
+                .regex(/^[A-Za-z0-9._~-]{43,128}$/, 'Discord PKCE code verifier is invalid'),
         }),
         z.object({
             flow: z.literal('ACTIVITY'),

@@ -43,6 +43,11 @@ function tryParseIntEnvVariable(varName: string): number | undefined {
     return intValue;
 }
 
+function getOptionalStringEnvVariable(varName: string): string | undefined {
+    const value = process.env[varName]?.trim();
+    return value === undefined || value.length === 0 ? undefined : value;
+}
+
 function parseBooleanEnvVariable(varName: string, defaultValue: boolean): boolean {
     const variable = process.env[varName];
     if (variable === undefined) {
@@ -58,10 +63,11 @@ function parseBooleanEnvVariable(varName: string, defaultValue: boolean): boolea
 }
 
 export function validateOptionalConfigGroup(groupName: string, values: Record<string, string | undefined>): void {
-    const configuredValues = Object.entries(values).filter(([, value]) => value !== undefined);
+    const isConfigured = (value: string | undefined) => value !== undefined && value.trim().length > 0;
+    const configuredValues = Object.entries(values).filter(([, value]) => isConfigured(value));
     if (configuredValues.length > 0 && configuredValues.length !== Object.keys(values).length) {
         const missingNames = Object.entries(values)
-            .filter(([, value]) => value === undefined)
+            .filter(([, value]) => !isConfigured(value))
             .map(([name]) => name)
             .join(', ');
         throw new Error(`${groupName} configuration is incomplete. Missing: ${missingNames}`);
@@ -80,9 +86,9 @@ if (env === 'production') {
 
 const tournamentMode = process.env['TOURNAMENT_MODE'] === 'true';
 const discordConfig = {
-    DISCORD_CLIENT_ID: process.env['DISCORD_CLIENT_ID'],
-    DISCORD_CLIENT_SECRET: process.env['DISCORD_CLIENT_SECRET'],
-    DISCORD_BROWSER_REDIRECT_URI: process.env['DISCORD_BROWSER_REDIRECT_URI'],
+    DISCORD_CLIENT_ID: getOptionalStringEnvVariable('DISCORD_CLIENT_ID'),
+    DISCORD_CLIENT_SECRET: getOptionalStringEnvVariable('DISCORD_CLIENT_SECRET'),
+    DISCORD_BROWSER_REDIRECT_URI: getOptionalStringEnvVariable('DISCORD_BROWSER_REDIRECT_URI'),
 };
 validateOptionalConfigGroup('Discord', discordConfig);
 
@@ -94,8 +100,8 @@ const config: Config = {
     jwtSecret: getRequiredStringEnvVariable('JWT_SECRET'),
     jwtExpiry: process.env['JWT_EXPIRY'] || '7d',
     authInitDataValiditySeconds: tryParseIntEnvVariable('AUTH_INIT_DATA_VALIDITY_SECONDS') || 86400,
-    googleClientId: process.env['GOOGLE_CLIENT_ID'],
-    telegramLoginClientId: process.env['TELEGRAM_LOGIN_CLIENT_ID'],
+    googleClientId: getOptionalStringEnvVariable('GOOGLE_CLIENT_ID'),
+    telegramLoginClientId: getOptionalStringEnvVariable('TELEGRAM_LOGIN_CLIENT_ID'),
     discordClientId: discordConfig.DISCORD_CLIENT_ID,
     discordClientSecret: discordConfig.DISCORD_CLIENT_SECRET,
     discordBrowserRedirectUri: discordConfig.DISCORD_BROWSER_REDIRECT_URI,

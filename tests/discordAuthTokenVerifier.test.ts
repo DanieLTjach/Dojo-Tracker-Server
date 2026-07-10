@@ -149,4 +149,14 @@ describe('Discord configuration', () => {
             })
         ).not.toThrow();
     });
+
+    it('treats blank Discord configuration values as missing', () => {
+        expect(() =>
+            validateOptionalConfigGroup('Discord', {
+                DISCORD_CLIENT_ID: 'client',
+                DISCORD_CLIENT_SECRET: '   ',
+                DISCORD_BROWSER_REDIRECT_URI: undefined,
+            })
+        ).toThrow('Discord configuration is incomplete');
+    });
 });
