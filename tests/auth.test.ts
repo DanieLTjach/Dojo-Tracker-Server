@@ -8,47 +8,72 @@ import { HashUtil } from '../src/util/HashUtil.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
 import config from '../config/config.ts';
-import { AuthProvider, type VerifiedExternalProfile } from '../src/model/AuthProviderModels.ts';
-import type { ExternalAuthTokenVerifier } from '../src/service/ExternalAuthTokenVerifier.ts';
+import {
+    AuthProvider,
+    type ExternalAuthFlow,
+    type ExternalAuthProviderInput,
+    type VerifiedExternalAuth,
+    type VerifiedExternalProfile,
+} from '../src/model/AuthProviderModels.ts';
 import { AuthService } from '../src/service/AuthService.ts';
 import { AuthController } from '../src/controller/AuthController.ts';
 import { AuthProviderIdentityRepository } from '../src/repository/AuthProviderIdentityRepository.ts';
 import { createAuthHeader } from './testHelpers.ts';
+import {
+    ExternalAuthProviderRegistry,
+    TelegramAuthProviderAdapter,
+    type ExternalAuthProviderAdapter,
+} from '../src/service/ExternalAuthProviderRegistry.ts';
 
 const app = express();
 app.use(express.json());
 app.use('/api', authRoutes);
 app.use(handleErrors);
 
-class FakeExternalAuthTokenVerifier implements ExternalAuthTokenVerifier {
-    private googleProfiles: Record<string, VerifiedExternalProfile>;
-    private telegramProfiles: Record<string, VerifiedExternalProfile>;
-    private discordProfiles: Record<string, VerifiedExternalProfile>;
+class FakeExternalAuthProviderAdapter implements ExternalAuthProviderAdapter {
+    readonly flows: ExternalAuthFlow[] = ['BROWSER'];
+    readonly provider: AuthProvider;
+    private profiles: Record<string, VerifiedExternalProfile>;
 
+    constructor(
+        provider: AuthProvider,
+        profiles: Record<string, VerifiedExternalProfile>
+    ) {
+        this.provider = provider;
+        this.profiles = profiles;
+    }
+
+    isConfigured(): boolean {
+        return true;
+    }
+
+    async verify(input: ExternalAuthProviderInput): Promise<VerifiedExternalAuth> {
+        const token = 'credential' in input
+            ? input.credential
+            : 'idToken' in input
+            ? input.idToken
+            : input.code;
+        return { profile: this.profiles[token]! };
+    }
+}
+
+class FakeExternalAuthTokenVerifier extends ExternalAuthProviderRegistry {
     constructor(
         googleProfiles: Record<string, VerifiedExternalProfile>,
         telegramProfiles: Record<string, VerifiedExternalProfile>,
         discordProfiles: Record<string, VerifiedExternalProfile> = {}
     ) {
-        this.googleProfiles = googleProfiles;
-        this.telegramProfiles = telegramProfiles;
-        this.discordProfiles = discordProfiles;
-    }
-
-    async verifyGoogleCredential(credential: string): Promise<VerifiedExternalProfile> {
-        return this.googleProfiles[credential]!;
-    }
-
-    async verifyTelegramIdToken(idToken: string): Promise<VerifiedExternalProfile> {
-        return this.telegramProfiles[idToken]!;
-    }
-
-    async verifyDiscordCode(code: string): Promise<VerifiedExternalProfile> {
-        return this.discordProfiles[code]!;
+        super([
+            new FakeExternalAuthProviderAdapter(AuthProvider.GOOGLE, googleProfiles),
+            new TelegramAuthProviderAdapter({
+                verify: async (idToken: string) => telegramProfiles[idToken]!,
+            }),
+            new FakeExternalAuthProviderAdapter(AuthProvider.DISCORD, discordProfiles),
+        ]);
     }
 }
 
-function createExternalAuthApp(verifier: ExternalAuthTokenVerifier) {
+function createExternalAuthApp(verifier: ExternalAuthProviderRegistry) {
     const externalAuthApp = express();
     externalAuthApp.use(express.json());
     externalAuthApp.use('/api', createAuthRouter(new AuthController(new AuthService(verifier))));
@@ -264,6 +289,43 @@ describe('Authentication API Endpoints', () => {
     });
 
     describe('external browser auth', () => {
+        it('supports a LINE-like adapter without provider-specific AuthService methods', async () => {
+            const lineProvider = 'LINE' as AuthProvider;
+            const registry = new ExternalAuthProviderRegistry([
+                new FakeExternalAuthProviderAdapter(lineProvider, {
+                    'line-token': {
+                        provider: lineProvider,
+                        providerUserId: 'line-user',
+                        displayName: 'LINE User',
+                    },
+                }),
+            ]);
+
+            const result = await new AuthService(registry).authenticateExternal(
+                lineProvider,
+                { credential: 'line-token' }
+            );
+
+            expect(result).toMatchObject({
+                registrationRequired: true,
+                provider: 'LINE',
+                suggestedName: 'LINE User',
+            });
+        });
+
+        it('lists configured auth providers without authentication', async () => {
+            const externalAuthApp = createExternalAuthApp(new FakeExternalAuthTokenVerifier({}, {}));
+
+            const response = await request(externalAuthApp)
+                .get('/api/auth/providers/available')
+                .expect(200);
+
+            expect(response.body).toEqual([
+                { provider: 'GOOGLE', flows: ['BROWSER'] },
+                { provider: 'DISCORD', flows: ['BROWSER'] },
+            ]);
+        });
+
         it('authenticates an existing Google identity', async () => {
             const user = userService.registerUser('Existing Google User', undefined, undefined, 0);
             authProviderIdentityRepository.createIdentity(user.id, {

@@ -32,12 +32,6 @@ function isProviderUnavailableError(error: unknown): boolean {
     return typeof status === 'number' && (status === 429 || status >= 500);
 }
 
-export interface ExternalAuthTokenVerifier {
-    verifyGoogleCredential(credential: string): Promise<VerifiedExternalProfile>;
-    verifyTelegramIdToken(idToken: string): Promise<VerifiedExternalProfile>;
-    verifyDiscordCode(code: string): Promise<VerifiedExternalProfile>;
-}
-
 export class GoogleAuthTokenVerifier {
     private client = new OAuth2Client();
 
@@ -224,23 +218,5 @@ export class DiscordAuthTokenVerifier {
             }
             throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
         }
-    }
-}
-
-export class DefaultExternalAuthTokenVerifier implements ExternalAuthTokenVerifier {
-    private googleVerifier = new GoogleAuthTokenVerifier();
-    private telegramVerifier = new TelegramAuthTokenVerifier();
-    private discordVerifier = new DiscordAuthTokenVerifier();
-
-    verifyGoogleCredential(credential: string): Promise<VerifiedExternalProfile> {
-        return this.googleVerifier.verify(credential);
-    }
-
-    verifyTelegramIdToken(idToken: string): Promise<VerifiedExternalProfile> {
-        return this.telegramVerifier.verify(idToken);
-    }
-
-    verifyDiscordCode(code: string): Promise<VerifiedExternalProfile> {
-        return this.discordVerifier.verify(code);
     }
 }

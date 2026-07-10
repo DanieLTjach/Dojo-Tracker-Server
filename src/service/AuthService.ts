@@ -4,15 +4,17 @@ import { TokenService } from './TokenService.ts';
 import type { TokenPair, TelegramUser } from '../model/AuthModels.ts';
 import {
     AuthProvider,
+    type AvailableAuthProviderDTO,
+    type ExternalAuthProviderInput,
     type ExternalAuthRegistrationRequired,
     type LinkedAuthProviderDTO,
     type VerifiedExternalProfile,
 } from '../model/AuthProviderModels.ts';
 import { AuthProviderIdentityRepository } from '../repository/AuthProviderIdentityRepository.ts';
 import {
-    DefaultExternalAuthTokenVerifier,
-    type ExternalAuthTokenVerifier,
-} from './ExternalAuthTokenVerifier.ts';
+    ExternalAuthProviderRegistry,
+    type ExternalAuthProviderAdapter,
+} from './ExternalAuthProviderRegistry.ts';
 import {
     AuthProviderIdentityAlreadyLinkedError,
     InvalidInitDataError,
@@ -30,10 +32,10 @@ export class AuthService {
     private userService: UserService = new UserService();
     private tokenService: TokenService = new TokenService();
     private authProviderIdentityRepository: AuthProviderIdentityRepository = new AuthProviderIdentityRepository();
-    private externalAuthTokenVerifier: ExternalAuthTokenVerifier;
+    private externalAuthProviderRegistry: ExternalAuthProviderRegistry;
 
-    constructor(externalAuthTokenVerifier: ExternalAuthTokenVerifier = new DefaultExternalAuthTokenVerifier()) {
-        this.externalAuthTokenVerifier = externalAuthTokenVerifier;
+    constructor(externalAuthProviderRegistry: ExternalAuthProviderRegistry = new ExternalAuthProviderRegistry()) {
+        this.externalAuthProviderRegistry = externalAuthProviderRegistry;
     }
 
     /**
@@ -56,34 +58,24 @@ export class AuthService {
         return this.tokenService.createTokenPair(user);
     }
 
-    async authenticateGoogle(credential: string, name?: string): Promise<ExternalAuthResult> {
-        const profile = await this.externalAuthTokenVerifier.verifyGoogleCredential(credential);
-        return this.resolveExternalAuth(profile, name);
+    async authenticateExternal(
+        provider: AuthProvider,
+        input: ExternalAuthProviderInput,
+        name?: string
+    ): Promise<ExternalAuthResult> {
+        const adapter = this.externalAuthProviderRegistry.getAdapter(provider);
+        const { profile } = await adapter.verify(input);
+        return this.resolveExternalAuth(profile, adapter, name);
     }
 
-    async authenticateTelegram(idToken: string, name?: string): Promise<ExternalAuthResult> {
-        const profile = await this.externalAuthTokenVerifier.verifyTelegramIdToken(idToken);
-        return this.resolveExternalAuth(profile, name);
-    }
-
-    async linkGoogle(userId: number, credential: string): Promise<LinkedAuthProviderDTO> {
-        const profile = await this.externalAuthTokenVerifier.verifyGoogleCredential(credential);
-        return this.linkExternalAuthProvider(userId, profile);
-    }
-
-    async linkTelegram(userId: number, idToken: string): Promise<LinkedAuthProviderDTO> {
-        const profile = await this.externalAuthTokenVerifier.verifyTelegramIdToken(idToken);
-        return this.linkExternalAuthProvider(userId, profile);
-    }
-
-    async authenticateDiscord(code: string, name?: string): Promise<ExternalAuthResult> {
-        const profile = await this.externalAuthTokenVerifier.verifyDiscordCode(code);
-        return this.resolveExternalAuth(profile, name);
-    }
-
-    async linkDiscord(userId: number, code: string): Promise<LinkedAuthProviderDTO> {
-        const profile = await this.externalAuthTokenVerifier.verifyDiscordCode(code);
-        return this.linkExternalAuthProvider(userId, profile);
+    async linkExternal(
+        userId: number,
+        provider: AuthProvider,
+        input: ExternalAuthProviderInput
+    ): Promise<LinkedAuthProviderDTO> {
+        const adapter = this.externalAuthProviderRegistry.getAdapter(provider);
+        const { profile } = await adapter.verify(input);
+        return this.linkExternalAuthProvider(userId, profile, adapter);
     }
 
     getLinkedProviders(userId: number): LinkedAuthProviderDTO[] {
@@ -95,6 +87,10 @@ export class AuthService {
             username: identity.username,
             linkedAt: identity.createdAt.toISOString(),
         }));
+    }
+
+    getAvailableProviders(): AvailableAuthProviderDTO[] {
+        return this.externalAuthProviderRegistry.getAvailableProviders();
     }
 
     /**
@@ -193,32 +189,38 @@ export class AuthService {
         }
     }
 
-    private resolveExternalAuth(profile: VerifiedExternalProfile, name?: string): ExternalAuthResult {
+    private resolveExternalAuth(
+        profile: VerifiedExternalProfile,
+        adapter: ExternalAuthProviderAdapter,
+        name?: string
+    ): ExternalAuthResult {
         return dbManager.db.transaction(() => {
             const existingIdentity = this.authProviderIdentityRepository.findIdentity(
                 profile.provider,
                 profile.providerUserId
             );
             if (existingIdentity !== undefined) {
-                this.validateUserIsActive(existingIdentity.user.id, existingIdentity.user.isActive);
-                return this.tokenService.createTokenPair(existingIdentity.user);
+                const user = this.userService.getUserById(existingIdentity.userId);
+                this.validateUserIsActive(user.id, user.isActive);
+                return this.tokenService.createTokenPair(user);
             }
 
-            const existingTelegramUser = this.findExistingTelegramUser(profile);
-            if (existingTelegramUser !== undefined) {
-                this.validateUserIsActive(existingTelegramUser.id, existingTelegramUser.isActive);
-                this.createIdentityForUser(existingTelegramUser.id, profile);
-                return this.tokenService.createTokenPair(existingTelegramUser);
+            const existingLegacyUser = adapter.findLegacyUser?.(profile, this.userService);
+            if (existingLegacyUser !== undefined) {
+                this.validateUserIsActive(existingLegacyUser.id, existingLegacyUser.isActive);
+                this.createIdentityForUser(existingLegacyUser.id, profile);
+                return this.tokenService.createTokenPair(existingLegacyUser);
             }
 
             if (name === undefined) {
                 return this.buildRegistrationRequired(profile);
             }
 
+            const registrationFields = adapter.getRegistrationUserFields?.(profile) ?? {};
             const user = this.userService.registerUser(
                 name,
-                profile.provider === AuthProvider.TELEGRAM ? profile.username : undefined,
-                profile.telegramId,
+                registrationFields.telegramUsername,
+                registrationFields.telegramId,
                 SYSTEM_USER_ID
             );
             this.authProviderIdentityRepository.createIdentity(user.id, profile);
@@ -226,7 +228,11 @@ export class AuthService {
         })();
     }
 
-    private linkExternalAuthProvider(userId: number, profile: VerifiedExternalProfile): LinkedAuthProviderDTO {
+    private linkExternalAuthProvider(
+        userId: number,
+        profile: VerifiedExternalProfile,
+        adapter: ExternalAuthProviderAdapter
+    ): LinkedAuthProviderDTO {
         return dbManager.db.transaction(() => {
             const user = this.userService.getUserById(userId);
             this.validateUserIsActive(user.id, user.isActive);
@@ -250,20 +256,11 @@ export class AuthService {
                 throw new UserAlreadyHasAuthProviderError(profile.provider);
             }
 
-            if (profile.provider === AuthProvider.TELEGRAM) {
-                this.ensureTelegramProfileCanBeLinked(user.id, user.telegramId, profile);
-            }
+            adapter.prepareLink?.(user, profile, this.userService);
 
             const identity = this.authProviderIdentityRepository.createIdentity(userId, profile);
             return this.toLinkedProviderDTO(identity);
         })();
-    }
-
-    private findExistingTelegramUser(profile: VerifiedExternalProfile) {
-        if (profile.provider !== AuthProvider.TELEGRAM || profile.telegramId === undefined) {
-            return undefined;
-        }
-        return this.userService.getOptionalUserByTelegramId(profile.telegramId);
     }
 
     private createIdentityForUser(userId: number, profile: VerifiedExternalProfile): void {
@@ -279,27 +276,6 @@ export class AuthService {
         }
 
         this.authProviderIdentityRepository.createIdentity(userId, profile);
-    }
-
-    private ensureTelegramProfileCanBeLinked(
-        userId: number,
-        currentTelegramId: number | null,
-        profile: VerifiedExternalProfile
-    ): void {
-        if (profile.telegramId === undefined) {
-            throw new InvalidInitDataError('Missing Telegram id');
-        }
-        if (currentTelegramId !== null && currentTelegramId !== profile.telegramId) {
-            throw new UserAlreadyHasAuthProviderError(AuthProvider.TELEGRAM);
-        }
-
-        const existingTelegramUser = this.userService.getOptionalUserByTelegramId(profile.telegramId);
-        if (existingTelegramUser !== undefined && existingTelegramUser.id !== userId) {
-            throw new AuthProviderIdentityAlreadyLinkedError(AuthProvider.TELEGRAM);
-        }
-        if (currentTelegramId === null) {
-            this.userService.setUserTelegramId(userId, profile.telegramId, userId);
-        }
     }
 
     private buildRegistrationRequired(profile: VerifiedExternalProfile): ExternalAuthRegistrationRequired {

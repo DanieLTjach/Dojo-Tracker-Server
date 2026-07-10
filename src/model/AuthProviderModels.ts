@@ -1,5 +1,3 @@
-import type { User } from './UserModels.ts';
-
 export const AuthProvider = {
     GOOGLE: 'GOOGLE',
     TELEGRAM: 'TELEGRAM',
@@ -20,10 +18,6 @@ export interface AuthProviderIdentity {
     modifiedAt: Date;
 }
 
-export interface AuthProviderIdentityWithUser extends AuthProviderIdentity {
-    user: User;
-}
-
 export interface VerifiedExternalProfile {
     provider: AuthProvider;
     providerUserId: string;
@@ -31,6 +25,22 @@ export interface VerifiedExternalProfile {
     email?: string;
     username?: string;
     telegramId?: number;
+}
+
+export type ExternalAuthFlow = 'BROWSER' | 'ACTIVITY';
+
+export type ExternalAuthProviderInput =
+    | { credential: string }
+    | { idToken: string }
+    | { code: string };
+
+export interface VerifiedExternalAuth {
+    profile: VerifiedExternalProfile;
+}
+
+export interface AvailableAuthProviderDTO {
+    provider: AuthProvider;
+    flows: ExternalAuthFlow[];
 }
 
 export interface ExternalAuthRegistrationRequired {
