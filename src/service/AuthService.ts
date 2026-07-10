@@ -76,6 +76,16 @@ export class AuthService {
         return this.linkExternalAuthProvider(userId, profile);
     }
 
+    async authenticateDiscord(code: string, name?: string): Promise<ExternalAuthResult> {
+        const profile = await this.externalAuthTokenVerifier.verifyDiscordCode(code);
+        return this.resolveExternalAuth(profile, name);
+    }
+
+    async linkDiscord(userId: number, code: string): Promise<LinkedAuthProviderDTO> {
+        const profile = await this.externalAuthTokenVerifier.verifyDiscordCode(code);
+        return this.linkExternalAuthProvider(userId, profile);
+    }
+
     getLinkedProviders(userId: number): LinkedAuthProviderDTO[] {
         this.userService.getUserById(userId);
         return this.authProviderIdentityRepository.findIdentitiesByUserId(userId).map(identity => ({

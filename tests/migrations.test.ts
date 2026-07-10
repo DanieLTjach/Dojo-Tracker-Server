@@ -591,7 +591,7 @@ describe('Database Migrations', () => {
         const providers = db.prepare('SELECT provider FROM authProvider ORDER BY provider').all() as Array<
             { provider: string }
         >;
-        expect(providers.map(row => row.provider)).toEqual(['GOOGLE', 'TELEGRAM']);
+        expect(providers.map(row => row.provider)).toEqual(['DISCORD', 'GOOGLE', 'TELEGRAM']);
 
         const identityColumns = (db.prepare('PRAGMA table_info(authProviderIdentity)').all() as Array<
             { name: string, type: string, notnull: number, dflt_value: string | null }

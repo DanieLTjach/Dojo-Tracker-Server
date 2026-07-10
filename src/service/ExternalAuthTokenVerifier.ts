@@ -10,6 +10,7 @@ import {
 export interface ExternalAuthTokenVerifier {
     verifyGoogleCredential(credential: string): Promise<VerifiedExternalProfile>;
     verifyTelegramIdToken(idToken: string): Promise<VerifiedExternalProfile>;
+    verifyDiscordCode(code: string): Promise<VerifiedExternalProfile>;
 }
 
 export class GoogleAuthTokenVerifier {
@@ -98,9 +99,98 @@ export class TelegramAuthTokenVerifier {
     }
 }
 
+export class DiscordAuthTokenVerifier {
+    async verify(code: string): Promise<VerifiedExternalProfile> {
+        if (
+            config.discordClientId === undefined ||
+            config.discordClientSecret === undefined ||
+            config.discordRedirectUri === undefined
+        ) {
+            throw new AuthProviderNotConfiguredError(AuthProvider.DISCORD);
+        }
+
+        try {
+            const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    client_id: config.discordClientId,
+                    client_secret: config.discordClientSecret,
+                    grant_type: 'authorization_code',
+                    code: code,
+                    redirect_uri: config.discordRedirectUri,
+                }).toString(),
+            });
+
+            if (!tokenResponse.ok) {
+                throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
+            }
+
+            const tokenData = await tokenResponse.json() as { access_token: string };
+            const accessToken = tokenData.access_token;
+            if (!accessToken) {
+                throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
+            }
+
+            const userResponse = await fetch('https://discord.com/api/v10/users/@me', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            });
+
+            if (!userResponse.ok) {
+                throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
+            }
+
+            const userData = await userResponse.json() as {
+                id: string;
+                username: string;
+                global_name?: string;
+                email?: string;
+            };
+
+            if (!userData.id) {
+                throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
+            }
+
+            const profile: VerifiedExternalProfile = {
+                provider: AuthProvider.DISCORD,
+                providerUserId: userData.id,
+            };
+
+            if (userData.global_name !== undefined) {
+                profile.displayName = userData.global_name;
+            } else if (userData.username !== undefined) {
+                profile.displayName = userData.username;
+            }
+
+            if (userData.email !== undefined) {
+                profile.email = userData.email;
+            }
+
+            if (userData.username !== undefined) {
+                profile.username = userData.username;
+            }
+
+            return profile;
+        } catch (error) {
+            if (
+                error instanceof AuthProviderNotConfiguredError ||
+                error instanceof InvalidExternalAuthTokenError
+            ) {
+                throw error;
+            }
+            throw new InvalidExternalAuthTokenError(AuthProvider.DISCORD);
+        }
+    }
+}
+
 export class DefaultExternalAuthTokenVerifier implements ExternalAuthTokenVerifier {
     private googleVerifier = new GoogleAuthTokenVerifier();
     private telegramVerifier = new TelegramAuthTokenVerifier();
+    private discordVerifier = new DiscordAuthTokenVerifier();
 
     verifyGoogleCredential(credential: string): Promise<VerifiedExternalProfile> {
         return this.googleVerifier.verify(credential);
@@ -108,5 +198,9 @@ export class DefaultExternalAuthTokenVerifier implements ExternalAuthTokenVerifi
 
     verifyTelegramIdToken(idToken: string): Promise<VerifiedExternalProfile> {
         return this.telegramVerifier.verify(idToken);
+    }
+
+    verifyDiscordCode(code: string): Promise<VerifiedExternalProfile> {
+        return this.discordVerifier.verify(code);
     }
 }

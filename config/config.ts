@@ -7,6 +7,9 @@ interface Config {
     authInitDataValiditySeconds: number;
     googleClientId: string | undefined;
     telegramLoginClientId: string | undefined;
+    discordClientId: string | undefined;
+    discordClientSecret: string | undefined;
+    discordRedirectUri: string | undefined;
     frontendUrl: string;
     botUrl: string;
     botToken: string;
@@ -76,6 +79,9 @@ const config: Config = {
     authInitDataValiditySeconds: tryParseIntEnvVariable('AUTH_INIT_DATA_VALIDITY_SECONDS') || 86400,
     googleClientId: process.env['GOOGLE_CLIENT_ID'],
     telegramLoginClientId: process.env['TELEGRAM_LOGIN_CLIENT_ID'],
+    discordClientId: process.env['DISCORD_CLIENT_ID'],
+    discordClientSecret: process.env['DISCORD_CLIENT_SECRET'],
+    discordRedirectUri: process.env['DISCORD_REDIRECT_URI'],
     frontendUrl: getRequiredStringEnvVariable('FRONTEND_URL'),
     botUrl: getRequiredStringEnvVariable('BOT_URL'),
     globalLogsChatId: globalLogsChatId,

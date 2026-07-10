@@ -23,13 +23,16 @@ app.use(handleErrors);
 class FakeExternalAuthTokenVerifier implements ExternalAuthTokenVerifier {
     private googleProfiles: Record<string, VerifiedExternalProfile>;
     private telegramProfiles: Record<string, VerifiedExternalProfile>;
+    private discordProfiles: Record<string, VerifiedExternalProfile>;
 
     constructor(
         googleProfiles: Record<string, VerifiedExternalProfile>,
-        telegramProfiles: Record<string, VerifiedExternalProfile>
+        telegramProfiles: Record<string, VerifiedExternalProfile>,
+        discordProfiles: Record<string, VerifiedExternalProfile> = {}
     ) {
         this.googleProfiles = googleProfiles;
         this.telegramProfiles = telegramProfiles;
+        this.discordProfiles = discordProfiles;
     }
 
     async verifyGoogleCredential(credential: string): Promise<VerifiedExternalProfile> {
@@ -38,6 +41,10 @@ class FakeExternalAuthTokenVerifier implements ExternalAuthTokenVerifier {
 
     async verifyTelegramIdToken(idToken: string): Promise<VerifiedExternalProfile> {
         return this.telegramProfiles[idToken]!;
+    }
+
+    async verifyDiscordCode(code: string): Promise<VerifiedExternalProfile> {
+        return this.discordProfiles[code]!;
     }
 }
 
@@ -494,6 +501,109 @@ describe('Authentication API Endpoints', () => {
                 .expect(409);
 
             expect(response.body).toHaveProperty('errorCode', 'authProviderIdentityAlreadyLinked');
+        });
+
+        it('authenticates an existing Discord identity', async () => {
+            const user = userService.registerUser('Existing Discord User', undefined, undefined, 0);
+            authProviderIdentityRepository.createIdentity(user.id, {
+                provider: AuthProvider.DISCORD,
+                providerUserId: 'discord-existing',
+                displayName: 'Existing Discord User',
+            });
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({}, {}, {
+                    'discord-existing-code': {
+                        provider: AuthProvider.DISCORD,
+                        providerUserId: 'discord-existing',
+                        displayName: 'Existing Discord User',
+                    },
+                })
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/discord')
+                .send({ code: 'discord-existing-code' })
+                .expect(200);
+
+            expect(response.body).toHaveProperty('accessToken');
+        });
+
+        it('requires explicit registration for an unknown Discord identity', async () => {
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({}, {}, {
+                    'discord-new-code': {
+                        provider: AuthProvider.DISCORD,
+                        providerUserId: 'discord-new',
+                        displayName: 'Discord New',
+                    },
+                })
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/discord')
+                .send({ code: 'discord-new-code' })
+                .expect(200);
+
+            expect(response.body).toEqual({
+                registrationRequired: true,
+                provider: 'DISCORD',
+                suggestedName: 'Discord New',
+                profile: {
+                    displayName: 'Discord New',
+                    email: null,
+                    username: null,
+                },
+            });
+        });
+
+        it('creates a Discord-only user after explicit registration', async () => {
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({}, {}, {
+                    'discord-register-code': {
+                        provider: AuthProvider.DISCORD,
+                        providerUserId: 'discord-register',
+                        displayName: 'Discord Registered',
+                    },
+                })
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/discord')
+                .send({ code: 'discord-register-code', name: 'Discord Registered' })
+                .expect(200);
+
+            const user = userRepository.findUserByName('Discord Registered')!;
+            const identity = authProviderIdentityRepository.findIdentity(AuthProvider.DISCORD, 'discord-register')!;
+            expect(response.body).toHaveProperty('accessToken');
+            expect(user.telegramId).toBeNull();
+            expect(identity.userId).toBe(user.id);
+        });
+
+        it('links Discord for the current user', async () => {
+            const user = userService.registerUser('Link Discord User', undefined, undefined, 0);
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({}, {}, {
+                    'discord-link-code': {
+                        provider: AuthProvider.DISCORD,
+                        providerUserId: 'discord-link',
+                        displayName: 'Link Discord User',
+                    },
+                })
+            );
+
+            const linkResponse = await request(externalAuthApp)
+                .post('/api/auth/link/discord')
+                .set('Authorization', createAuthHeader(user.id))
+                .send({ code: 'discord-link-code' })
+                .expect(200);
+
+            expect(linkResponse.body).toEqual({
+                provider: 'DISCORD',
+                displayName: 'Link Discord User',
+                email: null,
+                username: null,
+                linkedAt: expect.any(String),
+            });
         });
     });
 });

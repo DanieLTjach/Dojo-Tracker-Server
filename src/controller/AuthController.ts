@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { AuthService } from '../service/AuthService.ts';
-import { googleAuthSchema, telegramBrowserAuthSchema } from '../schema/AuthSchemas.ts';
+import { googleAuthSchema, telegramBrowserAuthSchema, discordAuthSchema } from '../schema/AuthSchemas.ts';
 
 export class AuthController {
     private authService: AuthService;
@@ -47,6 +47,18 @@ export class AuthController {
     async linkTelegram(req: Request, res: Response) {
         const { body: { idToken } } = telegramBrowserAuthSchema.parse(req);
         const result = await this.authService.linkTelegram(req.user!.userId, idToken);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    async authenticateDiscord(req: Request, res: Response) {
+        const { body: { code, name } } = discordAuthSchema.parse(req);
+        const result = await this.authService.authenticateDiscord(code, name);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    async linkDiscord(req: Request, res: Response) {
+        const { body: { code } } = discordAuthSchema.parse(req);
+        const result = await this.authService.linkDiscord(req.user!.userId, code);
         return res.status(StatusCodes.OK).json(result);
     }
 

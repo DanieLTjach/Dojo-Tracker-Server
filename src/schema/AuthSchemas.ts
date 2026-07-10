@@ -15,3 +15,10 @@ export const telegramBrowserAuthSchema = z.object({
         name: authNameSchema,
     }),
 });
+
+export const discordAuthSchema = z.object({
+    body: z.object({
+        code: z.string().trim().min(1, 'Discord code is required'),
+        name: authNameSchema,
+    }),
+});

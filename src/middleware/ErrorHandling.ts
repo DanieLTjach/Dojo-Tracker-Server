@@ -17,6 +17,7 @@ const sensitiveRequestBodyKeys = new Set([
     'refresh_token',
     'g_csrf_token',
     'code_verifier',
+    'code',
 ]);
 
 export const handleErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {

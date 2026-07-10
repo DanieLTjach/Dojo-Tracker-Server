@@ -3,6 +3,7 @@ import type { User } from './UserModels.ts';
 export const AuthProvider = {
     GOOGLE: 'GOOGLE',
     TELEGRAM: 'TELEGRAM',
+    DISCORD: 'DISCORD',
 } as const;
 
 export type AuthProvider = typeof AuthProvider[keyof typeof AuthProvider];

@@ -2,7 +2,7 @@ CREATE TABLE authProvider (
     provider TEXT NOT NULL PRIMARY KEY
 );
 
-INSERT INTO authProvider (provider) VALUES ('GOOGLE'), ('TELEGRAM');
+INSERT INTO authProvider (provider) VALUES ('GOOGLE'), ('TELEGRAM'), ('DISCORD');
 
 CREATE TABLE authProviderIdentity (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
