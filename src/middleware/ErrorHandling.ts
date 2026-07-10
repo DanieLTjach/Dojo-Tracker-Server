@@ -5,7 +5,7 @@ import { ZodError } from 'zod';
 import { SqliteError } from 'better-sqlite3';
 import LogService from '../service/LogService.ts';
 import { UserService } from '../service/UserService.ts';
-import { DEFAULT_LOCALE, SupportedLocale, t } from '../i18n/index.ts';
+import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveUserLocale } from '../util/LocaleResolver.ts';
 
 const userService = new UserService();

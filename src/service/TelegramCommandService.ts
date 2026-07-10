@@ -31,7 +31,7 @@ import type { ClubPollConfig } from '../model/PollModels.ts';
 import PollSchedulerService from './PollSchedulerService.ts';
 import { EventService } from './EventService.ts';
 import { TournamentRoundImportService } from './TournamentRoundImportService.ts';
-import { DEFAULT_LOCALE, SupportedLocale, t } from '../i18n/index.ts';
+import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 
 type TelegramCommandContext =

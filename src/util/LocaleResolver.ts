@@ -1,4 +1,4 @@
-import { normalizeLocale, SupportedLocale } from '../i18n/index.ts';
+import { normalizeLocale, type SupportedLocale } from '../i18n/index.ts';
 import type { Club } from '../model/ClubModels.ts';
 import type { User } from '../model/UserModels.ts';
 
