@@ -23,6 +23,8 @@ import {
     ExpiredAuthDataError,
     UserAlreadyHasAuthProviderError,
     ClaimProofRequiredError,
+    AuthProviderNotLinkedError,
+    CannotUnlinkLastAuthProviderError,
 } from '../error/AuthErrors.ts';
 import { UserIsNotActive } from '../error/UserErrors.ts';
 import { dbManager } from '../db/dbInit.ts';
@@ -60,11 +62,27 @@ export class AuthService {
      * @param params - Query parameters from initData (as key-value object)
      * @returns TokenPair with JWT access token
      */
-    authenticate(params: Record<string, string>): TokenPair {
+    authenticate(params: Record<string, string>): TokenPair | ExternalAuthRegistrationRequired {
         this.validateInitData(params);
 
-        const telegramId = this.extractTelegramId(params);
-        const user = this.userService.getUserByTelegramId(telegramId);
+        const telegramUser = this.extractTelegramUser(params);
+        const user = this.userService.getOptionalUserByTelegramId(telegramUser.id);
+
+        if (user === undefined) {
+            const displayName = [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ').trim();
+            const profile: VerifiedExternalProfile = {
+                provider: AuthProvider.TELEGRAM,
+                providerUserId: String(telegramUser.id),
+                telegramId: telegramUser.id,
+            };
+            if (displayName.length > 0) {
+                profile.displayName = displayName;
+            }
+            if (telegramUser.username !== undefined) {
+                profile.username = `@${telegramUser.username}`;
+            }
+            return this.externalAuthRegistrationService.create(profile);
+        }
 
         if (!user.isActive) {
             throw new UserIsNotActive(user.id);
@@ -142,6 +160,31 @@ export class AuthService {
         const result = this.authLinkCodeService.create(userId);
         LogService.logInfo(`User ${userId} generated an account link code`, globalUserLogsTopic);
         return result;
+    }
+
+    unlinkProvider(userId: number, provider: AuthProvider): LinkedAuthProviderDTO[] {
+        return dbManager.db.transaction(() => {
+            const user = this.userService.getUserById(userId);
+            this.validateUserIsActive(user.id, user.isActive);
+            const identities = this.authProviderIdentityRepository.findIdentitiesByUserId(userId);
+            const loginMethods = new Set(identities.map(identity => identity.provider));
+            if (user.telegramId !== null) {
+                loginMethods.add(AuthProvider.TELEGRAM);
+            }
+            if (!loginMethods.has(provider)) {
+                throw new AuthProviderNotLinkedError(provider);
+            }
+            if (loginMethods.size <= 1) {
+                throw new CannotUnlinkLastAuthProviderError();
+            }
+
+            this.authProviderIdentityRepository.deleteIdentityByUserAndProvider(userId, provider);
+            if (provider === AuthProvider.TELEGRAM) {
+                this.userService.clearUserTelegram(userId, userId);
+            }
+            LogService.logInfo(`User ${userId} unlinked ${provider} authentication`, globalUserLogsTopic);
+            return this.getLinkedProviders(userId);
+        })();
     }
 
     claimExternal(registrationToken: string, bearerUserId?: number, linkCode?: string): TokenPair {

@@ -33,6 +33,11 @@ export function createAuthRouter(authController: AuthController = new AuthContro
     router.post('/auth/link/discord', requireAuth, asyncHandler((req, res) => authController.linkDiscord(req, res)));
     router.get('/auth/providers/available', (_req, res) => authController.getAvailableProviders(_req, res));
     router.get('/auth/providers', requireAuth, (req, res) => authController.getLinkedProviders(req, res));
+    router.delete(
+        '/auth/providers/:provider',
+        requireAuth,
+        withTransaction((req, res) => authController.unlinkProvider(req, res))
+    );
 
     return router;
 }

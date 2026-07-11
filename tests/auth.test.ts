@@ -213,16 +213,22 @@ describe('Authentication API Endpoints', () => {
             expect(response.body).toHaveProperty('accessToken');
         });
 
-        it('should reject authentication for non-existent user', async () => {
+        it('should return a registration continuation for a non-existent user', async () => {
             const nonExistentTelegramId = 999888777;
             const initData = generateValidInitData(nonExistentTelegramId, 'nonexistent');
 
             const response = await request(app)
                 .post('/api/authenticate')
                 .query(initData)
-                .expect(404);
+                .expect(200);
 
-            expect(response.body).toHaveProperty('errorCode', 'userNotFoundByTelegramId');
+            expect(response.body).toMatchObject({
+                registrationRequired: true,
+                provider: AuthProvider.TELEGRAM,
+                suggestedName: 'Test User',
+                suggestedNickname: '@nonexistent',
+            });
+            expect(response.body.registrationToken).toEqual(expect.any(String));
         });
 
         it('should reject authentication with invalid hash', async () => {
@@ -1214,6 +1220,139 @@ describe('Authentication API Endpoints', () => {
                 telegramUsername: '@claimed_telegram',
             });
             await request(app).post('/api/authenticate').query(initData).expect(200);
+        });
+    });
+
+    describe('provider unlinking', () => {
+        it('refuses to unlink the last identity-based login method', async () => {
+            const user = userService.registerUser('Last Google Owner', '@last_google_owner', undefined, undefined, 0);
+            authProviderIdentityRepository.createIdentity(user.id, {
+                provider: AuthProvider.GOOGLE,
+                providerUserId: 'google-last-method',
+            });
+
+            const response = await request(app)
+                .delete('/api/auth/providers/GOOGLE')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(400);
+
+            expect(response.body.errorCode).toBe('cannotUnlinkLastAuthProvider');
+            expect(authProviderIdentityRepository.findIdentity(AuthProvider.GOOGLE, 'google-last-method'))
+                .toBeDefined();
+        });
+
+        it('unlinks one of two providers and returns the remaining provider', async () => {
+            const user = userService.registerUser(
+                'Multi Provider Owner',
+                '@multi_provider_owner',
+                undefined,
+                undefined,
+                0
+            );
+            authProviderIdentityRepository.createIdentity(user.id, {
+                provider: AuthProvider.GOOGLE,
+                providerUserId: 'google-multi-provider',
+                displayName: 'Google Multi',
+            });
+            authProviderIdentityRepository.createIdentity(user.id, {
+                provider: AuthProvider.DISCORD,
+                providerUserId: 'discord-multi-provider',
+                displayName: 'Discord Multi',
+            });
+
+            const response = await request(app)
+                .delete('/api/auth/providers/DISCORD')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+
+            expect(response.body).toEqual([expect.objectContaining({ provider: AuthProvider.GOOGLE })]);
+            expect(authProviderIdentityRepository.findIdentity(AuthProvider.DISCORD, 'discord-multi-provider'))
+                .toBeUndefined();
+        });
+
+        it('clears Telegram legacy fields so the next Mini App entrance requires registration or claim', async () => {
+            const telegramId = 654321790;
+            const user = userService.registerUser(
+                'Unlink Telegram Owner',
+                '@unlink_telegram_owner',
+                '@unlink_telegram',
+                telegramId,
+                0
+            );
+            authProviderIdentityRepository.createIdentity(user.id, {
+                provider: AuthProvider.GOOGLE,
+                providerUserId: 'google-after-telegram-unlink',
+            });
+            authProviderIdentityRepository.createIdentity(user.id, {
+                provider: AuthProvider.TELEGRAM,
+                providerUserId: String(telegramId),
+                username: '@unlink_telegram',
+                telegramId,
+            });
+
+            const unlinkResponse = await request(app)
+                .delete('/api/auth/providers/TELEGRAM')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+            const storedUser = userRepository.findUserById(user.id)!;
+            const loginResponse = await request(app)
+                .post('/api/authenticate')
+                .query(generateValidInitData(telegramId, 'unlink_telegram'))
+                .expect(200);
+
+            expect(unlinkResponse.body).toEqual([expect.objectContaining({ provider: AuthProvider.GOOGLE })]);
+            expect(storedUser.telegramId).toBeNull();
+            expect(storedUser.telegramUsername).toBeNull();
+            expect(authProviderIdentityRepository.findIdentity(AuthProvider.TELEGRAM, String(telegramId)))
+                .toBeUndefined();
+            expect(loginResponse.body).toMatchObject({
+                registrationRequired: true,
+                provider: AuthProvider.TELEGRAM,
+            });
+        });
+
+        it('counts a legacy Mini App login without an identity row as the last method', async () => {
+            const telegramId = 654321791;
+            const user = userService.registerUser(
+                'Mini App Only Owner',
+                '@mini_app_only_owner',
+                '@mini_app_only',
+                telegramId,
+                0
+            );
+
+            const response = await request(app)
+                .delete('/api/auth/providers/TELEGRAM')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(400);
+
+            expect(response.body.errorCode).toBe('cannotUnlinkLastAuthProvider');
+            expect(userRepository.findUserById(user.id)?.telegramId).toBe(telegramId);
+        });
+
+        it('rejects providers that are absent or malformed', async () => {
+            const user = userService.registerUser(
+                'Missing Provider Owner',
+                '@missing_provider_owner',
+                undefined,
+                undefined,
+                0
+            );
+            authProviderIdentityRepository.createIdentity(user.id, {
+                provider: AuthProvider.GOOGLE,
+                providerUserId: 'google-missing-provider-owner',
+            });
+
+            const absent = await request(app)
+                .delete('/api/auth/providers/DISCORD')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(404);
+            await request(app)
+                .delete('/api/auth/providers/LINE')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(400);
+
+            expect(absent.body.errorCode).toBe('authProviderNotLinked');
         });
     });
 });

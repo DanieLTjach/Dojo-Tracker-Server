@@ -8,6 +8,7 @@ import {
     externalAuthRegistrationSchema,
     claimExternalAuthSchema,
     claimTelegramSchema,
+    unlinkProviderSchema,
 } from '../schema/AuthSchemas.ts';
 import { AuthProvider } from '../model/AuthProviderModels.ts';
 
@@ -100,6 +101,12 @@ export class AuthController {
 
     createLinkCode(req: Request, res: Response) {
         const result = this.authService.createLinkCode(req.user!.userId);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    unlinkProvider(req: Request, res: Response) {
+        const { params: { provider } } = unlinkProviderSchema.parse(req);
+        const result = this.authService.unlinkProvider(req.user!.userId, provider);
         return res.status(StatusCodes.OK).json(result);
     }
 }

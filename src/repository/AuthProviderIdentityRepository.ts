@@ -95,6 +95,12 @@ export class AuthProviderIdentityRepository {
 
         return this.findIdentityByUserAndProvider(userId, profile.provider)!;
     }
+
+    deleteIdentityByUserAndProvider(userId: number, provider: AuthProvider): void {
+        dbManager.db.prepare(`
+            DELETE FROM authProviderIdentity
+            WHERE userId = :userId AND provider = :provider`).run({ userId, provider });
+    }
 }
 
 interface AuthProviderIdentityDBEntity {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { nicknameSchema } from './UserSchemas.ts';
+import { AuthProvider } from '../model/AuthProviderModels.ts';
 
 const authNameSchema = z.string().trim().min(1, 'Name cannot be empty');
 
@@ -54,5 +55,11 @@ export const claimExternalAuthSchema = z.object({
 export const claimTelegramSchema = z.object({
     body: z.object({
         linkCode: linkCodeSchema,
+    }),
+});
+
+export const unlinkProviderSchema = z.object({
+    params: z.object({
+        provider: z.enum([AuthProvider.GOOGLE, AuthProvider.TELEGRAM, AuthProvider.DISCORD]),
     }),
 });

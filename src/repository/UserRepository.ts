@@ -260,6 +260,20 @@ export class UserRepository {
         });
     }
 
+    clearUserTelegram(userId: number, modifiedBy: number): void {
+        dbManager.db.prepare(`
+            UPDATE user
+            SET telegramId = NULL,
+                telegramUsername = NULL,
+                modifiedBy = :modifiedBy,
+                modifiedAt = :timestamp
+            WHERE id = :id`).run({
+            id: userId,
+            modifiedBy,
+            timestamp: new Date().toISOString(),
+        });
+    }
+
     private updateUserStatusStatement(): Statement<{
         isActive: number;
         status: UserStatus;

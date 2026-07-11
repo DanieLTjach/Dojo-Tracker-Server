@@ -15,6 +15,8 @@ errors:
   invalidExternalAuthRegistrationToken: Токен реєстрації зовнішньої автентифікації невалідний або прострочений
   invalidLinkCode: Код прив'язки невалідний або прострочений
   claimProofRequired: Надайте рівно один доказ володіння обліковим записом
+  authProviderNotLinked: Обліковий запис {{provider}} не прив'язано
+  cannotUnlinkLastAuthProvider: Не можна відв'язати останній спосіб входу
   externalAuthProviderUnavailable: Провайдер автентифікації {{provider}} тимчасово недоступний
   authProviderIdentityAlreadyLinked: Обліковий запис {{provider}} вже прив'язаний до іншого користувача
   userAlreadyHasAuthProvider: Користувач вже має прив'язаний обліковий запис {{provider}}

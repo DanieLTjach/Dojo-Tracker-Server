@@ -5,6 +5,7 @@ import {
     ForbiddenError,
     ConflictError,
     InternalServerError,
+    NotFoundError,
     ServiceUnavailableError,
 } from './BaseErrors.ts';
 
@@ -77,6 +78,18 @@ export class InvalidLinkCodeError extends UnauthorizedError {
 export class ClaimProofRequiredError extends BadRequestError {
     constructor() {
         super('claimProofRequired');
+    }
+}
+
+export class AuthProviderNotLinkedError extends NotFoundError {
+    constructor(provider: AuthProvider) {
+        super('authProviderNotLinked', { provider });
+    }
+}
+
+export class CannotUnlinkLastAuthProviderError extends BadRequestError {
+    constructor() {
+        super('cannotUnlinkLastAuthProvider');
     }
 }
 

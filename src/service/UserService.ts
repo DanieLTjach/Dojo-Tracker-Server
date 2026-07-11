@@ -74,6 +74,14 @@ export class UserService {
         return newUser;
     }
 
+    clearUserTelegram(userId: number, modifiedBy: number): User {
+        const oldUser = this.getUserById(userId);
+        this.userRepository.clearUserTelegram(userId, modifiedBy);
+        const newUser = this.getUserById(userId);
+        this.logEditedUser(oldUser, newUser, modifiedBy);
+        return newUser;
+    }
+
     getUserStatusByTelegramId(telegramId: number): UserStatus {
         return this.getUserByTelegramId(telegramId).status;
     }
