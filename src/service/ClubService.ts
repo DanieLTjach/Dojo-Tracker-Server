@@ -6,7 +6,7 @@ import { ClubRepository } from '../repository/ClubRepository.ts';
 import LogService from './LogService.ts';
 import dedent from 'dedent';
 import { UserRepository } from '../repository/UserRepository.ts';
-import { type SupportedLocale, t } from '../i18n/index.ts';
+import { t, type SupportedLocale } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
 
 export class ClubService {

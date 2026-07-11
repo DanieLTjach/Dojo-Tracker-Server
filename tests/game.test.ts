@@ -6,7 +6,7 @@ import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader, createTestEvent, createCustomEvent, createTelegramInitData } from './testHelpers.ts';
-import { ExhaustiveDraw } from '../src/model/GameRoundResultModels.ts';
+import type { ExhaustiveDraw } from '../src/model/GameRoundResultModels.ts';
 import { ProfileRepository } from '../src/repository/ProfileRepository.ts';
 
 const app = express();
