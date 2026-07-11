@@ -83,13 +83,14 @@ describe('Permissions matrix integration specification', () => {
     }): void {
         const timestamp = nextTimestamp();
         dbManager.db.prepare(
-            `INSERT INTO user (id, telegramUsername, telegramId, name, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO user (id, telegramUsername, telegramId, name, nickname, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).run(
             params.userId,
             params.telegramUsername,
             params.telegramId,
             params.name,
+            `@matrix_${params.userId}`,
             timestamp,
             timestamp,
             SYSTEM_USER_ID,

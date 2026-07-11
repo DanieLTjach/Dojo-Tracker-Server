@@ -54,9 +54,9 @@ describe('Event registration permissions matrix', () => {
     function insertUser(userId: number, name: string, isAdmin: boolean): void {
         const ts = nextTs();
         dbManager.db.prepare(
-            `INSERT INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, ?, NULL, NULL, ?, 1, 'ACTIVE', ?, ?, ?)`
-        ).run(userId, name, isAdmin ? 1 : 0, ts, ts, SYSTEM_USER_ID);
+            `INSERT INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, ?, NULL, NULL, ?, 1, 'ACTIVE', ?, ?, ?)`
+        ).run(userId, name, `@permissions_${userId}`, isAdmin ? 1 : 0, ts, ts, SYSTEM_USER_ID);
     }
 
     function insertClub(clubId: number, name: string): void {

@@ -1,4 +1,13 @@
-import { UnauthorizedError, ForbiddenError } from './BaseErrors.ts';
+import type { AuthProvider } from '../model/AuthProviderModels.ts';
+import {
+    BadRequestError,
+    UnauthorizedError,
+    ForbiddenError,
+    ConflictError,
+    InternalServerError,
+    NotFoundError,
+    ServiceUnavailableError,
+} from './BaseErrors.ts';
 
 export class InvalidInitDataError extends UnauthorizedError {
     constructor(reason: string) {
@@ -39,5 +48,71 @@ export class TokenExpiredError extends UnauthorizedError {
 export class InvalidTokenError extends UnauthorizedError {
     constructor() {
         super('invalidToken');
+    }
+}
+
+export class AuthProviderNotConfiguredError extends InternalServerError {
+    constructor(provider: AuthProvider) {
+        super('authProviderNotConfigured', { provider });
+    }
+}
+
+export class InvalidExternalAuthTokenError extends UnauthorizedError {
+    constructor(provider: AuthProvider) {
+        super('invalidExternalAuthToken', { provider });
+    }
+}
+
+export class InvalidExternalAuthRegistrationTokenError extends UnauthorizedError {
+    constructor() {
+        super('invalidExternalAuthRegistrationToken');
+    }
+}
+
+export class InvalidLinkCodeError extends UnauthorizedError {
+    constructor() {
+        super('invalidLinkCode');
+    }
+}
+
+export class ClaimProofRequiredError extends BadRequestError {
+    constructor() {
+        super('claimProofRequired');
+    }
+}
+
+export class AuthProviderNotLinkedError extends NotFoundError {
+    constructor(provider: AuthProvider) {
+        super('authProviderNotLinked', { provider });
+    }
+}
+
+export class CannotUnlinkLastAuthProviderError extends BadRequestError {
+    constructor() {
+        super('cannotUnlinkLastAuthProvider');
+    }
+}
+
+export class ExternalAuthProviderUnavailableError extends ServiceUnavailableError {
+    constructor(provider: AuthProvider) {
+        super('externalAuthProviderUnavailable', { provider });
+    }
+}
+
+export class AuthProviderIdentityAlreadyLinkedError extends ConflictError {
+    constructor(provider: AuthProvider) {
+        super('authProviderIdentityAlreadyLinked', { provider });
+    }
+}
+
+export class UserAlreadyHasAuthProviderError extends ConflictError {
+    constructor(provider: AuthProvider) {
+        super('userAlreadyHasAuthProvider', { provider });
+    }
+}
+
+export class TelegramAccountAlreadyUsedError extends ConflictError {
+    constructor() {
+        super('telegramAccountAlreadyUsed');
     }
 }

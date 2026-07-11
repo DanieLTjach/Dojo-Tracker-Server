@@ -11,6 +11,7 @@ export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
 export interface User {
     id: number;
     name: string;
+    nickname: string;
     telegramUsername: string | null;
     telegramId: number | null;
     isAdmin: boolean;

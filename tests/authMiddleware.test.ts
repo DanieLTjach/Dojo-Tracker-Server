@@ -24,7 +24,7 @@ describe('AuthMiddleware', () => {
         userService = new UserService();
         const userRepository = new UserRepository();
         // Create test user
-        testUser = userService.registerUser('test_name', 'testuser', 123456789, 0);
+        testUser = userService.registerUser('test_name', '@auth_middleware', 'testuser', 123456789, 0);
         // Activate the user for tests
         userRepository.updateUserStatus(testUser.id, true, 'ACTIVE', 0);
         // Refresh testUser to get updated isActive status

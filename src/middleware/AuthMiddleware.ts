@@ -71,6 +71,31 @@ export const requireAuth = (req: Request, _res: Response, next: NextFunction): v
     }
 };
 
+export const optionalAuth = (req: Request, _res: Response, next: NextFunction): void => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (authHeader === undefined) {
+            req.user = undefined;
+            next();
+            return;
+        }
+
+        const parts = authHeader.split(' ');
+        if (parts.length !== 2 || parts[0] !== 'Bearer') {
+            throw new InvalidAuthTokenError('Invalid authorization header format. Expected: Bearer <token>');
+        }
+        const decodedToken = tokenService.verifyToken(parts[1]!);
+        const user = userService.getUserById(decodedToken.userId);
+        if (!user.isActive) {
+            throw new InvalidAuthTokenError('User is not active');
+        }
+        req.user = decodedToken;
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
+
 /**
  * Middleware to require admin privileges.
  * Must be used AFTER requireAuth middleware.

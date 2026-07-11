@@ -95,6 +95,7 @@ describe('ClubInviteService', () => {
         expect(result.type).toBe('JOIN_CLUB');
         expect(result.nextAction).toBe('CLUB_HOME');
         expect(result.user.name).toBe('Akagi');
+        expect(result.user.nickname).toMatch(/^@[a-z]+_[a-z]+_\d{3}$/);
 
         const membership = membershipRepository.findMembership(clubId, result.user.id);
         expect(membership?.status).toBe('ACTIVE');
@@ -121,6 +122,16 @@ describe('ClubInviteService', () => {
         expect(membershipRepository.findMembership(clubId, result.user.id)).toBeUndefined();
     });
 
+    it('uses a Telegram username as the bot-created nickname', () => {
+        const invite = createInvite({ type: 'REGISTRATION_ONLY' });
+        const result = inviteService.redeemInvite(
+            invite.code,
+            telegramUser(30, { first_name: 'Named', username: 'named_user' })
+        );
+
+        expect(result.user.nickname).toBe('@named_user');
+    });
+
     it('derives the name from Telegram first and last name', () => {
         const invite = createInvite({ type: 'REGISTRATION_ONLY' });
         const result = inviteService.redeemInvite(
@@ -131,7 +142,13 @@ describe('ClubInviteService', () => {
     });
 
     it('appends a suffix when the derived name collides with an existing user', () => {
-        userService.registerUser('Collide', 'collide_existing', TELEGRAM_BASE + 50, SYSTEM_USER_ID);
+        userService.registerUser(
+            'Collide',
+            '@collide_existing',
+            'collide_existing',
+            TELEGRAM_BASE + 50,
+            SYSTEM_USER_ID
+        );
 
         const invite = createInvite({ type: 'REGISTRATION_ONLY' });
         const result = inviteService.redeemInvite(invite.code, telegramUser(5, { first_name: 'Collide' }));

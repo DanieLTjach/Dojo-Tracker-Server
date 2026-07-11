@@ -9,6 +9,23 @@ import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveUserLocale } from '../util/LocaleResolver.ts';
 
 const userService = new UserService();
+const sensitiveRequestBodyKeys = new Set([
+    'credential',
+    'idToken',
+    'id_token',
+    'access_token',
+    'accessToken',
+    'refresh_token',
+    'refreshToken',
+    'g_csrf_token',
+    'code_verifier',
+    'codeVerifier',
+    'code',
+    'registrationToken',
+    'linkCode',
+    'client_secret',
+    'clientSecret',
+]);
 
 export const handleErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {
     let locale: SupportedLocale = DEFAULT_LOCALE;
@@ -24,7 +41,7 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
     }
     LogService.logError(
         `Error while processing request ${req.method} ${req.url} from user ${userInfo} with body ${
-            JSON.stringify(req.body)
+            JSON.stringify(redactSensitiveRequestBody(req.body))
         }`,
         err
     );
@@ -59,3 +76,18 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
             : err.message || t('errors.internalServerError', locale),
     });
 };
+
+function redactSensitiveRequestBody(value: unknown): unknown {
+    if (Array.isArray(value)) {
+        return value.map(redactSensitiveRequestBody);
+    }
+    if (value !== null && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, nestedValue]) => [
+                key,
+                sensitiveRequestBodyKeys.has(key) ? '[REDACTED]' : redactSensitiveRequestBody(nestedValue),
+            ])
+        );
+    }
+    return value;
+}

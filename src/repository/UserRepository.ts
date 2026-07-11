@@ -142,22 +142,36 @@ export class UserRepository {
         return userDBEntity !== undefined ? userWithProfileFromDBEntity(userDBEntity) : undefined;
     }
 
+    findUserByNickname(nickname: string): User | undefined {
+        const entity = dbManager.db.prepare(`
+            SELECT user.*,
+                p.firstNameEn as p_firstNameEn, p.lastNameEn as p_lastNameEn,
+                p.firstName as p_firstName, p.lastName as p_lastName,
+                p.emaNumber as p_emaNumber, p.locale as p_locale, p.hideProfile as p_hideProfile
+            FROM user
+            LEFT JOIN profile p ON user.id = p.userId
+            WHERE nickname = :nickname`).get({ nickname }) as UserWithProfileDBEntity | undefined;
+        return entity === undefined ? undefined : userWithProfileFromDBEntity(entity);
+    }
+
     private registerUserStatement(): Statement<{
         name: string;
-        telegramUsername: string | undefined;
-        telegramId: number | undefined;
+        nickname: string;
+        telegramUsername: string | null;
+        telegramId: number | null;
         modifiedBy: number;
         isActive: number;
         status: UserStatus;
         timestamp: string;
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO user (name, telegramUsername, telegramId, modifiedBy, isActive, status, createdAt, modifiedAt)
-            VALUES (:name, :telegramUsername, :telegramId, :modifiedBy, :isActive, :status, :timestamp, :timestamp)`);
+            INSERT INTO user (name, nickname, telegramUsername, telegramId, modifiedBy, isActive, status, createdAt, modifiedAt)
+            VALUES (:name, :nickname, :telegramUsername, :telegramId, :modifiedBy, :isActive, :status, :timestamp, :timestamp)`);
     }
 
     registerUser(
         name: string,
+        nickname: string,
         telegramUsername: string | undefined,
         telegramId: number | undefined,
         createdBy: number
@@ -165,8 +179,9 @@ export class UserRepository {
         return Number(
             this.registerUserStatement().run({
                 name,
-                telegramUsername,
-                telegramId,
+                nickname,
+                telegramUsername: telegramUsername ?? null,
+                telegramId: telegramId ?? null,
                 modifiedBy: createdBy,
                 isActive: booleanToInteger(true),
                 status: 'ACTIVE',
@@ -191,6 +206,18 @@ export class UserRepository {
         this.updateUserNameStatement().run({ name, modifiedBy, id: userId, timestamp: new Date().toISOString() });
     }
 
+    updateUserNickname(userId: number, nickname: string, modifiedBy: number) {
+        dbManager.db.prepare(`
+            UPDATE user
+            SET nickname = :nickname, modifiedBy = :modifiedBy, modifiedAt = :timestamp
+            WHERE id = :id`).run({
+            nickname,
+            modifiedBy,
+            id: userId,
+            timestamp: new Date().toISOString(),
+        });
+    }
+
     private updateUserTelegramUsernameStatement(): Statement<{
         telegramUsername: string;
         modifiedBy: number;
@@ -208,6 +235,41 @@ export class UserRepository {
             telegramUsername,
             modifiedBy,
             id: userId,
+            timestamp: new Date().toISOString(),
+        });
+    }
+
+    private updateUserTelegramIdStatement(): Statement<{
+        telegramId: number;
+        modifiedBy: number;
+        id: number;
+        timestamp: string;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE user
+            SET telegramId = :telegramId, modifiedBy = :modifiedBy, modifiedAt = :timestamp
+            WHERE id = :id`);
+    }
+
+    updateUserTelegramId(userId: number, telegramId: number, modifiedBy: number) {
+        this.updateUserTelegramIdStatement().run({
+            telegramId,
+            modifiedBy,
+            id: userId,
+            timestamp: new Date().toISOString(),
+        });
+    }
+
+    clearUserTelegram(userId: number, modifiedBy: number): void {
+        dbManager.db.prepare(`
+            UPDATE user
+            SET telegramId = NULL,
+                telegramUsername = NULL,
+                modifiedBy = :modifiedBy,
+                modifiedAt = :timestamp
+            WHERE id = :id`).run({
+            id: userId,
+            modifiedBy,
             timestamp: new Date().toISOString(),
         });
     }
@@ -239,6 +301,7 @@ export class UserRepository {
 interface UserWithProfileDBEntity {
     id: number;
     name: string;
+    nickname: string;
     telegramUsername: string | null;
     telegramId: number | null;
     isAdmin: number;
@@ -260,6 +323,7 @@ function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
     return {
         id: dbEntity.id,
         name: dbEntity.name,
+        nickname: dbEntity.nickname,
         telegramUsername: dbEntity.telegramUsername,
         telegramId: dbEntity.telegramId,
         isAdmin: Boolean(dbEntity.isAdmin),

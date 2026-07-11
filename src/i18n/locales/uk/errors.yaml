@@ -10,6 +10,17 @@ errors:
   insufficientPermissions: Недостатньо прав для виконання цієї дії
   tokenExpired: Термін дії токена автентифікації минув. Перезайдіть в додаток
   invalidToken: Невалідний токен автентифікації. Перезайдіть в додаток
+  authProviderNotConfigured: Провайдер автентифікації {{provider}} не налаштований
+  invalidExternalAuthToken: Невалідний токен автентифікації {{provider}}
+  invalidExternalAuthRegistrationToken: Токен реєстрації зовнішньої автентифікації невалідний або прострочений
+  invalidLinkCode: Код прив'язки невалідний або прострочений
+  claimProofRequired: Надайте рівно один доказ володіння обліковим записом
+  authProviderNotLinked: Обліковий запис {{provider}} не прив'язано
+  cannotUnlinkLastAuthProvider: Не можна відв'язати останній спосіб входу
+  externalAuthProviderUnavailable: Провайдер автентифікації {{provider}} тимчасово недоступний
+  authProviderIdentityAlreadyLinked: Обліковий запис {{provider}} вже прив'язаний до іншого користувача
+  userAlreadyHasAuthProvider: Користувач вже має прив'язаний обліковий запис {{provider}}
+  telegramAccountAlreadyUsed: Цей Telegram акаунт вже належить іншому користувачу
 
   clubNotFound: Клуб з id {{clubId}} не знайдено
   clubMembershipNotFound: "Учасника з userId {{userId}} не знайдено в клубі '{{clubName}}'"
@@ -24,6 +35,7 @@ errors:
   inviteExpired: Термін дії цього запрошення сплив
   inviteExhausted: Це запрошення вичерпало ліміт використань
   nameRequiredForNewUser: Для реєстрації потрібно вказати імʼя
+  nicknameAlreadyTaken: Нікнейм {{nickname}} вже зайнятий
 
   eventNotFound: Подію з id {{eventId}} не знайдено
   gameRulesNotFound: Правила гри з id {{gameRulesId}} не знайдено

@@ -10,6 +10,17 @@ errors:
   insufficientPermissions: You do not have permission to perform this action
   tokenExpired: Authentication token has expired. Please sign in again
   invalidToken: Invalid authentication token. Please sign in again
+  authProviderNotConfigured: Authentication provider {{provider}} is not configured
+  invalidExternalAuthToken: Invalid {{provider}} authentication token
+  invalidExternalAuthRegistrationToken: The external authentication registration token is invalid or expired
+  invalidLinkCode: The link code is invalid or expired
+  claimProofRequired: Provide exactly one claim proof
+  authProviderNotLinked: The {{provider}} account is not linked
+  cannotUnlinkLastAuthProvider: You cannot unlink your last login method
+  externalAuthProviderUnavailable: The {{provider}} authentication provider is temporarily unavailable
+  authProviderIdentityAlreadyLinked: The {{provider}} account is already linked to another user
+  userAlreadyHasAuthProvider: The user already has a linked {{provider}} account
+  telegramAccountAlreadyUsed: This Telegram account already belongs to another user
 
   clubNotFound: Club with id {{clubId}} was not found
   clubMembershipNotFound: "Member with userId {{userId}} was not found in club '{{clubName}}'"
@@ -24,6 +35,7 @@ errors:
   inviteExpired: This invite has expired
   inviteExhausted: This invite has reached its usage limit
   nameRequiredForNewUser: Name is required for registration
+  nicknameAlreadyTaken: The nickname {{nickname}} is already taken
 
   eventNotFound: Event with id {{eventId}} was not found
   gameRulesNotFound: Game rules with id {{gameRulesId}} were not found

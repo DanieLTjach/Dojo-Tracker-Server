@@ -1,4 +1,5 @@
 import { InternalServerError } from '../error/BaseErrors.ts';
+import { AuthProvider } from '../model/AuthProviderModels.ts';
 import { ClubInviteSource, ClubInviteType, ClubMembershipStatus, ClubRole } from '../model/ClubModels.ts';
 import { EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
 import { EventFormat, EventType, UmaTieBreak } from '../model/EventModels.ts';
@@ -30,6 +31,10 @@ export function parseEnumValue<T extends Record<string, string>>(
 
 export function parseUserStatus(value: string): UserStatus {
     return parseEnumValue('UserStatus', UserStatus, value);
+}
+
+export function parseAuthProvider(value: string): AuthProvider {
+    return parseEnumValue('AuthProvider', AuthProvider, value);
 }
 
 export function parseClubRole(value: string): ClubRole {
