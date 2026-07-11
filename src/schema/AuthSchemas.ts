@@ -38,3 +38,21 @@ export const externalAuthRegistrationSchema = z.object({
         nickname: nicknameSchema,
     }),
 });
+
+const linkCodeSchema = z.string()
+    .trim()
+    .regex(/^[A-Za-z0-9]{8}$/, 'Invalid link code')
+    .transform(value => value.toUpperCase());
+
+export const claimExternalAuthSchema = z.object({
+    body: z.object({
+        registrationToken: z.string().trim().min(1, 'Registration token is required'),
+        linkCode: linkCodeSchema.optional(),
+    }),
+});
+
+export const claimTelegramSchema = z.object({
+    body: z.object({
+        linkCode: linkCodeSchema,
+    }),
+});

@@ -1,5 +1,6 @@
 import type { AuthProvider } from '../model/AuthProviderModels.ts';
 import {
+    BadRequestError,
     UnauthorizedError,
     ForbiddenError,
     ConflictError,
@@ -64,6 +65,18 @@ export class InvalidExternalAuthTokenError extends UnauthorizedError {
 export class InvalidExternalAuthRegistrationTokenError extends UnauthorizedError {
     constructor() {
         super('invalidExternalAuthRegistrationToken');
+    }
+}
+
+export class InvalidLinkCodeError extends UnauthorizedError {
+    constructor() {
+        super('invalidLinkCode');
+    }
+}
+
+export class ClaimProofRequiredError extends BadRequestError {
+    constructor() {
+        super('claimProofRequired');
     }
 }
 

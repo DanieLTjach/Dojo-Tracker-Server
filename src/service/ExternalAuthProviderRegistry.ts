@@ -109,6 +109,9 @@ export class TelegramAuthProviderAdapter implements ExternalAuthProviderAdapter 
         if (user.telegramId === null) {
             userService.setUserTelegramId(user.id, profile.telegramId, user.id);
         }
+        if (profile.username !== undefined && user.telegramUsername !== profile.username) {
+            userService.editUser(user.id, undefined, undefined, profile.username, user.id);
+        }
     }
 
     getRegistrationUserFields(profile: VerifiedExternalProfile): ExternalAuthRegistrationUserFields {

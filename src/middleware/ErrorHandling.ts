@@ -22,6 +22,7 @@ const sensitiveRequestBodyKeys = new Set([
     'codeVerifier',
     'code',
     'registrationToken',
+    'linkCode',
     'client_secret',
     'clientSecret',
 ]);

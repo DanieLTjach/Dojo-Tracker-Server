@@ -2,7 +2,7 @@ import type { RequestHandler } from 'express';
 import { Router } from 'express';
 import { AuthController } from '../controller/AuthController.ts';
 import { withTransaction } from '../db/TransactionManagement.ts';
-import { requireAuth } from '../middleware/AuthMiddleware.ts';
+import { optionalAuth, requireAuth } from '../middleware/AuthMiddleware.ts';
 
 const asyncHandler = (handler: RequestHandler): RequestHandler => {
     return (req, res, next) => {
@@ -25,6 +25,9 @@ export function createAuthRouter(authController: AuthController = new AuthContro
     router.post('/auth/telegram', asyncHandler((req, res) => authController.authenticateTelegram(req, res)));
     router.post('/auth/discord', asyncHandler((req, res) => authController.authenticateDiscord(req, res)));
     router.post('/auth/register', withTransaction((req, res) => authController.registerExternal(req, res)));
+    router.post('/auth/claim', optionalAuth, withTransaction((req, res) => authController.claimExternal(req, res)));
+    router.post('/auth/claim/telegram', withTransaction((req, res) => authController.claimTelegram(req, res)));
+    router.post('/auth/link-code', requireAuth, withTransaction((req, res) => authController.createLinkCode(req, res)));
     router.post('/auth/link/google', requireAuth, asyncHandler((req, res) => authController.linkGoogle(req, res)));
     router.post('/auth/link/telegram', requireAuth, asyncHandler((req, res) => authController.linkTelegram(req, res)));
     router.post('/auth/link/discord', requireAuth, asyncHandler((req, res) => authController.linkDiscord(req, res)));

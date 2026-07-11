@@ -8,6 +8,7 @@ import {
     type ExternalAuthProviderInput,
     type ExternalAuthProviderSession,
     type ExternalAuthRegistrationRequired,
+    type LinkCodeDTO,
     type LinkedAuthProviderDTO,
     type VerifiedExternalProfile,
 } from '../model/AuthProviderModels.ts';
@@ -21,12 +22,16 @@ import {
     InvalidInitDataError,
     ExpiredAuthDataError,
     UserAlreadyHasAuthProviderError,
+    ClaimProofRequiredError,
 } from '../error/AuthErrors.ts';
 import { UserIsNotActive } from '../error/UserErrors.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { SYSTEM_USER_ID } from '../../config/constants.ts';
 import config from '../../config/config.ts';
 import { ExternalAuthRegistrationService } from './ExternalAuthRegistrationService.ts';
+import { AuthLinkCodeService } from './AuthLinkCodeService.ts';
+import LogService from './LogService.ts';
+import { globalUserLogsTopic } from '../model/TelegramTopic.ts';
 
 type ExternalAuthResult = (TokenPair | ExternalAuthRegistrationRequired) & {
     providerSession?: ExternalAuthProviderSession;
@@ -42,6 +47,7 @@ export class AuthService {
     private authProviderIdentityRepository: AuthProviderIdentityRepository = new AuthProviderIdentityRepository();
     private externalAuthProviderRegistry: ExternalAuthProviderRegistry;
     private externalAuthRegistrationService = new ExternalAuthRegistrationService();
+    private authLinkCodeService = new AuthLinkCodeService();
 
     constructor(externalAuthProviderRegistry: ExternalAuthProviderRegistry = new ExternalAuthProviderRegistry()) {
         this.externalAuthProviderRegistry = externalAuthProviderRegistry;
@@ -128,6 +134,68 @@ export class AuthService {
             );
             this.authProviderIdentityRepository.createIdentity(user.id, profile);
             this.externalAuthRegistrationService.consume(pending.tokenHash);
+            return this.tokenService.createTokenPair(user);
+        })();
+    }
+
+    createLinkCode(userId: number): LinkCodeDTO {
+        const result = this.authLinkCodeService.create(userId);
+        LogService.logInfo(`User ${userId} generated an account link code`, globalUserLogsTopic);
+        return result;
+    }
+
+    claimExternal(registrationToken: string, bearerUserId?: number, linkCode?: string): TokenPair {
+        return dbManager.db.transaction(() => {
+            const hasBearerProof = bearerUserId !== undefined;
+            const hasLinkCodeProof = linkCode !== undefined;
+            if (hasBearerProof === hasLinkCodeProof) {
+                throw new ClaimProofRequiredError();
+            }
+
+            const pending = this.externalAuthRegistrationService.getValid(registrationToken);
+            const resolvedCode = linkCode === undefined ? undefined : this.authLinkCodeService.resolve(linkCode);
+            const targetUserId = bearerUserId ?? resolvedCode!.userId;
+            const adapter = this.externalAuthProviderRegistry.getAdapter(pending.profile.provider);
+            this.linkExternalAuthProvider(targetUserId, pending.profile, adapter);
+            this.externalAuthRegistrationService.consume(pending.tokenHash);
+            if (resolvedCode !== undefined) {
+                this.authLinkCodeService.consume(resolvedCode.codeHash);
+            }
+            const user = this.userService.getUserById(targetUserId);
+            LogService.logInfo(
+                `User ${targetUserId} claimed ${pending.profile.provider} identity`,
+                globalUserLogsTopic
+            );
+            return this.tokenService.createTokenPair(user);
+        })();
+    }
+
+    claimTelegramMiniApp(params: Record<string, string>, linkCode: string): TokenPair {
+        this.validateInitData(params);
+        const telegramUser = this.extractTelegramUser(params);
+        const displayName = [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ').trim();
+        const profile: VerifiedExternalProfile = {
+            provider: AuthProvider.TELEGRAM,
+            providerUserId: String(telegramUser.id),
+            telegramId: telegramUser.id,
+        };
+        if (displayName.length > 0) {
+            profile.displayName = displayName;
+        }
+        if (telegramUser.username !== undefined) {
+            profile.username = `@${telegramUser.username}`;
+        }
+
+        return dbManager.db.transaction(() => {
+            const resolvedCode = this.authLinkCodeService.resolve(linkCode);
+            const adapter = this.externalAuthProviderRegistry.getAdapter(AuthProvider.TELEGRAM);
+            this.linkExternalAuthProvider(resolvedCode.userId, profile, adapter);
+            this.authLinkCodeService.consume(resolvedCode.codeHash);
+            const user = this.userService.getUserById(resolvedCode.userId);
+            LogService.logInfo(
+                `User ${resolvedCode.userId} claimed Telegram Mini App identity`,
+                globalUserLogsTopic
+            );
             return this.tokenService.createTokenPair(user);
         })();
     }

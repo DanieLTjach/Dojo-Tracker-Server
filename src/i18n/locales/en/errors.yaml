@@ -13,6 +13,8 @@ errors:
   authProviderNotConfigured: Authentication provider {{provider}} is not configured
   invalidExternalAuthToken: Invalid {{provider}} authentication token
   invalidExternalAuthRegistrationToken: The external authentication registration token is invalid or expired
+  invalidLinkCode: The link code is invalid or expired
+  claimProofRequired: Provide exactly one claim proof
   externalAuthProviderUnavailable: The {{provider}} authentication provider is temporarily unavailable
   authProviderIdentityAlreadyLinked: The {{provider}} account is already linked to another user
   userAlreadyHasAuthProvider: The user already has a linked {{provider}} account

@@ -6,6 +6,8 @@ import {
     telegramBrowserAuthSchema,
     discordAuthSchema,
     externalAuthRegistrationSchema,
+    claimExternalAuthSchema,
+    claimTelegramSchema,
 } from '../schema/AuthSchemas.ts';
 import { AuthProvider } from '../model/AuthProviderModels.ts';
 
@@ -81,6 +83,23 @@ export class AuthController {
     registerExternal(req: Request, res: Response) {
         const { body: { registrationToken, name, nickname } } = externalAuthRegistrationSchema.parse(req);
         const result = this.authService.registerExternal(registrationToken, name, nickname);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    claimExternal(req: Request, res: Response) {
+        const { body: { registrationToken, linkCode } } = claimExternalAuthSchema.parse(req);
+        const result = this.authService.claimExternal(registrationToken, req.user?.userId, linkCode);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    claimTelegram(req: Request, res: Response) {
+        const { body: { linkCode } } = claimTelegramSchema.parse(req);
+        const result = this.authService.claimTelegramMiniApp(req.query as Record<string, string>, linkCode);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    createLinkCode(req: Request, res: Response) {
+        const result = this.authService.createLinkCode(req.user!.userId);
         return res.status(StatusCodes.OK).json(result);
     }
 }

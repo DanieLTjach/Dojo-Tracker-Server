@@ -25,6 +25,7 @@ import {
     type ExternalAuthProviderAdapter,
 } from '../src/service/ExternalAuthProviderRegistry.ts';
 import { hashRegistrationToken } from '../src/service/ExternalAuthRegistrationService.ts';
+import { AuthLinkCodeService, hashLinkCode } from '../src/service/AuthLinkCodeService.ts';
 
 const app = express();
 app.use(express.json());
@@ -958,6 +959,261 @@ describe('Authentication API Endpoints', () => {
                     expiresIn: 3600,
                 },
             });
+        });
+    });
+
+    describe('account claim flow', () => {
+        it('creates a hashed, expiring code and invalidates the previous code', async () => {
+            const user = userService.registerUser('Link Code Owner', '@link_code_owner', undefined, undefined, 0);
+
+            const first = await request(app)
+                .post('/api/auth/link-code')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+            const second = await request(app)
+                .post('/api/auth/link-code')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+            const stored = dbManager.db.prepare(
+                'SELECT codeHash, expiresAt FROM authLinkCode WHERE userId = ?'
+            ).get(user.id) as { codeHash: string, expiresAt: string };
+
+            expect(first.body.code).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+            expect(second.body.code).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+            expect(stored.codeHash).toBe(hashLinkCode(second.body.code));
+            expect(stored.codeHash).not.toContain(second.body.code);
+            expect(new Date(stored.expiresAt).getTime()).toBeGreaterThan(Date.now());
+            expect(() => new AuthLinkCodeService().resolve(first.body.code)).toThrow();
+        });
+
+        it('claims an unknown identity using authenticated proof', async () => {
+            const user = userService.registerUser('Bearer Claim Owner', '@bearer_claim_owner', undefined, undefined, 0);
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'bearer-claim-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-bearer-claim',
+                    },
+                }, {})
+            );
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'bearer-claim-token' })
+                .expect(200);
+
+            const claimResponse = await request(externalAuthApp)
+                .post('/api/auth/claim')
+                .set('Authorization', createAuthHeader(user.id))
+                .send({ registrationToken: authResponse.body.registrationToken })
+                .expect(200);
+
+            expect(claimResponse.body).toHaveProperty('accessToken');
+            expect(authProviderIdentityRepository.findIdentity(AuthProvider.GOOGLE, 'google-bearer-claim')?.userId)
+                .toBe(user.id);
+            expect(
+                dbManager.db.prepare(
+                    'SELECT 1 FROM pendingExternalAuthRegistration WHERE tokenHash = ?'
+                ).get(hashRegistrationToken(authResponse.body.registrationToken))
+            ).toBeUndefined();
+        });
+
+        it('claims an unknown identity with a case-insensitive link code and consumes both proofs', async () => {
+            const user = userService.registerUser('Code Claim Owner', '@code_claim_owner', undefined, undefined, 0);
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'code-claim-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-code-claim',
+                    },
+                }, {})
+            );
+            const codeResponse = await request(externalAuthApp)
+                .post('/api/auth/link-code')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'code-claim-token' })
+                .expect(200);
+
+            await request(externalAuthApp)
+                .post('/api/auth/claim')
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    linkCode: (codeResponse.body.code as string).toLowerCase(),
+                })
+                .expect(200);
+
+            expect(authProviderIdentityRepository.findIdentity(AuthProvider.GOOGLE, 'google-code-claim')?.userId)
+                .toBe(user.id);
+            expect(dbManager.db.prepare('SELECT 1 FROM authLinkCode WHERE userId = ?').get(user.id)).toBeUndefined();
+            await request(externalAuthApp)
+                .post('/api/auth/claim')
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    linkCode: codeResponse.body.code,
+                })
+                .expect(401);
+        });
+
+        it('requires exactly one claim proof and validates optional authorization strictly', async () => {
+            const user = userService.registerUser('Claim Proof Owner', '@claim_proof_owner', undefined, undefined, 0);
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'proof-claim-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-proof-claim',
+                    },
+                }, {})
+            );
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'proof-claim-token' })
+                .expect(200);
+            const codeResponse = await request(externalAuthApp)
+                .post('/api/auth/link-code')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+
+            const missing = await request(externalAuthApp)
+                .post('/api/auth/claim')
+                .send({ registrationToken: authResponse.body.registrationToken })
+                .expect(400);
+            const duplicate = await request(externalAuthApp)
+                .post('/api/auth/claim')
+                .set('Authorization', createAuthHeader(user.id))
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    linkCode: codeResponse.body.code,
+                })
+                .expect(400);
+            const malformedHeader = await request(externalAuthApp)
+                .post('/api/auth/claim')
+                .set('Authorization', 'not-a-bearer-token')
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    linkCode: codeResponse.body.code,
+                })
+                .expect(401);
+
+            expect(missing.body.errorCode).toBe('claimProofRequired');
+            expect(duplicate.body.errorCode).toBe('claimProofRequired');
+            expect(malformedHeader.body.errorCode).toBe('invalidAuthToken');
+        });
+
+        it('rejects wrong, expired, and inactive-user link codes', async () => {
+            const user = userService.registerUser('Invalid Code Owner', '@invalid_code_owner', undefined, undefined, 0);
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'invalid-code-claim-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-invalid-code-claim',
+                    },
+                }, {})
+            );
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'invalid-code-claim-token' })
+                .expect(200);
+            const codeResponse = await request(externalAuthApp)
+                .post('/api/auth/link-code')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+
+            await request(externalAuthApp)
+                .post('/api/auth/claim')
+                .send({ registrationToken: authResponse.body.registrationToken, linkCode: 'AAAAAAAA' })
+                .expect(401);
+            dbManager.db.prepare('UPDATE authLinkCode SET expiresAt = ? WHERE userId = ?')
+                .run(new Date(0).toISOString(), user.id);
+            await request(externalAuthApp)
+                .post('/api/auth/claim')
+                .send({ registrationToken: authResponse.body.registrationToken, linkCode: codeResponse.body.code })
+                .expect(401);
+
+            const freshCode = await request(externalAuthApp)
+                .post('/api/auth/link-code')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+            userRepository.updateUserStatus(user.id, false, 'INACTIVE', 0);
+            const inactive = await request(externalAuthApp)
+                .post('/api/auth/claim')
+                .send({ registrationToken: authResponse.body.registrationToken, linkCode: freshCode.body.code })
+                .expect(403);
+            expect(inactive.body.errorCode).toBe('userIsNotActive');
+        });
+
+        it('keeps the link code and registration continuation after a provider conflict', async () => {
+            const user = userService.registerUser(
+                'Conflict Claim Owner',
+                '@conflict_claim_owner',
+                undefined,
+                undefined,
+                0
+            );
+            authProviderIdentityRepository.createIdentity(user.id, {
+                provider: AuthProvider.GOOGLE,
+                providerUserId: 'google-existing-conflict',
+            });
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'conflict-claim-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-new-conflict',
+                    },
+                }, {})
+            );
+            const codeResponse = await request(externalAuthApp)
+                .post('/api/auth/link-code')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'conflict-claim-token' })
+                .expect(200);
+
+            const conflict = await request(externalAuthApp)
+                .post('/api/auth/claim')
+                .send({ registrationToken: authResponse.body.registrationToken, linkCode: codeResponse.body.code })
+                .expect(409);
+
+            expect(conflict.body.errorCode).toBe('userAlreadyHasAuthProvider');
+            expect(dbManager.db.prepare('SELECT 1 FROM authLinkCode WHERE userId = ?').get(user.id)).toBeDefined();
+            expect(
+                dbManager.db.prepare(
+                    'SELECT 1 FROM pendingExternalAuthRegistration WHERE tokenHash = ?'
+                ).get(hashRegistrationToken(authResponse.body.registrationToken))
+            ).toBeDefined();
+        });
+
+        it('claims Telegram Mini App identity and reconciles legacy Telegram fields', async () => {
+            const telegramId = 654321789;
+            const user = userService.registerUser(
+                'Telegram Claim Owner',
+                '@telegram_claim_owner',
+                undefined,
+                undefined,
+                0
+            );
+            const codeResponse = await request(app)
+                .post('/api/auth/link-code')
+                .set('Authorization', createAuthHeader(user.id))
+                .expect(200);
+            const initData = generateValidInitData(telegramId, 'claimed_telegram');
+
+            await request(app)
+                .post('/api/auth/claim/telegram')
+                .query(initData)
+                .send({ linkCode: codeResponse.body.code })
+                .expect(200);
+
+            expect(authProviderIdentityRepository.findIdentity(AuthProvider.TELEGRAM, String(telegramId))?.userId)
+                .toBe(user.id);
+            expect(userRepository.findUserById(user.id)).toMatchObject({
+                telegramId,
+                telegramUsername: '@claimed_telegram',
+            });
+            await request(app).post('/api/authenticate').query(initData).expect(200);
         });
     });
 });
