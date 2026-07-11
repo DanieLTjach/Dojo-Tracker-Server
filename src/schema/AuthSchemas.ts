@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { nicknameSchema } from './UserSchemas.ts';
 
 const authNameSchema = z.string().trim().min(1, 'Name cannot be empty');
 
@@ -34,5 +35,6 @@ export const externalAuthRegistrationSchema = z.object({
     body: z.object({
         registrationToken: z.string().trim().min(1, 'Registration token is required'),
         name: authNameSchema,
+        nickname: nicknameSchema,
     }),
 });

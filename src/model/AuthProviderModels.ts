@@ -57,6 +57,7 @@ export interface AvailableAuthProviderDTO {
 export interface ExternalAuthRegistrationRequired {
     registrationRequired: true;
     registrationToken: string;
+    suggestedNickname: string;
     provider: AuthProvider;
     suggestedName: string | null;
     profile: {
@@ -71,6 +72,18 @@ export interface PendingExternalAuthRegistration {
     profile: VerifiedExternalProfile;
     createdAt: Date;
     expiresAt: Date;
+}
+
+export interface AuthLinkCode {
+    codeHash: string;
+    userId: number;
+    createdAt: Date;
+    expiresAt: Date;
+}
+
+export interface LinkCodeDTO {
+    code: string;
+    expiresAt: string;
 }
 
 export interface LinkedAuthProviderDTO {

@@ -106,7 +106,7 @@ describe('Authentication API Endpoints', () => {
 
     beforeAll(() => {
         // Create test user before running auth tests
-        const user = userService.registerUser('name', TEST_USERNAME, TEST_TELEGRAM_ID, 0);
+        const user = userService.registerUser('name', '@auth_test_user', TEST_USERNAME, TEST_TELEGRAM_ID, 0);
         // Activate the user for tests
         userRepository.updateUserStatus(user.id, true, 'ACTIVE', 0);
     });
@@ -290,7 +290,13 @@ describe('Authentication API Endpoints', () => {
         it('should reject authentication for inactive user', async () => {
             const inactiveTelegramId = 777888999;
             // Create an inactive user
-            const user = userService.registerUser('inactive_name', 'inactiveuser', inactiveTelegramId, 0);
+            const user = userService.registerUser(
+                'inactive_name',
+                '@inactive_auth_user',
+                'inactiveuser',
+                inactiveTelegramId,
+                0
+            );
             userRepository.updateUserStatus(user.id, false, 'INACTIVE', 0);
             const initData = generateValidInitData(inactiveTelegramId, 'inactiveuser');
 
@@ -348,7 +354,7 @@ describe('Authentication API Endpoints', () => {
         });
 
         it('authenticates an existing Google identity', async () => {
-            const user = userService.registerUser('Existing Google User', undefined, undefined, 0);
+            const user = userService.registerUser('Existing Google User', '@existing_google', undefined, undefined, 0);
             authProviderIdentityRepository.createIdentity(user.id, {
                 provider: AuthProvider.GOOGLE,
                 providerUserId: 'google-existing',
@@ -394,6 +400,7 @@ describe('Authentication API Endpoints', () => {
             expect(response.body).toEqual({
                 registrationRequired: true,
                 registrationToken: expect.any(String),
+                suggestedNickname: expect.stringMatching(/^@[A-Za-z0-9_]{3,32}$/),
                 provider: 'GOOGLE',
                 suggestedName: 'Google New',
                 profile: {
@@ -402,6 +409,62 @@ describe('Authentication API Endpoints', () => {
                     username: null,
                 },
             });
+        });
+
+        it('normalizes a provider username into the suggested nickname', async () => {
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-username-token': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-username',
+                        username: 'ihor.k',
+                    },
+                }, {})
+            );
+
+            const response = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-username-token' })
+                .expect(200);
+
+            expect(response.body.suggestedNickname).toBe('@ihor_k');
+        });
+
+        it('keeps the registration token after a nickname tripwire conflict without revealing account data', async () => {
+            userService.registerUser('Nickname Owner', '@nickname_tripwire', undefined, undefined, 0);
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({
+                    'google-nickname-tripwire': {
+                        provider: AuthProvider.GOOGLE,
+                        providerUserId: 'google-nickname-tripwire',
+                    },
+                }, {})
+            );
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/google')
+                .send({ credential: 'google-nickname-tripwire' })
+                .expect(200);
+            const registrationToken = authResponse.body.registrationToken as string;
+
+            const conflict = await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({
+                    registrationToken,
+                    name: 'Nickname Claim Candidate',
+                    nickname: '@NICKNAME_TRIPWIRE',
+                })
+                .expect(400);
+            expect(conflict.body.errorCode).toBe('nicknameAlreadyTaken');
+            expect(JSON.stringify(conflict.body)).not.toContain('Nickname Owner');
+
+            await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({
+                    registrationToken,
+                    name: 'Nickname Claim Candidate',
+                    nickname: '@nickname_tripwire_retry',
+                })
+                .expect(200);
         });
 
         it('creates a Google-only user after explicit registration', async () => {
@@ -425,6 +488,7 @@ describe('Authentication API Endpoints', () => {
                 .send({
                     registrationToken: authResponse.body.registrationToken,
                     name: 'Google Registered',
+                    nickname: '@google_registered',
                 })
                 .expect(200);
 
@@ -462,7 +526,7 @@ describe('Authentication API Endpoints', () => {
         });
 
         it('keeps a registration token usable after a name conflict and consumes it once on success', async () => {
-            userService.registerUser('Registration Name Collision', undefined, undefined, 0);
+            userService.registerUser('Registration Name Collision', '@registration_collision', undefined, undefined, 0);
             const externalAuthApp = createExternalAuthApp(
                 new FakeExternalAuthTokenVerifier({
                     'google-registration-retry': {
@@ -480,15 +544,19 @@ describe('Authentication API Endpoints', () => {
 
             await request(externalAuthApp)
                 .post('/api/auth/register')
-                .send({ registrationToken, name: 'Registration Name Collision' })
+                .send({
+                    registrationToken,
+                    name: 'Registration Name Collision',
+                    nickname: '@registration_retry',
+                })
                 .expect(400);
             await request(externalAuthApp)
                 .post('/api/auth/register')
-                .send({ registrationToken, name: 'Registration Retry Success' })
+                .send({ registrationToken, name: 'Registration Retry Success', nickname: '@registration_retry' })
                 .expect(200);
             const consumedResponse = await request(externalAuthApp)
                 .post('/api/auth/register')
-                .send({ registrationToken, name: 'Cannot Reuse Registration' })
+                .send({ registrationToken, name: 'Cannot Reuse Registration', nickname: '@cannot_reuse' })
                 .expect(401);
 
             expect(consumedResponse.body.errorCode).toBe('invalidExternalAuthRegistrationToken');
@@ -518,11 +586,15 @@ describe('Authentication API Endpoints', () => {
 
             await request(externalAuthApp)
                 .post('/api/auth/register')
-                .send({ registrationToken, name: 'Expired Registration' })
+                .send({ registrationToken, name: 'Expired Registration', nickname: '@expired_registration' })
                 .expect(401);
             await request(externalAuthApp)
                 .post('/api/auth/register')
-                .send({ registrationToken: 'not-a-real-token', name: 'Malformed Registration' })
+                .send({
+                    registrationToken: 'not-a-real-token',
+                    name: 'Malformed Registration',
+                    nickname: '@malformed_registration',
+                })
                 .expect(401);
         });
 
@@ -539,7 +611,13 @@ describe('Authentication API Endpoints', () => {
                 .post('/api/auth/google')
                 .send({ credential: 'google-registration-race' })
                 .expect(200);
-            const linkedUser = userService.registerUser('Concurrent Linked User', undefined, undefined, 0);
+            const linkedUser = userService.registerUser(
+                'Concurrent Linked User',
+                '@concurrent_linked',
+                undefined,
+                undefined,
+                0
+            );
             authProviderIdentityRepository.createIdentity(linkedUser.id, {
                 provider: AuthProvider.GOOGLE,
                 providerUserId: 'google-registration-race',
@@ -550,6 +628,7 @@ describe('Authentication API Endpoints', () => {
                 .send({
                     registrationToken: authResponse.body.registrationToken,
                     name: 'Concurrent Registration',
+                    nickname: '@concurrent_registration',
                 })
                 .expect(409);
 
@@ -558,7 +637,7 @@ describe('Authentication API Endpoints', () => {
         });
 
         it('does not auto-link Google users by display name or email', async () => {
-            userService.registerUser('Existing Display Name', undefined, undefined, 0);
+            userService.registerUser('Existing Display Name', '@existing_display', undefined, undefined, 0);
             const externalAuthApp = createExternalAuthApp(
                 new FakeExternalAuthTokenVerifier({
                     'google-name-collision-token': {
@@ -581,7 +660,13 @@ describe('Authentication API Endpoints', () => {
         });
 
         it('backfills and authenticates an existing Telegram user by telegramId', async () => {
-            const legacyUser = userService.registerUser('Legacy Telegram User', 'legacy_telegram', 888777666, 0);
+            const legacyUser = userService.registerUser(
+                'Legacy Telegram User',
+                '@legacy_telegram',
+                'legacy_telegram',
+                888777666,
+                0
+            );
             const externalAuthApp = createExternalAuthApp(
                 new FakeExternalAuthTokenVerifier({}, {
                     'telegram-legacy-token': {
@@ -626,6 +711,7 @@ describe('Authentication API Endpoints', () => {
                 .send({
                     registrationToken: authResponse.body.registrationToken,
                     name: 'Telegram New',
+                    nickname: '@telegram_new',
                 })
                 .expect(200);
 
@@ -636,7 +722,7 @@ describe('Authentication API Endpoints', () => {
         });
 
         it('rejects login for an inactive linked user', async () => {
-            const user = userService.registerUser('Inactive Google User', undefined, undefined, 0);
+            const user = userService.registerUser('Inactive Google User', '@inactive_google', undefined, undefined, 0);
             userRepository.updateUserStatus(user.id, false, 'INACTIVE', 0);
             authProviderIdentityRepository.createIdentity(user.id, {
                 provider: AuthProvider.GOOGLE,
@@ -662,7 +748,7 @@ describe('Authentication API Endpoints', () => {
         });
 
         it('links Google for the current user and lists providers without provider ids', async () => {
-            const user = userService.registerUser('Link Google User', undefined, undefined, 0);
+            const user = userService.registerUser('Link Google User', '@link_google', undefined, undefined, 0);
             const externalAuthApp = createExternalAuthApp(
                 new FakeExternalAuthTokenVerifier({
                     'google-link-token': {
@@ -696,8 +782,8 @@ describe('Authentication API Endpoints', () => {
         });
 
         it('rejects linking a provider identity already linked to another user', async () => {
-            const owner = userService.registerUser('Provider Owner', undefined, undefined, 0);
-            const target = userService.registerUser('Provider Target', undefined, undefined, 0);
+            const owner = userService.registerUser('Provider Owner', '@provider_owner', undefined, undefined, 0);
+            const target = userService.registerUser('Provider Target', '@provider_target', undefined, undefined, 0);
             authProviderIdentityRepository.createIdentity(owner.id, {
                 provider: AuthProvider.GOOGLE,
                 providerUserId: 'google-owned',
@@ -723,7 +809,13 @@ describe('Authentication API Endpoints', () => {
         });
 
         it('authenticates an existing Discord identity', async () => {
-            const user = userService.registerUser('Existing Discord User', undefined, undefined, 0);
+            const user = userService.registerUser(
+                'Existing Discord User',
+                '@existing_discord',
+                undefined,
+                undefined,
+                0
+            );
             authProviderIdentityRepository.createIdentity(user.id, {
                 provider: AuthProvider.DISCORD,
                 providerUserId: 'discord-existing',
@@ -784,6 +876,7 @@ describe('Authentication API Endpoints', () => {
             expect(response.body).toEqual({
                 registrationRequired: true,
                 registrationToken: expect.any(String),
+                suggestedNickname: expect.stringMatching(/^@[A-Za-z0-9_]{3,32}$/),
                 provider: 'DISCORD',
                 suggestedName: 'Discord New',
                 profile: {
@@ -824,6 +917,7 @@ describe('Authentication API Endpoints', () => {
                 .send({
                     registrationToken: authResponse.body.registrationToken,
                     name: 'Discord Registered',
+                    nickname: '@discord_registered',
                 })
                 .expect(200);
 
@@ -835,7 +929,7 @@ describe('Authentication API Endpoints', () => {
         });
 
         it('links Discord for the current user', async () => {
-            const user = userService.registerUser('Link Discord User', undefined, undefined, 0);
+            const user = userService.registerUser('Link Discord User', '@link_discord', undefined, undefined, 0);
             const externalAuthApp = createExternalAuthApp(
                 new FakeExternalAuthTokenVerifier({}, {}, {
                     'discord-link-code': {

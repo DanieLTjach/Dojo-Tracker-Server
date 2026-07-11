@@ -58,10 +58,10 @@ describe('AchievementService (persisted tournament achievements)', () => {
     let u4: number;
 
     beforeAll(() => {
-        u1 = userService.registerUser('Alpha', 'alpha', 910001, 0).id;
-        u2 = userService.registerUser('Bravo', 'bravo', 910002, 0).id;
-        u3 = userService.registerUser('Charlie', 'charlie', 910003, 0).id;
-        u4 = userService.registerUser('Delta', 'delta', 910004, 0).id;
+        u1 = userService.registerUser('Alpha', '@alpha_achievement', 'alpha', 910001, 0).id;
+        u2 = userService.registerUser('Bravo', '@bravo_achievement', 'bravo', 910002, 0).id;
+        u3 = userService.registerUser('Charlie', '@charlie_achievement', 'charlie', 910003, 0).id;
+        u4 = userService.registerUser('Delta', '@delta_achievement', 'delta', 910004, 0).id;
 
         // The requesting user's locale drives result formatting; pin u1 to English
         // so the formatted-value assertions below stay stable.

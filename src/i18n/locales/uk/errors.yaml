@@ -31,6 +31,7 @@ errors:
   inviteExpired: Термін дії цього запрошення сплив
   inviteExhausted: Це запрошення вичерпало ліміт використань
   nameRequiredForNewUser: Для реєстрації потрібно вказати імʼя
+  nicknameAlreadyTaken: Нікнейм {{nickname}} вже зайнятий
 
   eventNotFound: Подію з id {{eventId}} не знайдено
   gameRulesNotFound: Правила гри з id {{gameRulesId}} не знайдено

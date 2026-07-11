@@ -31,11 +31,11 @@ describe('Public tournament endpoint', () => {
     beforeAll(() => {
         const ts = nextTs();
         dbManager.db.prepare(
-            `INSERT INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+            `INSERT INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
              VALUES
-                (?, 'Public Test User', NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?),
-                (?, 'Public Hidden User', NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?),
-                (?, 'Public Pending User', NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?)`
+                (?, 'Public Test User', '@public_test_user', NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?),
+                (?, 'Public Hidden User', '@public_hidden_user', NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?),
+                (?, 'Public Pending User', '@public_pending_user', NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?)`
         ).run(
             PARTICIPANT_USER_ID,
             ts,

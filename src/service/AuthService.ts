@@ -103,7 +103,7 @@ export class AuthService {
         return this.externalAuthProviderRegistry.getAvailableProviders();
     }
 
-    registerExternal(registrationToken: string, name: string): TokenPair {
+    registerExternal(registrationToken: string, name: string, nickname: string): TokenPair {
         return dbManager.db.transaction(() => {
             const pending = this.externalAuthRegistrationService.getValid(registrationToken);
             const profile = pending.profile;
@@ -121,6 +121,7 @@ export class AuthService {
             const registrationFields = adapter.getRegistrationUserFields?.(profile) ?? {};
             const user = this.userService.registerUser(
                 name,
+                nickname,
                 registrationFields.telegramUsername,
                 registrationFields.telegramId,
                 SYSTEM_USER_ID

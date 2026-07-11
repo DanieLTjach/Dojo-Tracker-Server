@@ -6,6 +6,7 @@ import type {
     VerifiedExternalProfile,
 } from '../model/AuthProviderModels.ts';
 import { PendingExternalAuthRegistrationRepository } from '../repository/PendingExternalAuthRegistrationRepository.ts';
+import { generateReadableNickname, normalizeProviderUsername } from '../util/NicknameUtil.ts';
 
 const REGISTRATION_TOKEN_TTL_MS = 10 * 60 * 1000;
 
@@ -25,6 +26,7 @@ export class ExternalAuthRegistrationService {
         return {
             registrationRequired: true,
             registrationToken,
+            suggestedNickname: normalizeProviderUsername(profile.username) ?? generateReadableNickname(),
             provider: profile.provider,
             suggestedName: profile.displayName ?? profile.username ?? null,
             profile: {

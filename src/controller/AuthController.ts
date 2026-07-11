@@ -79,8 +79,8 @@ export class AuthController {
     }
 
     registerExternal(req: Request, res: Response) {
-        const { body: { registrationToken, name } } = externalAuthRegistrationSchema.parse(req);
-        const result = this.authService.registerExternal(registrationToken, name);
+        const { body: { registrationToken, name, nickname } } = externalAuthRegistrationSchema.parse(req);
+        const result = this.authService.registerExternal(registrationToken, name, nickname);
         return res.status(StatusCodes.OK).json(result);
     }
 }

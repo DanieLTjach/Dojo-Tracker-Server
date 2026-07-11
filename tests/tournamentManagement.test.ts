@@ -71,9 +71,17 @@ describe('Tournament management', () => {
         const ts = '2024-01-01T00:00:00.000Z';
         for (const userId of [...PLAYER_IDS, OWNER_USER_ID, MODERATOR_USER_ID]) {
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
-            ).run(userId, `Tournament User ${userId}`, `@tournament_${userId}`, userId + 1000000, ts, ts);
+                `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
+            ).run(
+                userId,
+                `Tournament User ${userId}`,
+                `@tournament_${userId}`,
+                `@tournament_${userId}`,
+                userId + 1000000,
+                ts,
+                ts
+            );
         }
 
         for (const userId of PLAYER_IDS) {

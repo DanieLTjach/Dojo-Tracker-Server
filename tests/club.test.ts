@@ -56,9 +56,27 @@ describe('Club API Endpoints', () => {
         const userService = new UserService();
         const userRepository = new UserRepository();
 
-        const nonAdminUser = userService.registerUser('NonAdminClubUser', 'nonadmin_club', 666666661, SYSTEM_USER_ID);
-        const ownerUser = userService.registerUser('OwnerClubUser', 'owner_club', 666666662, SYSTEM_USER_ID);
-        const memberUser = userService.registerUser('MemberClubUser', 'member_club', 666666663, SYSTEM_USER_ID);
+        const nonAdminUser = userService.registerUser(
+            'NonAdminClubUser',
+            '@nonadmin_club',
+            'nonadmin_club',
+            666666661,
+            SYSTEM_USER_ID
+        );
+        const ownerUser = userService.registerUser(
+            'OwnerClubUser',
+            '@owner_club',
+            'owner_club',
+            666666662,
+            SYSTEM_USER_ID
+        );
+        const memberUser = userService.registerUser(
+            'MemberClubUser',
+            '@member_club',
+            'member_club',
+            666666663,
+            SYSTEM_USER_ID
+        );
 
         nonAdminId = nonAdminUser.id;
         ownerId = ownerUser.id;

@@ -57,9 +57,19 @@ describe('Game Rules API Endpoints', () => {
 
         beforeAll(() => {
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(NON_ADMIN_USER_ID, 920100, 'presets-nonadmin', 1, 0, presetsTimestamp, presetsTimestamp, 0);
+                `INSERT OR IGNORE INTO user (id, telegramId, name, nickname, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(
+                NON_ADMIN_USER_ID,
+                920100,
+                'presets-nonadmin',
+                '@presets_nonadmin',
+                1,
+                0,
+                presetsTimestamp,
+                presetsTimestamp,
+                0
+            );
         });
 
         afterAll(() => {
@@ -409,9 +419,9 @@ describe('Game Rules API Endpoints', () => {
                  VALUES (?, ?, ?, ?, ?, ?, ?)`
             ).run(ruleId, 'PUT Forbidden Rule', clubId, 4, '[15,5,-5,-15]', 30000, 'DIVIDE');
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(userId, 910600, 'put-nonowner', 1, 0, timestamp, timestamp, 0);
+                `INSERT OR IGNORE INTO user (id, telegramId, name, nickname, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(userId, 910600, 'put-nonowner', '@put_nonowner', 1, 0, timestamp, timestamp, 0);
 
             try {
                 const response = await request(app)
@@ -443,9 +453,9 @@ describe('Game Rules API Endpoints', () => {
                  VALUES (?, ?, ?, ?, ?, ?, ?)`
             ).run(ruleId, 'PUT Owner Rule', clubId, 4, '[15,5,-5,-15]', 30000, 'DIVIDE');
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(ownerId, 910800, 'put-owner', 1, 0, timestamp, timestamp, 0);
+                `INSERT OR IGNORE INTO user (id, telegramId, name, nickname, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(ownerId, 910800, 'put-owner', '@put_owner', 1, 0, timestamp, timestamp, 0);
             dbManager.db.prepare(
                 `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -490,13 +500,13 @@ describe('Game Rules API Endpoints', () => {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(clubId, 'Upsert API Club', null, null, null, null, 1, timestamp, timestamp, 0);
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(ownerId, 910901, 'upsert-owner', 1, 0, timestamp, timestamp, 0);
+                `INSERT OR IGNORE INTO user (id, telegramId, name, nickname, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(ownerId, 910901, 'upsert-owner', '@upsert_owner', 1, 0, timestamp, timestamp, 0);
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(nonMemberId, 910902, 'upsert-nonmember', 1, 0, timestamp, timestamp, 0);
+                `INSERT OR IGNORE INTO user (id, telegramId, name, nickname, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(nonMemberId, 910902, 'upsert-nonmember', '@upsert_nonmember', 1, 0, timestamp, timestamp, 0);
             dbManager.db.prepare(
                 `INSERT INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`
