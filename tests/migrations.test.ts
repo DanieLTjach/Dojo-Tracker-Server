@@ -677,6 +677,78 @@ describe('Database Migrations', () => {
         db.close();
     });
 
+    test('migration 13 adds strict case-insensitive nicknames and link codes', () => {
+        const db = createMigratedDb(12);
+        db.prepare("UPDATE user SET telegramUsername = '@system' WHERE id = 0").run();
+        db.prepare(`
+            INSERT INTO user (
+                id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
+            ) VALUES (
+                1301, 'Nickname User', '@Nickname_User', 1301,
+                '2026-07-11T00:00:00.000Z', '2026-07-11T00:00:00.000Z', 0, 1, 0, 'ACTIVE'
+            )`).run();
+
+        runMigration(db, 13);
+        db.pragma('foreign_keys = ON');
+
+        expect(db.prepare('SELECT nickname FROM user WHERE id = 1301').get())
+            .toEqual({ nickname: '@Nickname_User' });
+        expect(() =>
+            db.prepare(`
+                INSERT INTO user (
+                    name, nickname, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
+                ) VALUES ('Null Nickname', NULL, '2026-07-11', '2026-07-11', 0, 1, 0, 'ACTIVE')`).run()
+        ).toThrow();
+        expect(() =>
+            db.prepare(`
+                INSERT INTO user (
+                    name, nickname, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
+                ) VALUES ('Duplicate Nickname', '@nickname_user', '2026-07-11', '2026-07-11', 0, 1, 0, 'ACTIVE')`).run()
+        ).toThrow();
+
+        const insertedId = Number(
+            db.prepare(`
+            INSERT INTO user (
+                name, nickname, telegramUsername, telegramId,
+                createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
+            ) VALUES (
+                'Autoincrement User', '@autoincrement_user', '@other_unique', 1310,
+                '2026-07-11', '2026-07-11', 0, 1, 0, 'ACTIVE'
+            )`).run().lastInsertRowid
+        );
+        expect(insertedId).toBeGreaterThan(1301);
+
+        const linkCodeColumns = (db.prepare('PRAGMA table_info(authLinkCode)').all() as Array<{
+            name: string;
+            type: string;
+            notnull: number;
+        }>).map(({ name, type, notnull }) => ({ name, type, notnull }));
+        expect(linkCodeColumns).toEqual([
+            { name: 'codeHash', type: 'TEXT', notnull: 1 },
+            { name: 'userId', type: 'INTEGER', notnull: 1 },
+            { name: 'createdAt', type: 'TIMESTAMP', notnull: 1 },
+            { name: 'expiresAt', type: 'TIMESTAMP', notnull: 1 },
+        ]);
+        expect(db.pragma('foreign_key_check')).toEqual([]);
+        db.close();
+    });
+
+    test('migration 13 rolls back when the username backfill was not run', () => {
+        const db = createMigratedDb(12);
+        db.prepare(`
+            INSERT INTO user (
+                id, name, telegramUsername, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
+            ) VALUES (1399, 'Missing Username', NULL, '2026-07-11', '2026-07-11', 0, 1, 0, 'ACTIVE')`)
+            .run();
+
+        expect(() => db.transaction(() => runMigration(db, 13))()).toThrow();
+
+        const columns = db.prepare('PRAGMA table_info(user)').all() as Array<{ name: string }>;
+        expect(columns.map(column => column.name)).not.toContain('nickname');
+        expect(db.prepare('SELECT name FROM user WHERE id = 0').get()).toEqual({ name: 'SYSTEM' });
+        db.close();
+    });
+
     test('migration 10 removes legacy static pairings from event info', () => {
         const db = createMigratedDb(9);
 
