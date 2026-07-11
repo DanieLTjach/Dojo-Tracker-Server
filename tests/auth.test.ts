@@ -213,22 +213,16 @@ describe('Authentication API Endpoints', () => {
             expect(response.body).toHaveProperty('accessToken');
         });
 
-        it('should return a registration continuation for a non-existent user', async () => {
+        it('should reject authentication for non-existent user', async () => {
             const nonExistentTelegramId = 999888777;
             const initData = generateValidInitData(nonExistentTelegramId, 'nonexistent');
 
             const response = await request(app)
                 .post('/api/authenticate')
                 .query(initData)
-                .expect(200);
+                .expect(404);
 
-            expect(response.body).toMatchObject({
-                registrationRequired: true,
-                provider: AuthProvider.TELEGRAM,
-                suggestedName: 'Test User',
-                suggestedNickname: '@nonexistent',
-            });
-            expect(response.body.registrationToken).toEqual(expect.any(String));
+            expect(response.body).toHaveProperty('errorCode', 'userNotFoundByTelegramId');
         });
 
         it('should reject authentication with invalid hash', async () => {
@@ -1192,7 +1186,7 @@ describe('Authentication API Endpoints', () => {
             ).toBeDefined();
         });
 
-        it('claims Telegram Mini App identity and reconciles legacy Telegram fields', async () => {
+        it('claims Telegram Mini App identity and sets telegramId for future Mini App logins', async () => {
             const telegramId = 654321789;
             const user = userService.registerUser(
                 'Telegram Claim Owner',
@@ -1217,7 +1211,7 @@ describe('Authentication API Endpoints', () => {
                 .toBe(user.id);
             expect(userRepository.findUserById(user.id)).toMatchObject({
                 telegramId,
-                telegramUsername: '@claimed_telegram',
+                telegramUsername: null,
             });
             await request(app).post('/api/authenticate').query(initData).expect(200);
         });
@@ -1298,17 +1292,14 @@ describe('Authentication API Endpoints', () => {
             const loginResponse = await request(app)
                 .post('/api/authenticate')
                 .query(generateValidInitData(telegramId, 'unlink_telegram'))
-                .expect(200);
+                .expect(404);
 
             expect(unlinkResponse.body).toEqual([expect.objectContaining({ provider: AuthProvider.GOOGLE })]);
             expect(storedUser.telegramId).toBeNull();
             expect(storedUser.telegramUsername).toBeNull();
             expect(authProviderIdentityRepository.findIdentity(AuthProvider.TELEGRAM, String(telegramId)))
                 .toBeUndefined();
-            expect(loginResponse.body).toMatchObject({
-                registrationRequired: true,
-                provider: AuthProvider.TELEGRAM,
-            });
+            expect(loginResponse.body).toHaveProperty('errorCode', 'userNotFoundByTelegramId');
         });
 
         it('counts a legacy Mini App login without an identity row as the last method', async () => {

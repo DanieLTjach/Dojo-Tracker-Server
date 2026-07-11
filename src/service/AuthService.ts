@@ -62,27 +62,11 @@ export class AuthService {
      * @param params - Query parameters from initData (as key-value object)
      * @returns TokenPair with JWT access token
      */
-    authenticate(params: Record<string, string>): TokenPair | ExternalAuthRegistrationRequired {
+    authenticate(params: Record<string, string>): TokenPair {
         this.validateInitData(params);
 
-        const telegramUser = this.extractTelegramUser(params);
-        const user = this.userService.getOptionalUserByTelegramId(telegramUser.id);
-
-        if (user === undefined) {
-            const displayName = [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ').trim();
-            const profile: VerifiedExternalProfile = {
-                provider: AuthProvider.TELEGRAM,
-                providerUserId: String(telegramUser.id),
-                telegramId: telegramUser.id,
-            };
-            if (displayName.length > 0) {
-                profile.displayName = displayName;
-            }
-            if (telegramUser.username !== undefined) {
-                profile.username = `@${telegramUser.username}`;
-            }
-            return this.externalAuthRegistrationService.create(profile);
-        }
+        const telegramId = this.extractTelegramId(params);
+        const user = this.userService.getUserByTelegramId(telegramId);
 
         if (!user.isActive) {
             throw new UserIsNotActive(user.id);
