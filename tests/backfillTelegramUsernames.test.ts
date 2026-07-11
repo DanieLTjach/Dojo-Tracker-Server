@@ -21,18 +21,21 @@ describe('backfill Telegram usernames script', () => {
 
         const result = fillMissingTelegramUsernames(db, { manifestPath, random });
 
-        expect(result.entries).toHaveLength(3);
+        // the SYSTEM user (id 0) is skipped; migration 013 names it directly
+        expect(result.entries.map((entry: { id: number }) => entry.id)).toEqual([1, 2]);
+        expect(db.prepare('SELECT telegramUsername FROM user WHERE id = 0').get())
+            .toEqual({ telegramUsername: null });
         expect(result.entries.every((entry: { generated: string }) => generatedPattern.test(entry.generated)))
             .toBe(true);
         expect(new Set(result.entries.map((entry: { generated: string }) => entry.generated.toLowerCase())).size)
-            .toBe(3);
+            .toBe(2);
         expect(JSON.parse(fs.readFileSync(manifestPath, 'utf8'))).toEqual(result.entries);
 
         const preserved = result.entries[0]!;
         db.prepare('UPDATE user SET telegramUsername = ? WHERE id = ?').run('@changed_by_user', preserved.id);
         const reverted = cleanupGeneratedTelegramUsernames(db, result.entries);
 
-        expect(reverted).toHaveLength(2);
+        expect(reverted).toHaveLength(1);
         expect(db.prepare('SELECT telegramUsername FROM user WHERE id = ?').get(preserved.id))
             .toEqual({ telegramUsername: '@changed_by_user' });
         expect(db.prepare('SELECT telegramUsername FROM user WHERE id = 3').get())

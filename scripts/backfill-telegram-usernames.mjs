@@ -59,7 +59,8 @@ export function generateUniqueUsername(existing, random = randomInt) {
 }
 
 export function fillMissingTelegramUsernames(db, options = {}) {
-    const rows = db.prepare('SELECT id FROM user WHERE telegramUsername IS NULL ORDER BY id').all();
+    // id 0 is the SYSTEM user; migration 013 assigns it the '@system' nickname directly
+    const rows = db.prepare('SELECT id FROM user WHERE telegramUsername IS NULL AND id != 0 ORDER BY id').all();
     const existing = new Set(
         db.prepare('SELECT telegramUsername FROM user WHERE telegramUsername IS NOT NULL').all()
             .map(row => row.telegramUsername.toLowerCase())

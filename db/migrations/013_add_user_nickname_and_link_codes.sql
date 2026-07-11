@@ -17,7 +17,9 @@ INSERT INTO user_new (
     createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
 )
 SELECT
-    id, telegramUsername, telegramId, name, telegramUsername,
+    id, telegramUsername, telegramId, name,
+    -- the SYSTEM user (id 0) has no Telegram username in existing databases
+    CASE WHEN id = 0 THEN '@system' ELSE telegramUsername END,
     createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
 FROM user;
 

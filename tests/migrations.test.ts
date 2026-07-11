@@ -679,7 +679,6 @@ describe('Database Migrations', () => {
 
     test('migration 13 adds strict case-insensitive nicknames and link codes', () => {
         const db = createMigratedDb(12);
-        db.prepare("UPDATE user SET telegramUsername = '@system' WHERE id = 0").run();
         db.prepare(`
             INSERT INTO user (
                 id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
@@ -693,6 +692,9 @@ describe('Database Migrations', () => {
 
         expect(db.prepare('SELECT nickname FROM user WHERE id = 1301').get())
             .toEqual({ nickname: '@Nickname_User' });
+        // the SYSTEM user has no telegramUsername in existing databases; the migration names it directly
+        expect(db.prepare('SELECT telegramUsername, nickname FROM user WHERE id = 0').get())
+            .toEqual({ telegramUsername: null, nickname: '@system' });
         expect(() =>
             db.prepare(`
                 INSERT INTO user (
