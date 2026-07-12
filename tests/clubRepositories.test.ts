@@ -11,8 +11,8 @@ function seedTestUsers(): void {
     const timestamp = new Date().toISOString();
 
     dbManager.db.prepare(`
-        INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
-        VALUES (:id, :name, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
+        INSERT INTO user (id, name, nickname, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+        VALUES (:id, :name, :telegramUsername, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
     `).run({
         id: TEST_USER_A_ID,
         name: 'Repo Test User A',
@@ -27,8 +27,8 @@ function seedTestUsers(): void {
     });
 
     dbManager.db.prepare(`
-        INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
-        VALUES (:id, :name, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
+        INSERT INTO user (id, name, nickname, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+        VALUES (:id, :name, :telegramUsername, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
     `).run({
         id: TEST_USER_B_ID,
         name: 'Repo Test User B',

@@ -332,9 +332,9 @@ describe('Game Rules CRUD', () => {
         test('createGameRules with non-owner non-admin throws InsufficientClubPermissionsError', () => {
             const nonOwnerUserId = 999;
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(nonOwnerUserId, 999999, 'nonowner', 1, 0, timestamp, timestamp, 0);
+                `INSERT OR IGNORE INTO user (id, telegramId, name, nickname, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(nonOwnerUserId, 999999, 'nonowner', '@rules_nonowner', 1, 0, timestamp, timestamp, 0);
 
             expect(() => service.createGameRules(baseParams, nonOwnerUserId))
                 .toThrow(InsufficientClubPermissionsError);
@@ -345,9 +345,9 @@ describe('Game Rules CRUD', () => {
         test('non-admin club owner can updateGameRules and deleteGameRules for own club', () => {
             const ownerUserId = 981;
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(ownerUserId, 981981, 'club-owner', 1, 0, timestamp, timestamp, 0);
+                `INSERT OR IGNORE INTO user (id, telegramId, name, nickname, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(ownerUserId, 981981, 'club-owner', '@rules_club_owner', 1, 0, timestamp, timestamp, 0);
             dbManager.db.prepare(
                 `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, 'OWNER', 'ACTIVE', ?, ?, 0)`
@@ -373,9 +373,9 @@ describe('Game Rules CRUD', () => {
         test('updateGameRules on global (clubId null) by non-admin throws InsufficientPermissionsError', () => {
             const nonAdminId = 982;
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, telegramId, name, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            ).run(nonAdminId, 982982, 'non-admin', 1, 0, timestamp, timestamp, 0);
+                `INSERT OR IGNORE INTO user (id, telegramId, name, nickname, isActive, isAdmin, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(nonAdminId, 982982, 'non-admin', '@rules_non_admin', 1, 0, timestamp, timestamp, 0);
 
             const globalRuleId = repo.insertGameRules({ ...baseParams, name: 'Global Rule', clubId: null });
             try {

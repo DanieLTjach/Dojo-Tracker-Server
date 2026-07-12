@@ -24,6 +24,7 @@ errors:
   inviteExpired: This invite has expired
   inviteExhausted: This invite has reached its usage limit
   nameRequiredForNewUser: Name is required for registration
+  nicknameAlreadyTaken: The nickname {{nickname}} is already taken
 
   eventNotFound: Event with id {{eventId}} was not found
   gameRulesNotFound: Game rules with id {{gameRulesId}} were not found

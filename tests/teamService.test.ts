@@ -49,9 +49,9 @@ describe('TeamService', () => {
     function insertUser(userId: number, name: string): void {
         const t = nextTs();
         dbManager.db.prepare(
-            `INSERT INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, ?, NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?)`
-        ).run(userId, name, t, t, SYSTEM_USER_ID);
+            `INSERT INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, ?, NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?)`
+        ).run(userId, name, `@team_${userId}`, t, t, SYSTEM_USER_ID);
     }
 
     function approve(eventId: number, userId: number, status: 'APPROVED' | 'PENDING' = 'APPROVED'): void {
@@ -599,9 +599,9 @@ describe('TeamService', () => {
         for (const id of EXTRA_IDS) {
             const t = nextTs();
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, name, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, 0, 1, 'ACTIVE', ?, ?, ?)`
-            ).run(id, `Extra ${id}`, t, t, SYSTEM_USER_ID);
+                `INSERT OR IGNORE INTO user (id, name, nickname, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, 0, 1, 'ACTIVE', ?, ?, ?)`
+            ).run(id, `Extra ${id}`, `@team_extra_${id}`, t, t, SYSTEM_USER_ID);
             dbManager.db.prepare(
                 `INSERT INTO eventRegistration (eventId, userId, status, isFillerPlayer, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, 'APPROVED', 0, ?, ?, ?)

@@ -60,9 +60,17 @@ describe('Tournament rating update logs', () => {
         const ts = '2024-01-01T00:00:00.000Z';
         for (const userId of PLAYER_IDS) {
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
-            ).run(userId, `Rating Log User ${userId}`, `@rating_log_${userId}`, userId + 1000000, ts, ts);
+                `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
+            ).run(
+                userId,
+                `Rating Log User ${userId}`,
+                `@rating_log_${userId}`,
+                `@rating_log_${userId}`,
+                userId + 1000000,
+                ts,
+                ts
+            );
             dbManager.db.prepare(
                 `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, 'MEMBER', 'ACTIVE', ?, ?, 0)`

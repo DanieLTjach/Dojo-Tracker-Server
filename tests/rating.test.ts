@@ -41,7 +41,7 @@ describe('Rating API Endpoints', () => {
             .post('/api/users')
             .set('Authorization', adminAuthHeader)
             .query(initData)
-            .send({ name });
+            .send({ name, nickname: `@user_${telegramId}` });
         expect(response.status).toBe(201);
         const userId = response.body.id;
 
