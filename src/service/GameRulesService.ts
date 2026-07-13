@@ -12,7 +12,7 @@ import { UserService } from './UserService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
-import { buildDetailsSchemaForCore } from '../schema/GameRulesSchemas.ts';
+import { parseGameRulesDetailsForCore } from '../schema/GameRulesSchemas.ts';
 
 export class GameRulesService {
     private gameRulesRepository: GameRulesRepository = new GameRulesRepository();
@@ -42,13 +42,21 @@ export class GameRulesService {
         return this.getGameRulesById(id);
     }
 
-    createGameRules(params: InsertGameRulesParams, userId: number): GameRules {
-        if (params.clubId === null) {
+    createGameRules(params: CreateGameRulesServiceParams, userId: number): GameRules {
+        const { details, ...gameRulesParams } = params;
+        if (gameRulesParams.clubId === null) {
             this.userService.validateUserIsAdmin(userId, () => new InsufficientPermissionsError());
         } else {
-            this.clubMembershipService.validateUserCanEditClub(params.clubId, userId);
+            this.clubMembershipService.validateUserCanEditClub(gameRulesParams.clubId, userId);
         }
-        const newId = this.gameRulesRepository.insertGameRules(params);
+
+        const validatedDetails = details === undefined
+            ? undefined
+            : parseGameRulesDetailsForCore(details, gameRulesParams);
+        const newId = this.gameRulesRepository.insertGameRules(gameRulesParams);
+        if (validatedDetails !== undefined) {
+            this.writeGameRulesDetails(newId, validatedDetails, gameRulesParams);
+        }
         return this.getGameRulesById(newId);
     }
 
@@ -58,7 +66,7 @@ export class GameRulesService {
         const { details, ...gameRulesParams } = params;
         const validatedDetails = details === undefined
             ? undefined
-            : buildDetailsSchemaForCore(gameRulesParams).parse(details);
+            : parseGameRulesDetailsForCore(details, gameRulesParams);
 
         if (!gameRulesCoreFieldsEqual(gameRules, gameRulesParams)) {
             this.validateGameRulesHaveNoGames(gameRules);
@@ -109,12 +117,16 @@ export class GameRulesService {
         details: GameRulesDetails,
         core: Pick<GameRules, 'numberOfPlayers' | 'startingPoints'>
     ): void {
-        const validated = buildDetailsSchemaForCore(core).parse(details);
+        const validated = parseGameRulesDetailsForCore(details, core);
         this.gameRulesRepository.updateGameRulesDetails(id, compactDetails(validated));
     }
 }
 
 export interface UpdateGameRulesServiceParams extends InsertGameRulesParams {
+    details?: GameRulesDetails | undefined;
+}
+
+export interface CreateGameRulesServiceParams extends InsertGameRulesParams {
     details?: GameRulesDetails | undefined;
 }
 

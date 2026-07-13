@@ -119,6 +119,55 @@ describe('Game Rules CRUD', () => {
             repo.deleteGameRules(created.id);
         });
 
+        test('createGameRules creates core and no-preset sanma details together', () => {
+            const created = service.createGameRules({
+                ...baseParams,
+                name: 'Atomic Sanma Create',
+                numberOfPlayers: 3,
+                startingPoints: 40000,
+                uma: [15, 0, -15],
+                details: {
+                    rules: {
+                        goal: 40000,
+                        honba: '2x500',
+                        noten_penalty: 2000,
+                        open_tanyao: true,
+                    },
+                },
+            }, ADMIN_USER_ID);
+
+            expect(created.details?.rules).toMatchObject({
+                number_of_players: 3,
+                starting_points: 40000,
+                goal: 40000,
+                honba: '2x500',
+                noten_penalty: 2000,
+                open_tanyao: true,
+            });
+
+            repo.deleteGameRules(created.id);
+        });
+
+        test('createGameRules validates details before inserting core', () => {
+            const name = 'Invalid Atomic Sanma Create';
+
+            expect(() =>
+                service.createGameRules({
+                    ...baseParams,
+                    name,
+                    numberOfPlayers: 3,
+                    startingPoints: 40000,
+                    uma: [15, 0, -15],
+                    details: {
+                        rules: { starting_points: 35000 },
+                    },
+                }, ADMIN_USER_ID)
+            ).toThrow();
+
+            const row = dbManager.db.prepare('SELECT id FROM gameRules WHERE name = ?').get(name);
+            expect(row).toBeUndefined();
+        });
+
         test('updateGameRules updates and returns updated record', () => {
             const result = service.updateGameRules(createdRuleId, {
                 ...baseParams,
