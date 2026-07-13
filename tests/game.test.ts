@@ -1797,6 +1797,94 @@ describe('Game API Endpoints', () => {
 
             setClubRole(1, testUser2Id, 'MEMBER');
         });
+
+        test('should use a custom riichi value through submit, finish, undo, and finish again', async () => {
+            const eventRow = dbManager.db.prepare('SELECT gameRules FROM event WHERE id = ?').get(TEST_EVENT_ID) as {
+                gameRules: number;
+            };
+            const rulesRow = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(
+                eventRow.gameRules
+            ) as {
+                details: string | null;
+            };
+            dbManager.db.prepare('UPDATE gameRules SET details = ? WHERE id = ?').run(
+                JSON.stringify({
+                    rules: {
+                        riichi_deposit_value: 1500,
+                        remaining_riichi_deposits: 'final_winner',
+                    },
+                }),
+                eventRow.gameRules
+            );
+
+            try {
+                const createResponse = await createTrackedGame();
+                const gameId = createResponse.body.id;
+                const roundWithRiichi = await request(app)
+                    .post(`/api/games/${gameId}/rounds/1`)
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        type: 'EXHAUSTIVE_DRAW',
+                        riichiPlayerIds: [testUser1Id],
+                        tenpaiPlayerIds: [],
+                        nagashiManganPlayerIds: [],
+                    });
+
+                expect(roundWithRiichi.status).toBe(200);
+                expect(roundWithRiichi.body.currentState.riichiSticks).toBe(1);
+                expect(
+                    roundWithRiichi.body.players.find((player: { userId: number }) => player.userId === testUser1Id)
+                        .points
+                ).toBe(28500);
+
+                const firstFinish = await finishGame(gameId, user1AuthHeader);
+                expect(firstFinish.status).toBe(200);
+                const firstFinishPoints = Object.fromEntries(
+                    firstFinish.body.players.map((player: { userId: number, points: number }) => [
+                        player.userId,
+                        player.points,
+                    ])
+                );
+                expect(firstFinishPoints).toMatchObject({
+                    [testUser1Id]: 28500,
+                    [testUser2Id]: 30500,
+                    [testUser3Id]: 30500,
+                    [testUser4Id]: 30500,
+                });
+
+                setClubRole(1, testUser2Id, 'MODERATOR');
+                const undoResponse = await undoFinishGame(gameId, createAuthHeader(testUser2Id));
+                expect(undoResponse.status).toBe(200);
+                expect(undoResponse.body.currentState.riichiSticks).toBe(1);
+                const undoPoints = Object.fromEntries(
+                    undoResponse.body.players.map((player: { userId: number, points: number }) => [
+                        player.userId,
+                        player.points,
+                    ])
+                );
+                expect(undoPoints).toMatchObject({
+                    [testUser1Id]: 28500,
+                    [testUser2Id]: 30000,
+                    [testUser3Id]: 30000,
+                    [testUser4Id]: 30000,
+                });
+
+                const secondFinish = await finishGame(gameId, user1AuthHeader);
+                expect(secondFinish.status).toBe(200);
+                expect(Object.fromEntries(
+                    secondFinish.body.players.map((player: { userId: number, points: number }) => [
+                        player.userId,
+                        player.points,
+                    ])
+                )).toEqual(firstFinishPoints);
+            } finally {
+                setClubRole(1, testUser2Id, 'MEMBER');
+                dbManager.db.prepare('UPDATE gameRules SET details = ? WHERE id = ?').run(
+                    rulesRow.details,
+                    eventRow.gameRules
+                );
+            }
+        });
     });
 
     describe('GET /api/games/:gameId - Get Game by ID', () => {

@@ -120,3 +120,9 @@ export class PlayerNotInGameError extends BadRequestError {
         super('playerNotInGame', { playerId });
     }
 }
+
+export class InsufficientPointsForRiichiError extends BadRequestError {
+    constructor(playerId: number, requiredPoints: number, actualPoints: number) {
+        super('insufficientPointsForRiichi', { playerId, requiredPoints, actualPoints });
+    }
+}

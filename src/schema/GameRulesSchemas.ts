@@ -24,6 +24,7 @@ const customRuleValueSchema = z.union([
 
 const customRuleNameSchema = z.string().trim().min(1, 'Custom rule name cannot be empty');
 const customRuleTooltipSchema = z.string().trim().min(1, 'Custom rule tooltip cannot be empty');
+const HONBA_PATTERN = /^[23]x(?:0|[1-9]\d*00)$/;
 
 const customRuleEntrySchema = z.strictObject({
     category: customRuleCategorySchema,
@@ -43,7 +44,9 @@ function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
             schema = z.number().int(`${spec.key} must be an integer`);
             break;
         case 'string':
-            schema = z.string();
+            schema = spec.key === 'honba'
+                ? z.string().regex(HONBA_PATTERN, 'honba must use 2x… or 3x… with a non-negative step-100 value')
+                : z.string();
             break;
         case 'enumString':
             schema = z.string().refine(
@@ -149,6 +152,33 @@ export function buildDetailsSchemaForCore(
                 code: 'custom',
                 message: NOTEN_PENALTY_DIVISIBILITY_MESSAGE,
                 path: ['rules', 'noten_penalty'],
+            });
+        }
+
+        const honba = details.rules['honba'];
+        if (typeof honba === 'string' && HONBA_PATTERN.test(honba)) {
+            const payerCount = Number(honba.split('x')[0]);
+            if (payerCount !== core.numberOfPlayers - 1) {
+                ctx.addIssue({
+                    code: 'custom',
+                    message: 'honba payer count must match top-level numberOfPlayers',
+                    path: ['rules', 'honba'],
+                });
+            }
+        }
+
+        const redFives = details.rules['red_fives'];
+        if (
+            core.numberOfPlayers === 3 &&
+            redFives !== undefined &&
+            redFives !== 'none' &&
+            redFives !== 'two_red_fives_five_pin_and_five_sou' &&
+            redFives !== 'four_red_fives_two_pin_and_two_sou'
+        ) {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'red_fives must represent 0, 2, or 4 red fives for sanma',
+                path: ['rules', 'red_fives'],
             });
         }
     }) as z.ZodType<GameRulesDetails>;

@@ -1,6 +1,7 @@
 interface RuleSpecBase {
     key: string;
     required?: boolean;
+    suggestions?: readonly (boolean | number | string)[];
 }
 
 interface BooleanRuleSpec extends RuleSpecBase {
@@ -67,11 +68,7 @@ export const gameRulesCatalog = {
         { key: 'furiten_from_kita', type: 'boolean' },
         { key: 'furiten_riichi', type: 'boolean' },
         { key: 'goal', type: 'integer', min: 0, multipleOf: 100 },
-        {
-            key: 'honba',
-            type: 'enumString',
-            enum: ['2x100', '2x200', '2x300', '2x500', '3x100', '3x200', '3x300', '3x500'],
-        },
+        { key: 'honba', type: 'string', suggestions: [100, 200, 300, 500] },
         { key: 'kan_dora', type: 'boolean' },
         { key: 'kan_dora_called_promoted_quad', type: 'enumString', enum: ['before_discard', 'after_discard'] },
         { key: 'kan_dora_concealed_quad', type: 'enumString', enum: ['before_discard', 'after_discard'] },
@@ -84,7 +81,7 @@ export const gameRulesCatalog = {
         { key: 'nagashi_mangan', type: 'boolean' },
         { key: 'nb_quads_max', type: 'enumInteger', enum: [4] },
         { key: 'north_as_yaku', type: 'boolean' },
-        { key: 'noten_penalty', type: 'integer', min: 0, multipleOf: 100 },
+        { key: 'noten_penalty', type: 'integer', min: 0, multipleOf: 100, suggestions: [0, 1000, 2000, 3000] },
         { key: 'number_of_players', type: 'enumInteger', enum: [3, 4], required: true },
         { key: 'oka', type: 'integer', min: 0 },
         { key: 'open_riichi', type: 'boolean' },
@@ -92,10 +89,16 @@ export const gameRulesCatalog = {
         {
             key: 'red_fives',
             type: 'enumString',
-            enum: ['none', 'three_one_per_suit', 'two_red_fives_five_pin_and_five_sou'],
+            enum: [
+                'none',
+                'three_one_per_suit',
+                'two_red_fives_five_pin_and_five_sou',
+                'four_red_fives_two_pin_and_two_sou',
+            ],
         },
         { key: 'remaining_riichi_deposits', type: 'enumString', enum: ['final_winner', 'lost'] },
         { key: 'riichi_1000_points_min', type: 'boolean' },
+        { key: 'riichi_deposit_value', type: 'integer', min: 0, multipleOf: 100, suggestions: [500, 1000, 1500, 2000] },
         { key: 'riichi_deposit_is_returned_if_one_of_multiple_ron', type: 'boolean' },
         { key: 'riichi_deposits_payment_on_multiple_ron', type: 'enumString', enum: ['bump'] },
         { key: 'riichi_on_the_last_tile', type: 'boolean' },

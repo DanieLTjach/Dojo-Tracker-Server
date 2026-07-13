@@ -20,6 +20,7 @@ import {
     TwoHanMinimumIsRequiredError,
     NoPlayersInTheGameError,
     AbortiveDrawNotInRulesetError,
+    InsufficientPointsForRiichiError,
 } from '../error/PointCalculationErrors.ts';
 import type { GameRules } from '../model/EventModels.ts';
 import type { GamePlayer, DetailedGame, GameState } from '../model/GameModels.ts';
@@ -49,6 +50,7 @@ import {
     getNotenPenalty,
     getNumberOfPlayers,
     getRemainingRiichiDeposits,
+    getRiichiDepositValue,
     getTenpaiYame,
     getTripleRonHandling,
     isContinuationWhenAbortionEnabled,
@@ -56,6 +58,7 @@ import {
     isManganRoundingUpEnabled,
     isNagashiManganEnabled,
     isRiichiDepositReturnedIfOneOfMultipleRon,
+    isRiichiDepositMinimumEnabled,
     isTwoHanMinimumEnabled,
     isWestRoundEnabled,
     isYakumanStackingEnabled,
@@ -78,6 +81,7 @@ export function calculateGameRoundResult(
     const detailedRules = rules.details.rules;
 
     validateResultPlayersInGame(game.players, result);
+    validateRiichiPlayersCanPay(game.players, detailedRules, result);
 
     const roundPointChanges = calculateRoundPointChanges(currentGameState, game.players, detailedRules, result);
 
@@ -115,6 +119,23 @@ export function calculateGameRoundResult(
         nextState: undefined,
         gameFinishReason,
     };
+}
+
+function validateRiichiPlayersCanPay(
+    players: GamePlayer[],
+    rules: GameRulesValues,
+    result: GameRoundResultInputDTO
+): void {
+    if (!isRiichiDepositMinimumEnabled(rules)) return;
+
+    const deposit = getRiichiDepositValue(rules);
+    const riichiPlayerIds = result.type === 'CHOMBO' ? [] : result.riichiPlayerIds;
+    for (const playerId of riichiPlayerIds) {
+        const player = players.find(candidate => candidate.userId === playerId)!;
+        if (player.points < deposit) {
+            throw new InsufficientPointsForRiichiError(playerId, deposit, player.points);
+        }
+    }
 }
 
 function calculateRoundPointChanges(
@@ -229,7 +250,7 @@ function calculateTsumoPointChanges(
     ];
     return mergePlayerPointChanges(
         result,
-        giveBankRiichiSticksToPlayer(gameState, tsumo.winningHandData.winnerPlayerId),
+        giveBankRiichiSticksToPlayer(gameState, rules, tsumo.winningHandData.winnerPlayerId),
         calculatePointChangesFromThisRoundRiichiCalls(
             rules,
             tsumo.riichiPlayerIds,
@@ -269,7 +290,7 @@ function calculateRonPointChanges(
         );
     return mergePlayerPointChanges(
         ...pointChangesFromEachHand,
-        giveBankRiichiSticksToPlayer(gameState, headBumpPlayerId),
+        giveBankRiichiSticksToPlayer(gameState, rules, headBumpPlayerId),
         calculatePointChangesFromThisRoundRiichiCalls(
             rules,
             ron.riichiPlayerIds,
@@ -408,7 +429,8 @@ function calculatePointChangesFromThisRoundRiichiCalls(
     }
     riichiPlayerIds = riichiPlayerIds.filter(playerId => playerId !== receiverPlayerId);
 
-    const payments = riichiPlayerIds.map(playerId => ({ playerId, pointChange: -1000 }));
+    const deposit = getRiichiDepositValue(rules);
+    const payments = riichiPlayerIds.map(playerId => ({ playerId, pointChange: -deposit }));
     const totalPayment = -payments.reduce((sum, payment) => sum + payment.pointChange, 0);
     return [
         ...payments,
@@ -427,7 +449,7 @@ function calculateExhaustiveDrawPointChanges(
     }
     return mergePlayerPointChanges(
         calculateNotenPaymentPointChanges(players, rules, exhaustiveDraw),
-        takeRiichiSticksFromPlayers(exhaustiveDraw.riichiPlayerIds)
+        takeRiichiSticksFromPlayers(rules, exhaustiveDraw.riichiPlayerIds)
     );
 }
 
@@ -464,7 +486,7 @@ function calculateNagashiManganPointChanges(
     );
     return mergePlayerPointChanges(
         ...nagashiManganPointChanges,
-        takeRiichiSticksFromPlayers(exhaustiveDraw.riichiPlayerIds)
+        takeRiichiSticksFromPlayers(rules, exhaustiveDraw.riichiPlayerIds)
     );
 }
 
@@ -504,7 +526,7 @@ function calculateAbortiveDrawPointChanges(rules: GameRulesValues, abortiveDraw:
         throw new AbortiveDrawNotInRulesetError();
     }
 
-    return takeRiichiSticksFromPlayers(abortiveDraw.riichiPlayerIds);
+    return takeRiichiSticksFromPlayers(rules, abortiveDraw.riichiPlayerIds);
 }
 
 function calculateChomboPointChanges(
@@ -540,15 +562,20 @@ function calculateChomboPointChanges(
     }
 }
 
-function giveBankRiichiSticksToPlayer(gameState: GameState, playerId: number): PlayerPointChange[] {
+function giveBankRiichiSticksToPlayer(
+    gameState: GameState,
+    rules: GameRulesValues,
+    playerId: number
+): PlayerPointChange[] {
     return [{
         playerId,
-        pointChange: gameState.riichiSticks * 1000,
+        pointChange: gameState.riichiSticks * getRiichiDepositValue(rules),
     }];
 }
 
-function takeRiichiSticksFromPlayers(riichiPlayerIds: number[]): PlayerPointChange[] {
-    return riichiPlayerIds.map(playerId => ({ playerId, pointChange: -1000 }));
+function takeRiichiSticksFromPlayers(rules: GameRulesValues, riichiPlayerIds: number[]): PlayerPointChange[] {
+    const deposit = getRiichiDepositValue(rules);
+    return riichiPlayerIds.map(playerId => ({ playerId, pointChange: -deposit }));
 }
 
 export function mergePlayerPointChanges(...arrays: PlayerPointChange[][]): PlayerPointChange[] {
@@ -928,17 +955,18 @@ function handleRemaningRiichiSticksAfterGameFinished(
         return [];
     }
 
-    return splitRemainingRiichiSticksAmongWinners(players, gameRules, riichiStickCount);
+    return splitRemainingRiichiSticksAmongWinners(players, gameRules, detailedRules, riichiStickCount);
 }
 
 function splitRemainingRiichiSticksAmongWinners(
     players: GamePlayer[],
     gameRules: GameRules,
+    detailedRules: GameRulesValues,
     riichiStickCount: number
 ): PlayerPointChange[] {
     const winners = getPlayersTiedForFirstPlace(players, gameRules);
 
-    const sharePerWinner = Math.floor(riichiStickCount * 1000 / winners.length);
+    const sharePerWinner = Math.floor(riichiStickCount * getRiichiDepositValue(detailedRules) / winners.length);
     if (sharePerWinner === 0) {
         return [];
     }

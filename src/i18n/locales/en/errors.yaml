@@ -160,6 +160,7 @@ errors:
   invalidHonbaFormat: Invalid honba value format in rules
   noPlayersInTheGame: Game has no players
   playerNotInGame: Player {{playerId}} is not in the game
+  insufficientPointsForRiichi: Player {{playerId}} needs at least {{requiredPoints}} points to declare riichi (currently {{actualPoints}})
 
   userRatingChangeInGameNotFound: Rating change for user {{userId}} in game {{gameId}} was not found
   userHasNoRatingDespiteHavingPlayedGames: User {{userId}} has no rating in event {{eventId}} despite having played games

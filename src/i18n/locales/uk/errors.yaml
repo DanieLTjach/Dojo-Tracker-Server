@@ -160,6 +160,7 @@ errors:
   invalidHonbaFormat: Некоректний формат значення хонби в правилах
   noPlayersInTheGame: Гра не має гравців
   playerNotInGame: Гравець {{playerId}} відсутній у грі
+  insufficientPointsForRiichi: Гравцю {{playerId}} потрібно щонайменше {{requiredPoints}} очок для оголошення ріічі (зараз {{actualPoints}})
 
   userRatingChangeInGameNotFound: Зміну рейтингу користувача {{userId}} в грі {{gameId}} не знайдено
   userHasNoRatingDespiteHavingPlayedGames: Користувач {{userId}} не має рейтингу в події {{eventId}} попри те, що має зіграні ігри
