@@ -53,6 +53,30 @@ describe('ErrorHandling Middleware', () => {
         expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('should return localized field errors without raw Zod data for game-rules requests', () => {
+        mockReq.url = '/api/game-rules';
+        const zodError = new ZodError([
+            {
+                code: 'custom',
+                path: ['body', 'details', 'rules', 'noten_penalty'],
+                message: 'noten_penalty must divide evenly among the noten players',
+            },
+        ]);
+
+        handleErrors(zodError, mockReq as Request, mockRes as Response, mockNext);
+
+        expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
+        expect(mockRes.json).toHaveBeenCalledWith({
+            errorCode: 'gameRulesValidationFailed',
+            message: 'Виправте виділені поля правил гри',
+            validationErrors: [{
+                path: 'details.rules.noten_penalty',
+                code: 'notenPenaltySplit',
+                message: 'Штраф за нотен має ділитися на цілу кількість очок для цієї кількості гравців.',
+            }],
+        });
+    });
+
     it('should handle SqliteError and return 500 with error details', () => {
         const sqliteError = new SqliteError('UNIQUE constraint failed', 'SQLITE_CONSTRAINT_UNIQUE');
 

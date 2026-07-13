@@ -1,5 +1,16 @@
 errors:
   invalidRequestData: Некоректні дані запиту
+  gameRulesValidationFailed: Виправте виділені поля правил гри
+  gameRulesValidationCoreFieldMismatch: Значення має збігатися з основним налаштуванням набору правил.
+  gameRulesValidationNotenPenaltySplit: Штраф за нотен має ділитися на цілу кількість очок для цієї кількості гравців.
+  gameRulesValidationInteger: Введіть ціле число.
+  gameRulesValidationMultipleOf: Введіть значення з потрібним кроком.
+  gameRulesValidationInvalidType: Введіть значення очікуваного типу.
+  gameRulesValidationInvalidValue: Виберіть або введіть дозволене значення.
+  gameRulesValidationTooSmall: Введіть значення не менше мінімального.
+  gameRulesValidationTooBig: Введіть значення не більше максимального.
+  gameRulesValidationInvalidFormat: Введіть значення у правильному форматі.
+  gameRulesValidationUnknownField: Це поле не підтримується.
   databaseError: "Помилка бази даних: {{message}}"
   internalServerError: Внутрішня помилка сервера
 

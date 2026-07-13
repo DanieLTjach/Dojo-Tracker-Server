@@ -249,6 +249,7 @@ describe('Game Rules API Endpoints', () => {
                 .get('/api/game-rules/invalid')
                 .set('Authorization', adminAuthHeader);
             expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameRulesValidationFailed');
         });
 
         test('should require authentication', async () => {
@@ -324,6 +325,16 @@ describe('Game Rules API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
+            expect(response.body).toMatchObject({
+                errorCode: 'gameRulesValidationFailed',
+                message: 'Виправте виділені поля правил гри',
+                validationErrors: [{
+                    path: 'details.preset',
+                    code: 'invalidValue',
+                    message: 'Виберіть або введіть дозволене значення.',
+                }],
+            });
+            expect(response.body).not.toHaveProperty('details');
         });
 
         test('should reject unknown top-level key in details', async () => {
