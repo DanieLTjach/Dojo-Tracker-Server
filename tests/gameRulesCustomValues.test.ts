@@ -1,12 +1,17 @@
 import { describe, expect, test } from '@jest/globals';
-import { buildDetailsSchemaForCore, gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
+import { buildDetailsSchemaForCore } from '../src/schema/GameRulesSchemas.ts';
 import { gameRulesCatalogByKey } from '../src/data/gameRulesCatalog.ts';
+import { gameRulesPresetsByKey } from '../src/data/gameRulesPresets.ts';
 import type { GameRulesValues } from '../src/data/gameRulesCatalog.ts';
-import { getNotenPenalty, getHonbaValue } from '../src/util/RulesUtils.ts';
-import { calculateGameRoundResult } from '../src/util/PointCalculationUtil.ts';
+import { getNotenPenalty, getHonbaValue, getRiichiDepositValue } from '../src/util/RulesUtils.ts';
+import {
+    calculateGameRoundResult,
+    calculateRemainingRiichiSticksPointChanges,
+} from '../src/util/PointCalculationUtil.ts';
 import { Wind } from '../src/model/GameModels.ts';
 import type { PlayerPointChange } from '../src/model/GameRoundResultModels.ts';
 import { detailedGame, fourPlayers, gameState, makeGameRules } from './pointCalculationUtil.helpers.ts';
+import { InsufficientPointsForRiichiError } from '../src/error/PointCalculationErrors.ts';
 
 const sortByPlayer = (changes: PlayerPointChange[]) => [...changes].sort((a, b) => a.playerId - b.playerId);
 
@@ -117,16 +122,12 @@ describe('custom noten_penalty (integer)', () => {
     });
 });
 
-describe('expanded honba enum', () => {
-    test('catalog enum is a superset of the original four values', () => {
+describe('configurable honba', () => {
+    test('catalog exposes common per-payer suggestions while retaining string storage', () => {
         const spec = gameRulesCatalogByKey.get('honba');
         expect(spec).toBeDefined();
-        expect(spec!.type).toBe('enumString');
-        if (spec!.type === 'enumString') {
-            for (const original of ['2x100', '3x100', '3x200', '3x500']) {
-                expect(spec!.enum).toContain(original);
-            }
-        }
+        expect(spec!.type).toBe('string');
+        expect(spec!.suggestions).toEqual([100, 200, 300, 500]);
     });
 
     test.each([
@@ -138,29 +139,151 @@ describe('expanded honba enum', () => {
         ['3x200', 200],
         ['3x300', 300],
         ['3x500', 500],
+        ['3x700', 700],
+        ['3x1200', 1200],
     ])('schema accepts honba %s and getHonbaValue parses it to %d', (honba, expected) => {
-        const result = gameRulesDetailsSchema.safeParse({
-            rules: { number_of_players: 4, starting_points: 30000, honba },
+        const result = (honba.startsWith('2x') ? sanmaDetailsSchema : yonmaDetailsSchema).safeParse({
+            rules: { honba },
         });
 
         expect(result.success).toBe(true);
         expect(getHonbaValue({ honba } as GameRulesValues)).toBe(expected);
     });
 
-    test('schema rejects an honba value outside the enum', () => {
-        const result = gameRulesDetailsSchema.safeParse({
-            rules: { number_of_players: 4, starting_points: 30000, honba: '4x100' },
+    test.each(['3x50', '3x-100', '3x100.5', '4x100'])('schema rejects invalid honba value %s', honba => {
+        const result = yonmaDetailsSchema.safeParse({
+            rules: { honba },
         });
 
         expect(result.success).toBe(false);
     });
 
-    test('schema rejects the removed 1x100 honba value', () => {
-        const result = gameRulesDetailsSchema.safeParse({
-            rules: { number_of_players: 4, starting_points: 30000, honba: '1x100' },
+    test('schema uses the top-level player count to validate the payer count', () => {
+        const result = sanmaDetailsSchema.safeParse({
+            rules: { honba: '3x500' },
         });
 
         expect(result.success).toBe(false);
+    });
+});
+
+describe('sanma akadora values', () => {
+    test.each([
+        'none',
+        'two_red_fives_five_pin_and_five_sou',
+        'four_red_fives_two_pin_and_two_sou',
+    ])('accepts %s', redFives => {
+        expect(sanmaDetailsSchema.safeParse({ rules: { red_fives: redFives } }).success).toBe(true);
+    });
+
+    test('rejects the yonma three-akadora value for sanma', () => {
+        expect(sanmaDetailsSchema.safeParse({ rules: { red_fives: 'three_one_per_suit' } }).success).toBe(false);
+    });
+});
+
+describe('configurable riichi deposits', () => {
+    const customRules: GameRulesValues = {
+        ...gameRulesPresetsByKey.get('ema_2025')!.rules,
+        riichi_deposit_value: 1500,
+    };
+
+    test('catalog exposes a step-100 non-negative integer with common suggestions', () => {
+        const spec = gameRulesCatalogByKey.get('riichi_deposit_value');
+        expect(spec).toMatchObject({
+            type: 'integer',
+            min: 0,
+            multipleOf: 100,
+            suggestions: [500, 1000, 1500, 2000],
+        });
+    });
+
+    test('missing value retains the legacy 1000-point behavior', () => {
+        expect(getRiichiDepositValue({})).toBe(1000);
+    });
+
+    test('tsumo scoring uses the configured value for bank payouts and new declarations', () => {
+        const result = calculateGameRoundResult(
+            detailedGame(fourPlayers(), gameState(Wind.EAST, 1, 0, 2)),
+            makeGameRules(customRules),
+            {
+                type: 'TSUMO',
+                winningHandData: { winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 },
+                riichiPlayerIds: [3],
+            }
+        );
+
+        expect(sortByPlayer(result.playerPointChanges)).toEqual([
+            { playerId: 1, pointChange: -2600 },
+            { playerId: 2, pointChange: 9700 },
+            { playerId: 3, pointChange: -2800 },
+            { playerId: 4, pointChange: -1300 },
+        ]);
+    });
+
+    test('ron scoring uses the configured value for bank payouts and new declarations', () => {
+        const result = calculateGameRoundResult(
+            detailedGame(fourPlayers(), gameState(Wind.EAST, 1, 0, 2)),
+            makeGameRules(customRules),
+            {
+                type: 'RON',
+                dealInPlayerId: 4,
+                winningHandData: [{ winnerPlayerId: 2, yakumanCount: 0, han: 3, fu: 40 }],
+                riichiPlayerIds: [3],
+            }
+        );
+
+        expect(sortByPlayer(result.playerPointChanges)).toEqual([
+            { playerId: 2, pointChange: 9700 },
+            { playerId: 3, pointChange: -1500 },
+            { playerId: 4, pointChange: -5200 },
+        ]);
+    });
+
+    test.each(['EXHAUSTIVE_DRAW', 'ABORTIVE_DRAW'] as const)(
+        '%s charges the configured declaration value and carries one bank stick',
+        type => {
+            const result = calculateGameRoundResult(
+                detailedGame(fourPlayers(), gameState(Wind.EAST, 1, 0, 0)),
+                makeGameRules({ ...customRules, abortive_draw: true }),
+                type === 'EXHAUSTIVE_DRAW'
+                    ? {
+                        type,
+                        tenpaiPlayerIds: [],
+                        nagashiManganPlayerIds: [],
+                        riichiPlayerIds: [2],
+                    }
+                    : { type, drawType: 'FOUR_WINDS', riichiPlayerIds: [2] }
+            );
+
+            expect(result.playerPointChanges).toContainEqual({ playerId: 2, pointChange: -1500 });
+            expect(result.nextState?.riichiSticks).toBe(1);
+        }
+    );
+
+    test('finish distribution uses the configured value', () => {
+        const rules = makeGameRules(customRules);
+        const changes = calculateRemainingRiichiSticksPointChanges(
+            fourPlayers([30000, 25000, 24000, 21000]),
+            rules,
+            2
+        );
+
+        expect(changes).toEqual([{ playerId: 1, pointChange: 3000 }]);
+    });
+
+    test('the legacy minimum flag requires enough points for the configured deposit', () => {
+        expect(() =>
+            calculateGameRoundResult(
+                detailedGame(fourPlayers([1000, 25000, 25000, 25000]), gameState(Wind.EAST)),
+                makeGameRules({ ...customRules, riichi_1000_points_min: true }),
+                {
+                    type: 'EXHAUSTIVE_DRAW',
+                    tenpaiPlayerIds: [],
+                    nagashiManganPlayerIds: [],
+                    riichiPlayerIds: [1],
+                }
+            )
+        ).toThrow(InsufficientPointsForRiichiError);
     });
 });
 

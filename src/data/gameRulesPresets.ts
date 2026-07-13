@@ -36,6 +36,7 @@ const defaultDef: GameRulesPresetDef = {
         open_riichi: false,
         open_tanyao: true,
         remaining_riichi_deposits: 'final_winner',
+        riichi_deposit_value: 1000,
         riichi_deposit_is_returned_if_one_of_multiple_ron: false,
         riichi_deposits_payment_on_multiple_ron: 'bump',
         riichi_on_the_last_tile: false,

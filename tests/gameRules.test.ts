@@ -44,6 +44,25 @@ describe('Game Rules API Endpoints', () => {
             });
         });
 
+        test('should expose suggestions for configurable scoring values', async () => {
+            const response = await request(app)
+                .get('/api/game-rules/catalog')
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.rules.find((rule: { key: string }) => rule.key === 'riichi_deposit_value'))
+                .toMatchObject({
+                    type: 'integer',
+                    min: 0,
+                    multipleOf: 100,
+                    suggestions: [500, 1000, 1500, 2000],
+                });
+            expect(response.body.rules.find((rule: { key: string }) => rule.key === 'honba')).toMatchObject({
+                type: 'string',
+                suggestions: [100, 200, 300, 500],
+            });
+        });
+
         test('should require authentication', async () => {
             const response = await request(app).get('/api/game-rules/catalog');
             expect(response.status).toBe(401);
