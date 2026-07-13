@@ -383,5 +383,34 @@ describe('Tournament seating generation', () => {
             const seatedIds = response.body.candidates[0].rounds[0].flat();
             expect(seatedIds).not.toContain(RESERVE_ID);
         });
+
+        it('reports team-draft-incomplete (not generic participant-count) when no teams are drafted yet', async () => {
+            dbManager.db.prepare('DELETE FROM teamMembership WHERE eventId = ?').run(TEAM_EVENT_ID);
+            dbManager.db.prepare('DELETE FROM team WHERE eventId = ?').run(TEAM_EVENT_ID);
+
+            const response = await request(app)
+                .post(`/api/events/${TEAM_EVENT_ID}/tournament/seating/generate`)
+                .set('Authorization', adminAuthHeader)
+                .send({ timeLimitMs: 1000, seed: 1 });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('teamDraftIncomplete');
+        });
+
+        it('reports team-draft-incomplete when teams are drafted but not full', async () => {
+            // Remove one member from a full team so the draft no longer matches the config.
+            dbManager.db.prepare('DELETE FROM teamMembership WHERE eventId = ? AND userId = ?').run(
+                TEAM_EVENT_ID,
+                TEAM_PLAYER_IDS[0]
+            );
+
+            const response = await request(app)
+                .post(`/api/events/${TEAM_EVENT_ID}/tournament/seating/generate`)
+                .set('Authorization', adminAuthHeader)
+                .send({ timeLimitMs: 1000, seed: 1 });
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('teamDraftIncomplete');
+        });
     });
 });

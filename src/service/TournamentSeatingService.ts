@@ -86,11 +86,11 @@ export class TournamentSeatingService {
     ): Promise<SeatingGenerationResultDTO> {
         const event = this.getTournamentEventForManagement(eventId, userId);
         this.assertTournamentHasNotStarted(event);
+        this.eventService.validateTeamTournamentComposition(event, true);
 
         const participantIds = this.getSeatableParticipantIds(event);
         const tables = this.resolveTableCount(event, participantIds.length);
         const rounds = event.tournament!.totalRounds;
-        this.eventService.validateTeamTournamentComposition(event, true);
 
         // For a team tournament, forbid two players of the same team at a table. The team
         // ids are aligned to the participant index order the generator works in, so the
