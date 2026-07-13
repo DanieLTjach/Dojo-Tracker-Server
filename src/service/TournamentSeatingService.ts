@@ -86,11 +86,15 @@ export class TournamentSeatingService {
     ): Promise<SeatingGenerationResultDTO> {
         const event = this.getTournamentEventForManagement(eventId, userId);
         this.assertTournamentHasNotStarted(event);
+        // For team tournaments, the team-completeness check is the relevant gate and must run
+        // before the generic participant-count check below — otherwise an empty/incomplete
+        // draft reports "0 participants" (counting teamed players) instead of the correct
+        // "form N full teams" message.
+        this.eventService.validateTeamTournamentComposition(event, true);
 
         const participantIds = this.getSeatableParticipantIds(event);
         const tables = this.resolveTableCount(event, participantIds.length);
         const rounds = event.tournament!.totalRounds;
-        this.eventService.validateTeamTournamentComposition(event, true);
 
         // For a team tournament, forbid two players of the same team at a table. The team
         // ids are aligned to the participant index order the generator works in, so the
