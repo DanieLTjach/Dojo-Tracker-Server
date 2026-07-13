@@ -23,7 +23,7 @@ import PollSchedulerService from './service/PollSchedulerService.ts';
 const app = express();
 app.use(express.json());
 app.use(cors({
-    origin: config.frontendUrl,
+    origin: config.frontendUrls,
 }));
 
 // Health check endpoint

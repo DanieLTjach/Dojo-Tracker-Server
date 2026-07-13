@@ -5,7 +5,7 @@ interface Config {
     jwtSecret: string;
     jwtExpiry: string;
     authInitDataValiditySeconds: number;
-    frontendUrl: string;
+    frontendUrls: string[];
     botUrl: string;
     botToken: string;
     globalLogsChatId: number | undefined;
@@ -72,7 +72,7 @@ const config: Config = {
     jwtSecret: getRequiredStringEnvVariable('JWT_SECRET'),
     jwtExpiry: process.env['JWT_EXPIRY'] || '7d',
     authInitDataValiditySeconds: tryParseIntEnvVariable('AUTH_INIT_DATA_VALIDITY_SECONDS') || 86400,
-    frontendUrl: getRequiredStringEnvVariable('FRONTEND_URL'),
+    frontendUrls: getRequiredStringEnvVariable('FRONTEND_URLS').split(',').map(url => url.trim()),
     botUrl: getRequiredStringEnvVariable('BOT_URL'),
     globalLogsChatId: globalLogsChatId,
     globalErrorLogsTopicId: tryParseIntEnvVariable('GLOBAL_ERROR_LOGS_TOPIC_ID'),
