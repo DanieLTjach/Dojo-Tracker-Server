@@ -148,6 +148,9 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         uma: parseUma(dbEntity.uma),
         startingPoints: dbEntity.startingPoints,
         umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak),
-        details: parseGameRulesDetailsAndApplyPresets(dbEntity.details),
+        details: parseGameRulesDetailsAndApplyPresets(dbEntity.details, {
+            numberOfPlayers: dbEntity.numberOfPlayers,
+            startingPoints: dbEntity.startingPoints,
+        }),
     };
 }

@@ -79,10 +79,14 @@ describe('Game Rules API Endpoints', () => {
             expect(preset).toHaveProperty('key');
             expect(preset).toHaveProperty('name');
             expect(preset).toHaveProperty('extends');
+            expect(preset).toHaveProperty('numberOfPlayers');
+            expect(preset).toHaveProperty('startingPoints');
             expect(preset).toHaveProperty('rules');
             expect(preset).toHaveProperty('ownRules');
             expect(typeof preset.rules).toBe('object');
             expect(typeof preset.ownRules).toBe('object');
+            expect([3, 4]).toContain(preset.numberOfPlayers);
+            expect(typeof preset.startingPoints).toBe('number');
         });
 
         test('should include public presets and hide the internal default preset', async () => {
@@ -277,7 +281,7 @@ describe('Game Rules API Endpoints', () => {
                         details: {
                             preset: 'ema_2025',
                             rules: {
-                                starting_points: 25000,
+                                starting_points: 30000,
                                 red_fives: 'three_one_per_suit',
                             },
                         },
@@ -289,7 +293,7 @@ describe('Game Rules API Endpoints', () => {
                 });
                 expect(response.body.details.rules.number_of_players).toBe(4);
                 expect(response.body.details.rules.open_tanyao).toBe(true);
-                expect(response.body.details.rules.starting_points).toBe(25000);
+                expect(response.body.details.rules.starting_points).toBe(30000);
                 expect(response.body.details.rules.red_fives).toBe('three_one_per_suit');
 
                 const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(ruleId) as {
@@ -299,7 +303,6 @@ describe('Game Rules API Endpoints', () => {
                 expect(stored).toEqual({
                     preset: 'ema_2025',
                     rules: {
-                        starting_points: 25000,
                         red_fives: 'three_one_per_suit',
                     },
                 });
@@ -456,11 +459,11 @@ describe('Game Rules API Endpoints', () => {
                     .put(`/api/game-rules/${ruleId}/details`)
                     .set('Authorization', createAuthHeader(ownerId))
                     .send({
-                        details: { preset: 'ema_2025', rules: { starting_points: 25000 } },
+                        details: { preset: 'ema_2025', rules: { starting_points: 30000 } },
                     });
                 expect(response.status).toBe(200);
                 expect(response.body.details.preset).toBe('ema_2025');
-                expect(response.body.details.rules.starting_points).toBe(25000);
+                expect(response.body.details.rules.starting_points).toBe(30000);
             } finally {
                 dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(clubId, ownerId);
                 dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(ownerId);
