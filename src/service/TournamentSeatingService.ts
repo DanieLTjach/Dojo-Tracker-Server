@@ -86,8 +86,9 @@ export class TournamentSeatingService {
     ): Promise<SeatingGenerationResultDTO> {
         const event = this.getTournamentEventForManagement(eventId, userId);
         this.assertTournamentHasNotStarted(event);
+        this.eventService.validateTeamTournamentComposition(event, true);
 
-        const participantIds = this.resolveSeatableParticipantIds(event);
+        const participantIds = this.getSeatableParticipantIds(event);
         const tables = this.resolveTableCount(event, participantIds.length);
         const rounds = event.tournament!.totalRounds;
 
@@ -249,18 +250,6 @@ export class TournamentSeatingService {
         }
         const teamMap = this.teamService.getPlayerTeamMapForEvent(event.id);
         return approved.filter(userId => teamMap.has(userId));
-    }
-
-    /**
-     * Seatable participant ids, having first validated that a team tournament's draft is
-     * complete. The team-completeness gate has to precede the count-based checks the caller
-     * runs on the result: for a team tournament the seatable count is the teamed players, so
-     * an empty/incomplete draft would otherwise surface as a misleading participant-count
-     * error rather than the actionable "form N full teams" one.
-     */
-    private resolveSeatableParticipantIds(event: Event): number[] {
-        this.eventService.validateTeamTournamentComposition(event, true);
-        return this.getSeatableParticipantIds(event);
     }
 
     /**
