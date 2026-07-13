@@ -537,6 +537,91 @@ describe('Game Rules API Endpoints', () => {
             dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(response.body.id);
         });
 
+        test('POST creates the screenshot sanma core and details atomically', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Lviv Sanma 2026 Summer',
+                    numberOfPlayers: 3,
+                    uma: [15, 0, -15],
+                    startingPoints: 40000,
+                    umaTieBreak: 'DIVIDE',
+                    clubId,
+                    details: {
+                        rules: {
+                            goal: 40000,
+                            honba: '2x500',
+                            noten_penalty: 2000,
+                            red_fives: 'two_red_fives_five_pin_and_five_sou',
+                            double_ron: 'yes',
+                            triple_ron: 'first',
+                            riichi_1000_points_min: true,
+                            riichi_without_a_next_draw: true,
+                            open_tanyao: true,
+                            counted_yakuman: true,
+                            yakuman_stacking: true,
+                            north_as_yaku: true,
+                        },
+                    },
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body).toMatchObject({
+                name: 'Lviv Sanma 2026 Summer',
+                numberOfPlayers: 3,
+                startingPoints: 40000,
+                details: {
+                    rules: {
+                        number_of_players: 3,
+                        starting_points: 40000,
+                        goal: 40000,
+                        honba: '2x500',
+                        noten_penalty: 2000,
+                    },
+                },
+            });
+
+            const stored = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(response.body.id) as {
+                details: string;
+            };
+            expect(JSON.parse(stored.details).rules).toMatchObject({
+                goal: 40000,
+                honba: '2x500',
+                noten_penalty: 2000,
+            });
+            expect(JSON.parse(stored.details).rules.number_of_players).toBeUndefined();
+            expect(JSON.parse(stored.details).rules.starting_points).toBeUndefined();
+
+            dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(response.body.id);
+        });
+
+        test('POST with invalid details leaves no partial ruleset', async () => {
+            const name = 'Invalid Atomic POST';
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...validBody,
+                    name,
+                    numberOfPlayers: 3,
+                    startingPoints: 40000,
+                    uma: [15, 0, -15],
+                    details: { rules: { starting_points: 35000 } },
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body).toMatchObject({
+                errorCode: 'gameRulesValidationFailed',
+                validationErrors: [{
+                    path: 'details.rules.starting_points',
+                    code: 'coreFieldMismatch',
+                }],
+            });
+            const row = dbManager.db.prepare('SELECT id FROM gameRules WHERE name = ?').get(name);
+            expect(row).toBeUndefined();
+        });
+
         test('POST creates rule as club owner', async () => {
             const response = await request(app)
                 .post('/api/game-rules')

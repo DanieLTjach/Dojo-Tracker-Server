@@ -154,6 +154,19 @@ export function buildDetailsSchemaForCore(
     }) as z.ZodType<GameRulesDetails>;
 }
 
+export function parseGameRulesDetailsForCore(
+    details: GameRulesDetails,
+    core: GameRulesCoreValidationContext
+): GameRulesDetails {
+    const result = buildDetailsSchemaForCore(core).safeParse(details);
+    if (result.success) return result.data;
+
+    throw new z.ZodError(result.error.issues.map(issue => ({
+        ...issue,
+        path: ['details', ...issue.path],
+    })));
+}
+
 export const gameRulesGetByIdSchema = z.object({
     params: z.object({
         id: gameRulesIdParamSchema,
@@ -190,8 +203,12 @@ export const gameRulesUpsertBodySchema = z.strictObject({
     clubId: z.number().int().nullable(),
 });
 
+const gameRulesCreateBodySchema = gameRulesUpsertBodySchema.extend({
+    details: gameRulesDetailsSchema.optional(),
+});
+
 export const gameRulesCreateSchema = z.object({
-    body: gameRulesUpsertBodySchema,
+    body: gameRulesCreateBodySchema,
 });
 
 const gameRulesUpdateBodySchema = gameRulesUpsertBodySchema.extend({
