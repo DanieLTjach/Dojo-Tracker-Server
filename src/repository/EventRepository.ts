@@ -392,7 +392,10 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             uma: parseUma(dbEntity.gr_uma),
             startingPoints: dbEntity.gr_startingPoints,
             umaTieBreak: parseUmaTieBreak(dbEntity.gr_umaTieBreak),
-            details: parseGameRulesDetailsAndApplyPresets(dbEntity.gr_details),
+            details: parseGameRulesDetailsAndApplyPresets(dbEntity.gr_details, {
+                numberOfPlayers: dbEntity.gr_numberOfPlayers,
+                startingPoints: dbEntity.gr_startingPoints,
+            }),
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,

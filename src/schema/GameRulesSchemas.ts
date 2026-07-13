@@ -79,20 +79,9 @@ export function notenPenaltyDivisorFor(numberOfPlayers: number): number {
     return numberOfPlayers === 3 ? 2 : 6;
 }
 
-// Resolve number_of_players from explicit rules first, then preset defaults.
-// Missing values are handled by the regular required-field validation.
-function notenPenaltyDividesCleanly(rules: Record<string, unknown>, presetKey?: string): boolean {
+function notenPenaltyDividesCleanly(rules: Record<string, unknown>, numberOfPlayers: number): boolean {
     const notenPenalty = rules['noten_penalty'];
     if (typeof notenPenalty !== 'number') {
-        return true;
-    }
-    const presetPlayers = presetKey
-        ? gameRulesPresetsByKey.get(presetKey)?.rules?.['number_of_players']
-        : undefined;
-    const numberOfPlayers = typeof rules['number_of_players'] === 'number'
-        ? rules['number_of_players'] as number
-        : (typeof presetPlayers === 'number' ? presetPlayers : undefined);
-    if (numberOfPlayers === undefined) {
         return true;
     }
     return notenPenalty % notenPenaltyDivisorFor(numberOfPlayers) === 0;
@@ -105,13 +94,7 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
     const allOptionalShape = Object.fromEntries(
         catalog.rules.map(spec => [spec.key, ruleSpecToSchema(spec).optional()])
     );
-    const withRequiredShape = Object.fromEntries(
-        catalog.rules.map(
-            spec => [spec.key, spec.required ? ruleSpecToSchema(spec) : ruleSpecToSchema(spec).optional()]
-        )
-    );
     const allOptionalRulesSchema = z.strictObject(allOptionalShape);
-    const withRequiredRulesSchema = z.strictObject(withRequiredShape);
 
     const presetSchema = z.string().trim().min(1, 'Preset cannot be empty').refine(
         key => {
@@ -123,28 +106,53 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
 
     const customRulesSchema = z.array(customRuleEntrySchema);
 
-    return z.union([
-        z.strictObject({
-            preset: presetSchema,
-            rules: allOptionalRulesSchema,
-            links: z.array(gameRulesLinkSchema).optional(),
-            customRules: customRulesSchema.optional(),
-        }).refine(
-            details => notenPenaltyDividesCleanly(details.rules, details.preset),
-            { error: NOTEN_PENALTY_DIVISIBILITY_MESSAGE, path: ['rules', 'noten_penalty'] }
-        ),
-        z.strictObject({
-            rules: withRequiredRulesSchema,
-            links: z.array(gameRulesLinkSchema).optional(),
-            customRules: customRulesSchema.optional(),
-        }).refine(
-            details => notenPenaltyDividesCleanly(details.rules),
-            { error: NOTEN_PENALTY_DIVISIBILITY_MESSAGE, path: ['rules', 'noten_penalty'] }
-        ),
-    ]) as z.ZodType<GameRulesDetails>;
+    return z.strictObject({
+        preset: presetSchema.optional(),
+        rules: allOptionalRulesSchema,
+        links: z.array(gameRulesLinkSchema).optional(),
+        customRules: customRulesSchema.optional(),
+    }) as z.ZodType<GameRulesDetails>;
 }
 
 export const gameRulesDetailsSchema = buildDetailsSchema(gameRulesCatalog);
+
+export interface GameRulesCoreValidationContext {
+    numberOfPlayers: number;
+    startingPoints: number;
+}
+
+export function buildDetailsSchemaForCore(
+    core: GameRulesCoreValidationContext,
+    catalog: GameRulesCatalog = gameRulesCatalog
+): z.ZodType<GameRulesDetails> {
+    return buildDetailsSchema(catalog).superRefine((details, ctx) => {
+        const duplicatePlayers = details.rules['number_of_players'];
+        if (duplicatePlayers !== undefined && duplicatePlayers !== core.numberOfPlayers) {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'number_of_players must match top-level numberOfPlayers',
+                path: ['rules', 'number_of_players'],
+            });
+        }
+
+        const duplicateStartingPoints = details.rules['starting_points'];
+        if (duplicateStartingPoints !== undefined && duplicateStartingPoints !== core.startingPoints) {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'starting_points must match top-level startingPoints',
+                path: ['rules', 'starting_points'],
+            });
+        }
+
+        if (!notenPenaltyDividesCleanly(details.rules, core.numberOfPlayers)) {
+            ctx.addIssue({
+                code: 'custom',
+                message: NOTEN_PENALTY_DIVISIBILITY_MESSAGE,
+                path: ['rules', 'noten_penalty'],
+            });
+        }
+    }) as z.ZodType<GameRulesDetails>;
+}
 
 export const gameRulesGetByIdSchema = z.object({
     params: z.object({
