@@ -93,6 +93,7 @@ export const gameRulesCatalog = {
                 'none',
                 'three_one_per_suit',
                 'two_red_fives_five_pin_and_five_sou',
+                'three_red_fives_two_pin_and_one_sou',
                 'four_red_fives_two_pin_and_two_sou',
             ],
         },
