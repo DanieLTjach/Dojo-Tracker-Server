@@ -90,8 +90,16 @@ function notenPenaltyDividesCleanly(rules: Record<string, unknown>, numberOfPlay
     return notenPenalty % notenPenaltyDivisorFor(numberOfPlayers) === 0;
 }
 
-const NOTEN_PENALTY_DIVISIBILITY_MESSAGE =
+// These custom refine messages are contract-coupled to publicCode() in
+// GameRulesValidationUtil.ts, which maps each exact string to a user-facing
+// validation code. Keep the two in sync — reword here, update the map there.
+export const CORE_FIELD_MISMATCH_MESSAGES = {
+    number_of_players: 'number_of_players must match top-level numberOfPlayers',
+    starting_points: 'starting_points must match top-level startingPoints',
+} as const;
+export const NOTEN_PENALTY_DIVISIBILITY_MESSAGE =
     'noten_penalty must divide evenly among the noten players (a multiple of 6 for yonma, 2 for sanma)';
+export const HONBA_PAYER_COUNT_MESSAGE = 'honba payer count must match top-level numberOfPlayers';
 
 export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRulesDetails> {
     const allOptionalShape = Object.fromEntries(
@@ -133,7 +141,7 @@ export function buildDetailsSchemaForCore(
         if (duplicatePlayers !== undefined && duplicatePlayers !== core.numberOfPlayers) {
             ctx.addIssue({
                 code: 'custom',
-                message: 'number_of_players must match top-level numberOfPlayers',
+                message: CORE_FIELD_MISMATCH_MESSAGES.number_of_players,
                 path: ['rules', 'number_of_players'],
             });
         }
@@ -142,7 +150,7 @@ export function buildDetailsSchemaForCore(
         if (duplicateStartingPoints !== undefined && duplicateStartingPoints !== core.startingPoints) {
             ctx.addIssue({
                 code: 'custom',
-                message: 'starting_points must match top-level startingPoints',
+                message: CORE_FIELD_MISMATCH_MESSAGES.starting_points,
                 path: ['rules', 'starting_points'],
             });
         }
@@ -161,7 +169,7 @@ export function buildDetailsSchemaForCore(
             if (payerCount !== core.numberOfPlayers - 1) {
                 ctx.addIssue({
                     code: 'custom',
-                    message: 'honba payer count must match top-level numberOfPlayers',
+                    message: HONBA_PAYER_COUNT_MESSAGE,
                     path: ['rules', 'honba'],
                 });
             }

@@ -1,5 +1,19 @@
 import type { $ZodIssue } from 'zod/v4/core';
 import { type SupportedLocale, t } from '../i18n/index.ts';
+import {
+    CORE_FIELD_MISMATCH_MESSAGES,
+    HONBA_PAYER_COUNT_MESSAGE,
+    NOTEN_PENALTY_DIVISIBILITY_MESSAGE,
+} from '../schema/GameRulesSchemas.ts';
+
+// Custom refine messages map to a stable user-facing code by exact identity, so
+// a reworded message surfaces a type error here rather than silently degrading.
+const CUSTOM_MESSAGE_CODES = new Map<string, string>([
+    [CORE_FIELD_MISMATCH_MESSAGES.number_of_players, 'coreFieldMismatch'],
+    [CORE_FIELD_MISMATCH_MESSAGES.starting_points, 'coreFieldMismatch'],
+    [NOTEN_PENALTY_DIVISIBILITY_MESSAGE, 'notenPenaltySplit'],
+    [HONBA_PAYER_COUNT_MESSAGE, 'honbaPayerCount'],
+]);
 
 export interface GameRulesValidationErrorEntry {
     path: string;
@@ -44,8 +58,8 @@ function publicPath(path: PropertyKey[]): string {
 }
 
 function publicCode(issue: ValidationIssueLike): string {
-    if (issue.message.includes('must match top-level')) return 'coreFieldMismatch';
-    if (issue.message.startsWith('noten_penalty must divide evenly')) return 'notenPenaltySplit';
+    const customCode = CUSTOM_MESSAGE_CODES.get(issue.message);
+    if (customCode) return customCode;
     if (issue.message.includes('must be an integer')) return 'integer';
     if (issue.message.includes('must be a multiple of')) return 'multipleOf';
     if (issue.message.includes('must be one of')) return 'invalidValue';

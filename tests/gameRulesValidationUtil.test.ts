@@ -1,6 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 import { ZodError } from 'zod';
 import { normalizeGameRulesValidationIssues } from '../src/util/GameRulesValidationUtil.ts';
+import { HONBA_PAYER_COUNT_MESSAGE } from '../src/schema/GameRulesSchemas.ts';
 
 describe('normalizeGameRulesValidationIssues', () => {
     test('flattens union issues into stable dotted paths and deduplicates them', () => {
@@ -42,6 +43,20 @@ describe('normalizeGameRulesValidationIssues', () => {
             path: 'details.rules.starting_points',
             code: 'coreFieldMismatch',
             message: 'Значення має збігатися з основним налаштуванням набору правил.',
+        }]);
+    });
+
+    test('gives honba payer-count mismatch its own code rather than coreFieldMismatch', () => {
+        const error = new ZodError([{
+            code: 'custom',
+            path: ['body', 'details', 'rules', 'honba'],
+            message: HONBA_PAYER_COUNT_MESSAGE,
+        }]);
+
+        expect(normalizeGameRulesValidationIssues(error.issues, 'en')).toEqual([{
+            path: 'details.rules.honba',
+            code: 'honbaPayerCount',
+            message: 'The honba value must match the number of paying players for this ruleset.',
         }]);
     });
 });

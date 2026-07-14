@@ -3,6 +3,7 @@ errors:
   gameRulesValidationFailed: Виправте виділені поля правил гри
   gameRulesValidationCoreFieldMismatch: Значення має збігатися з основним налаштуванням набору правил.
   gameRulesValidationNotenPenaltySplit: Штраф за нотен має ділитися на цілу кількість очок для цієї кількості гравців.
+  gameRulesValidationHonbaPayerCount: Значення хонби має відповідати кількості гравців, що платять, для цього набору правил.
   gameRulesValidationInteger: Введіть ціле число.
   gameRulesValidationMultipleOf: Введіть значення з потрібним кроком.
   gameRulesValidationInvalidType: Введіть значення очікуваного типу.
