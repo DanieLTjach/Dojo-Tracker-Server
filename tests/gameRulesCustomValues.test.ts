@@ -171,13 +171,16 @@ describe('sanma akadora values', () => {
     test.each([
         'none',
         'two_red_fives_five_pin_and_five_sou',
-        'four_red_fives_two_pin_and_two_sou',
+        'three_red_fives_two_pin_and_one_sou',
     ])('accepts %s', redFives => {
         expect(sanmaDetailsSchema.safeParse({ rules: { red_fives: redFives } }).success).toBe(true);
     });
 
-    test('rejects the yonma three-akadora value for sanma', () => {
-        expect(sanmaDetailsSchema.safeParse({ rules: { red_fives: 'three_one_per_suit' } }).success).toBe(false);
+    test.each([
+        'three_one_per_suit',
+        'four_red_fives_two_pin_and_two_sou',
+    ])('rejects the yonma-only value %s for sanma', redFives => {
+        expect(sanmaDetailsSchema.safeParse({ rules: { red_fives: redFives } }).success).toBe(false);
     });
 });
 

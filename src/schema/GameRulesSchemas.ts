@@ -101,6 +101,16 @@ export const NOTEN_PENALTY_DIVISIBILITY_MESSAGE =
     'noten_penalty must divide evenly among the noten players (a multiple of 6 for yonma, 2 for sanma)';
 export const HONBA_PAYER_COUNT_MESSAGE = 'honba payer count must match top-level numberOfPlayers';
 
+// Sanma only removes manzu 2-8, so the meaningful red-five configs are:
+// none (0), two (one 5p + one 5s), or three (two 5p + one 5s). The yonma-only
+// four (two 5p + two 5s) config is not valid for sanma.
+export const SANMA_RED_FIVES = new Set([
+    'none',
+    'two_red_fives_five_pin_and_five_sou',
+    'three_red_fives_two_pin_and_one_sou',
+]);
+export const SANMA_RED_FIVES_MESSAGE = 'red_fives must represent 0, 2, or 3 red fives for sanma';
+
 export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRulesDetails> {
     const allOptionalShape = Object.fromEntries(
         catalog.rules.map(spec => [spec.key, ruleSpecToSchema(spec).optional()])
@@ -179,13 +189,11 @@ export function buildDetailsSchemaForCore(
         if (
             core.numberOfPlayers === 3 &&
             redFives !== undefined &&
-            redFives !== 'none' &&
-            redFives !== 'two_red_fives_five_pin_and_five_sou' &&
-            redFives !== 'four_red_fives_two_pin_and_two_sou'
+            !SANMA_RED_FIVES.has(redFives as string)
         ) {
             ctx.addIssue({
                 code: 'custom',
-                message: 'red_fives must represent 0, 2, or 4 red fives for sanma',
+                message: SANMA_RED_FIVES_MESSAGE,
                 path: ['rules', 'red_fives'],
             });
         }
