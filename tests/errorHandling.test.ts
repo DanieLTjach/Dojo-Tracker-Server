@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import { ResponseStatusError } from '../src/error/BaseErrors.ts';
 import { ZodError } from 'zod';
 import { SqliteError } from 'better-sqlite3';
+import { NOTEN_PENALTY_DIVISIBILITY_MESSAGE } from '../src/schema/GameRulesSchemas.ts';
 import { jest } from '@jest/globals';
 
 describe('ErrorHandling Middleware', () => {
@@ -59,7 +60,7 @@ describe('ErrorHandling Middleware', () => {
             {
                 code: 'custom',
                 path: ['body', 'details', 'rules', 'noten_penalty'],
-                message: 'noten_penalty must divide evenly among the noten players',
+                message: NOTEN_PENALTY_DIVISIBILITY_MESSAGE,
             },
         ]);
 

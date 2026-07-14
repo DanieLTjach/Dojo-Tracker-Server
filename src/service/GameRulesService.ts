@@ -38,7 +38,7 @@ export class GameRulesService {
     updateGameRulesDetails(id: number, details: GameRulesDetails, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
         this.validateUserCanUpdateGameRules(gameRules, userId);
-        this.writeGameRulesDetails(id, details, gameRules);
+        this.writeGameRulesDetails(id, parseGameRulesDetailsForCore(details, gameRules));
         return this.getGameRulesById(id);
     }
 
@@ -55,7 +55,7 @@ export class GameRulesService {
             : parseGameRulesDetailsForCore(details, gameRulesParams);
         const newId = this.gameRulesRepository.insertGameRules(gameRulesParams);
         if (validatedDetails !== undefined) {
-            this.writeGameRulesDetails(newId, validatedDetails, gameRulesParams);
+            this.writeGameRulesDetails(newId, validatedDetails);
         }
         return this.getGameRulesById(newId);
     }
@@ -74,7 +74,7 @@ export class GameRulesService {
         }
 
         if (validatedDetails !== undefined) {
-            this.writeGameRulesDetails(id, validatedDetails, gameRulesParams);
+            this.writeGameRulesDetails(id, validatedDetails);
         }
 
         return this.getGameRulesById(id);
@@ -112,13 +112,10 @@ export class GameRulesService {
         }
     }
 
-    private writeGameRulesDetails(
-        id: number,
-        details: GameRulesDetails,
-        core: Pick<GameRules, 'numberOfPlayers' | 'startingPoints'>
-    ): void {
-        const validated = parseGameRulesDetailsForCore(details, core);
-        this.gameRulesRepository.updateGameRulesDetails(id, compactDetails(validated));
+    // Expects details already validated against the target core via
+    // parseGameRulesDetailsForCore; callers must parse before writing.
+    private writeGameRulesDetails(id: number, validatedDetails: GameRulesDetails): void {
+        this.gameRulesRepository.updateGameRulesDetails(id, compactDetails(validatedDetails));
     }
 }
 
