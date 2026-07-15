@@ -8,7 +8,7 @@ import type {
 import { PendingExternalAuthRegistrationRepository } from '../repository/PendingExternalAuthRegistrationRepository.ts';
 import { generateReadableNickname, normalizeProviderUsername } from '../util/NicknameUtil.ts';
 
-const REGISTRATION_TOKEN_TTL_MS = 10 * 60 * 1000;
+const REGISTRATION_TOKEN_TTL_MS = 30 * 60 * 1000;
 
 export class ExternalAuthRegistrationService {
     private repository = new PendingExternalAuthRegistrationRepository();

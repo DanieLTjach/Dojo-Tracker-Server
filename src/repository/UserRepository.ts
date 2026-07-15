@@ -114,7 +114,7 @@ export class UserRepository {
                 p.hideProfile as p_hideProfile
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
-            WHERE telegramUsername = :telegramUsername`);
+            WHERE telegramUsername = :telegramUsername COLLATE NOCASE`);
     }
 
     findUserByTelegramUsername(telegramUsername: string): User | undefined {

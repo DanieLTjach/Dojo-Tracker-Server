@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { HashUtil } from '../util/HashUtil.ts';
 import { UserService } from './UserService.ts';
 import { TokenService } from './TokenService.ts';
@@ -25,6 +26,9 @@ import {
     ClaimProofRequiredError,
     AuthProviderNotLinkedError,
     CannotUnlinkLastAuthProviderError,
+    ExternalAccountLinkRequiredError,
+    InvalidRefreshTokenError,
+    RefreshTokenExpiredError,
 } from '../error/AuthErrors.ts';
 import { UserIsNotActive } from '../error/UserErrors.ts';
 import { dbManager } from '../db/dbInit.ts';
@@ -34,6 +38,8 @@ import { ExternalAuthRegistrationService } from './ExternalAuthRegistrationServi
 import { AuthLinkCodeService } from './AuthLinkCodeService.ts';
 import LogService from './LogService.ts';
 import { globalUserLogsTopic } from '../model/TelegramTopic.ts';
+import { RefreshTokenRepository } from '../repository/RefreshTokenRepository.ts';
+import type { User } from '../model/UserModels.ts';
 
 type ExternalAuthResult = (TokenPair | ExternalAuthRegistrationRequired) & {
     providerSession?: ExternalAuthProviderSession;
@@ -50,6 +56,7 @@ export class AuthService {
     private externalAuthProviderRegistry: ExternalAuthProviderRegistry;
     private externalAuthRegistrationService = new ExternalAuthRegistrationService();
     private authLinkCodeService = new AuthLinkCodeService();
+    private refreshTokenRepository = new RefreshTokenRepository();
 
     constructor(externalAuthProviderRegistry: ExternalAuthProviderRegistry = new ExternalAuthProviderRegistry()) {
         this.externalAuthProviderRegistry = externalAuthProviderRegistry;
@@ -72,7 +79,42 @@ export class AuthService {
             throw new UserIsNotActive(user.id);
         }
 
-        return this.tokenService.createTokenPair(user);
+        return this.createSessionTokenPair(user);
+    }
+
+    refresh(refreshToken: unknown): TokenPair {
+        let reuseError: InvalidRefreshTokenError | undefined;
+        const tokenPair = dbManager.db.transaction(() => {
+            const tokenRow = this.findRefreshToken(refreshToken);
+            const now = new Date();
+
+            if (tokenRow.revokedAt !== null) {
+                throw new InvalidRefreshTokenError();
+            }
+            if (tokenRow.rotatedAt !== null) {
+                this.refreshTokenRepository.revokeFamily(tokenRow.familyId, now);
+                reuseError = new InvalidRefreshTokenError();
+                return undefined;
+            }
+            if (tokenRow.expiresAt.getTime() <= now.getTime()) {
+                throw new RefreshTokenExpiredError();
+            }
+
+            const user = this.userService.getUserById(tokenRow.userId);
+            this.validateUserIsActive(user.id, user.isActive);
+            this.refreshTokenRepository.markRotated(tokenRow.id, now);
+            const nextPair = this.createSessionTokenPair(user, tokenRow.familyId, now);
+            this.refreshTokenRepository.deleteExpired(now);
+            return nextPair;
+        })();
+
+        if (reuseError !== undefined) {
+            throw reuseError;
+        }
+        if (tokenPair === undefined) {
+            throw new InvalidRefreshTokenError();
+        }
+        return tokenPair;
     }
 
     async authenticateExternal(
@@ -111,6 +153,14 @@ export class AuthService {
         return this.externalAuthProviderRegistry.getAvailableProviders();
     }
 
+    checkExternalNickname(
+        registrationToken: string,
+        nickname: string
+    ): { accountLinkRequired: boolean } {
+        this.externalAuthRegistrationService.getValid(registrationToken);
+        return { accountLinkRequired: this.findExternalNicknameOwner(nickname) !== undefined };
+    }
+
     registerExternal(registrationToken: string, name: string, nickname: string): TokenPair {
         return dbManager.db.transaction(() => {
             const pending = this.externalAuthRegistrationService.getValid(registrationToken);
@@ -126,6 +176,10 @@ export class AuthService {
                 throw new AuthProviderIdentityAlreadyLinkedError(profile.provider);
             }
 
+            if (this.findExternalNicknameOwner(nickname) !== undefined) {
+                throw new ExternalAccountLinkRequiredError();
+            }
+
             const registrationFields = adapter.getRegistrationUserFields?.(profile) ?? {};
             const user = this.userService.registerUser(
                 name,
@@ -136,8 +190,13 @@ export class AuthService {
             );
             this.authProviderIdentityRepository.createIdentity(user.id, profile);
             this.externalAuthRegistrationService.consume(pending.tokenHash);
-            return this.tokenService.createTokenPair(user);
+            return this.createSessionTokenPair(user);
         })();
+    }
+
+    private findExternalNicknameOwner(nickname: string): User | undefined {
+        return this.userService.findUserByNickname(nickname) ??
+            this.userService.findUserByTelegramUsername(nickname);
     }
 
     createLinkCode(userId: number): LinkCodeDTO {
@@ -193,7 +252,7 @@ export class AuthService {
                 `User ${targetUserId} claimed ${pending.profile.provider} identity`,
                 globalUserLogsTopic
             );
-            return this.tokenService.createTokenPair(user);
+            return this.createSessionTokenPair(user);
         })();
     }
 
@@ -223,7 +282,7 @@ export class AuthService {
                 `User ${resolvedCode.userId} claimed Telegram Mini App identity`,
                 globalUserLogsTopic
             );
-            return this.tokenService.createTokenPair(user);
+            return this.createSessionTokenPair(user);
         })();
     }
 
@@ -335,14 +394,14 @@ export class AuthService {
             if (existingIdentity !== undefined) {
                 const user = this.userService.getUserById(existingIdentity.userId);
                 this.validateUserIsActive(user.id, user.isActive);
-                return this.tokenService.createTokenPair(user);
+                return this.createSessionTokenPair(user);
             }
 
             const existingLegacyUser = adapter.findLegacyUser?.(profile, this.userService);
             if (existingLegacyUser !== undefined) {
                 this.validateUserIsActive(existingLegacyUser.id, existingLegacyUser.isActive);
                 this.createIdentityForUser(existingLegacyUser.id, profile);
-                return this.tokenService.createTokenPair(existingLegacyUser);
+                return this.createSessionTokenPair(existingLegacyUser);
             }
 
             return this.externalAuthRegistrationService.create(profile);
@@ -403,6 +462,25 @@ export class AuthService {
         if (!isActive) {
             throw new UserIsNotActive(userId);
         }
+    }
+
+    private findRefreshToken(refreshToken: unknown) {
+        if (typeof refreshToken !== 'string' || refreshToken.length === 0) {
+            throw new InvalidRefreshTokenError();
+        }
+        const tokenRow = this.refreshTokenRepository.findByHash(this.tokenService.hashRefreshToken(refreshToken));
+        if (tokenRow === undefined) {
+            throw new InvalidRefreshTokenError();
+        }
+        return tokenRow;
+    }
+
+    private createSessionTokenPair(user: User, familyId: string = crypto.randomUUID(), now = new Date()): TokenPair {
+        const { accessToken } = this.tokenService.createTokenPair(user);
+        const refreshToken = this.tokenService.generateRefreshToken();
+        const expiresAt = new Date(now.getTime() + config.refreshTokenExpiryDays * 24 * 60 * 60 * 1000);
+        this.refreshTokenRepository.insert(user.id, refreshToken.tokenHash, familyId, expiresAt, now);
+        return { accessToken, refreshToken: refreshToken.token };
     }
 
     private toLinkedProviderDTO(identity: {

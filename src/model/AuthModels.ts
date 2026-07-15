@@ -1,9 +1,28 @@
 /**
  * Token pair returned after successful authentication
  */
-export interface TokenPair {
+export interface AccessTokenPair {
     accessToken: string;
-    refreshToken?: string; // Optional for future implementation
+}
+
+export interface TokenPair extends AccessTokenPair {
+    refreshToken: string;
+}
+
+export interface GeneratedRefreshToken {
+    token: string;
+    tokenHash: string;
+}
+
+export interface RefreshTokenRow {
+    id: number;
+    userId: number;
+    tokenHash: string;
+    familyId: string;
+    expiresAt: Date;
+    createdAt: Date;
+    rotatedAt: Date | null;
+    revokedAt: Date | null;
 }
 
 /**

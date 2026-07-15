@@ -51,6 +51,18 @@ export class InvalidTokenError extends UnauthorizedError {
     }
 }
 
+export class InvalidRefreshTokenError extends UnauthorizedError {
+    constructor() {
+        super('invalidRefreshToken');
+    }
+}
+
+export class RefreshTokenExpiredError extends UnauthorizedError {
+    constructor() {
+        super('refreshTokenExpired');
+    }
+}
+
 export class AuthProviderNotConfiguredError extends InternalServerError {
     constructor(provider: AuthProvider) {
         super('authProviderNotConfigured', { provider });
@@ -66,6 +78,12 @@ export class InvalidExternalAuthTokenError extends UnauthorizedError {
 export class InvalidExternalAuthRegistrationTokenError extends UnauthorizedError {
     constructor() {
         super('invalidExternalAuthRegistrationToken');
+    }
+}
+
+export class ExternalAccountLinkRequiredError extends ConflictError {
+    constructor() {
+        super('externalAccountLinkRequired');
     }
 }
 

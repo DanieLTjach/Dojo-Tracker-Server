@@ -10,9 +10,12 @@ errors:
   insufficientPermissions: Недостатньо прав для виконання цієї дії
   tokenExpired: Термін дії токена автентифікації минув. Перезайдіть в додаток
   invalidToken: Невалідний токен автентифікації. Перезайдіть в додаток
+  invalidRefreshToken: Невалідний refresh-токен. Перезайдіть в додаток
+  refreshTokenExpired: Термін дії сесії минув. Перезайдіть в додаток
   authProviderNotConfigured: Провайдер автентифікації {{provider}} не налаштований
   invalidExternalAuthToken: Невалідний токен автентифікації {{provider}}
   invalidExternalAuthRegistrationToken: Токен реєстрації зовнішньої автентифікації невалідний або прострочений
+  externalAccountLinkRequired: Цей нікнейм збігається з наявним акаунтом. Підтвердьте право власності, щоб прив’язати його.
   invalidLinkCode: Код прив'язки невалідний або прострочений
   claimProofRequired: Надайте рівно один доказ володіння обліковим записом
   authProviderNotLinked: Обліковий запис {{provider}} не прив'язано

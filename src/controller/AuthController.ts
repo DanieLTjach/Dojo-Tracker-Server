@@ -9,6 +9,8 @@ import {
     claimExternalAuthSchema,
     claimTelegramSchema,
     unlinkProviderSchema,
+    refreshAuthSchema,
+    externalAuthNicknameCheckSchema,
 } from '../schema/AuthSchemas.ts';
 import { AuthProvider } from '../model/AuthProviderModels.ts';
 
@@ -32,6 +34,12 @@ export class AuthController {
     authenticate(req: Request, res: Response) {
         const initDataParams = req.query as Record<string, string>;
         const result = this.authService.authenticate(initDataParams);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    refresh(req: Request, res: Response) {
+        const { body: { refreshToken } } = refreshAuthSchema.parse(req);
+        const result = this.authService.refresh(refreshToken);
         return res.status(StatusCodes.OK).json(result);
     }
 
@@ -84,6 +92,12 @@ export class AuthController {
     registerExternal(req: Request, res: Response) {
         const { body: { registrationToken, name, nickname } } = externalAuthRegistrationSchema.parse(req);
         const result = this.authService.registerExternal(registrationToken, name, nickname);
+        return res.status(StatusCodes.OK).json(result);
+    }
+
+    checkExternalNickname(req: Request, res: Response) {
+        const { body: { registrationToken, nickname } } = externalAuthNicknameCheckSchema.parse(req);
+        const result = this.authService.checkExternalNickname(registrationToken, nickname);
         return res.status(StatusCodes.OK).json(result);
     }
 

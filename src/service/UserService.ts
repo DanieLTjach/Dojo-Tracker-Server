@@ -86,6 +86,14 @@ export class UserService {
         return this.getUserByTelegramId(telegramId).status;
     }
 
+    findUserByTelegramUsername(telegramUsername: string): User | undefined {
+        return this.userRepository.findUserByTelegramUsername(telegramUsername);
+    }
+
+    findUserByNickname(nickname: string): User | undefined {
+        return this.userRepository.findUserByNickname(nickname);
+    }
+
     getAllUsers(requestingUserId?: number, clubId?: number): User[] {
         const users = clubId !== undefined
             ? this.userRepository.findAllUsersByClubId(clubId)

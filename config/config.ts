@@ -4,6 +4,7 @@ interface Config {
     dbPath: string;
     jwtSecret: string;
     jwtExpiry: string;
+    refreshTokenExpiryDays: number;
     authInitDataValiditySeconds: number;
     googleClientId: string | undefined;
     telegramLoginClientId: string | undefined;
@@ -99,6 +100,7 @@ const config: Config = {
     botToken: getRequiredStringEnvVariable('BOT_TOKEN'),
     jwtSecret: getRequiredStringEnvVariable('JWT_SECRET'),
     jwtExpiry: process.env['JWT_EXPIRY'] || '7d',
+    refreshTokenExpiryDays: tryParseIntEnvVariable('REFRESH_TOKEN_EXPIRY_DAYS') || 90,
     authInitDataValiditySeconds: tryParseIntEnvVariable('AUTH_INIT_DATA_VALIDITY_SECONDS') || 86400,
     googleClientId: getOptionalStringEnvVariable('GOOGLE_CLIENT_ID'),
     telegramLoginClientId: getOptionalStringEnvVariable('TELEGRAM_LOGIN_CLIENT_ID'),

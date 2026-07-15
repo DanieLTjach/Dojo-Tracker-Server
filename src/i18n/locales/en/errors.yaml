@@ -10,9 +10,12 @@ errors:
   insufficientPermissions: You do not have permission to perform this action
   tokenExpired: Authentication token has expired. Please sign in again
   invalidToken: Invalid authentication token. Please sign in again
+  invalidRefreshToken: Invalid refresh token. Please sign in again
+  refreshTokenExpired: Your session has expired. Please sign in again
   authProviderNotConfigured: Authentication provider {{provider}} is not configured
   invalidExternalAuthToken: Invalid {{provider}} authentication token
   invalidExternalAuthRegistrationToken: The external authentication registration token is invalid or expired
+  externalAccountLinkRequired: This nickname matches an existing account. Verify ownership to link it.
   invalidLinkCode: The link code is invalid or expired
   claimProofRequired: Provide exactly one claim proof
   authProviderNotLinked: The {{provider}} account is not linked

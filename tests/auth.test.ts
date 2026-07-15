@@ -26,6 +26,7 @@ import {
 } from '../src/service/ExternalAuthProviderRegistry.ts';
 import { hashRegistrationToken } from '../src/service/ExternalAuthRegistrationService.ts';
 import { AuthLinkCodeService, hashLinkCode } from '../src/service/AuthLinkCodeService.ts';
+import { TokenService } from '../src/service/TokenService.ts';
 
 const app = express();
 app.use(express.json());
@@ -431,8 +432,8 @@ describe('Authentication API Endpoints', () => {
             expect(response.body.suggestedNickname).toBe('@ihor_k');
         });
 
-        it('keeps the registration token after a nickname tripwire conflict without revealing account data', async () => {
-            userService.registerUser('Nickname Owner', '@nickname_tripwire', undefined, undefined, 0);
+        it('checks nickname ownership without revealing account data and keeps the continuation reusable', async () => {
+            userService.registerUser('Nickname Owner', '@nickname_tripwire', '@nickname_tripwire', undefined, 0);
             const externalAuthApp = createExternalAuthApp(
                 new FakeExternalAuthTokenVerifier({
                     'google-nickname-tripwire': {
@@ -447,6 +448,13 @@ describe('Authentication API Endpoints', () => {
                 .expect(200);
             const registrationToken = authResponse.body.registrationToken as string;
 
+            const check = await request(externalAuthApp)
+                .post('/api/auth/register/check-nickname')
+                .send({ registrationToken, nickname: '@NICKNAME_TRIPWIRE' })
+                .expect(200);
+            expect(check.body).toEqual({ accountLinkRequired: true });
+            expect(JSON.stringify(check.body)).not.toContain('Nickname Owner');
+
             const conflict = await request(externalAuthApp)
                 .post('/api/auth/register')
                 .send({
@@ -454,8 +462,8 @@ describe('Authentication API Endpoints', () => {
                     name: 'Nickname Claim Candidate',
                     nickname: '@NICKNAME_TRIPWIRE',
                 })
-                .expect(400);
-            expect(conflict.body.errorCode).toBe('nicknameAlreadyTaken');
+                .expect(409);
+            expect(conflict.body.errorCode).toBe('externalAccountLinkRequired');
             expect(JSON.stringify(conflict.body)).not.toContain('Nickname Owner');
 
             await request(externalAuthApp)
@@ -466,6 +474,48 @@ describe('Authentication API Endpoints', () => {
                     nickname: '@nickname_tripwire_retry',
                 })
                 .expect(200);
+        });
+
+        it('finds a Telegram username before asking for a registration name', async () => {
+            userService.registerUser(
+                'Exact Match Owner',
+                '@different_club_nickname',
+                '@exact_match_owner',
+                undefined,
+                0
+            );
+            const externalAuthApp = createExternalAuthApp(
+                new FakeExternalAuthTokenVerifier({}, {}, {
+                    'discord-exact-match': {
+                        provider: AuthProvider.DISCORD,
+                        providerUserId: 'discord-exact-match',
+                    },
+                })
+            );
+            const authResponse = await request(externalAuthApp)
+                .post('/api/auth/discord')
+                .send({ flow: 'ACTIVITY', code: 'discord-exact-match' })
+                .expect(200);
+
+            const check = await request(externalAuthApp)
+                .post('/api/auth/register/check-nickname')
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    nickname: '@EXACT_MATCH_OWNER',
+                })
+                .expect(200);
+            expect(check.body).toEqual({ accountLinkRequired: true });
+
+            const conflict = await request(externalAuthApp)
+                .post('/api/auth/register')
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    name: 'Completely Different Name',
+                    nickname: '@EXACT_MATCH_OWNER',
+                })
+                .expect(409);
+
+            expect(conflict.body.errorCode).toBe('externalAccountLinkRequired');
         });
 
         it('creates a Google-only user after explicit registration', async () => {
@@ -496,6 +546,7 @@ describe('Authentication API Endpoints', () => {
             const user = userRepository.findUserByName('Google Registered')!;
             const identity = authProviderIdentityRepository.findIdentity(AuthProvider.GOOGLE, 'google-register')!;
             expect(response.body).toHaveProperty('accessToken');
+            expect(response.body).toHaveProperty('refreshToken');
             expect(user.telegramId).toBeNull();
             expect(identity.userId).toBe(user.id);
             expect(identity.email).toBe('registered@example.com');
@@ -913,6 +964,14 @@ describe('Authentication API Endpoints', () => {
                 .post('/api/auth/discord')
                 .send({ flow: 'ACTIVITY', code: 'discord-register-code' })
                 .expect(200);
+            const checkResponse = await request(externalAuthApp)
+                .post('/api/auth/register/check-nickname')
+                .send({
+                    registrationToken: authResponse.body.registrationToken,
+                    nickname: '@discord_registered',
+                })
+                .expect(200);
+            expect(checkResponse.body).toEqual({ accountLinkRequired: false });
             const response = await request(externalAuthApp)
                 .post('/api/auth/register')
                 .send({
@@ -925,6 +984,7 @@ describe('Authentication API Endpoints', () => {
             const user = userRepository.findUserByName('Discord Registered')!;
             const identity = authProviderIdentityRepository.findIdentity(AuthProvider.DISCORD, 'discord-register')!;
             expect(response.body).toHaveProperty('accessToken');
+            expect(response.body).toHaveProperty('refreshToken');
             expect(user.telegramId).toBeNull();
             expect(identity.userId).toBe(user.id);
         });
@@ -959,6 +1019,58 @@ describe('Authentication API Endpoints', () => {
                     expiresIn: 3600,
                 },
             });
+        });
+    });
+
+    describe('refresh tokens', () => {
+        it('stores only a hash and rotates a refresh token', async () => {
+            const authResponse = await request(app)
+                .post('/api/authenticate')
+                .query(generateValidInitData(TEST_TELEGRAM_ID, TEST_USERNAME))
+                .expect(200);
+            const firstRefreshToken = authResponse.body.refreshToken as string;
+            const tokenService = new TokenService();
+            const stored = dbManager.db.prepare(
+                'SELECT tokenHash, rotatedAt FROM refreshToken WHERE tokenHash = ?'
+            ).get(tokenService.hashRefreshToken(firstRefreshToken)) as { tokenHash: string, rotatedAt: string | null };
+
+            expect(stored.tokenHash).not.toBe(firstRefreshToken);
+            expect(stored.rotatedAt).toBeNull();
+
+            const refreshResponse = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: firstRefreshToken })
+                .expect(200);
+
+            expect(refreshResponse.body.accessToken).toEqual(expect.any(String));
+            expect(refreshResponse.body.refreshToken).toEqual(expect.any(String));
+            expect(refreshResponse.body.refreshToken).not.toBe(firstRefreshToken);
+            const rotated = dbManager.db.prepare(
+                'SELECT rotatedAt FROM refreshToken WHERE tokenHash = ?'
+            ).get(tokenService.hashRefreshToken(firstRefreshToken)) as { rotatedAt: string | null };
+            expect(rotated.rotatedAt).not.toBeNull();
+        });
+
+        it('revokes the refresh-token family when a rotated token is reused', async () => {
+            const authResponse = await request(app)
+                .post('/api/authenticate')
+                .query(generateValidInitData(TEST_TELEGRAM_ID, TEST_USERNAME))
+                .expect(200);
+            const first = authResponse.body.refreshToken as string;
+            const rotatedResponse = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: first })
+                .expect(200);
+
+            await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: first })
+                .expect(401);
+            const rejected = await request(app)
+                .post('/api/authenticate/refresh')
+                .send({ refreshToken: rotatedResponse.body.refreshToken })
+                .expect(401);
+            expect(rejected.body.errorCode).toBe('invalidRefreshToken');
         });
     });
 

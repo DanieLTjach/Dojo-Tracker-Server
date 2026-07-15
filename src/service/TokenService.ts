@@ -1,6 +1,7 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import type { SignOptions } from 'jsonwebtoken';
-import type { TokenPair, DecodedToken } from '../model/AuthModels.ts';
+import type { AccessTokenPair, DecodedToken, GeneratedRefreshToken } from '../model/AuthModels.ts';
 import type { User } from '../model/UserModels.ts';
 import config from '../../config/config.ts';
 import { InvalidTokenError, TokenExpiredError } from '../error/AuthErrors.ts';
@@ -12,12 +13,21 @@ export class TokenService {
      * @param user - The user to create tokens for
      * @returns TokenPair with accessToken
      */
-    createTokenPair(user: User): TokenPair {
+    createTokenPair(user: User): AccessTokenPair {
         const payload: DecodedToken = { userId: user.id };
         const accessToken = jwt.sign(payload, config.jwtSecret, {
             expiresIn: config.jwtExpiry,
         } as SignOptions);
         return { accessToken };
+    }
+
+    generateRefreshToken(): GeneratedRefreshToken {
+        const token = crypto.randomBytes(32).toString('base64url');
+        return { token, tokenHash: this.hashRefreshToken(token) };
+    }
+
+    hashRefreshToken(token: string): string {
+        return crypto.createHash('sha256').update(token).digest('hex');
     }
 
     /**

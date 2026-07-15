@@ -40,6 +40,19 @@ export const externalAuthRegistrationSchema = z.object({
     }),
 });
 
+export const externalAuthNicknameCheckSchema = z.object({
+    body: z.object({
+        registrationToken: z.string().trim().min(1, 'Registration token is required'),
+        nickname: nicknameSchema,
+    }),
+});
+
+export const refreshAuthSchema = z.object({
+    body: z.object({
+        refreshToken: z.string().trim().min(1, 'Refresh token is required'),
+    }),
+});
+
 const linkCodeSchema = z.string()
     .trim()
     .regex(/^[A-Za-z0-9]{8}$/, 'Invalid link code')
