@@ -345,6 +345,25 @@ describe('User API Endpoints', () => {
         });
     });
 
+    describe('GET /api/users/current', () => {
+        it('should return the requesting user own record', async () => {
+            const response = await request(app)
+                .get('/api/users/current')
+                .set('Authorization', regularUserAuthHeader)
+                .expect(200);
+
+            expect(response.body).toHaveProperty('id', testUserId);
+            expect(response.body).toHaveProperty('name');
+        });
+
+        it('should fail when no authentication token provided', async () => {
+            const response = await request(app)
+                .get('/api/users/current');
+
+            expect(response.status).toBe(401);
+        });
+    });
+
     describe('GET /api/users/by-telegram-id/:telegramId', () => {
         it('should return a user by telegram id (requires auth)', async () => {
             const response = await request(app)

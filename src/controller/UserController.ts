@@ -41,6 +41,12 @@ export class UserController {
         return res.status(StatusCodes.OK).json(result);
     }
 
+    getCurrentUser(req: Request, res: Response) {
+        const userId = req.user!.userId;
+        const user = this.userService.getUserById(userId, userId);
+        return res.status(StatusCodes.OK).json(user);
+    }
+
     getAllUsers(req: Request, res: Response) {
         const { query } = getUserListSchema.parse(req);
         const requestingUserId = req.user!.userId;

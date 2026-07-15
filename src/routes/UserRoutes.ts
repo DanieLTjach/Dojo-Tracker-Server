@@ -17,6 +17,9 @@ const achievementController = new AchievementController();
 router.post('/', withTransaction((req, res) => userController.registerUser(req, res)));
 // Public - get current user status
 router.post('/current/status', withTransaction((req, res) => userController.getCurrentUserStatus(req, res)));
+// Authenticated - get the current user's own record (identity comes from the JWT,
+// so external-auth hosts without Telegram initData can load their profile)
+router.get('/current', requireAuth, withTransaction((req, res) => userController.getCurrentUser(req, res)));
 // Authenticated - get current user's club memberships
 router.get(
     '/current/clubs',
