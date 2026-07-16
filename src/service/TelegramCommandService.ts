@@ -1234,12 +1234,7 @@ class TelegramCommandService {
         }
 
         const user = this.userService.getOptionalUserByTelegramId(ctx.from.id);
-        if (user === undefined) {
-            LogService.logError(`Received telegram command from unregistered user with id: ${ctx.from.id}: ${ctx}`);
-            ctx.reply(t('telegram.errors.userNotRegistered', DEFAULT_LOCALE));
-            return;
-        }
-        const locale = resolveUserLocale(user);
+        const locale = user !== undefined ? resolveUserLocale(user) : DEFAULT_LOCALE;
 
         try {
             // Object.assign (not spread) so ctx's prototype methods (reply, etc.) survive
