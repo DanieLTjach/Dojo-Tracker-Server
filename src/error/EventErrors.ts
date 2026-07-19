@@ -172,8 +172,8 @@ export class SeatingNotEnoughParticipantsError extends BadRequestError {
 }
 
 export class SeatingParticipantsNotMultipleOfTableSizeError extends BadRequestError {
-    constructor(eventName: string, count: number) {
-        super('seatingParticipantsNotMultipleOfTableSize', { eventName, count });
+    constructor(eventName: string, count: number, tableSize: number) {
+        super('seatingParticipantsNotMultipleOfTableSize', { eventName, count, tableSize });
     }
 }
 
@@ -261,9 +261,9 @@ export class InvalidTeamCountError extends BadRequestError {
     }
 }
 
-export class TeamCountNotDivisibleByFourError extends BadRequestError {
-    constructor() {
-        super('teamCountNotDivisibleByFour');
+export class TeamCountNotDivisibleByTableSizeError extends BadRequestError {
+    constructor(tableSize: number) {
+        super('teamCountNotDivisibleByTableSize', { tableSize });
     }
 }
 

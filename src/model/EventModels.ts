@@ -109,8 +109,8 @@ export type PlayerNameDisplay = typeof PlayerNameDisplay[keyof typeof PlayerName
 /**
  * Per-team-tournament sizing. The draft minimum is NOT stored here — it reuses
  * the existing EventConfig.minParticipants. Invariants (validated in EventService):
- * minParticipants === teamSize * teamCount, and teamCount is divisible by 4 (each
- * table seats one player from four distinct teams).
+ * minParticipants === teamSize * teamCount, and teamCount is divisible by the
+ * event's number of players per table.
  */
 export interface TeamTournamentConfig {
     teamSize: number;

@@ -152,6 +152,44 @@ describe('Tournament seating generation', () => {
             }
         });
 
+        it('generates and applies three-player tables for sanma rules', async () => {
+            dbManager.db.prepare('UPDATE event SET gameRules = 3 WHERE id = ?').run(TOURNAMENT_EVENT_ID);
+            dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId = ? AND userId IN (?, ?)').run(
+                TOURNAMENT_EVENT_ID,
+                PLAYER_IDS[6],
+                PLAYER_IDS[7]
+            );
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/seating/generate`)
+                .set('Authorization', adminAuthHeader)
+                .send({ timeLimitMs: 1000, candidateCount: 1, seed: 123 });
+
+            expect(response.status).toBe(200);
+            expect(response.body.tables).toBe(2);
+            expect(response.body.participantCount).toBe(6);
+            expect(response.body.candidates[0].repeatCounts).not.toHaveProperty('fourPlayers');
+            for (const table of response.body.candidates[0].rounds[0]) {
+                expect(table).toHaveLength(3);
+                expect(table.map((seat: { seat: string }) => seat.seat)).toEqual(['EAST', 'SOUTH', 'WEST']);
+            }
+
+            const rounds = response.body.candidates[0].rounds.map((round: { userId: number }[][]) =>
+                round.map(table => table.map(seat => seat.userId))
+            );
+            const applyResponse = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/seating/apply`)
+                .set('Authorization', adminAuthHeader)
+                .send({ rounds });
+
+            expect(applyResponse.status).toBe(201);
+            expect(applyResponse.body.created).toBe(2);
+            expect(applyResponse.body.games).toHaveLength(2);
+            for (const game of applyResponse.body.games) {
+                expect(game.players).toHaveLength(3);
+            }
+        });
+
         it('is deterministic for a given seed', async () => {
             const send = () =>
                 request(app)
