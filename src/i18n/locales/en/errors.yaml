@@ -24,6 +24,16 @@ errors:
   inviteExpired: This invite has expired
   inviteExhausted: This invite has reached its usage limit
   nameRequiredForNewUser: Name is required for registration
+  clubAchievementDefinitionNotFound: Achievement definition with id {{definitionId}} was not found
+  clubAchievementDefinitionNameAlreadyExists: "An achievement named '{{name}}' already exists in this club"
+  clubAchievementDefinitionArchived: "Achievement '{{name}}' is archived and cannot be assigned"
+  clubAchievementDefinitionFromAnotherClub: Achievement definition {{definitionId}} belongs to a different club
+  invalidAchievementSource: Provide exactly one of a built-in achievement code, a custom definition id, or a new definition to create
+  unknownBuiltInAchievementCode: "Unknown built-in achievement code '{{code}}'"
+  clubAchievementAlreadyAssigned: User {{userId}} already has this achievement
+  clubAchievementAssignmentNotFound: Achievement assignment with id {{assignmentId}} was not found
+  clubAchievementAssignmentAlreadyRevoked: Achievement assignment {{assignmentId}} has already been revoked
+  targetNotActiveClubMember: User {{userId}} must be an active club member to receive this achievement
 
   eventNotFound: Event with id {{eventId}} was not found
   gameRulesNotFound: Game rules with id {{gameRulesId}} were not found

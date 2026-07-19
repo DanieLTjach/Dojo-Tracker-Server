@@ -24,6 +24,16 @@ errors:
   inviteExpired: Термін дії цього запрошення сплив
   inviteExhausted: Це запрошення вичерпало ліміт використань
   nameRequiredForNewUser: Для реєстрації потрібно вказати імʼя
+  clubAchievementDefinitionNotFound: Нагороду з id {{definitionId}} не знайдено
+  clubAchievementDefinitionNameAlreadyExists: "Нагорода з назвою '{{name}}' вже існує в цьому клубі"
+  clubAchievementDefinitionArchived: "Нагорода '{{name}}' архівована і не може бути присвоєна"
+  clubAchievementDefinitionFromAnotherClub: Нагорода {{definitionId}} належить іншому клубу
+  invalidAchievementSource: Вкажіть рівно одне з наступного — код вбудованої нагороди, id власної нагороди або дані для створення нової нагороди
+  unknownBuiltInAchievementCode: "Невідомий код вбудованої нагороди '{{code}}'"
+  clubAchievementAlreadyAssigned: Користувач {{userId}} вже має цю нагороду
+  clubAchievementAssignmentNotFound: Присвоєння нагороди з id {{assignmentId}} не знайдено
+  clubAchievementAssignmentAlreadyRevoked: Присвоєння нагороди {{assignmentId}} вже скасовано
+  targetNotActiveClubMember: Користувач {{userId}} має бути активним учасником клубу, щоб отримати цю нагороду
 
   eventNotFound: Подію з id {{eventId}} не знайдено
   gameRulesNotFound: Правила гри з id {{gameRulesId}} не знайдено
