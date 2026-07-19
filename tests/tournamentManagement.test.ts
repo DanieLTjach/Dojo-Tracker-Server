@@ -330,6 +330,39 @@ describe('Tournament management', () => {
         expect(currentGame.body.status).toBe('IN_PROGRESS');
     });
 
+    test('records a planned result only for a game in the current tournament round', async () => {
+        const round1GameId = importRound(1);
+        const round2GameId = importRound(2);
+        await request(app)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+            .set('Authorization', adminAuthHeader)
+            .send({})
+            .expect(200);
+
+        const results = PLAYER_IDS.map((userId, index) => ({
+            userId,
+            points: [45000, 32000, 25000, 18000][index],
+        }));
+        const futureRound = await request(app)
+            .post(`/api/games/${round2GameId}/result`)
+            .set('Authorization', adminAuthHeader)
+            .send({ results });
+        expect(futureRound.status).toBe(400);
+        expect(futureRound.body.errorCode).toBe('tournamentGameNotInCurrentRound');
+
+        const currentRound = await request(app)
+            .post(`/api/games/${round1GameId}/result`)
+            .set('Authorization', playerAuthHeader)
+            .send({ results });
+        expect(currentRound.status).toBe(200);
+        expect(currentRound.body).toMatchObject({
+            id: round1GameId,
+            status: 'FINISHED',
+            tournamentRound: 1,
+            rounds: [],
+        });
+    });
+
     test('keeps CREATED non-tournament tracked game start behavior unchanged', async () => {
         createCustomEvent(
             SEASON_EVENT_ID,

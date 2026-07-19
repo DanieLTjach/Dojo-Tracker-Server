@@ -31,6 +31,11 @@ router.delete(
 router.post('/:gameId/start', requireAuth, withTransaction((req, res) => gameController.startTrackedGame(req, res)));
 router.post('/:gameId/finish', requireAuth, withTransaction((req, res) => gameController.finishGame(req, res)));
 router.post(
+    '/:gameId/result',
+    requireAuth,
+    withTransaction((req, res) => gameController.recordPlannedGameResult(req, res))
+);
+router.post(
     '/:gameId/undo-finish',
     requireAuth,
     withTransaction((req, res) => gameController.undoFinishGame(req, res))

@@ -156,6 +156,18 @@ export class GameNotCreatedWhenStartingError extends BadRequestError {
     }
 }
 
+export class GameNotCreatedWhenRecordingResultError extends BadRequestError {
+    constructor() {
+        super('gameNotCreatedWhenRecordingResult');
+    }
+}
+
+export class PlannedGameResultRosterMismatchError extends BadRequestError {
+    constructor() {
+        super('plannedGameResultRosterMismatch');
+    }
+}
+
 export class NotGamePlayerError extends ForbiddenError {
     constructor() {
         super('notGamePlayer');

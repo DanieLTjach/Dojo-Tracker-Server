@@ -258,6 +258,38 @@ export class GameRepository {
         }
     }
 
+    private setPlannedGamePlayerResultStatement(): Statement<{
+        gameId: number;
+        userId: number;
+        points: number;
+        chomboCount: number;
+        modifiedBy: number;
+        modifiedAt: string;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE userToGame
+            SET points = :points, chomboCount = :chomboCount, modifiedAt = :modifiedAt, modifiedBy = :modifiedBy
+            WHERE gameId = :gameId AND userId = :userId`);
+    }
+
+    setPlannedGamePlayerResult(
+        gameId: number,
+        userId: number,
+        points: number,
+        chomboCount: number,
+        modifiedBy: number,
+        modifiedAt: Date
+    ): void {
+        this.setPlannedGamePlayerResultStatement().run({
+            gameId,
+            userId,
+            points,
+            chomboCount,
+            modifiedBy,
+            modifiedAt: modifiedAt.toISOString(),
+        });
+    }
+
     private updatePlayerChomboCountStatement(): Statement<{
         gameId: number;
         userId: number;
@@ -357,6 +389,26 @@ export class GameRepository {
             modifiedBy,
             endedAt: timestamp,
             modifiedAt: timestamp,
+        });
+    }
+
+    private recordPlannedGameResultStatement(): Statement<{
+        id: number;
+        modifiedBy: number;
+        completedAt: string;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE game
+            SET status = 'FINISHED', startedAt = :completedAt, endedAt = :completedAt,
+                modifiedBy = :modifiedBy, modifiedAt = :completedAt
+            WHERE id = :id`);
+    }
+
+    recordPlannedGameResult(gameId: number, modifiedBy: number, completedAt: Date): void {
+        this.recordPlannedGameResultStatement().run({
+            id: gameId,
+            modifiedBy,
+            completedAt: completedAt.toISOString(),
         });
     }
 

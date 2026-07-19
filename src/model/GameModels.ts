@@ -102,6 +102,12 @@ export interface TrackedGamePlayerData {
     isSubstitutePlayer?: boolean | undefined;
 }
 
+export interface PlannedGamePlayerResult {
+    userId: number;
+    points: number;
+    chomboCount: number;
+}
+
 export interface GameFilters {
     dateFrom?: Date | undefined;
     dateTo?: Date | undefined;

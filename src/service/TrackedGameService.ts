@@ -2,6 +2,7 @@ import dedent from 'dedent';
 import { BadRequestError } from '../error/BaseErrors.ts';
 import {
     CannotUndoFinishOnNonTrackedGameError,
+    GameNotCreatedWhenRecordingResultError,
     GameNotCreatedWhenStartingError,
     GameNotFinishedWhenUndoingFinishError,
     GameNotInProgressWhenAddingNewRoundError,
@@ -12,6 +13,7 @@ import {
     LastRoundRollbackAlreadyUsedError,
     NoRoundsCompletedError,
     NoRoundsToRollbackError,
+    PlannedGameResultRosterMismatchError,
     RoundAlreadyExistsError,
 } from '../error/GameErrors.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
@@ -20,6 +22,7 @@ import type {
     GamePlayer,
     GameRound,
     GameWithPlayers,
+    PlannedGamePlayerResult,
     TrackedGamePlayerData,
 } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
@@ -101,6 +104,68 @@ export class TrackedGameService {
         const logAction = status === GameStatus.CREATED ? 'CREATED' : 'STARTED_ON_CREATE';
         this.logTrackedGameAction(newGame, event, logAction, createdBy);
         return newGame;
+    }
+
+    recordPlannedGameResult(
+        gameId: number,
+        results: PlannedGamePlayerResult[],
+        modifiedBy: number
+    ): DetailedGame {
+        const game = this.gameService.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+
+        this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
+        if (game.status !== GameStatus.CREATED) {
+            throw new GameNotCreatedWhenRecordingResultError();
+        }
+        this.eventService.validateTournamentGameCanStart(event, game);
+        this.validatePlannedGameResultRoster(game, results);
+
+        const players = results.map(result => {
+            const plannedPlayer = game.players.find(player => player.userId === result.userId)!;
+            return {
+                ...result,
+                startPlace: plannedPlayer.startPlace,
+                isSubstitutePlayer: plannedPlayer.isSubstitutePlayer,
+            };
+        });
+        this.gameService.validatePlayers(players, event.gameRules);
+
+        const completedAt = new Date();
+        this.gameService.validateGameWithinEventDates(event, completedAt, modifiedBy, GameStatus.FINISHED);
+        const standingsBefore = this.ratingService.calculateStandings(event.id);
+
+        for (const result of results) {
+            this.gameRepository.setPlannedGamePlayerResult(
+                gameId,
+                result.userId,
+                result.points,
+                result.chomboCount,
+                modifiedBy,
+                completedAt
+            );
+        }
+        this.gameRepository.recordPlannedGameResult(gameId, modifiedBy, completedAt);
+        this.ratingService.addRatingChangesFromGame(
+            gameId,
+            completedAt,
+            players,
+            event.id,
+            event.gameRules,
+            event.startingRating
+        );
+        this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
+
+        const finishedGame = this.gameService.getDetailedGameById(gameId);
+        this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
+        this.gameService.logRatingUpdateForGame(
+            finishedGame,
+            event,
+            standingsBefore,
+            this.ratingService.calculateStandings(event.id),
+            modifiedBy
+        );
+        return finishedGame;
     }
 
     addGameRoundResult(
@@ -263,6 +328,21 @@ export class TrackedGameService {
     private validateGameIsCreated(game: GameWithPlayers): void {
         if (game.status !== GameStatus.CREATED) {
             throw new GameNotCreatedWhenStartingError();
+        }
+    }
+
+    private validatePlannedGameResultRoster(
+        game: GameWithPlayers,
+        results: PlannedGamePlayerResult[]
+    ): void {
+        const resultUserIds = results.map(result => result.userId);
+        const plannedUserIds = new Set(game.players.map(player => player.userId));
+        if (
+            resultUserIds.length !== game.players.length ||
+            new Set(resultUserIds).size !== resultUserIds.length ||
+            resultUserIds.some(userId => !plannedUserIds.has(userId))
+        ) {
+            throw new PlannedGameResultRosterMismatchError();
         }
     }
 
