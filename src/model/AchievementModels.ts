@@ -64,3 +64,32 @@ export interface UserAchievement {
     value: number | undefined;
     valueFormatted: string | undefined;
 }
+
+/** A club-scoped, reusable custom achievement a club owner/moderator can assign. */
+export interface ClubAchievementDefinition {
+    id: number;
+    clubId: number;
+    name: string;
+    description: string;
+    icon: string | null;
+    archivedAt: Date | null;
+    archivedBy: number | null;
+    createdAt: Date;
+    createdBy: number;
+    modifiedAt: Date;
+    modifiedBy: number;
+}
+
+/** One instance of a club awarding an achievement (built-in or custom) to a member. */
+export interface ClubUserAchievement {
+    id: number;
+    clubId: number;
+    userId: number;
+    builtInCode: string | null;
+    definitionId: number | null;
+    note: string | null;
+    awardedAt: Date;
+    awardedBy: number;
+    revokedAt: Date | null;
+    revokedBy: number | null;
+}
