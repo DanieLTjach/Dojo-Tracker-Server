@@ -32,6 +32,13 @@ export type SeatingTable = [number, number, number, number];
 /** A round is an ordered list of tables (index in the list = physical table number). */
 export type SeatingRound = SeatingTable[];
 
+/** Excess occurrences of same-table player groups, grouped by group size. */
+export interface SeatingRepeatCounts {
+    twoPlayers: number;
+    threePlayers: number;
+    fourPlayers: number;
+}
+
 export interface SeatingCandidate {
     /** rounds[r][t] = the four player indices seated at table t in round r. */
     rounds: SeatingRound[];
@@ -39,6 +46,8 @@ export interface SeatingCandidate {
     tableSpreadScore: number;
     /** Lower is better. 0 = perfectly even seat-wind distribution. */
     seatBalanceScore: number;
+    /** Each occurrence after a group's first appearance contributes one repeat. */
+    repeatCounts: SeatingRepeatCounts;
 }
 
 export interface SeatingOptions {
@@ -59,6 +68,49 @@ export interface SeatingOptions {
 }
 
 export class SeatingGenerationError extends Error {}
+
+/**
+ * Count repeated unordered groups at the same table. A group seen N times contributes N - 1,
+ * so a group that plays together three times contributes two repeats.
+ */
+function calculateRepeatCounts(schedule: SeatingRound[]): SeatingRepeatCounts {
+    const groupOccurrences = new Map<number, Map<string, number>>([
+        [2, new Map<string, number>()],
+        [3, new Map<string, number>()],
+        [4, new Map<string, number>()],
+    ]);
+
+    for (const round of schedule) {
+        for (const table of round) {
+            const players = [...table].sort((a, b) => a - b);
+            for (let groupSize = 2; groupSize <= 4; groupSize++) {
+                const combinations = (start: number, selected: number[]): void => {
+                    if (selected.length === groupSize) {
+                        const key = selected.join(',');
+                        const occurrences = groupOccurrences.get(groupSize)!;
+                        occurrences.set(key, (occurrences.get(key) ?? 0) + 1);
+                        return;
+                    }
+                    for (let i = start; i < players.length; i++) {
+                        selected.push(players[i]!);
+                        combinations(i + 1, selected);
+                        selected.pop();
+                    }
+                };
+                combinations(0, []);
+            }
+        }
+    }
+
+    const countExcessOccurrences = (occurrences: Map<string, number>): number =>
+        [...occurrences.values()].reduce((total, count) => total + Math.max(0, count - 1), 0);
+
+    return {
+        twoPlayers: countExcessOccurrences(groupOccurrences.get(2)!),
+        threePlayers: countExcessOccurrences(groupOccurrences.get(3)!),
+        fourPlayers: countExcessOccurrences(groupOccurrences.get(4)!),
+    };
+}
 
 /** Mulberry32 — small, fast, deterministic PRNG so candidates are reproducible by seed. */
 class Rng {
@@ -546,8 +598,9 @@ export function generateSeatingCandidate(options: SeatingOptions): SeatingCandid
     balanceSeats(schedule, playerCount, rounds, rng, seatBalanceDeadline);
     const tableSpreadScore = optimiseTableNumbers(schedule, playerCount, tables, rounds, rng, deadline);
     const seatBalanceScore = totalSeatScore(schedule, playerCount, rounds);
+    const repeatCounts = calculateRepeatCounts(schedule);
 
-    return { rounds: schedule, tableSpreadScore, seatBalanceScore };
+    return { rounds: schedule, tableSpreadScore, seatBalanceScore, repeatCounts };
 }
 
 /**

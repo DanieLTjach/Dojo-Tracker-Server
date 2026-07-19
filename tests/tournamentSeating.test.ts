@@ -130,6 +130,11 @@ describe('Tournament seating generation', () => {
 
             const candidate = response.body.candidates[0];
             expect(candidate.rounds).toHaveLength(TOTAL_ROUNDS);
+            expect(candidate.repeatCounts).toEqual({
+                twoPlayers: expect.any(Number),
+                threePlayers: expect.any(Number),
+                fourPlayers: expect.any(Number),
+            });
             // Every seat references an approved participant with a valid wind.
             const winds = new Set(['EAST', 'SOUTH', 'WEST', 'NORTH']);
             for (const round of candidate.rounds) {

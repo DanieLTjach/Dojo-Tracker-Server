@@ -70,6 +70,11 @@ describe('SeatingGeneratorUtil', () => {
             // 16 players; 5 rounds is the maximum feasible for 4 tables.
             const candidate = generateSeatingCandidate({ tables: 4, rounds: 5, timeLimitMs: TIME_LIMIT_MS, seed: 11 });
             expect(countPairRepeats(candidate)).toBe(0);
+            expect(candidate.repeatCounts).toEqual({
+                twoPlayers: 0,
+                threePlayers: 0,
+                fourPlayers: 0,
+            });
         });
     });
 
@@ -98,9 +103,21 @@ describe('SeatingGeneratorUtil', () => {
     });
 
     describe('generateSeatingCandidate - configurations with repeats', () => {
-        it('should handle configurations where players repeat', () => {
-            expect(generateSeatingCandidate({ tables: 1, rounds: 3, timeLimitMs: TIME_LIMIT_MS, seed: 1 }))
-                .toBeDefined();
+        it('counts every occurrence after the first for pairs, triples, and groups of four', () => {
+            const candidate = generateSeatingCandidate({
+                tables: 1,
+                rounds: 3,
+                timeLimitMs: TIME_LIMIT_MS,
+                seed: 1,
+            });
+
+            // One unchanged four-player table over three rounds: each of its 6 pairs,
+            // 4 triples, and single group of four has two excess occurrences.
+            expect(candidate.repeatCounts).toEqual({
+                twoPlayers: 12,
+                threePlayers: 8,
+                fourPlayers: 2,
+            });
         });
     });
 

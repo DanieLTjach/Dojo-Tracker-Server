@@ -54,6 +54,11 @@ export interface SeatingCandidateDTO {
     rounds: SeatingSeat[][][];
     tableSpreadScore: number;
     seatBalanceScore: number;
+    repeatCounts: {
+        twoPlayers: number;
+        threePlayers: number;
+        fourPlayers: number;
+    };
 }
 
 export interface SeatingGenerationResultDTO {
@@ -136,6 +141,7 @@ export class TournamentSeatingService {
             candidates: candidates.map(candidate => ({
                 tableSpreadScore: candidate.tableSpreadScore,
                 seatBalanceScore: candidate.seatBalanceScore,
+                repeatCounts: candidate.repeatCounts,
                 rounds: candidate.rounds.map(round =>
                     round.map(table =>
                         table.map((playerIndex, seatIndex) => ({
