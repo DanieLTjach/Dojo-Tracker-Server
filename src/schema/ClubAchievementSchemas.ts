@@ -1,5 +1,6 @@
 import z from 'zod';
 import { clubIdParamSchema } from './CommonSchemas.ts';
+import { userIdParamSchema } from './UserSchemas.ts';
 
 const clubParamsSchema = z.object({
     clubId: clubIdParamSchema,
@@ -8,6 +9,17 @@ const clubParamsSchema = z.object({
 const definitionParamsSchema = z.object({
     clubId: clubIdParamSchema,
     definitionId: z.coerce.number().int('Achievement definition ID must be an integer'),
+});
+
+const memberParamsSchema = z.object({
+    clubId: clubIdParamSchema,
+    userId: userIdParamSchema,
+});
+
+const assignmentParamsSchema = z.object({
+    clubId: clubIdParamSchema,
+    userId: userIdParamSchema,
+    assignmentId: z.coerce.number().int('Assignment ID must be an integer'),
 });
 
 export const clubAchievementNameSchema = z.string().trim().min(1, 'Name is required').max(
@@ -42,4 +54,27 @@ export const clubAchievementCatalogArchiveSchema = z.object({
     body: z.object({
         archived: z.boolean(),
     }),
+});
+
+const newDefinitionBodySchema = z.object({
+    name: clubAchievementNameSchema,
+    description: clubAchievementDescriptionSchema,
+    icon: clubAchievementIconSchema,
+});
+
+export const clubAchievementAssignSchema = z.object({
+    params: memberParamsSchema,
+    body: z.object({
+        builtInCode: z.string().trim().min(1).optional(),
+        definitionId: z.coerce.number().int().optional(),
+        newDefinition: newDefinitionBodySchema.optional(),
+        note: clubAchievementNoteSchema,
+    }).refine(
+        body => [body.builtInCode, body.definitionId, body.newDefinition].filter(v => v !== undefined).length === 1,
+        { message: 'Provide exactly one of builtInCode, definitionId, or newDefinition' }
+    ),
+});
+
+export const clubAchievementRevokeSchema = z.object({
+    params: assignmentParamsSchema,
 });

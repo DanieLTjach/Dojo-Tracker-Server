@@ -50,19 +50,39 @@ export interface EventAchievementResult {
     winners: AchievementWinner[];
 }
 
+export const ProfileAchievementType = {
+    TOURNAMENT_AWARD: 'TOURNAMENT_AWARD',
+    EVENT_PLACEMENT: 'EVENT_PLACEMENT',
+    CAREER: 'CAREER',
+    HAND: 'HAND',
+    MANUAL: 'MANUAL',
+} as const;
+
+export type ProfileAchievementType = typeof ProfileAchievementType[keyof typeof ProfileAchievementType];
+
 /**
- * One achievement a user has won, as shown on their profile page. Includes the
- * owning tournament so the frontend can group/link by event.
+ * One achievement a user has won, as shown on their profile page. `type` discriminates
+ * the achievement's origin; existing tournament-award fields (eventId, eventName, metric)
+ * stay populated only for TOURNAMENT_AWARD to preserve the pre-existing response shape.
  */
 export interface UserAchievement {
-    eventId: number;
-    eventName: string;
-    metric: string;
+    type: ProfileAchievementType;
+    code: string;
     name: string;
     description: string;
-    valueUnit: AchievementValueUnit;
+    icon: string | null;
+    awardedAt: Date;
+    valueUnit: AchievementValueUnit | undefined;
     value: number | undefined;
     valueFormatted: string | undefined;
+    /** Populated for TOURNAMENT_AWARD only, kept for response-shape backward compatibility. */
+    eventId: number | undefined;
+    eventName: string | undefined;
+    metric: string | undefined;
+    /** Populated for MANUAL only. */
+    clubId: number | undefined;
+    clubName: string | undefined;
+    note: string | undefined;
 }
 
 /** A club-scoped, reusable custom achievement a club owner/moderator can assign. */

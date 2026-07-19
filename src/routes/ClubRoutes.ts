@@ -83,5 +83,17 @@ router.patch(
     requireClubRole('OWNER', 'MODERATOR'),
     withTransaction((req, res) => achievementController.setArchived(req, res))
 );
+router.post(
+    '/:clubId/members/:userId/achievements',
+    requireAuth,
+    requireClubRole('OWNER', 'MODERATOR'),
+    withTransaction((req, res) => achievementController.assign(req, res))
+);
+router.post(
+    '/:clubId/members/:userId/achievements/:assignmentId/revoke',
+    requireAuth,
+    requireClubRole('OWNER', 'MODERATOR'),
+    withTransaction((req, res) => achievementController.revoke(req, res))
+);
 
 export default router;

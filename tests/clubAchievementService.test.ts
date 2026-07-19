@@ -1,11 +1,20 @@
 import { ClubAchievementService } from '../src/service/ClubAchievementService.ts';
 import { ClubRepository } from '../src/repository/ClubRepository.ts';
+import { ClubMembershipService } from '../src/service/ClubMembershipService.ts';
+import { UserService } from '../src/service/UserService.ts';
+import { UserRepository } from '../src/repository/UserRepository.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import {
+    ClubAchievementAlreadyAssignedError,
+    ClubAchievementAssignmentAlreadyRevokedError,
+    ClubAchievementAssignmentNotFoundError,
     ClubAchievementDefinitionArchivedError,
     ClubAchievementDefinitionNameAlreadyExistsError,
     ClubAchievementDefinitionNotFoundError,
+    InvalidAchievementSourceError,
+    TargetNotActiveClubMemberError,
+    UnknownBuiltInAchievementCodeError,
 } from '../src/error/ClubAchievementErrors.ts';
 import { ClubNotFoundError } from '../src/error/ClubErrors.ts';
 
@@ -14,8 +23,13 @@ const SYSTEM_USER_ID = 0;
 describe('ClubAchievementService', () => {
     const achievementService = new ClubAchievementService();
     const clubRepository = new ClubRepository();
+    const membershipService = new ClubMembershipService();
+    const userService = new UserService();
+    const userRepository = new UserRepository();
     let clubId: number;
     let otherClubId: number;
+    let activeMemberId: number;
+    let inactiveMemberId: number;
 
     beforeAll(() => {
         clubId = clubRepository.createClub({
@@ -42,6 +56,23 @@ describe('ClubAchievementService', () => {
             createdAt: new Date('2026-04-01T10:00:00.000Z'),
             modifiedBy: SYSTEM_USER_ID,
         });
+
+        const activeUser = userService.registerUser('AchSvcActiveMember', 'ach_svc_active', 666688801, SYSTEM_USER_ID);
+        const inactiveUser = userService.registerUser(
+            'AchSvcInactiveMember',
+            'ach_svc_inactive',
+            666688802,
+            SYSTEM_USER_ID
+        );
+        activeMemberId = activeUser.id;
+        inactiveMemberId = inactiveUser.id;
+        userRepository.updateUserStatus(activeMemberId, true, 'ACTIVE', SYSTEM_USER_ID);
+        userRepository.updateUserStatus(inactiveMemberId, true, 'ACTIVE', SYSTEM_USER_ID);
+
+        membershipService.createActiveMembership(clubId, activeMemberId, SYSTEM_USER_ID);
+        membershipService.requestJoin(clubId, inactiveMemberId, inactiveMemberId);
+        membershipService.activateMember(clubId, inactiveMemberId, SYSTEM_USER_ID);
+        membershipService.deactivateMember(clubId, inactiveMemberId, SYSTEM_USER_ID);
     });
 
     afterEach(() => {
@@ -53,7 +84,9 @@ describe('ClubAchievementService', () => {
     });
 
     afterAll(() => {
+        dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId IN (?, ?)').run(clubId, otherClubId);
         dbManager.db.prepare('DELETE FROM club WHERE id IN (?, ?)').run(clubId, otherClubId);
+        dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?)').run(activeMemberId, inactiveMemberId);
         dbManager.closeDB();
         cleanupTestDatabase();
     });
@@ -147,6 +180,181 @@ describe('ClubAchievementService', () => {
 
         expect(achievementService.validateAssignableDefinition(clubId, definition.id)).toMatchObject({
             id: definition.id,
+        });
+    });
+
+    describe('assignAchievement', () => {
+        it('assigns a built-in achievement to an active member', () => {
+            const assignment = achievementService.assignAchievement(
+                clubId,
+                activeMemberId,
+                { builtInCode: 'MENTOR', definitionId: undefined, newDefinition: undefined },
+                'Great with newcomers',
+                SYSTEM_USER_ID
+            );
+
+            expect(assignment).toMatchObject({
+                clubId,
+                userId: activeMemberId,
+                builtInCode: 'MENTOR',
+                definitionId: null,
+                note: 'Great with newcomers',
+                revokedAt: null,
+            });
+        });
+
+        it('assigns an existing custom definition', () => {
+            const definition = achievementService.createDefinition(
+                clubId,
+                'Custom Award',
+                'desc',
+                null,
+                SYSTEM_USER_ID
+            );
+
+            const assignment = achievementService.assignAchievement(
+                clubId,
+                activeMemberId,
+                { builtInCode: undefined, definitionId: definition.id, newDefinition: undefined },
+                null,
+                SYSTEM_USER_ID
+            );
+
+            expect(assignment).toMatchObject({ definitionId: definition.id, builtInCode: null });
+        });
+
+        it('atomically creates a new definition and assigns it', () => {
+            const assignment = achievementService.assignAchievement(
+                clubId,
+                activeMemberId,
+                {
+                    builtInCode: undefined,
+                    definitionId: undefined,
+                    newDefinition: { name: 'Brand New Award', description: 'desc', icon: null },
+                },
+                null,
+                SYSTEM_USER_ID
+            );
+
+            expect(assignment.definitionId).not.toBeNull();
+            expect(achievementService.getCatalog(clubId).map(d => d.name)).toContain('Brand New Award');
+        });
+
+        it('rejects providing zero or multiple sources', () => {
+            expect(() =>
+                achievementService.assignAchievement(
+                    clubId,
+                    activeMemberId,
+                    { builtInCode: undefined, definitionId: undefined, newDefinition: undefined },
+                    null,
+                    SYSTEM_USER_ID
+                )
+            ).toThrow(InvalidAchievementSourceError);
+
+            expect(() =>
+                achievementService.assignAchievement(
+                    clubId,
+                    activeMemberId,
+                    { builtInCode: 'MENTOR', definitionId: 1, newDefinition: undefined },
+                    null,
+                    SYSTEM_USER_ID
+                )
+            ).toThrow(InvalidAchievementSourceError);
+        });
+
+        it('rejects an unknown built-in code', () => {
+            expect(() =>
+                achievementService.assignAchievement(
+                    clubId,
+                    activeMemberId,
+                    { builtInCode: 'NOT_A_REAL_CODE', definitionId: undefined, newDefinition: undefined },
+                    null,
+                    SYSTEM_USER_ID
+                )
+            ).toThrow(UnknownBuiltInAchievementCodeError);
+        });
+
+        it('rejects assigning to a non-active member', () => {
+            expect(() =>
+                achievementService.assignAchievement(
+                    clubId,
+                    inactiveMemberId,
+                    { builtInCode: 'MENTOR', definitionId: undefined, newDefinition: undefined },
+                    null,
+                    SYSTEM_USER_ID
+                )
+            ).toThrow(TargetNotActiveClubMemberError);
+        });
+
+        it('rejects a duplicate active assignment of the same built-in achievement', () => {
+            achievementService.assignAchievement(
+                clubId,
+                activeMemberId,
+                { builtInCode: 'FAIR_PLAY', definitionId: undefined, newDefinition: undefined },
+                null,
+                SYSTEM_USER_ID
+            );
+
+            expect(() =>
+                achievementService.assignAchievement(
+                    clubId,
+                    activeMemberId,
+                    { builtInCode: 'FAIR_PLAY', definitionId: undefined, newDefinition: undefined },
+                    null,
+                    SYSTEM_USER_ID
+                )
+            ).toThrow(ClubAchievementAlreadyAssignedError);
+        });
+    });
+
+    describe('revokeAssignment', () => {
+        it('revokes an active assignment and allows a fresh re-assignment afterwards', () => {
+            const assignment = achievementService.assignAchievement(
+                clubId,
+                activeMemberId,
+                { builtInCode: 'RISING_STAR', definitionId: undefined, newDefinition: undefined },
+                null,
+                SYSTEM_USER_ID
+            );
+
+            const revoked = achievementService.revokeAssignment(
+                clubId,
+                activeMemberId,
+                assignment.id,
+                SYSTEM_USER_ID
+            );
+            expect(revoked.revokedAt).not.toBeNull();
+            expect(revoked.revokedBy).toBe(SYSTEM_USER_ID);
+
+            expect(() =>
+                achievementService.assignAchievement(
+                    clubId,
+                    activeMemberId,
+                    { builtInCode: 'RISING_STAR', definitionId: undefined, newDefinition: undefined },
+                    null,
+                    SYSTEM_USER_ID
+                )
+            ).not.toThrow();
+        });
+
+        it('rejects revoking an already-revoked assignment', () => {
+            const assignment = achievementService.assignAchievement(
+                clubId,
+                activeMemberId,
+                { builtInCode: 'IRON_WILL', definitionId: undefined, newDefinition: undefined },
+                null,
+                SYSTEM_USER_ID
+            );
+            achievementService.revokeAssignment(clubId, activeMemberId, assignment.id, SYSTEM_USER_ID);
+
+            expect(() => achievementService.revokeAssignment(clubId, activeMemberId, assignment.id, SYSTEM_USER_ID))
+                .toThrow(ClubAchievementAssignmentAlreadyRevokedError);
+        });
+
+        it('404s for an assignment id that does not belong to this club/user', () => {
+            expect(() => achievementService.revokeAssignment(clubId, activeMemberId, 999999, SYSTEM_USER_ID)).toThrow(
+                ClubAchievementAssignmentNotFoundError
+            );
         });
     });
 });

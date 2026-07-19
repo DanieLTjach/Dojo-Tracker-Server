@@ -19,6 +19,8 @@ export interface UserAchievementRow {
     eventName: string;
     metric: AchievementMetric;
     value: number | null;
+    /** Event end date, falling back to its creation date for events without one set. */
+    awardedAt: string;
 }
 
 export class AchievementRepository {
@@ -73,7 +75,8 @@ export class AchievementRepository {
 
     private findByUserIdStatement(): Statement<{ userId: number }, UserAchievementRow> {
         return dbManager.db.prepare(`
-            SELECT ea.eventId, e.name AS eventName, ea.metric, ea.value
+            SELECT ea.eventId, e.name AS eventName, ea.metric, ea.value,
+                   COALESCE(e.dateTo, e.createdAt) AS awardedAt
             FROM eventAchievement ea
             JOIN event e ON e.id = ea.eventId
             WHERE ea.userId = :userId

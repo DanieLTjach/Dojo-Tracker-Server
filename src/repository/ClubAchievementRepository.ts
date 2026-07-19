@@ -79,6 +79,20 @@ export interface CreateAssignmentParams {
     awardedAt: Date;
 }
 
+/** An active manual assignment joined with its display fields, for the profile page. */
+export interface ProfileManualAchievementRow {
+    id: number;
+    clubId: number;
+    clubName: string;
+    builtInCode: string | null;
+    definitionId: number | null;
+    definitionName: string | null;
+    definitionDescription: string | null;
+    definitionIcon: string | null;
+    note: string | null;
+    awardedAt: string;
+}
+
 export class ClubAchievementRepository {
     private definitionSelect = `
         SELECT id, clubId, name, description, icon, archivedAt, archivedBy, createdAt, createdBy, modifiedAt, modifiedBy
@@ -262,6 +276,32 @@ export class ClubAchievementRepository {
     /** Earned, non-revoked assignments for a user across all clubs, for the profile page. */
     findActiveAssignmentsByUserId(userId: number): ClubUserAchievement[] {
         return this.findAssignmentsByUserIdStatement().all({ userId }).map(assignmentFromDBEntity);
+    }
+
+    private findActiveProfileRowsByUserIdStatement(): Statement<{ userId: number }, ProfileManualAchievementRow> {
+        return dbManager.db.prepare(`
+            SELECT
+                cua.id,
+                cua.clubId,
+                c.name AS clubName,
+                cua.builtInCode,
+                cua.definitionId,
+                cad.name AS definitionName,
+                cad.description AS definitionDescription,
+                cad.icon AS definitionIcon,
+                cua.note,
+                cua.awardedAt
+            FROM clubUserAchievement cua
+            JOIN club c ON c.id = cua.clubId
+            LEFT JOIN clubAchievementDefinition cad ON cad.id = cua.definitionId
+            WHERE cua.userId = :userId AND cua.revokedAt IS NULL
+            ORDER BY cua.awardedAt DESC
+        `);
+    }
+
+    /** Earned, non-revoked assignments for a user, joined with display fields, for the profile page. */
+    findActiveProfileRowsByUserId(userId: number): ProfileManualAchievementRow[] {
+        return this.findActiveProfileRowsByUserIdStatement().all({ userId });
     }
 
     private revokeAssignmentStatement(): Statement<
