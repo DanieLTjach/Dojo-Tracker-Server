@@ -104,12 +104,13 @@ export class EventRegistrationService {
         if (registration === undefined) {
             throw new EventRegistrationNotFoundError(event.name, targetUserId);
         }
-        if (registration.status !== 'PENDING') {
+        if (registration.status !== 'PENDING' && registration.status !== 'REJECTED') {
             throw new InvalidEventRegistrationStateError(
                 translationRef('telegram.actions.approve'),
                 registration.status,
                 [
                     'PENDING',
+                    'REJECTED',
                 ]
             );
         }

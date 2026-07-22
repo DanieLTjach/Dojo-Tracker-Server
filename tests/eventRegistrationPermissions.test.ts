@@ -294,6 +294,18 @@ describe('Event registration permissions matrix', () => {
                         .set('Authorization', authHeader).send({})
             );
         }
+
+        test('admin can approve a rejected registration', async () => {
+            seedRegistration(NON_MEMBER_USER_ID, 'REJECTED');
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/approve`)
+                .set('Authorization', authHeaders.admin)
+                .send({});
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toBe('APPROVED');
+        });
     });
 
     describe('reject registration — admin/owner/moderator only', () => {
