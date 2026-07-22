@@ -12,6 +12,7 @@ import {
     gameRoundPreviewSchema,
     gameRoundDeleteSchema,
     gameFinishSchema,
+    plannedGameResultSchema,
     gameUndoFinishSchema,
     gameStartSchema,
     gamePlayerSubstitutePlayerSchema,
@@ -98,6 +99,13 @@ export class GameController {
         const { params: { gameId } } = gameFinishSchema.parse(req);
         const modifiedBy = req.user!.userId;
         const game = this.trackedGameService.finishGame(gameId, modifiedBy);
+        return res.status(StatusCodes.OK).json(game);
+    }
+
+    recordPlannedGameResult(req: Request, res: Response) {
+        const { params: { gameId }, body: { results } } = plannedGameResultSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const game = this.trackedGameService.recordPlannedGameResult(gameId, results, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
     }
 

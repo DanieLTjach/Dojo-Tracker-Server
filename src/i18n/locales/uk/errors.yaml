@@ -124,6 +124,8 @@ errors:
   gameNotFinishedWhenUndoingFinish: Скасувати завершення можна лише для завершеної гри
   cannotUndoFinishOnNonTrackedGame: Скасувати завершення можна лише для відстежуваної гри з раундами
   gameNotCreatedWhenStarting: Можна розпочати лише гру в статусі CREATED
+  gameNotCreatedWhenRecordingResult: Фінальний результат можна внести лише для гри в статусі CREATED
+  plannedGameResultRosterMismatch: Гравці в результаті мають точно відповідати запланованому складу гри
   notGamePlayer: Лише гравці цієї гри можуть виконати цю дію
 
   userNotFoundByUsername: Користувача з Telegram username {{username}} не знайдено

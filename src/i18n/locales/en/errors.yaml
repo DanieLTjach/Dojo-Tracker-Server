@@ -124,6 +124,8 @@ errors:
   gameNotFinishedWhenUndoingFinish: Finish can only be undone for a finished game
   cannotUndoFinishOnNonTrackedGame: Finish can only be undone for a tracked game with rounds
   gameNotCreatedWhenStarting: Only a game in CREATED status can be started
+  gameNotCreatedWhenRecordingResult: A final result can only be recorded for a game in CREATED status
+  plannedGameResultRosterMismatch: Result players must exactly match the planned game roster
   notGamePlayer: Only players in this game can perform this action
 
   userNotFoundByUsername: User with Telegram username {{username}} was not found

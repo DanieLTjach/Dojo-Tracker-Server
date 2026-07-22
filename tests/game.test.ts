@@ -912,6 +912,142 @@ describe('Game API Endpoints', () => {
         });
     });
 
+    describe('POST /api/games/:gameId/result - Record Planned Game Result', () => {
+        const createPlannedGame = () =>
+            request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    status: 'CREATED',
+                    players: trackedPlayersPayload().map((player, index) => ({
+                        ...player,
+                        isSubstitutePlayer: index === 0,
+                    })),
+                });
+
+        const validResults = () => [
+            { userId: testUser1Id, points: 45000, chomboCount: 1 },
+            { userId: testUser2Id, points: 32000 },
+            { userId: testUser3Id, points: 25000 },
+            { userId: testUser4Id, points: 18000 },
+        ];
+
+        const recordResult = (gameId: number, authHeader: string, results = validResults()) =>
+            request(app)
+                .post(`/api/games/${gameId}/result`)
+                .set('Authorization', authHeader)
+                .send({ results });
+
+        test('records a final result while preserving planned player metadata', async () => {
+            const created = await createPlannedGame();
+            expect(created.status).toBe(201);
+
+            const response = await recordResult(created.body.id, user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toMatchObject({
+                id: created.body.id,
+                status: 'FINISHED',
+                createdAt: created.body.createdAt,
+                startedAt: response.body.endedAt,
+                currentState: null,
+                rounds: [],
+            });
+            expect(response.body.startedAt).not.toBeNull();
+            expect(response.body.players).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    userId: testUser1Id,
+                    points: 45000,
+                    chomboCount: 1,
+                    startPlace: 'EAST',
+                    isSubstitutePlayer: true,
+                }),
+                expect.objectContaining({
+                    userId: testUser2Id,
+                    points: 32000,
+                    chomboCount: 0,
+                    startPlace: 'SOUTH',
+                    isSubstitutePlayer: false,
+                }),
+            ]));
+
+            const ratingTimestamp = dbManager.db.prepare(
+                'SELECT timestamp FROM userRatingChange WHERE gameId = ? LIMIT 1'
+            ).get(created.body.id) as { timestamp: string };
+            expect(ratingTimestamp.timestamp).toBe(response.body.endedAt);
+        });
+
+        test('allows a system admin and a club moderator who is not a player', async () => {
+            const adminGame = await createPlannedGame();
+            expect((await recordResult(adminGame.body.id, adminAuthHeader)).status).toBe(200);
+
+            const moderatorId = await createTestUser('Planned Result Moderator', 555555560);
+            seedClubMembership(1, moderatorId);
+            const moderatorAuthHeader = createAuthHeader(moderatorId);
+            const moderatorGame = await createPlannedGame();
+
+            const unauthorized = await recordResult(moderatorGame.body.id, moderatorAuthHeader);
+            expect(unauthorized.status).toBe(403);
+            expect(unauthorized.body.errorCode).toBe('notAuthorizedToModifyGame');
+
+            setClubRole(1, moderatorId, 'MODERATOR');
+            expect((await recordResult(moderatorGame.body.id, moderatorAuthHeader)).status).toBe(200);
+        });
+
+        test('rejects a mismatched roster without changing the planned game', async () => {
+            const created = await createPlannedGame();
+            const response = await recordResult(created.body.id, user1AuthHeader, validResults().slice(0, 3));
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('plannedGameResultRosterMismatch');
+
+            const game = await request(app)
+                .get(`/api/games/${created.body.id}`)
+                .set('Authorization', user1AuthHeader);
+            expect(game.body.status).toBe('CREATED');
+            expect(game.body.players.every((player: { points: number }) => player.points === 30000)).toBe(true);
+            expect(
+                dbManager.db.prepare('SELECT COUNT(*) count FROM userRatingChange WHERE gameId = ?')
+                    .get(created.body.id)
+            ).toEqual({ count: 0 });
+        });
+
+        test('rejects invalid totals, invalid chombo counts, and repeated submission', async () => {
+            const invalidTotalGame = await createPlannedGame();
+            const invalidTotal = validResults();
+            invalidTotal[0]!.points += 1000;
+            expect((await recordResult(invalidTotalGame.body.id, user1AuthHeader, invalidTotal)).body.errorCode)
+                .toBe('incorrectTotalPoints');
+
+            const invalidChomboGame = await createPlannedGame();
+            const invalidChombo = validResults();
+            invalidChombo[0]!.chomboCount = 11;
+            const invalidChomboResponse = await recordResult(
+                invalidChomboGame.body.id,
+                user1AuthHeader,
+                invalidChombo
+            );
+            expect(invalidChomboResponse.status).toBe(400);
+            expect(invalidChomboResponse.body.error).toBe('Invalid request data');
+
+            const finishedGame = await createPlannedGame();
+            expect((await recordResult(finishedGame.body.id, user1AuthHeader)).status).toBe(200);
+            const repeated = await recordResult(finishedGame.body.id, user1AuthHeader);
+            expect(repeated.status).toBe(400);
+            expect(repeated.body.errorCode).toBe('gameNotCreatedWhenRecordingResult');
+        });
+
+        test('requires authentication', async () => {
+            const created = await createPlannedGame();
+            const response = await request(app)
+                .post(`/api/games/${created.body.id}/result`)
+                .send({ results: validResults() });
+
+            expect(response.status).toBe(401);
+        });
+    });
+
     describe('POST /api/games/:gameId/rounds/:roundId - Post Round Result', () => {
         let trackedGameId: number;
 
