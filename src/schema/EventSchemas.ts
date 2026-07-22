@@ -236,7 +236,8 @@ export const tournamentSeatingGenerateSchema = z.object({
 const seatingApplyRoundsSchema = z.array(
     z.array(
         z.array(z.number().int('Seat user id must be an integer').positive())
-            .length(4, 'Each table must have exactly 4 players')
+            .min(3, 'Each table must have at least 3 players')
+            .max(4, 'Each table must have at most 4 players')
     ).min(1, 'Each round must have at least one table')
 ).min(1, 'At least one round is required');
 

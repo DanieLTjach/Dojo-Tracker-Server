@@ -53,7 +53,7 @@ errors:
   tournamentNotInLastRound: 'Турнір "{{eventName}}" ще не знаходиться в останньому раунді'
   tournamentGameNotInCurrentRound: "Цю гру не можна розпочати зараз. Поточний раунд турніру: {{currentRound}}, раунд гри: {{gameRound}}"
   seatingNotEnoughParticipants: 'Для розсадки турніру "{{eventName}}" потрібно щонайменше {{required}} учасників (зараз {{actual}})'
-  seatingParticipantsNotMultipleOfTableSize: 'Кількість учасників турніру "{{eventName}}" ({{count}}) має ділитися на 4 для розсадки'
+  seatingParticipantsNotMultipleOfTableSize: 'Кількість учасників турніру "{{eventName}}" ({{count}}) має ділитися на {{tableSize}} для розсадки'
   seatingGenerationFailed: 'Не вдалося згенерувати розсадку для турніру "{{eventName}}" за відведений час. Спробуйте ще раз'
   seatingCannotBeModifiedAfterTournamentStarted: 'Розсадку турніру "{{eventName}}" не можна змінювати після початку турніру'
   seatingAlreadyApplied: 'Для турніру "{{eventName}}" вже створено ігри. Очистіть розсадку перед повторною генерацією'
@@ -68,7 +68,7 @@ errors:
   teamConfigRequired: Командний турнір потребує конфіг команд (teamConfig)
   invalidTeamSize: teamSize має бути цілим числом ≥ 1
   invalidTeamCount: teamCount має бути цілим числом ≥ 1
-  teamCountNotDivisibleByFour: teamCount має ділитися на 4
+  teamCountNotDivisibleByTableSize: "Кількість команд у турнірі має ділитися на {{tableSize}}"
   minParticipantsRequiredForTeamConfig: "Вкажіть minParticipants = teamSize * teamCount ({{expected}})"
   minParticipantsMustMatchTeamConfig: "minParticipants ({{minParticipants}}) має дорівнювати teamSize * teamCount ({{expected}})"
 
@@ -86,7 +86,7 @@ errors:
   draftNotStartable: 'Драфт турніру "{{eventName}}" не можна розпочати з поточного стану'
   teamDraftHasUnteamedPlayers: 'У командному турнірі "{{eventName}}" є {{unteamedCount}} схвалених учасників без команди'
   teamDraftUnevenTeams: 'У командному турнірі "{{eventName}}" команди мають різну кількість учасників'
-  teamCountMustBeDivisibleByFour: 'Кількість команд у турнірі "{{eventName}}" ({{teamCount}}) має ділитися на 4'
+  teamCountMustBeDivisibleByTableSize: 'Кількість команд у турнірі "{{eventName}}" ({{teamCount}}) має ділитися на {{tableSize}}'
   teamDraftIncomplete: 'Щоб почати командний турнір "{{eventName}}", сформуйте {{teamCount}} повних команд по {{teamSize}} гравців'
 
   eventRegistrationNotFound: "Реєстрацію користувача з id {{userId}} на подію '{{eventName}}' не знайдено"

@@ -26,7 +26,7 @@ import {
     TeamConfigRequiredError,
     InvalidTeamSizeError,
     InvalidTeamCountError,
-    TeamCountNotDivisibleByFourError,
+    TeamCountNotDivisibleByTableSizeError,
     MinParticipantsRequiredForTeamConfigError,
     MinParticipantsMustMatchTeamConfigError,
     TournamentRoundNotStartedError,
@@ -46,11 +46,12 @@ import { TeamRepository } from '../repository/TeamRepository.ts';
 import { UserService } from './UserService.ts';
 import { TournamentRepository } from '../repository/TournamentRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
+import { GameRulesRepository } from '../repository/GameRulesRepository.ts';
 import type { EventPatchBody } from '../schema/EventSchemas.ts';
 import {
     DraftNotStartableError,
     NotEnoughApprovedForDraftError,
-    TeamCountMustBeDivisibleByFourError,
+    TeamCountMustBeDivisibleByTableSizeError,
     TeamDraftIncompleteError,
 } from '../error/TeamErrors.ts';
 
@@ -61,6 +62,7 @@ export class EventService {
     private eventRegistrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
     private tournamentRepository: TournamentRepository = new TournamentRepository();
     private gameRepository: GameRepository = new GameRepository();
+    private gameRulesRepository: GameRulesRepository = new GameRulesRepository();
     private teamRepository: TeamRepository = new TeamRepository();
     private userService: UserService = new UserService();
 
@@ -487,7 +489,7 @@ export class EventService {
         }
     }
 
-    validateTeamTournamentComposition(event: Event, requireTeamCountDivisibleByFour: boolean): void {
+    validateTeamTournamentComposition(event: Event, requireTeamCountDivisibleByTableSize: boolean): void {
         if (event.format !== EventFormat.TEAM) {
             return;
         }
@@ -505,8 +507,15 @@ export class EventService {
             throw new TeamDraftIncompleteError(event.name, teamCount, teamSize);
         }
 
-        if (requireTeamCountDivisibleByFour && teamMemberCounts.length % 4 !== 0) {
-            throw new TeamCountMustBeDivisibleByFourError(event.name, teamMemberCounts.length);
+        if (
+            requireTeamCountDivisibleByTableSize &&
+            teamMemberCounts.length % event.gameRules.numberOfPlayers !== 0
+        ) {
+            throw new TeamCountMustBeDivisibleByTableSizeError(
+                event.name,
+                teamMemberCounts.length,
+                event.gameRules.numberOfPlayers
+            );
         }
     }
 
@@ -586,7 +595,7 @@ export class EventService {
      * teamConfig sizing. v1 supports TEAM only for tournaments (HYBRID is reserved
      * for future team seasons and rejected here). teamConfig is required for TEAM
      * tournaments and forbidden otherwise; it must satisfy:
-     *   teamCount % 4 === 0  (a table seats one player from four distinct teams), and
+     *   teamCount is divisible by the number of players per table, and
      *   minParticipants === teamSize * teamCount  (the draft minimum reuses minParticipants).
      */
     private validateEventFormat(data: EventData): void {
@@ -615,8 +624,9 @@ export class EventService {
         if (!Number.isInteger(teamConfig.teamCount) || teamConfig.teamCount < 1) {
             throw new InvalidTeamCountError();
         }
-        if (teamConfig.teamCount % 4 !== 0) {
-            throw new TeamCountNotDivisibleByFourError();
+        const playersPerTable = this.gameRulesRepository.findGameRulesById(data.gameRulesId)!.numberOfPlayers;
+        if (teamConfig.teamCount % playersPerTable !== 0) {
+            throw new TeamCountNotDivisibleByTableSizeError(playersPerTable);
         }
         const minParticipants = data.config?.minParticipants;
         const expected = teamConfig.teamSize * teamConfig.teamCount;

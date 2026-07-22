@@ -53,7 +53,7 @@ errors:
   tournamentNotInLastRound: 'Tournament "{{eventName}}" is not in the last round yet'
   tournamentGameNotInCurrentRound: "This game cannot be started now. Current tournament round: {{currentRound}}, game round: {{gameRound}}"
   seatingNotEnoughParticipants: 'Tournament "{{eventName}}" needs at least {{required}} participants for seating (currently {{actual}})'
-  seatingParticipantsNotMultipleOfTableSize: 'Participant count for tournament "{{eventName}}" ({{count}}) must be divisible by 4 for seating'
+  seatingParticipantsNotMultipleOfTableSize: 'Participant count for tournament "{{eventName}}" ({{count}}) must be divisible by {{tableSize}} for seating'
   seatingGenerationFailed: 'Could not generate seating for tournament "{{eventName}}" in time. Please try again'
   seatingCannotBeModifiedAfterTournamentStarted: 'Seating for tournament "{{eventName}}" cannot be changed after the tournament starts'
   seatingAlreadyApplied: 'Games already exist for tournament "{{eventName}}". Clear seating before generating it again'
@@ -68,7 +68,7 @@ errors:
   teamConfigRequired: Team tournaments require a team config (teamConfig)
   invalidTeamSize: teamSize must be an integer >= 1
   invalidTeamCount: teamCount must be an integer >= 1
-  teamCountNotDivisibleByFour: teamCount must be divisible by 4
+  teamCountNotDivisibleByTableSize: "teamCount must be divisible by {{tableSize}}"
   minParticipantsRequiredForTeamConfig: "Please set minParticipants = teamSize * teamCount ({{expected}})"
   minParticipantsMustMatchTeamConfig: "minParticipants ({{minParticipants}}) must equal teamSize * teamCount ({{expected}})"
 
@@ -86,7 +86,7 @@ errors:
   draftNotStartable: 'The draft for tournament "{{eventName}}" cannot be started from its current state'
   teamDraftHasUnteamedPlayers: 'Team tournament "{{eventName}}" has {{unteamedCount}} approved participants without a team'
   teamDraftUnevenTeams: 'Teams in team tournament "{{eventName}}" have different numbers of members'
-  teamCountMustBeDivisibleByFour: 'The number of teams in tournament "{{eventName}}" ({{teamCount}}) must be divisible by 4'
+  teamCountMustBeDivisibleByTableSize: 'The number of teams in tournament "{{eventName}}" ({{teamCount}}) must be divisible by {{tableSize}}'
   teamDraftIncomplete: 'To start the team tournament "{{eventName}}", form {{teamCount}} full teams of {{teamSize}} players each'
 
   eventRegistrationNotFound: "Registration for user with id {{userId}} in event '{{eventName}}' was not found"

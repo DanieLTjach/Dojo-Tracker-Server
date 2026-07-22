@@ -27,7 +27,6 @@ import LogService from './LogService.ts';
 import { TeamService } from './TeamService.ts';
 import { TrackedGameService } from './TrackedGameService.ts';
 
-const PLAYERS_PER_TABLE = 4;
 /** Seating generation is rare, so we give it a generous budget: at least 5s per candidate. */
 const DEFAULT_TIME_PER_CANDIDATE_MS = 5000;
 const DEFAULT_CANDIDATE_COUNT = 3;
@@ -49,11 +48,16 @@ export interface SeatingSeat {
     seat: Wind;
 }
 
-/** rounds[r][t] = the four seated players (in E/S/W/N order) at table t in round r. */
+/** rounds[r][t] = the seated players (in E/S/W/N order) at table t in round r. */
 export interface SeatingCandidateDTO {
     rounds: SeatingSeat[][][];
     tableSpreadScore: number;
     seatBalanceScore: number;
+    repeatCounts: {
+        twoPlayers: number;
+        threePlayers: number;
+        fourPlayers?: number;
+    };
 }
 
 export interface SeatingGenerationResultDTO {
@@ -63,7 +67,7 @@ export interface SeatingGenerationResultDTO {
     candidates: SeatingCandidateDTO[];
 }
 
-/** A chosen seating to persist: rounds of tables, each table four user ids in seat order. */
+/** A chosen seating to persist: rounds of tables, each table's user ids in seat order. */
 export type SeatingApplyRounds = number[][][];
 
 export class TournamentSeatingService {
@@ -89,7 +93,8 @@ export class TournamentSeatingService {
         this.eventService.validateTeamTournamentComposition(event, true);
 
         const participantIds = this.getSeatableParticipantIds(event);
-        const tables = this.resolveTableCount(event, participantIds.length);
+        const playersPerTable = event.gameRules.numberOfPlayers as 3 | 4;
+        const tables = this.resolveTableCount(event, participantIds.length, playersPerTable);
         const rounds = event.tournament!.totalRounds;
 
         // For a team tournament, forbid two players of the same team at a table. The team
@@ -109,7 +114,15 @@ export class TournamentSeatingService {
         const startedAt = Date.now();
         let candidates;
         try {
-            candidates = await runSeatingWorker({ tables, rounds, timeLimitMs, candidateCount, seed, playerTeams });
+            candidates = await runSeatingWorker({
+                tables,
+                playersPerTable,
+                rounds,
+                timeLimitMs,
+                candidateCount,
+                seed,
+                playerTeams,
+            });
         } catch (error) {
             const elapsedMs = Date.now() - startedAt;
             LogService.logInfo(
@@ -136,6 +149,7 @@ export class TournamentSeatingService {
             candidates: candidates.map(candidate => ({
                 tableSpreadScore: candidate.tableSpreadScore,
                 seatBalanceScore: candidate.seatBalanceScore,
+                repeatCounts: candidate.repeatCounts,
                 rounds: candidate.rounds.map(round =>
                     round.map(table =>
                         table.map((playerIndex, seatIndex) => ({
@@ -280,14 +294,14 @@ export class TournamentSeatingService {
         }
     }
 
-    private resolveTableCount(event: Event, participantCount: number): number {
-        if (participantCount < PLAYERS_PER_TABLE) {
-            throw new SeatingNotEnoughParticipantsError(event.name, PLAYERS_PER_TABLE, participantCount);
+    private resolveTableCount(event: Event, participantCount: number, playersPerTable: number): number {
+        if (participantCount < playersPerTable) {
+            throw new SeatingNotEnoughParticipantsError(event.name, playersPerTable, participantCount);
         }
-        if (participantCount % PLAYERS_PER_TABLE !== 0) {
-            throw new SeatingParticipantsNotMultipleOfTableSizeError(event.name, participantCount);
+        if (participantCount % playersPerTable !== 0) {
+            throw new SeatingParticipantsNotMultipleOfTableSizeError(event.name, participantCount, playersPerTable);
         }
-        return participantCount / PLAYERS_PER_TABLE;
+        return participantCount / playersPerTable;
     }
 
     private resolveTimeLimit(requested: number | undefined, candidateCount: number): number {
@@ -305,6 +319,7 @@ export class TournamentSeatingService {
     private validateSeatingShape(event: Event, seatingRounds: SeatingApplyRounds): void {
         const participantIds = new Set(this.getSeatableParticipantIds(event));
         const expectedRounds = event.tournament!.totalRounds;
+        const playersPerTable = event.gameRules.numberOfPlayers;
         // For a team tournament, reject any table that seats two players of the same team.
         const teamMap = event.format === EventFormat.TEAM
             ? this.teamService.getPlayerTeamMapForEvent(event.id)
@@ -320,12 +335,12 @@ export class TournamentSeatingService {
             const seenInRound = new Set<number>();
             for (let tableIndex = 0; tableIndex < round.length; tableIndex++) {
                 const table = round[tableIndex]!;
-                if (table.length !== PLAYERS_PER_TABLE) {
+                if (table.length !== playersPerTable) {
                     throw new SeatingTableSizeMismatchError(
                         event.name,
                         roundNumber,
                         tableIndex + 1,
-                        PLAYERS_PER_TABLE,
+                        playersPerTable,
                         table.length
                     );
                 }
