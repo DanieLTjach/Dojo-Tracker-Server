@@ -10,3 +10,6 @@ coverage
 .env*
 !.env.example
 !.env.test
+
+# operational artifacts from scripts/backfill-telegram-usernames.mjs
+scripts/nickname-backfill-*.json

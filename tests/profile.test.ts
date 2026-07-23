@@ -30,7 +30,7 @@ describe('Profile API Endpoints', () => {
         const res1 = await request(app)
             .post('/api/users')
             .query(initData1)
-            .send({ name: 'Profile Test User' })
+            .send({ name: 'Profile Test User', nickname: '@profile_test_user' })
             .expect(201);
         testUserId = res1.body.id;
 
@@ -45,7 +45,7 @@ describe('Profile API Endpoints', () => {
         const res2 = await request(app)
             .post('/api/users')
             .query(initData2)
-            .send({ name: 'Profile Test User 2' })
+            .send({ name: 'Profile Test User 2', nickname: '@profile_test_user_2' })
             .expect(201);
         testUser2Id = res2.body.id;
 

@@ -46,9 +46,9 @@ describe('EventRegistrationService', () => {
     function insertUser(userId: number, name: string): void {
         const ts = nextTs();
         dbManager.db.prepare(
-            `INSERT INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, ?, NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?)`
-        ).run(userId, name, ts, ts, SYSTEM_USER_ID);
+            `INSERT INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, ?, ?, NULL, NULL, 0, 1, 'ACTIVE', ?, ?, ?)`
+        ).run(userId, name, `@registration_${userId}`, ts, ts, SYSTEM_USER_ID);
     }
 
     function setProfileNames(userId: number, firstName: string | null, lastName: string | null): void {

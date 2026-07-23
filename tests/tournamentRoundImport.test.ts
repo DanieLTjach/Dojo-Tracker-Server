@@ -42,20 +42,20 @@ describe('TournamentRoundImportService', () => {
         const ts = '2024-01-01T00:00:00.000Z';
 
         dbManager.db.prepare(
-            `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Import U1', '@import_u1', 991001, 0, 1, 'ACTIVE', ?, ?, 0)`
+            `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'Import U1', '@import_u1', '@import_u1', 991001, 0, 1, 'ACTIVE', ?, ?, 0)`
         ).run(99101, ts, ts);
         dbManager.db.prepare(
-            `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Import U2', '@import_u2', 991002, 0, 1, 'ACTIVE', ?, ?, 0)`
+            `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'Import U2', '@import_u2', '@import_u2', 991002, 0, 1, 'ACTIVE', ?, ?, 0)`
         ).run(99102, ts, ts);
         dbManager.db.prepare(
-            `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Import U3', '@import_u3', 991003, 0, 1, 'ACTIVE', ?, ?, 0)`
+            `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'Import U3', '@import_u3', '@import_u3', 991003, 0, 1, 'ACTIVE', ?, ?, 0)`
         ).run(99103, ts, ts);
         dbManager.db.prepare(
-            `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Import U4', '@import_u4', 991004, 0, 1, 'ACTIVE', ?, ?, 0)`
+            `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'Import U4', '@import_u4', '@import_u4', 991004, 0, 1, 'ACTIVE', ?, ?, 0)`
         ).run(99104, ts, ts);
 
         user1Id = 99101;
@@ -85,12 +85,12 @@ describe('TournamentRoundImportService', () => {
         );
 
         dbManager.db.prepare(
-            `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Import Unregistered', '@import_unreg', 991999, 0, 1, 'ACTIVE', ?, ?, 0)`
+            `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'Import Unregistered', '@import_unreg', '@import_unreg', 991999, 0, 1, 'ACTIVE', ?, ?, 0)`
         ).run(UNREGISTERED_USER_ID, ts, ts);
         dbManager.db.prepare(
-            `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Import Pending', '@import_pending', 991998, 0, 1, 'ACTIVE', ?, ?, 0)`
+            `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+             VALUES (?, 'Import Pending', '@import_pending', '@import_pending', 991998, 0, 1, 'ACTIVE', ?, ?, 0)`
         ).run(PENDING_USER_ID, ts, ts);
 
         const membershipTs = new Date().toISOString();
@@ -226,12 +226,12 @@ describe('TournamentRoundImportService', () => {
         beforeAll(() => {
             const ts = '2024-01-01T00:00:00.000Z';
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, 'Import Admin', '@import_admin', 9910201, 1, 1, 'ACTIVE', ?, ?, 0)`
+                `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, 'Import Admin', '@import_admin', '@import_admin', 9910201, 1, 1, 'ACTIVE', ?, ?, 0)`
             ).run(ADMIN_IMPORTER_USER_ID, ts, ts);
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, 'Import NonAdmin', '@import_nonadmin', 9910202, 0, 1, 'ACTIVE', ?, ?, 0)`
+                `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, 'Import NonAdmin', '@import_nonadmin', '@import_nonadmin', 9910202, 0, 1, 'ACTIVE', ?, ?, 0)`
             ).run(NON_ADMIN_IMPORTER_USER_ID, ts, ts);
 
             dbManager.db.prepare(
@@ -311,9 +311,9 @@ describe('TournamentRoundImportService', () => {
         const ts = '2024-01-01T00:00:00.000Z';
         for (const [id, tg] of [[99105, 991005], [99106, 991006], [99107, 991007], [99108, 991008]] as const) {
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
-            ).run(id, `Import U${id}`, `@import_u${id}`, tg, ts, ts);
+                `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
+            ).run(id, `Import U${id}`, `@import_u${id}`, `@import_u${id}`, tg, ts, ts);
             dbManager.db.prepare(
                 `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, 'MEMBER', 'ACTIVE', ?, ?, 0)`

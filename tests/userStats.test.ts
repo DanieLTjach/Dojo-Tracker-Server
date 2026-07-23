@@ -41,7 +41,7 @@ describe('User Stats API Endpoints', () => {
             .post('/api/users')
             .set('Authorization', adminAuthHeader)
             .query(initData)
-            .send({ name });
+            .send({ name, nickname: `@user_${telegramId}` });
         const userId = response.body.id;
 
         // Activate the user
