@@ -12,6 +12,7 @@ import { UserService } from './UserService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
+import { parseGameRulesDetailsForCore } from '../schema/GameRulesSchemas.ts';
 
 export class GameRulesService {
     private gameRulesRepository: GameRulesRepository = new GameRulesRepository();
@@ -37,17 +38,25 @@ export class GameRulesService {
     updateGameRulesDetails(id: number, details: GameRulesDetails, userId: number): GameRules {
         const gameRules = this.getGameRulesById(id);
         this.validateUserCanUpdateGameRules(gameRules, userId);
-        this.writeGameRulesDetails(id, details);
+        this.writeGameRulesDetails(id, parseGameRulesDetailsForCore(details, gameRules));
         return this.getGameRulesById(id);
     }
 
-    createGameRules(params: InsertGameRulesParams, userId: number): GameRules {
-        if (params.clubId === null) {
+    createGameRules(params: CreateGameRulesServiceParams, userId: number): GameRules {
+        const { details, ...gameRulesParams } = params;
+        if (gameRulesParams.clubId === null) {
             this.userService.validateUserIsAdmin(userId, () => new InsufficientPermissionsError());
         } else {
-            this.clubMembershipService.validateUserCanEditClub(params.clubId, userId);
+            this.clubMembershipService.validateUserCanEditClub(gameRulesParams.clubId, userId);
         }
-        const newId = this.gameRulesRepository.insertGameRules(params);
+
+        const validatedDetails = details === undefined
+            ? undefined
+            : parseGameRulesDetailsForCore(details, gameRulesParams);
+        const newId = this.gameRulesRepository.insertGameRules(gameRulesParams);
+        if (validatedDetails !== undefined) {
+            this.writeGameRulesDetails(newId, validatedDetails);
+        }
         return this.getGameRulesById(newId);
     }
 
@@ -55,14 +64,17 @@ export class GameRulesService {
         const gameRules = this.getGameRulesById(id);
         this.validateUserCanUpdateGameRules(gameRules, userId);
         const { details, ...gameRulesParams } = params;
+        const validatedDetails = details === undefined
+            ? undefined
+            : parseGameRulesDetailsForCore(details, gameRulesParams);
 
         if (!gameRulesCoreFieldsEqual(gameRules, gameRulesParams)) {
             this.validateGameRulesHaveNoGames(gameRules);
             this.gameRulesRepository.updateGameRules(id, gameRulesParams);
         }
 
-        if (details !== undefined) {
-            this.writeGameRulesDetails(id, details);
+        if (validatedDetails !== undefined) {
+            this.writeGameRulesDetails(id, validatedDetails);
         }
 
         return this.getGameRulesById(id);
@@ -100,12 +112,18 @@ export class GameRulesService {
         }
     }
 
-    private writeGameRulesDetails(id: number, details: GameRulesDetails): void {
-        this.gameRulesRepository.updateGameRulesDetails(id, compactDetails(details));
+    // Expects details already validated against the target core via
+    // parseGameRulesDetailsForCore; callers must parse before writing.
+    private writeGameRulesDetails(id: number, validatedDetails: GameRulesDetails): void {
+        this.gameRulesRepository.updateGameRulesDetails(id, compactDetails(validatedDetails));
     }
 }
 
 export interface UpdateGameRulesServiceParams extends InsertGameRulesParams {
+    details?: GameRulesDetails | undefined;
+}
+
+export interface CreateGameRulesServiceParams extends InsertGameRulesParams {
     details?: GameRulesDetails | undefined;
 }
 
@@ -131,7 +149,12 @@ function ruleValuesEqual(a: RuleValue, b: RuleValue): boolean {
 }
 
 function compactDetails(details: GameRulesDetails): GameRulesDetails {
-    if (!details.preset) return details;
+    const rulesWithoutCoreFields = Object.fromEntries(
+        Object.entries(details.rules).filter(([key]) => key !== 'number_of_players' && key !== 'starting_points')
+    ) as GameRulesValues;
+    const detailsWithoutCoreFields = { ...details, rules: rulesWithoutCoreFields };
+
+    if (!details.preset) return detailsWithoutCoreFields;
 
     const preset = gameRulesPresetsByKey.get(details.preset);
     if (!preset) {
@@ -139,7 +162,7 @@ function compactDetails(details: GameRulesDetails): GameRulesDetails {
     }
 
     const overrides: GameRulesValues = {};
-    for (const [key, value] of Object.entries(details.rules)) {
+    for (const [key, value] of Object.entries(rulesWithoutCoreFields)) {
         if (value === undefined) continue;
         const presetValue = preset.rules[key as keyof GameRulesValues];
         if (presetValue === undefined || !ruleValuesEqual(value, presetValue)) {
@@ -147,5 +170,5 @@ function compactDetails(details: GameRulesDetails): GameRulesDetails {
         }
     }
 
-    return { ...details, rules: overrides };
+    return { ...detailsWithoutCoreFields, rules: overrides };
 }

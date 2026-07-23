@@ -1,5 +1,17 @@
 errors:
   invalidRequestData: Invalid request data
+  gameRulesValidationFailed: Please correct the highlighted game-rules fields
+  gameRulesValidationCoreFieldMismatch: This value must match the main ruleset setting.
+  gameRulesValidationNotenPenaltySplit: The noten penalty must split into whole points for this player count.
+  gameRulesValidationHonbaPayerCount: The honba value must match the number of paying players for this ruleset.
+  gameRulesValidationInteger: Enter a whole number.
+  gameRulesValidationMultipleOf: Enter a value using the required step.
+  gameRulesValidationInvalidType: Enter a value of the expected type.
+  gameRulesValidationInvalidValue: Select or enter an allowed value.
+  gameRulesValidationTooSmall: Enter a value at or above the minimum.
+  gameRulesValidationTooBig: Enter a value at or below the maximum.
+  gameRulesValidationInvalidFormat: Enter a value in the expected format.
+  gameRulesValidationUnknownField: This field is not supported.
   databaseError: "Database error: {{message}}"
   internalServerError: Internal Server Error
 
@@ -151,6 +163,7 @@ errors:
   invalidHonbaFormat: Invalid honba value format in rules
   noPlayersInTheGame: Game has no players
   playerNotInGame: Player {{playerId}} is not in the game
+  insufficientPointsForRiichi: Player {{playerId}} needs at least {{requiredPoints}} points to declare riichi (currently {{actualPoints}})
 
   userRatingChangeInGameNotFound: Rating change for user {{userId}} in game {{gameId}} was not found
   userHasNoRatingDespiteHavingPlayedGames: User {{userId}} has no rating in event {{eventId}} despite having played games

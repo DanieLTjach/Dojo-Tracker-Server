@@ -119,6 +119,55 @@ describe('Game Rules CRUD', () => {
             repo.deleteGameRules(created.id);
         });
 
+        test('createGameRules creates core and no-preset sanma details together', () => {
+            const created = service.createGameRules({
+                ...baseParams,
+                name: 'Atomic Sanma Create',
+                numberOfPlayers: 3,
+                startingPoints: 40000,
+                uma: [15, 0, -15],
+                details: {
+                    rules: {
+                        goal: 40000,
+                        honba: '2x500',
+                        noten_penalty: 2000,
+                        open_tanyao: true,
+                    },
+                },
+            }, ADMIN_USER_ID);
+
+            expect(created.details?.rules).toMatchObject({
+                number_of_players: 3,
+                starting_points: 40000,
+                goal: 40000,
+                honba: '2x500',
+                noten_penalty: 2000,
+                open_tanyao: true,
+            });
+
+            repo.deleteGameRules(created.id);
+        });
+
+        test('createGameRules validates details before inserting core', () => {
+            const name = 'Invalid Atomic Sanma Create';
+
+            expect(() =>
+                service.createGameRules({
+                    ...baseParams,
+                    name,
+                    numberOfPlayers: 3,
+                    startingPoints: 40000,
+                    uma: [15, 0, -15],
+                    details: {
+                        rules: { starting_points: 35000 },
+                    },
+                }, ADMIN_USER_ID)
+            ).toThrow();
+
+            const row = dbManager.db.prepare('SELECT id FROM gameRules WHERE name = ?').get(name);
+            expect(row).toBeUndefined();
+        });
+
         test('updateGameRules updates and returns updated record', () => {
             const result = service.updateGameRules(createdRuleId, {
                 ...baseParams,
@@ -265,11 +314,12 @@ describe('Game Rules CRUD', () => {
         });
 
         test('updateGameRulesDetails with preset stores only overrides', () => {
+            const current = service.getGameRulesById(createdRuleId);
             const fullRules: GameRulesDetails = {
                 preset: 'ema_2025',
                 rules: {
-                    number_of_players: 4,
-                    starting_points: 25000,
+                    number_of_players: current.numberOfPlayers as 3 | 4,
+                    starting_points: current.startingPoints,
                     open_tanyao: true,
                     red_fives: 'three_one_per_suit',
                 },
@@ -279,8 +329,8 @@ describe('Game Rules CRUD', () => {
 
             expect(updated.details).not.toBeNull();
             expect(updated.details!.preset).toBe('ema_2025');
-            expect(updated.details!.rules['number_of_players']).toBe(4);
-            expect(updated.details!.rules['starting_points']).toBe(25000);
+            expect(updated.details!.rules['number_of_players']).toBe(current.numberOfPlayers);
+            expect(updated.details!.rules['starting_points']).toBe(current.startingPoints);
             expect(updated.details!.rules['open_tanyao']).toBe(true);
             expect(updated.details!.rules['red_fives']).toBe('three_one_per_suit');
 
@@ -288,7 +338,7 @@ describe('Game Rules CRUD', () => {
                 details: string;
             };
             const stored = JSON.parse(raw.details);
-            expect(stored.rules.starting_points).toBe(25000);
+            expect(stored.rules.starting_points).toBeUndefined();
             expect(stored.rules.red_fives).toBe('three_one_per_suit');
             expect(stored.rules.number_of_players).toBeUndefined();
             expect(stored.rules.open_tanyao).toBeUndefined();
@@ -309,10 +359,11 @@ describe('Game Rules CRUD', () => {
         });
 
         test('updateGameRulesDetails without preset stores all rules', () => {
+            const current = service.getGameRulesById(createdRuleId);
             const details: GameRulesDetails = {
                 rules: {
-                    number_of_players: 4,
-                    starting_points: 30000,
+                    number_of_players: current.numberOfPlayers as 3 | 4,
+                    starting_points: current.startingPoints,
                     open_tanyao: true,
                 },
             };
@@ -323,8 +374,8 @@ describe('Game Rules CRUD', () => {
                 details: string;
             };
             const stored = JSON.parse(raw.details);
-            expect(stored.rules.number_of_players).toBe(4);
-            expect(stored.rules.starting_points).toBe(30000);
+            expect(stored.rules.number_of_players).toBeUndefined();
+            expect(stored.rules.starting_points).toBeUndefined();
             expect(stored.rules.open_tanyao).toBe(true);
             expect(stored.preset).toBeUndefined();
         });
@@ -408,7 +459,7 @@ describe('Game Rules CRUD', () => {
             };
             const stored = JSON.parse(raw.details);
             expect(stored.rules.open_tanyao).toBeUndefined();
-            expect(stored.rules.starting_points).toBe(35000);
+            expect(stored.rules.starting_points).toBeUndefined();
         });
     });
 });

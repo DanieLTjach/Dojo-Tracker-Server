@@ -1,5 +1,17 @@
 errors:
   invalidRequestData: Некоректні дані запиту
+  gameRulesValidationFailed: Виправте виділені поля правил гри
+  gameRulesValidationCoreFieldMismatch: Значення має збігатися з основним налаштуванням набору правил.
+  gameRulesValidationNotenPenaltySplit: Штраф за нотен має ділитися на цілу кількість очок для цієї кількості гравців.
+  gameRulesValidationHonbaPayerCount: Значення хонби має відповідати кількості гравців, що платять, для цього набору правил.
+  gameRulesValidationInteger: Введіть ціле число.
+  gameRulesValidationMultipleOf: Введіть значення з потрібним кроком.
+  gameRulesValidationInvalidType: Введіть значення очікуваного типу.
+  gameRulesValidationInvalidValue: Виберіть або введіть дозволене значення.
+  gameRulesValidationTooSmall: Введіть значення не менше мінімального.
+  gameRulesValidationTooBig: Введіть значення не більше максимального.
+  gameRulesValidationInvalidFormat: Введіть значення у правильному форматі.
+  gameRulesValidationUnknownField: Це поле не підтримується.
   databaseError: "Помилка бази даних: {{message}}"
   internalServerError: Внутрішня помилка сервера
 
@@ -151,6 +163,7 @@ errors:
   invalidHonbaFormat: Некоректний формат значення хонби в правилах
   noPlayersInTheGame: Гра не має гравців
   playerNotInGame: Гравець {{playerId}} відсутній у грі
+  insufficientPointsForRiichi: Гравцю {{playerId}} потрібно щонайменше {{requiredPoints}} очок для оголошення ріічі (зараз {{actualPoints}})
 
   userRatingChangeInGameNotFound: Зміну рейтингу користувача {{userId}} в грі {{gameId}} не знайдено
   userHasNoRatingDespiteHavingPlayedGames: Користувач {{userId}} не має рейтингу в події {{eventId}} попри те, що має зіграні ігри

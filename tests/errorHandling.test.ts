@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import { ResponseStatusError } from '../src/error/BaseErrors.ts';
 import { ZodError } from 'zod';
 import { SqliteError } from 'better-sqlite3';
+import { NOTEN_PENALTY_DIVISIBILITY_MESSAGE } from '../src/schema/GameRulesSchemas.ts';
 import { jest } from '@jest/globals';
 
 describe('ErrorHandling Middleware', () => {
@@ -51,6 +52,30 @@ describe('ErrorHandling Middleware', () => {
             details: zodError.issues,
         });
         expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return localized field errors without raw Zod data for game-rules requests', () => {
+        mockReq.url = '/api/game-rules';
+        const zodError = new ZodError([
+            {
+                code: 'custom',
+                path: ['body', 'details', 'rules', 'noten_penalty'],
+                message: NOTEN_PENALTY_DIVISIBILITY_MESSAGE,
+            },
+        ]);
+
+        handleErrors(zodError, mockReq as Request, mockRes as Response, mockNext);
+
+        expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
+        expect(mockRes.json).toHaveBeenCalledWith({
+            errorCode: 'gameRulesValidationFailed',
+            message: 'Виправте виділені поля правил гри',
+            validationErrors: [{
+                path: 'details.rules.noten_penalty',
+                code: 'notenPenaltySplit',
+                message: 'Штраф за нотен має ділитися на цілу кількість очок для цієї кількості гравців.',
+            }],
+        });
     });
 
     it('should handle SqliteError and return 500 with error details', () => {
