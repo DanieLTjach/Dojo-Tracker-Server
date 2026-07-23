@@ -1,9 +1,4 @@
-import {
-    type AchievementMetric,
-    ACHIEVEMENTS,
-    type AchievementDefinition,
-    type AchievementValueUnit,
-} from '../data/achievementsCatalog.ts';
+import { ACHIEVEMENTS, type AchievementDefinition, type AchievementValueUnit } from '../data/achievementsCatalog.ts';
 import type { Event } from '../model/EventModels.ts';
 import { AchievementCriterion, type EventAchievementResult, type UserAchievement } from '../model/AchievementModels.ts';
 import { type DetailedGame, GameStatus } from '../model/GameModels.ts';
@@ -17,16 +12,14 @@ import LogService from './LogService.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
 import { UserService } from './UserService.ts';
 import { resolveUserLocale } from '../util/LocaleResolver.ts';
-
-const DEFINITION_BY_METRIC = new Map<AchievementMetric, AchievementDefinition>(
-    ACHIEVEMENTS.map(definition => [definition.metric, definition])
-);
+import { ProfileAchievementService } from './ProfileAchievementService.ts';
 
 export class AchievementService {
     private achievementRepository: AchievementRepository = new AchievementRepository();
     private gameRepository: GameRepository = new GameRepository();
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
+    private profileAchievementService: ProfileAchievementService = new ProfileAchievementService();
 
     /**
      * Recompute and persist a tournament's achievements from its finished games.
@@ -116,30 +109,14 @@ export class AchievementService {
 
     /** Achievements a user has won across all tournaments, for the profile page. */
     getUserAchievements(userId: number, requestingUserId: number): UserAchievement[] {
-        for (const eventId of this.achievementRepository.findUncomputedTournamentEventIdsForUser(userId)) {
-            this.recomputeEventAchievements(this.eventService.getEventById(eventId));
-        }
-
         const requestingUser = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(requestingUser);
 
-        return this.achievementRepository.findByUserId(userId).flatMap(row => {
-            const definition = DEFINITION_BY_METRIC.get(row.metric);
-            if (definition === undefined) {
-                return [];
-            }
-            const value = row.value ?? undefined;
-            return [{
-                eventId: row.eventId,
-                eventName: row.eventName,
-                metric: row.metric,
-                name: definition.name,
-                description: achievementDescription(definition, locale),
-                valueUnit: definition.valueUnit,
-                value,
-                valueFormatted: formatValue(value, definition.valueUnit, locale),
-            }];
-        });
+        return this.profileAchievementService.getUserAchievements(
+            userId,
+            locale,
+            eventId => this.recomputeEventAchievements(this.eventService.getEventById(eventId))
+        );
     }
 
     private buildEventResults(
