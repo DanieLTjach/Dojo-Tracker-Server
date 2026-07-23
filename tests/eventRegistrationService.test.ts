@@ -265,6 +265,17 @@ describe('EventRegistrationService', () => {
             expect(after?.status).toBe('ACTIVE');
         });
 
+        it('approves REJECTED registration and activates PENDING clubMembership atomically', () => {
+            service.reject(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID, OWNER_USER_ID);
+            expect(registrationRepo.findRegistration(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID)?.status)
+                .toBe('REJECTED');
+            expect(membershipRepo.findMembership(TEST_CLUB_ID, NON_MEMBER_USER_ID)?.status).toBe('PENDING');
+
+            const result = service.approve(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID, OWNER_USER_ID);
+            expect(result.status).toBe('APPROVED');
+            expect(membershipRepo.findMembership(TEST_CLUB_ID, NON_MEMBER_USER_ID)?.status).toBe('ACTIVE');
+        });
+
         it('throws when registration is already APPROVED', () => {
             service.approve(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID, OWNER_USER_ID);
             expect(() => service.approve(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID, OWNER_USER_ID))
