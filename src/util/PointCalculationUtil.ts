@@ -517,8 +517,9 @@ function calculateChomboPointChanges(
         case 'twenty_thousand_after_uma':
             return [];
         case 'mangan':
+            const gameStateWithoutBank: GameState = { ...gameState, riichiSticks: 0 };
             const manganTsumoPayments = calculateTsumoPointChanges(
-                gameState,
+                gameStateWithoutBank,
                 players,
                 rules,
                 {
