@@ -502,6 +502,19 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
             ]);
         });
 
+        it('mangan mode: excludes banked riichi sticks from the reverse mangan', () => {
+            const rules: GameRulesValues = { ...ema, chombo: 'mangan' };
+            expectChanges(rules, gameState(Wind.EAST, 1, 0, 3), {
+                type: 'CHOMBO',
+                offenderPlayerId: 2,
+            }, [
+                { playerId: 1, pointChange: 4000 },
+                { playerId: 3, pointChange: 2000 },
+                { playerId: 4, pointChange: 2000 },
+                { playerId: 2, pointChange: -8000 },
+            ]);
+        });
+
         it('mangan mode: a dealer offender pays a dealer mangan to everyone', () => {
             const rules: GameRulesValues = { ...ema, chombo: 'mangan' };
             expectChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
