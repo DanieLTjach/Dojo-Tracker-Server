@@ -5,6 +5,7 @@ import { UserService } from '../src/service/UserService.ts';
 import { ProfileService } from '../src/service/ProfileService.ts';
 import { AchievementService } from '../src/service/AchievementService.ts';
 import { EventService } from '../src/service/EventService.ts';
+import { GameService } from '../src/service/GameService.ts';
 import { AchievementCriterion } from '../src/model/AchievementModels.ts';
 import { AchievementsOnlyForTournamentsError } from '../src/error/EventErrors.ts';
 import type { GameRoundResult } from '../src/model/GameRoundResultModels.ts';
@@ -242,6 +243,46 @@ describe('AchievementService (persisted tournament achievements)', () => {
             .get(eventId) as { count: number };
         expect(computed.achievementsComputedAt).not.toBe('2000-01-01T00:00:00.000Z');
         expect(storedAchievements.count).toBeGreaterThan(0);
+    });
+
+    it('recomputes initialized achievements when a finished game is created', () => {
+        const eventId = 9106;
+        createCustomEvent(
+            eventId,
+            'New Finished Game Cup',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z',
+            2,
+            1,
+            'TOURNAMENT'
+        );
+        dbManager.db
+            .prepare('UPDATE event SET achievementsComputedAt = ? WHERE id = ?')
+            .run('2000-01-01T00:00:00.000Z', eventId);
+
+        new GameService().addGame(
+            eventId,
+            [
+                { userId: u1, points: 50000, startPlace: 'EAST' },
+                { userId: u2, points: 30000, startPlace: 'SOUTH' },
+                { userId: u3, points: 20000, startPlace: 'WEST' },
+                { userId: u4, points: 20000, startPlace: 'NORTH' },
+            ],
+            0,
+            new Date('2025-02-01T00:00:00.000Z'),
+            true,
+            null,
+            null
+        );
+
+        const bestGamePoints = dbManager.db
+            .prepare(
+                `SELECT userId, value
+                 FROM eventAchievement
+                 WHERE eventId = ? AND metric = 'best_game_points'`
+            )
+            .get(eventId) as { userId: number, value: number } | undefined;
+        expect(bestGamePoints).toEqual({ userId: u1, value: 50000 });
     });
 
     it('force recompute returns results and refreshes the computed marker', () => {

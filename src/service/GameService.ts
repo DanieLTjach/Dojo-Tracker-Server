@@ -105,6 +105,7 @@ export class GameService {
             event.gameRules,
             event.startingRating
         );
+        this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
 
