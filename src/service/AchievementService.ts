@@ -68,6 +68,14 @@ export class AchievementService {
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 
+    clearEventAchievements(eventId: number): void {
+        const event = this.eventService.getEventById(eventId);
+        if (event.type !== 'TOURNAMENT') {
+            throw new AchievementsOnlyForTournamentsError();
+        }
+        this.achievementRepository.clearEventAchievements(eventId);
+    }
+
     private computeAndPersist(event: Event): void {
         const finishedGames = this.gameRepository
             .findGames({ eventId: event.id })

@@ -36,6 +36,10 @@ export class AchievementRepository {
         return dbManager.db.prepare('UPDATE event SET achievementsComputedAt = :computedAt WHERE id = :eventId');
     }
 
+    private clearComputedAtStatement(): Statement<{ eventId: number }, void> {
+        return dbManager.db.prepare('UPDATE event SET achievementsComputedAt = NULL WHERE id = :eventId');
+    }
+
     /** Atomically replace all stored achievements for an event and record the computation time. */
     replaceEventAchievements(eventId: number, rows: EventAchievementRow[], computedAt: Date): void {
         this.deleteByEventStatement().run({ eventId });
@@ -44,6 +48,11 @@ export class AchievementRepository {
             insert.run(row);
         }
         this.markComputedStatement().run({ eventId, computedAt: computedAt.toISOString() });
+    }
+
+    clearEventAchievements(eventId: number): void {
+        this.deleteByEventStatement().run({ eventId });
+        this.clearComputedAtStatement().run({ eventId });
     }
 
     private areEventAchievementsComputedStatement(): Statement<{ eventId: number }, { eventId: number }> {

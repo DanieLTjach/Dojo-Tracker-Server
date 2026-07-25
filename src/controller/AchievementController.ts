@@ -1,7 +1,11 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { AchievementService } from '../service/AchievementService.ts';
-import { getEventAchievementsSchema, recomputeEventAchievementsSchema } from '../schema/EventSchemas.ts';
+import {
+    clearEventAchievementsSchema,
+    getEventAchievementsSchema,
+    recomputeEventAchievementsSchema,
+} from '../schema/EventSchemas.ts';
 import { getUserAchievementsSchema } from '../schema/UserSchemas.ts';
 
 export class AchievementController {
@@ -19,6 +23,12 @@ export class AchievementController {
         const userId = req.user!.userId;
         const achievements = this.achievementService.forceRecomputeEventAchievements(eventId, userId);
         return res.status(StatusCodes.OK).json({ achievements });
+    }
+
+    clearEventAchievements(req: Request, res: Response) {
+        const { params: { eventId } } = clearEventAchievementsSchema.parse(req);
+        this.achievementService.clearEventAchievements(eventId);
+        return res.status(StatusCodes.NO_CONTENT).send();
     }
 
     getUserAchievements(req: Request, res: Response) {

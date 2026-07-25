@@ -45,6 +45,19 @@ router.get(
 );
 
 /**
+ * DELETE /api/events/:eventId/achievements
+ * Clear stored tournament achievements and reset their computed marker
+ *
+ * Authentication: Required (Admin only)
+ */
+router.delete(
+    '/:eventId/achievements',
+    requireAuth,
+    requireAdmin,
+    withTransaction((req, res) => achievementController.clearEventAchievements(req, res))
+);
+
+/**
  * POST /api/events/:eventId/achievements/recompute
  * Force recompute of a tournament's achievements (e.g. after fixing bad data)
  *

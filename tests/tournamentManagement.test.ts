@@ -288,6 +288,59 @@ describe('Tournament management', () => {
         expect(achievementState.achievementsComputedAt).not.toBeNull();
     });
 
+    test('allows an admin to clear stored tournament achievements', async () => {
+        dbManager.db
+            .prepare('UPDATE event SET achievementsComputedAt = ? WHERE id = ?')
+            .run('2026-06-01T12:00:00.000Z', TOURNAMENT_EVENT_ID);
+        dbManager.db.prepare(
+            `INSERT INTO eventAchievement (eventId, metric, userId, value)
+             VALUES (?, 'best_game_points', ?, 40000)`
+        ).run(TOURNAMENT_EVENT_ID, PLAYER_IDS[0]);
+
+        await request(app)
+            .delete(`/api/events/${TOURNAMENT_EVENT_ID}/achievements`)
+            .set('Authorization', adminAuthHeader)
+            .expect(204);
+
+        const state = dbManager.db
+            .prepare(
+                `SELECT e.achievementsComputedAt,
+                        (SELECT COUNT(*) FROM eventAchievement ea WHERE ea.eventId = e.id) AS achievementCount
+                 FROM event e
+                 WHERE e.id = ?`
+            )
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null, achievementCount: number };
+        expect(state).toEqual({ achievementsComputedAt: null, achievementCount: 0 });
+    });
+
+    test('rejects clearing tournament achievements by a non-admin', async () => {
+        dbManager.db
+            .prepare('UPDATE event SET achievementsComputedAt = ? WHERE id = ?')
+            .run('2026-06-01T12:00:00.000Z', TOURNAMENT_EVENT_ID);
+        dbManager.db.prepare(
+            `INSERT INTO eventAchievement (eventId, metric, userId, value)
+             VALUES (?, 'best_game_points', ?, 40000)`
+        ).run(TOURNAMENT_EVENT_ID, PLAYER_IDS[0]);
+
+        await request(app)
+            .delete(`/api/events/${TOURNAMENT_EVENT_ID}/achievements`)
+            .set('Authorization', ownerAuthHeader)
+            .expect(403);
+
+        const state = dbManager.db
+            .prepare(
+                `SELECT e.achievementsComputedAt,
+                        (SELECT COUNT(*) FROM eventAchievement ea WHERE ea.eventId = e.id) AS achievementCount
+                 FROM event e
+                 WHERE e.id = ?`
+            )
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null, achievementCount: number };
+        expect(state).toEqual({
+            achievementsComputedAt: '2026-06-01T12:00:00.000Z',
+            achievementCount: 1,
+        });
+    });
+
     test('allows club moderator to start a tournament round', async () => {
         importRound(1);
 
