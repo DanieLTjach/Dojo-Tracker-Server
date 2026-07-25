@@ -42,6 +42,7 @@ function cleanupEvent(eventId: number): void {
     dbManager.db.prepare('DELETE FROM gameRound WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
     dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
     dbManager.db.prepare('DELETE FROM userRatingChange WHERE eventId = ?').run(eventId);
+    dbManager.db.prepare('DELETE FROM eventAchievement WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM tournament WHERE eventId = ?').run(eventId);
@@ -280,6 +281,11 @@ describe('Tournament management', () => {
             status: 'FINISHED',
             currentRound: 2,
         });
+
+        const achievementState = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null };
+        expect(achievementState.achievementsComputedAt).not.toBeNull();
     });
 
     test('allows club moderator to start a tournament round', async () => {
