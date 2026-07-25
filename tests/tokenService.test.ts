@@ -28,6 +28,7 @@ describe('TokenService', () => {
             const user: User = {
                 id: 1,
                 name: 'Test User',
+                nickname: '@test_user_1',
                 telegramId: 123456789,
                 telegramUsername: '@testuser',
                 isAdmin: false,
@@ -50,6 +51,7 @@ describe('TokenService', () => {
             const user: User = {
                 id: 2,
                 name: 'Admin User',
+                nickname: '@admin_user_2',
                 telegramId: 987654321,
                 telegramUsername: '@admin',
                 isAdmin: true,
@@ -75,6 +77,7 @@ describe('TokenService', () => {
             const user: User = {
                 id: 5,
                 name: 'Test User',
+                nickname: '@test_user_5',
                 telegramId: 333333333,
                 telegramUsername: '@test',
                 isAdmin: true,
@@ -97,6 +100,7 @@ describe('TokenService', () => {
             const user: User = {
                 id: 6,
                 name: 'Test User',
+                nickname: '@test_user_6',
                 telegramId: 444444444,
                 telegramUsername: '@test',
                 isAdmin: false,
@@ -124,6 +128,7 @@ describe('TokenService', () => {
             const user: User = {
                 id: 7,
                 name: 'Test User',
+                nickname: '@test_user_7',
                 telegramId: 555555555,
                 telegramUsername: '@test',
                 isAdmin: false,
@@ -165,6 +170,7 @@ describe('TokenService', () => {
             const user: User = {
                 id: 8,
                 name: 'Test User',
+                nickname: '@test_user_8',
                 telegramId: 666666666,
                 telegramUsername: '@test',
                 isAdmin: true,

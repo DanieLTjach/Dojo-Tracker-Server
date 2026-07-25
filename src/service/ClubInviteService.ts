@@ -15,6 +15,7 @@ import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { NameAlreadyTakenByAnotherUser } from '../error/UserErrors.ts';
+import { NicknameAlreadyTakenError } from '../error/UserErrors.ts';
 import {
     InviteExhaustedError,
     InviteExpiredError,
@@ -25,6 +26,7 @@ import {
 import { generateInviteCode } from '../util/InviteCodeUtil.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
+import { generateReadableNickname, normalizeProviderUsername } from '../util/NicknameUtil.ts';
 
 const CODE_GENERATION_ATTEMPTS = 10;
 const NAME_COLLISION_ATTEMPTS = 10;
@@ -144,10 +146,19 @@ export class ClubInviteService {
     private registerWithUniqueName(baseName: string, telegramUsername: string | undefined, telegramId: number): User {
         for (let attempt = 0; attempt < NAME_COLLISION_ATTEMPTS; attempt++) {
             const candidate = attempt === 0 ? baseName : `${baseName} ${generateInviteCode(4)}`;
+            const nickname = attempt === 0
+                ? normalizeProviderUsername(telegramUsername) ?? generateReadableNickname()
+                : generateReadableNickname();
             try {
-                return this.userService.registerUser(candidate, telegramUsername, telegramId, SYSTEM_USER_ID);
+                return this.userService.registerUser(
+                    candidate,
+                    nickname,
+                    telegramUsername,
+                    telegramId,
+                    SYSTEM_USER_ID
+                );
             } catch (error) {
-                if (error instanceof NameAlreadyTakenByAnotherUser) {
+                if (error instanceof NameAlreadyTakenByAnotherUser || error instanceof NicknameAlreadyTakenError) {
                     continue;
                 }
                 throw error;

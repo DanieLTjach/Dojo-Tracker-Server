@@ -36,13 +36,14 @@ describe('User API Endpoints', () => {
             const response = await request(app)
                 .post('/api/users')
                 .query(initData)
-                .send({ name: 'Test User' })
+                .send({ name: 'Test User', nickname: '@test_user' })
                 .expect(201);
 
             testUserId = response.body.id;
 
             expect(response.body).toHaveProperty('id');
             expect(response.body.name).toBe('Test User');
+            expect(response.body.nickname).toBe('@test_user');
             expect(response.body.telegramUsername).toBe('@testuser');
             expect(response.body.telegramId).toBe(456456456);
             expect(response.body.isActive).toBe(true);
@@ -58,7 +59,7 @@ describe('User API Endpoints', () => {
             const response = await request(app)
                 .post('/api/users')
                 .query(initData)
-                .send({ name: 'Test User without telegram username' })
+                .send({ name: 'Test User without telegram username', nickname: '@test_without_tg' })
                 .expect(201);
 
             testUserId = response.body.id;
@@ -81,7 +82,7 @@ describe('User API Endpoints', () => {
                 .post('/api/users')
                 .set('Authorization', adminAuthHeader)
                 .query(initData)
-                .send({ name: 'Test User 2' })
+                .send({ name: 'Test User 2', nickname: '@test_user_2' })
                 .expect(201);
 
             testUser2Id = response.body.id;
@@ -95,16 +96,31 @@ describe('User API Endpoints', () => {
             const response = await request(app)
                 .post('/api/users')
                 .query(initData)
-                .send({});
+                .send({ nickname: '@missing_name' });
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBe('Invalid request data');
         });
 
+        it('should require a valid nickname', async () => {
+            const initData = createTelegramInitData(111222335, 'nickname_required');
+
+            await request(app)
+                .post('/api/users')
+                .query(initData)
+                .send({ name: 'Missing Nickname' })
+                .expect(400);
+            await request(app)
+                .post('/api/users')
+                .query(initData)
+                .send({ name: 'Malformed Nickname', nickname: 'missing-at-sign' })
+                .expect(400);
+        });
+
         it('should fail when telegram init data is missing', async () => {
             const response = await request(app)
                 .post('/api/users')
-                .send({ name: 'Test User 4' });
+                .send({ name: 'Test User 4', nickname: '@test_user_4' });
 
             expect(response.status).toBe(401);
             expect(response.body.message).toContain('Missing hash parameter');
@@ -117,7 +133,7 @@ describe('User API Endpoints', () => {
             const response = await request(app)
                 .post('/api/users')
                 .query(initData)
-                .send({ name: 'Test User 4' });
+                .send({ name: 'Test User 4', nickname: '@test_user_4' });
 
             expect(response.status).toBe(401);
             expect(response.body.message).toContain('Hash mismatch');
@@ -129,7 +145,7 @@ describe('User API Endpoints', () => {
             const response = await request(app)
                 .post('/api/users')
                 .query(initData)
-                .send({ name: 'Unique Name' });
+                .send({ name: 'Unique Name', nickname: '@unique_name' });
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe(
@@ -143,7 +159,7 @@ describe('User API Endpoints', () => {
             const response = await request(app)
                 .post('/api/users')
                 .query(initData)
-                .send({ name: 'Test User' });
+                .send({ name: 'Test User', nickname: '@new_user_name' });
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe(
@@ -157,7 +173,7 @@ describe('User API Endpoints', () => {
             const response = await request(app)
                 .post('/api/users')
                 .query(initData)
-                .send({ name: 'Different Name' });
+                .send({ name: 'Different Name', nickname: '@different_name' });
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe(
@@ -196,11 +212,12 @@ describe('User API Endpoints', () => {
             ).run(otherClubId, 'Users Filter Test Club 2', null, null, null, null, 1, timestamp, timestamp, 0);
 
             dbManager.db.prepare(
-                `INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                `INSERT INTO user (id, name, nickname, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(
                 activeMemberUserId,
                 'Club Active User',
+                '@club_active_user',
                 '@clubactiveuser',
                 920100001,
                 0,
@@ -212,11 +229,12 @@ describe('User API Endpoints', () => {
             );
 
             dbManager.db.prepare(
-                `INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                `INSERT INTO user (id, name, nickname, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(
                 pendingMemberUserId,
                 'Club Pending User',
+                '@club_pending_user',
                 '@clubpendinguser',
                 920100002,
                 0,
@@ -228,11 +246,12 @@ describe('User API Endpoints', () => {
             );
 
             dbManager.db.prepare(
-                `INSERT INTO user (id, name, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                `INSERT INTO user (id, name, nickname, telegramUsername, telegramId, modifiedBy, isAdmin, isActive, status, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(
                 otherClubUserId,
                 'Other Club User',
+                '@other_club_user',
                 '@otherclubuser',
                 920100003,
                 0,
@@ -366,6 +385,26 @@ describe('User API Endpoints', () => {
     });
 
     describe('PATCH /api/users/:id', () => {
+        it('should update nickname including a case-only change', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ nickname: '@TEST_WITHOUT_TG' })
+                .expect(200);
+
+            expect(response.body.nickname).toBe('@TEST_WITHOUT_TG');
+        });
+
+        it('should reject a nickname owned by another user case-insensitively', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ nickname: '@TEST_USER_2' })
+                .expect(400);
+
+            expect(response.body.errorCode).toBe('nicknameAlreadyTaken');
+        });
+
         it('should update user name (requires auth)', async () => {
             const updateData = {
                 name: 'Updated User Name',

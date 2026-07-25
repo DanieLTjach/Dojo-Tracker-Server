@@ -17,7 +17,7 @@ export class UserController {
     private authService: AuthService = new AuthService();
 
     registerUser(req: Request, res: Response) {
-        const { body: { name } } = userRegistrationSchema.parse(req);
+        const { body: { name, nickname } } = userRegistrationSchema.parse(req);
         const initDataParams = req.query as Record<string, string>;
 
         this.authService.validateInitData(initDataParams);
@@ -27,7 +27,7 @@ export class UserController {
         const telegramUsername = telegramUser.username ? `@${telegramUser.username}` : undefined;
 
         const createdBy = req.user?.userId ?? SYSTEM_USER_ID;
-        const newUser = this.userService.registerUser(name, telegramUsername, telegramId, createdBy);
+        const newUser = this.userService.registerUser(name, nickname, telegramUsername, telegramId, createdBy);
         return res.status(StatusCodes.CREATED).json(newUser);
     }
 
@@ -65,11 +65,17 @@ export class UserController {
     editUser(req: Request, res: Response) {
         const {
             params: { id },
-            body: { name, telegramUsername },
+            body: { name, nickname, telegramUsername },
         } = userEditSchema.parse(req);
 
         const modifiedBy = req.user!.userId; // Non-null assertion safe because requireAuth ensures user exists
-        const editedUser = this.userService.editUser(id, name ?? undefined, telegramUsername ?? undefined, modifiedBy);
+        const editedUser = this.userService.editUser(
+            id,
+            name ?? undefined,
+            nickname ?? undefined,
+            telegramUsername ?? undefined,
+            modifiedBy
+        );
         return res.status(StatusCodes.OK).json(editedUser);
     }
 

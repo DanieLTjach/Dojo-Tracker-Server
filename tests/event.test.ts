@@ -28,7 +28,13 @@ describe('Event API Endpoints', () => {
         // Create non-admin test user
         const userService = new UserService();
         const userRepository = new UserRepository();
-        const user = userService.registerUser('NonAdminEventUser', 'nonadmin_event', 555555555, SYSTEM_USER_ID);
+        const user = userService.registerUser(
+            'NonAdminEventUser',
+            '@nonadmin_event',
+            'nonadmin_event',
+            555555555,
+            SYSTEM_USER_ID
+        );
         userRepository.updateUserStatus(user.id, true, 'ACTIVE', SYSTEM_USER_ID);
         nonAdminAuthHeader = createAuthHeader(user.id);
     });
@@ -1277,13 +1283,14 @@ describe('Event API Endpoints', () => {
         beforeAll(() => {
             const timestamp = '2024-01-01T00:00:00.000Z';
             dbManager.db.prepare(
-                `INSERT INTO user (id, telegramUsername, telegramId, name, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                `INSERT INTO user (id, telegramUsername, telegramId, name, nickname, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(
                 clubOwnerUserId,
                 '@clubowner_event',
                 88888801,
                 'ClubOwnerEventUser',
+                '@clubowner_event',
                 timestamp,
                 timestamp,
                 0,

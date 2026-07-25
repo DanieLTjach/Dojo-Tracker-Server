@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { clubIdParamSchema } from './CommonSchemas.ts';
+import { NICKNAME_PATTERN } from '../util/NicknameUtil.ts';
 
 export const userNameSchema = z.string().trim().min(1, 'Name cannot be empty');
+export const nicknameSchema = z.string().trim().regex(NICKNAME_PATTERN, 'Invalid nickname');
 
 export const telegramUsernameSchema = z.string()
     .startsWith('@', "Telegram username must start with '@'")
@@ -21,6 +23,7 @@ export function uniqueUserIdsSchema(purpose: string) {
 export const userRegistrationSchema = z.object({
     body: z.object({
         name: userNameSchema,
+        nickname: nicknameSchema,
     }),
 });
 
@@ -49,9 +52,10 @@ export const userEditSchema = z.object({
     body: z.object({
         name: userNameSchema.nullish(),
         telegramUsername: telegramUsernameSchema.nullish(),
+        nickname: nicknameSchema.nullish(),
     }),
-}).refine(data => data.body.name || data.body.telegramUsername, {
-    error: "At least one of 'name' or 'telegramUsername' must be provided",
+}).refine(data => data.body.name || data.body.telegramUsername || data.body.nickname, {
+    error: "At least one of 'name', 'nickname' or 'telegramUsername' must be provided",
 });
 
 export const userActivationSchema = z.object({

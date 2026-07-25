@@ -9,8 +9,8 @@ const TEST_USER_ID = 93001;
 function seedTestUser(): void {
     const timestamp = new Date().toISOString();
     dbManager.db.prepare(`
-        INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
-        VALUES (:id, :name, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
+        INSERT INTO user (id, name, nickname, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+        VALUES (:id, :name, :telegramUsername, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
     `).run({
         id: TEST_USER_ID,
         name: 'Invite Repo User',

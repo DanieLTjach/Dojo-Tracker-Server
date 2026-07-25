@@ -122,7 +122,13 @@ const runImport = dbManager.db.transaction(() => {
         }
 
         try {
-            const userId = userRepository.registerUser(row.name, row.telegramUsername, row.telegramId, createdBy);
+            const userId = userRepository.registerUser(
+                row.name,
+                row.telegramUsername,
+                row.telegramUsername,
+                row.telegramId,
+                createdBy
+            );
 
             clubMembershipRepository.createMembership({
                 clubId,

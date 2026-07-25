@@ -31,8 +31,8 @@ function seedServiceTestUsers(): void {
     const timestamp = new Date().toISOString();
 
     dbManager.db.prepare(`
-        INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
-        VALUES (:id, :name, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
+        INSERT INTO user (id, name, nickname, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+        VALUES (:id, :name, :telegramUsername, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
     `).run({
         id: SERVICE_TEST_USER_ID,
         name: 'Club Service Test User',
@@ -47,8 +47,8 @@ function seedServiceTestUsers(): void {
     });
 
     dbManager.db.prepare(`
-        INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
-        VALUES (:id, :name, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
+        INSERT INTO user (id, name, nickname, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+        VALUES (:id, :name, :telegramUsername, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
     `).run({
         id: OWNER_TEST_USER_ID,
         name: 'Club Owner Test User',
@@ -63,8 +63,8 @@ function seedServiceTestUsers(): void {
     });
 
     dbManager.db.prepare(`
-        INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
-        VALUES (:id, :name, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
+        INSERT INTO user (id, name, nickname, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+        VALUES (:id, :name, :telegramUsername, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
     `).run({
         id: MEMBER_TEST_USER_ID,
         name: 'Club Member Test User',
@@ -79,8 +79,8 @@ function seedServiceTestUsers(): void {
     });
 
     dbManager.db.prepare(`
-        INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
-        VALUES (:id, :name, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
+        INSERT INTO user (id, name, nickname, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+        VALUES (:id, :name, :telegramUsername, :telegramUsername, :telegramId, :createdAt, :modifiedAt, :modifiedBy, :isActive, :isAdmin, :status)
     `).run({
         id: ADMIN_TEST_USER_ID,
         name: 'Club Admin Test User',

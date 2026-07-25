@@ -6,6 +6,12 @@ export class NameAlreadyTakenByAnotherUser extends BadRequestError {
     }
 }
 
+export class NicknameAlreadyTakenError extends BadRequestError {
+    constructor(nickname: string) {
+        super('nicknameAlreadyTaken', { nickname });
+    }
+}
+
 export class TelegramUsernameAlreadyTakenByAnotherUser extends BadRequestError {
     constructor(telegramUsername: string) {
         super('telegramUsernameAlreadyTakenByAnotherUser', { telegramUsername });

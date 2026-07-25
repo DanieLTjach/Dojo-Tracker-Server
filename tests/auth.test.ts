@@ -23,7 +23,7 @@ describe('Authentication API Endpoints', () => {
 
     beforeAll(() => {
         // Create test user before running auth tests
-        const user = userService.registerUser('name', TEST_USERNAME, TEST_TELEGRAM_ID, 0);
+        const user = userService.registerUser('name', '@auth_test_user', TEST_USERNAME, TEST_TELEGRAM_ID, 0);
         // Activate the user for tests
         userRepository.updateUserStatus(user.id, true, 'ACTIVE', 0);
     });
@@ -207,7 +207,13 @@ describe('Authentication API Endpoints', () => {
         it('should reject authentication for inactive user', async () => {
             const inactiveTelegramId = 777888999;
             // Create an inactive user
-            const user = userService.registerUser('inactive_name', 'inactiveuser', inactiveTelegramId, 0);
+            const user = userService.registerUser(
+                'inactive_name',
+                '@inactive_auth_user',
+                'inactiveuser',
+                inactiveTelegramId,
+                0
+            );
             userRepository.updateUserStatus(user.id, false, 'INACTIVE', 0);
             const initData = generateValidInitData(inactiveTelegramId, 'inactiveuser');
 

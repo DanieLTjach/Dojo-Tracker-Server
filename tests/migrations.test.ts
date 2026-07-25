@@ -743,4 +743,51 @@ describe('Database Migrations', () => {
 
         db.close();
     });
+
+    test('migration 12 adds strict case-insensitive nicknames', () => {
+        const db = createMigratedDb(11);
+        db.prepare(`
+            INSERT INTO user (
+                id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
+            ) VALUES (
+                1201, 'Nickname User', '@Nickname_User', 1201,
+                '2026-07-11T00:00:00.000Z', '2026-07-11T00:00:00.000Z', 0, 1, 0, 'ACTIVE'
+            )`).run();
+
+        runMigration(db, 12);
+        db.pragma('foreign_keys = ON');
+
+        expect(db.prepare('SELECT nickname FROM user WHERE id = 1201').get())
+            .toEqual({ nickname: '@Nickname_User' });
+        // the SYSTEM user has no telegramUsername in existing databases; the migration names it directly
+        expect(db.prepare('SELECT telegramUsername, nickname FROM user WHERE id = 0').get())
+            .toEqual({ telegramUsername: null, nickname: '@system' });
+        expect(() =>
+            db.prepare(`
+                INSERT INTO user (
+                    name, nickname, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
+                ) VALUES ('Null Nickname', NULL, '2026-07-11', '2026-07-11', 0, 1, 0, 'ACTIVE')`).run()
+        ).toThrow();
+        expect(() =>
+            db.prepare(`
+                INSERT INTO user (
+                    name, nickname, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
+                ) VALUES ('Duplicate Nickname', '@nickname_user', '2026-07-11', '2026-07-11', 0, 1, 0, 'ACTIVE')`).run()
+        ).toThrow();
+
+        const insertedId = Number(
+            db.prepare(`
+            INSERT INTO user (
+                name, nickname, telegramUsername, telegramId,
+                createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status
+            ) VALUES (
+                'Autoincrement User', '@autoincrement_user', '@other_unique', 1210,
+                '2026-07-11', '2026-07-11', 0, 1, 0, 'ACTIVE'
+            )`).run().lastInsertRowid
+        );
+        expect(insertedId).toBeGreaterThan(1201);
+
+        expect(db.pragma('foreign_key_check')).toEqual([]);
+        db.close();
+    });
 });

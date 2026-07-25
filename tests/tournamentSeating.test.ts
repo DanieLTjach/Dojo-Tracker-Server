@@ -57,9 +57,17 @@ describe('Tournament seating generation', () => {
         const ts = '2024-01-01T00:00:00.000Z';
         for (const userId of [...PLAYER_IDS, OWNER_USER_ID, MODERATOR_USER_ID, OUTSIDER_USER_ID]) {
             dbManager.db.prepare(
-                `INSERT OR IGNORE INTO user (id, name, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, ?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
-            ).run(userId, `Seating User ${userId}`, `@seating_${userId}`, userId + 2000000, ts, ts);
+                `INSERT OR IGNORE INTO user (id, name, nickname, telegramUsername, telegramId, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, ?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
+            ).run(
+                userId,
+                `Seating User ${userId}`,
+                `@seating_${userId}`,
+                `@seating_${userId}`,
+                userId + 2000000,
+                ts,
+                ts
+            );
         }
         for (const userId of PLAYER_IDS) {
             dbManager.db.prepare(
@@ -367,9 +375,9 @@ describe('Tournament seating generation', () => {
             const ts = '2024-01-01T00:00:00.000Z';
             for (const userId of ALL_IDS) {
                 dbManager.db.prepare(
-                    `INSERT OR IGNORE INTO user (id, name, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
-                 VALUES (?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
-                ).run(userId, `Team Seating ${userId}`, ts, ts);
+                    `INSERT OR IGNORE INTO user (id, name, nickname, isAdmin, isActive, status, createdAt, modifiedAt, modifiedBy)
+                 VALUES (?, ?, ?, 0, 1, 'ACTIVE', ?, ?, 0)`
+                ).run(userId, `Team Seating ${userId}`, `@team_seating_${userId}`, ts, ts);
                 dbManager.db.prepare(
                     `INSERT OR IGNORE INTO clubMembership (clubId, userId, role, status, createdAt, modifiedAt, modifiedBy)
                  VALUES (?, ?, 'MEMBER', 'ACTIVE', ?, ?, 0)`
