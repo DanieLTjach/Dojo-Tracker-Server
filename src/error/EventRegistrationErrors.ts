@@ -1,4 +1,4 @@
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from './BaseErrors.ts';
+import { BadRequestError, ConflictError, NotFoundError } from './BaseErrors.ts';
 import type { EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
 import type { TranslationParamValue } from '../i18n/index.ts';
 
@@ -43,11 +43,5 @@ export class MissingProfileNamesForTournamentRegistrationError extends BadReques
 export class EventCapacityReachedError extends ConflictError {
     constructor(eventName: string, maxParticipants: number) {
         super('eventCapacityReached', { eventName, maxParticipants });
-    }
-}
-
-export class InsufficientEventRegistrationManagementPermissionsError extends ForbiddenError {
-    constructor() {
-        super('insufficientEventRegistrationManagementPermissions');
     }
 }

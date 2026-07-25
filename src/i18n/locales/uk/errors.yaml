@@ -26,6 +26,7 @@ errors:
   nameRequiredForNewUser: Для реєстрації потрібно вказати імʼя
 
   eventNotFound: Подію з id {{eventId}} не знайдено
+  insufficientEventManagementPermissions: Недостатньо прав для управління цією подією. Потрібна роль адміна або OWNER/MODERATOR клубу події.
   gameRulesNotFound: Правила гри з id {{gameRulesId}} не знайдено
   cannotDeleteGameRulesInUse: 'Неможливо видалити правила "{{gameRulesName}}" — вони використовуються в {{eventCount}} подіях'
   cannotUpdateGameRulesInUse: 'Неможливо оновити правила "{{gameRulesName}}" — за ними вже зіграно {{gameCount}} ігор'
@@ -96,8 +97,6 @@ errors:
   missingProfileNamesForTournamentRegistration: Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі
   eventNotTournament: "Реєстрація доступна лише для подій типу TOURNAMENT (поточний тип: {{type}})"
   eventCapacityReached: 'Турнір "{{eventName}}" вже досяг максимальної кількості учасників ({{maxParticipants}})'
-  insufficientEventRegistrationManagementPermissions: Недостатньо прав для управління реєстраціями на цю подію. Потрібна роль адміна або OWNER/MODERATOR клубу події.
-
   gameNotFoundById: Гру з id {{id}} не знайдено
   tooManyGamesFound: Знайдено забагато ігор. Будь ласка, звузьте критерії пошуку.
   incorrectPlayerCount: Для гри потрібно {{requiredPlayers}} гравців

@@ -1,7 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { MissingAuthTokenError } from '../error/AuthErrors.ts';
-import { EventNotFoundError } from '../error/EventErrors.ts';
-import { InsufficientEventRegistrationManagementPermissionsError } from '../error/EventRegistrationErrors.ts';
+import { EventNotFoundError, InsufficientEventManagementPermissionsError } from '../error/EventErrors.ts';
 import { EventRegistrationStatus } from '../model/EventRegistrationModels.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
@@ -30,12 +29,12 @@ const assertEventManagementRole = (req: Request): void => {
     // event.clubId is nullable in the schema for legacy reasons but the
     // upcoming "remove global events" PR will tighten this. Guard defensively.
     if (event.clubId === null) {
-        throw new InsufficientEventRegistrationManagementPermissionsError();
+        throw new InsufficientEventManagementPermissionsError();
     }
 
     const role = membershipRepository.getUserClubRole(event.clubId, req.user.userId);
     if (role !== 'OWNER' && role !== 'MODERATOR') {
-        throw new InsufficientEventRegistrationManagementPermissionsError();
+        throw new InsufficientEventManagementPermissionsError();
     }
 };
 

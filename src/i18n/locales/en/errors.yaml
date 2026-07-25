@@ -26,6 +26,7 @@ errors:
   nameRequiredForNewUser: Name is required for registration
 
   eventNotFound: Event with id {{eventId}} was not found
+  insufficientEventManagementPermissions: You do not have permission to manage this event. Admin or event club OWNER/MODERATOR role is required.
   gameRulesNotFound: Game rules with id {{gameRulesId}} were not found
   cannotDeleteGameRulesInUse: 'Cannot delete rules "{{gameRulesName}}" because they are used in {{eventCount}} events'
   cannotUpdateGameRulesInUse: 'Cannot update rules "{{gameRulesName}}" because {{gameCount}} games have already been played with them'
@@ -96,8 +97,6 @@ errors:
   missingProfileNamesForTournamentRegistration: First and last name must be filled in the profile to apply for a tournament
   eventNotTournament: "Registration is only available for TOURNAMENT events (current type: {{type}})"
   eventCapacityReached: 'Tournament "{{eventName}}" has already reached the participant limit ({{maxParticipants}})'
-  insufficientEventRegistrationManagementPermissions: You do not have permission to manage registrations for this event. Admin or event club OWNER/MODERATOR role is required.
-
   gameNotFoundById: Game with id {{id}} was not found
   tooManyGamesFound: Too many games found. Please narrow your search criteria.
   incorrectPlayerCount: Game requires {{requiredPlayers}} players
