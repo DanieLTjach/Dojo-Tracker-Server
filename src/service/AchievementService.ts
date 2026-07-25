@@ -11,7 +11,6 @@ import { AchievementRepository, type EventAchievementWinnerRow } from '../reposi
 import { GameRepository } from '../repository/GameRepository.ts';
 import { computeAchievements } from '../util/AchievementCalculator.ts';
 import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
-import { TournamentStatus } from '../model/TournamentModels.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
@@ -96,28 +95,17 @@ export class AchievementService {
         this.achievementRepository.replaceEventAchievements(event.id, rows, new Date());
     }
 
-    /** Achievements for the tournament page. Computes lazily on first read for historical tournaments. */
+    /** Read the stored achievements for the tournament page. */
     getEventAchievements(eventId: number, requestingUserId: number): EventAchievementResult[] {
-        const event = this.eventService.getEventById(eventId);
+        this.eventService.getEventById(eventId);
         const user = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(user);
-
-        if (
-            !this.achievementRepository.areEventAchievementsComputed(eventId) &&
-            event.tournament?.status === TournamentStatus.FINISHED
-        ) {
-            this.recomputeEventAchievements(event);
-        }
 
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 
-    /** Achievements a user has won across all tournaments, for the profile page. */
+    /** Read a user's stored achievements across all tournaments. */
     getUserAchievements(userId: number, requestingUserId: number): UserAchievement[] {
-        for (const eventId of this.achievementRepository.findUncomputedTournamentEventIdsForUser(userId)) {
-            this.recomputeEventAchievements(this.eventService.getEventById(eventId));
-        }
-
         const requestingUser = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(requestingUser);
 
