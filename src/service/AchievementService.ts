@@ -109,6 +109,10 @@ export class AchievementService {
         const user = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(user);
 
+        if (!this.achievementRepository.areEventAchievementsComputed(eventId)) {
+            return [];
+        }
+
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 

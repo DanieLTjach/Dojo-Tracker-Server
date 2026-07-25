@@ -167,8 +167,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
             .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
             .get(unfinishedEventId) as { achievementsComputedAt: string | null };
 
-        expect(results).toHaveLength(21);
-        expect(results.every(result => result.winners.length === 0)).toBe(true);
+        expect(results).toEqual([]);
         expect(computed.achievementsComputedAt).toBeNull();
     });
 
