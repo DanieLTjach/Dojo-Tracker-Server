@@ -90,13 +90,15 @@ export class AchievementRepository {
             FROM userToGame utg
             JOIN game g ON g.id = utg.gameId
             JOIN event e ON e.id = g.eventId
+            JOIN tournament t ON t.eventId = e.id
             WHERE utg.userId = :userId
               AND e.type = 'TOURNAMENT'
+              AND t.status = 'FINISHED'
               AND g.status = 'FINISHED'
               AND e.achievementsComputedAt IS NULL`);
     }
 
-    /** Tournament events the user played a finished game in that have never been computed. */
+    /** Finished tournaments the user played a finished game in that have never been computed. */
     findUncomputedTournamentEventIdsForUser(userId: number): number[] {
         return this.findUncomputedTournamentEventIdsForUserStatement().all({ userId }).map(row => row.eventId);
     }

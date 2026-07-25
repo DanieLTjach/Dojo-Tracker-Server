@@ -108,7 +108,7 @@ export class AchievementService {
         const locale = resolveUserLocale(user);
 
         if (!this.achievementRepository.areEventAchievementsComputed(eventId)) {
-            this.recomputeEventAchievements(event);
+            this.recomputeEventAchievementsIfTournamentFinished(event);
         }
 
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
@@ -117,7 +117,7 @@ export class AchievementService {
     /** Achievements a user has won across all tournaments, for the profile page. */
     getUserAchievements(userId: number, requestingUserId: number): UserAchievement[] {
         for (const eventId of this.achievementRepository.findUncomputedTournamentEventIdsForUser(userId)) {
-            this.recomputeEventAchievements(this.eventService.getEventById(eventId));
+            this.recomputeEventAchievementsIfTournamentFinished(this.eventService.getEventById(eventId));
         }
 
         const requestingUser = this.userService.getUserById(requestingUserId);

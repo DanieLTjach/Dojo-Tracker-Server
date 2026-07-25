@@ -76,6 +76,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
             1,
             'TOURNAMENT'
         );
+        dbManager.db.prepare("UPDATE tournament SET status = 'FINISHED' WHERE eventId = ?").run(EVENT_ID);
 
         const gameId = insertFinishedGame(EVENT_ID);
         addPlayer(gameId, u1, 'EAST', 40000, 0);
@@ -138,6 +139,50 @@ describe('AchievementService (persisted tournament achievements)', () => {
             .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
             .get(EVENT_ID) as { achievementsComputedAt: string | null };
         expect(computed.achievementsComputedAt).not.toBeNull();
+    });
+
+    it('does not lazily compute event achievements before the tournament is finished', () => {
+        const unfinishedEventId = 9102;
+        createCustomEvent(
+            unfinishedEventId,
+            'Unfinished Achievements Cup',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z',
+            2,
+            1,
+            'TOURNAMENT'
+        );
+
+        const results = achievementService.getEventAchievements(unfinishedEventId, u1);
+        const computed = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(unfinishedEventId) as { achievementsComputedAt: string | null };
+
+        expect(results).toHaveLength(21);
+        expect(results.every(result => result.winners.length === 0)).toBe(true);
+        expect(computed.achievementsComputedAt).toBeNull();
+    });
+
+    it('does not lazily compute user achievements from an unfinished tournament', () => {
+        const unfinishedEventId = 9103;
+        createCustomEvent(
+            unfinishedEventId,
+            'Unfinished User Achievements Cup',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z',
+            2,
+            1,
+            'TOURNAMENT'
+        );
+        const gameId = insertFinishedGame(unfinishedEventId);
+        addPlayer(gameId, u1, 'EAST', 40000, 0);
+
+        achievementService.getUserAchievements(u1, u1);
+        const computed = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(unfinishedEventId) as { achievementsComputedAt: string | null };
+
+        expect(computed.achievementsComputedAt).toBeNull();
     });
 
     it('force recompute returns results and refreshes the computed marker', () => {
