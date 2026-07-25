@@ -72,7 +72,7 @@ export class EventController {
         const { params: { eventId } } = eventGetByIdSchema.parse(req);
         const userId = req.user!.userId;
         const event = this.eventService.finishTournament(eventId, userId);
-        this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
+        this.achievementService.recomputeEventAchievements(event);
         return res.status(StatusCodes.OK).json(event);
     }
 

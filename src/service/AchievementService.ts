@@ -45,14 +45,9 @@ export class AchievementService {
         }
     }
 
-    /**
-     * Recompute only when the tournament is already finished. Achievements are derived from a
-     * tournament's final results, so there is no point recomputing them on every game action
-     * (creation/update/deletion) while the tournament is still running — only a change to a
-     * finished tournament's games can affect its achievements.
-     */
-    recomputeEventAchievementsIfTournamentFinished(event: Event): void {
-        if (event.tournament?.status !== TournamentStatus.FINISHED) {
+    /** Recompute after game changes only when achievements have already been initialized. */
+    recomputeEventAchievementsIfAlreadyComputed(event: Event): void {
+        if (!this.achievementRepository.areEventAchievementsComputed(event.id)) {
             return;
         }
         this.recomputeEventAchievements(event);
@@ -107,8 +102,11 @@ export class AchievementService {
         const user = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(user);
 
-        if (!this.achievementRepository.areEventAchievementsComputed(eventId)) {
-            this.recomputeEventAchievementsIfTournamentFinished(event);
+        if (
+            !this.achievementRepository.areEventAchievementsComputed(eventId) &&
+            event.tournament?.status === TournamentStatus.FINISHED
+        ) {
+            this.recomputeEventAchievements(event);
         }
 
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
@@ -117,7 +115,7 @@ export class AchievementService {
     /** Achievements a user has won across all tournaments, for the profile page. */
     getUserAchievements(userId: number, requestingUserId: number): UserAchievement[] {
         for (const eventId of this.achievementRepository.findUncomputedTournamentEventIdsForUser(userId)) {
-            this.recomputeEventAchievementsIfTournamentFinished(this.eventService.getEventById(eventId));
+            this.recomputeEventAchievements(this.eventService.getEventById(eventId));
         }
 
         const requestingUser = this.userService.getUserById(requestingUserId);
