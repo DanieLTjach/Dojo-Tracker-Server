@@ -743,4 +743,29 @@ describe('Database Migrations', () => {
 
         db.close();
     });
+
+    test('migration 12 adds a nullable current-round start timestamp', () => {
+        const db = createMigratedDb(11);
+
+        runMigration(db, 12);
+
+        const tournamentColumns = db.prepare('PRAGMA table_info(tournament)').all() as Array<{
+            name: string;
+            type: string;
+            notnull: number;
+            dflt_value: string | null;
+        }>;
+        expect(tournamentColumns.find(column => column.name === 'currentRoundStartedAt')).toMatchObject({
+            type: 'TIMESTAMP',
+            notnull: 0,
+            dflt_value: null,
+        });
+
+        const existingRows = db.prepare('SELECT currentRoundStartedAt FROM tournament').all() as Array<{
+            currentRoundStartedAt: string | null;
+        }>;
+        expect(existingRows.every(row => row.currentRoundStartedAt === null)).toBe(true);
+
+        db.close();
+    });
 });

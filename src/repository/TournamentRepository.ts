@@ -57,6 +57,7 @@ export class TournamentRepository {
         eventId: number;
         status: TournamentStatus;
         currentRound: number | null;
+        currentRoundStartedAt: string | null;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
@@ -64,6 +65,7 @@ export class TournamentRepository {
             UPDATE tournament
             SET status = :status,
                 currentRound = :currentRound,
+                currentRoundStartedAt = :currentRoundStartedAt,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
             WHERE eventId = :eventId
@@ -74,6 +76,7 @@ export class TournamentRepository {
         eventId: number,
         status: TournamentStatus,
         currentRound: number | null,
+        currentRoundStartedAt: Date | null,
         modifiedAt: Date,
         modifiedBy: number
     ): void {
@@ -81,6 +84,7 @@ export class TournamentRepository {
             eventId,
             status,
             currentRound,
+            currentRoundStartedAt: currentRoundStartedAt?.toISOString() ?? null,
             modifiedAt: modifiedAt.toISOString(),
             modifiedBy,
         });

@@ -12,6 +12,7 @@ export interface Tournament {
     eventId: number;
     status: TournamentStatus;
     currentRound: number | null;
+    currentRoundStartedAt: Date | null;
     totalRounds: number;
     createdAt: Date;
     modifiedAt: Date;

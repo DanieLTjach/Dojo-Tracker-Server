@@ -26,6 +26,7 @@ export class EventRepository {
                 gr.details as gr_details,
                 t.status as tournament_status,
                 t.currentRound as tournament_currentRound,
+                t.currentRoundStartedAt as tournament_currentRoundStartedAt,
                 t.totalRounds as tournament_totalRounds,
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
@@ -58,6 +59,7 @@ export class EventRepository {
                 gr.details as gr_details,
                 t.status as tournament_status,
                 t.currentRound as tournament_currentRound,
+                t.currentRoundStartedAt as tournament_currentRoundStartedAt,
                 t.totalRounds as tournament_totalRounds,
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
@@ -91,6 +93,7 @@ export class EventRepository {
                 gr.details as gr_details,
                 t.status as tournament_status,
                 t.currentRound as tournament_currentRound,
+                t.currentRoundStartedAt as tournament_currentRoundStartedAt,
                 t.totalRounds as tournament_totalRounds,
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
@@ -315,6 +318,7 @@ interface EventWithGameRulesDBEntity {
     gr_details: string | null;
     tournament_status: TournamentStatus | null;
     tournament_currentRound: number | null;
+    tournament_currentRoundStartedAt: string | null;
     tournament_totalRounds: number | null;
     tournament_createdAt: string | null;
     tournament_modifiedAt: string | null;
@@ -407,6 +411,9 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
                 eventId: dbEntity.id,
                 status: parseTournamentStatus(dbEntity.tournament_status),
                 currentRound: dbEntity.tournament_currentRound,
+                currentRoundStartedAt: dbEntity.tournament_currentRoundStartedAt !== null
+                    ? new Date(dbEntity.tournament_currentRoundStartedAt)
+                    : null,
                 totalRounds: dbEntity.tournament_totalRounds!,
                 createdAt: new Date(dbEntity.tournament_createdAt!),
                 modifiedAt: new Date(dbEntity.tournament_modifiedAt!),

@@ -173,11 +173,13 @@ describe('Tournament management', () => {
     test('is idempotent: re-posting the current round is a no-op, not a skip', async () => {
         importRound(1);
 
-        await request(app)
+        const firstStart = await request(app)
             .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
             .set('Authorization', adminAuthHeader)
             .send({})
             .expect(200);
+
+        expect(firstStart.body.tournament.currentRoundStartedAt).toEqual(expect.any(String));
 
         const duplicate = await request(app)
             .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
@@ -188,6 +190,7 @@ describe('Tournament management', () => {
         expect(duplicate.body.tournament).toMatchObject({
             status: 'IN_PROGRESS',
             currentRound: 1,
+            currentRoundStartedAt: firstStart.body.tournament.currentRoundStartedAt,
         });
     });
 

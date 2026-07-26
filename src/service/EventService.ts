@@ -258,7 +258,8 @@ export class EventService {
             ? TournamentStatus.LAST_ROUND
             : TournamentStatus.IN_PROGRESS;
 
-        this.tournamentRepository.updateTournamentState(eventId, status, nextRound, new Date(), modifiedBy);
+        const startedAt = new Date();
+        this.tournamentRepository.updateTournamentState(eventId, status, nextRound, startedAt, startedAt, modifiedBy);
 
         return this.getEventById(eventId);
     }
@@ -301,7 +302,14 @@ export class EventService {
             : TournamentStatus.DRAFT;
         const newStatus = newCurrentRound === null ? preStartStatus : TournamentStatus.IN_PROGRESS;
 
-        this.tournamentRepository.updateTournamentState(eventId, newStatus, newCurrentRound, new Date(), modifiedBy);
+        this.tournamentRepository.updateTournamentState(
+            eventId,
+            newStatus,
+            newCurrentRound,
+            null,
+            new Date(),
+            modifiedBy
+        );
 
         return this.getEventById(eventId);
     }
@@ -325,6 +333,7 @@ export class EventService {
             eventId,
             TournamentStatus.FINISHED,
             tournament.currentRound,
+            tournament.currentRoundStartedAt,
             new Date(),
             modifiedBy
         );
@@ -467,6 +476,7 @@ export class EventService {
             eventId,
             status,
             event.tournament!.currentRound,
+            event.tournament!.currentRoundStartedAt,
             new Date(),
             modifiedBy
         );
