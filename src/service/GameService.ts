@@ -52,6 +52,7 @@ import { AchievementService } from './AchievementService.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
+import { computeTournamentGameTimer } from '../util/TournamentTimerUtil.ts';
 
 export class GameService {
     private gameRepository: GameRepository = new GameRepository();
@@ -132,11 +133,13 @@ export class GameService {
     getDetailedGameById(gameId: number): DetailedGame {
         const game = this.getGameById(gameId);
         const rounds = this.gameRepository.findGameRoundsByGameId(gameId);
+        const event = this.eventService.getEventById(game.eventId);
 
         return {
             ...game,
             rounds,
             currentState: this.calculateCurrentGameState(game, rounds),
+            timer: computeTournamentGameTimer(game, event),
         };
     }
 

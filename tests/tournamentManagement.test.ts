@@ -1,4 +1,5 @@
 import express from 'express';
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import gameRoutes from '../src/routes/GameRoutes.ts';
@@ -490,6 +491,53 @@ describe('Tournament management', () => {
 
         expect(startResponse.status).toBe(200);
         expect(startResponse.body.status).toBe('IN_PROGRESS');
+        expect(startResponse.body.timer).toMatchObject({
+            status: 'STOPPED',
+            durationSec: 0,
+            remainingSec: 0,
+        });
+        expect(startResponse.body.timer.serverNow).toEqual(expect.any(String));
+    });
+
+    test('returns the synchronized round timer when getting and starting a tracked game', async () => {
+        jest.useFakeTimers();
+        try {
+            const roundStartedAt = new Date('2026-07-26T12:00:00.000Z');
+            jest.setSystemTime(roundStartedAt);
+            dbManager.db.prepare('UPDATE event SET config = ? WHERE id = ?')
+                .run(JSON.stringify({ roundDurationSec: 3600 }), TOURNAMENT_EVENT_ID);
+            const gameId = importRound(1);
+
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            const serverNow = new Date('2026-07-26T12:15:00.000Z');
+            jest.setSystemTime(serverNow);
+            const fetched = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', playerAuthHeader);
+
+            expect(fetched.status).toBe(200);
+            expect(fetched.body.timer).toEqual({
+                status: 'RUNNING',
+                durationSec: 3600,
+                remainingSec: 2700,
+                serverNow: serverNow.toISOString(),
+            });
+
+            const started = await request(app)
+                .post(`/api/games/${gameId}/start`)
+                .set('Authorization', playerAuthHeader)
+                .send({});
+
+            expect(started.status).toBe(200);
+            expect(started.body.timer).toEqual(fetched.body.timer);
+        } finally {
+            jest.useRealTimers();
+        }
     });
 
     describe('cancel tournament round', () => {
