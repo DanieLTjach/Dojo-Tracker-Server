@@ -6,11 +6,10 @@ import {
 } from '../data/achievementsCatalog.ts';
 import type { Event } from '../model/EventModels.ts';
 import { AchievementCriterion, type EventAchievementResult, type UserAchievement } from '../model/AchievementModels.ts';
-import { type DetailedGame, GameStatus } from '../model/GameModels.ts';
-import { computeTournamentGameTimer } from '../util/TournamentTimerUtil.ts';
+import { GameStatus } from '../model/GameModels.ts';
 import { AchievementRepository, type EventAchievementWinnerRow } from '../repository/AchievementRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
-import { computeAchievements } from '../util/AchievementCalculator.ts';
+import { type AchievementGame, computeAchievements } from '../util/AchievementCalculator.ts';
 import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
@@ -82,12 +81,9 @@ export class AchievementService {
             .findGames({ eventId: event.id })
             .filter(game => game.status === GameStatus.FINISHED);
 
-        const games: DetailedGame[] = finishedGames.map(game => ({
-            ...game,
+        const games: AchievementGame[] = finishedGames.map(game => ({
             players: this.gameRepository.findGamePlayersByGameId(game.id),
             rounds: this.gameRepository.findGameRoundsByGameId(game.id),
-            currentState: null,
-            timer: computeTournamentGameTimer(game, event),
         }));
 
         const rules = event.gameRules.details?.rules ?? {};

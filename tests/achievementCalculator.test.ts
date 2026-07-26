@@ -102,7 +102,7 @@ function detailedGame(players: GamePlayer[], rounds: GameRound[]): DetailedGame 
             status: 'STOPPED',
             durationSec: 0,
             remainingSec: 0,
-            serverNow: ts,
+            serverNow: ts.toISOString(),
         },
     };
 }

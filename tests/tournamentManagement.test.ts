@@ -504,8 +504,8 @@ describe('Tournament management', () => {
         try {
             const roundStartedAt = new Date('2026-07-26T12:00:00.000Z');
             jest.setSystemTime(roundStartedAt);
-            dbManager.db.prepare('UPDATE event SET config = ? WHERE id = ?')
-                .run(JSON.stringify({ roundDurationSec: 3600 }), TOURNAMENT_EVENT_ID);
+            dbManager.db.prepare('UPDATE tournament SET roundDurationSec = ? WHERE eventId = ?')
+                .run(3600, TOURNAMENT_EVENT_ID);
             const gameId = importRound(1);
 
             await request(app)
@@ -535,6 +535,49 @@ describe('Tournament management', () => {
 
             expect(started.status).toBe(200);
             expect(started.body.timer).toEqual(fetched.body.timer);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    test('a repeated round start is idempotent and does not restart the timer', async () => {
+        jest.useFakeTimers();
+        try {
+            const roundStartedAt = new Date('2026-07-26T12:00:00.000Z');
+            jest.setSystemTime(roundStartedAt);
+            dbManager.db.prepare('UPDATE tournament SET roundDurationSec = ? WHERE eventId = ?')
+                .run(3600, TOURNAMENT_EVENT_ID);
+            const gameId = importRound(1);
+
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            // Ten minutes later, a retry (double tap, network retry) must not re-arm the
+            // clock — the round is still the same round, so the countdown keeps running.
+            jest.setSystemTime(new Date('2026-07-26T12:10:00.000Z'));
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            const serverNow = new Date('2026-07-26T12:15:00.000Z');
+            jest.setSystemTime(serverNow);
+            const fetched = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', playerAuthHeader);
+
+            expect(fetched.status).toBe(200);
+            // 2700, not 3300: elapsed time is measured from the original start.
+            expect(fetched.body.timer).toEqual({
+                status: 'RUNNING',
+                durationSec: 3600,
+                remainingSec: 2700,
+                serverNow: serverNow.toISOString(),
+            });
         } finally {
             jest.useRealTimers();
         }

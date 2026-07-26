@@ -133,13 +133,17 @@ export class GameService {
     getDetailedGameById(gameId: number): DetailedGame {
         const game = this.getGameById(gameId);
         const rounds = this.gameRepository.findGameRoundsByGameId(gameId);
-        const event = this.eventService.getEventById(game.eventId);
+        // Only a game that belongs to a tournament round can have a running timer, so
+        // score-only and non-tournament games skip the extra event read entirely.
+        const event = game.tournamentRound !== null
+            ? this.eventService.getEventById(game.eventId)
+            : null;
 
         return {
             ...game,
             rounds,
             currentState: this.calculateCurrentGameState(game, rounds),
-            timer: computeTournamentGameTimer(game, event),
+            timer: computeTournamentGameTimer(game, event ?? { tournament: null }),
         };
     }
 

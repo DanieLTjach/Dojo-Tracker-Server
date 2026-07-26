@@ -37,7 +37,9 @@ export interface GameTimer {
     status: TimerStatus;
     durationSec: number;
     remainingSec: number;
-    serverNow: Date;
+    // ISO-8601 string, not a Date: this crosses the wire as JSON and clients parse it
+    // to correct for clock drift, so the type matches the serialized form.
+    serverNow: string;
 }
 
 export const GameFinishReason = {
