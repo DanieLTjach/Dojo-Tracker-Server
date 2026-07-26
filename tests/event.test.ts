@@ -444,12 +444,11 @@ describe('Event API Endpoints', () => {
                     ...createPayload,
                     clubId: 1,
                     type: 'TOURNAMENT',
-                    tournament: { totalRounds: 3 },
+                    tournament: { totalRounds: 3, roundDurationSec: 5400 },
                     config: {
                         minParticipants: 8,
                         maxParticipants: 16,
                         registrationDeadline: '2026-06-01T18:00:00.000Z',
-                        roundDurationSec: 5400,
                     },
                 });
 
@@ -460,8 +459,8 @@ describe('Event API Endpoints', () => {
                 minParticipants: 8,
                 maxParticipants: 16,
                 registrationDeadline: '2026-06-01T18:00:00.000Z',
-                roundDurationSec: 5400,
             });
+            expect(response.body.tournament.roundDurationSec).toBe(5400);
             expect(response.body.maxParticipants).toBe(16);
             expect(response.body.registrationDeadline).toBe('2026-06-01T18:00:00.000Z');
 
@@ -471,8 +470,11 @@ describe('Event API Endpoints', () => {
                 minParticipants: 8,
                 maxParticipants: 16,
                 registrationDeadline: '2026-06-01T18:00:00.000Z',
-                roundDurationSec: 5400,
             });
+            const storedTournament = dbManager.db
+                .prepare('SELECT roundDurationSec FROM tournament WHERE eventId = ?')
+                .get(createdEventId) as { roundDurationSec: number | null };
+            expect(storedTournament.roundDurationSec).toBe(5400);
             expect(new EventRepository().findEventById(createdEventId!)?.config?.registrationDeadline)
                 .toEqual(new Date('2026-06-01T18:00:00.000Z'));
         });
@@ -511,10 +513,26 @@ describe('Event API Endpoints', () => {
         });
 
         test('should reject roundDurationSec for a season event', async () => {
+            // A season has no rounds, so it has no tournament config to carry a duration.
             const response = await request(app)
                 .post('/api/events')
                 .set('Authorization', adminAuthHeader)
-                .send({ ...createPayload, config: { roundDurationSec: 3600 } });
+                .send({ ...createPayload, tournament: { totalRounds: 3, roundDurationSec: 3600 } });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject roundDurationSec in the generic event config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...createPayload,
+                    clubId: 1,
+                    type: 'TOURNAMENT',
+                    tournament: { totalRounds: 3 },
+                    config: { roundDurationSec: 3600 },
+                });
 
             expect(response.status).toBe(400);
         });
@@ -527,8 +545,7 @@ describe('Event API Endpoints', () => {
                     ...createPayload,
                     clubId: 1,
                     type: 'TOURNAMENT',
-                    tournament: { totalRounds: 3 },
-                    config: { roundDurationSec: 0 },
+                    tournament: { totalRounds: 3, roundDurationSec: 0 },
                 });
 
             expect(response.status).toBe(400);

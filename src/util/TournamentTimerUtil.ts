@@ -1,4 +1,3 @@
-import type { EventConfig } from '../model/EventModels.ts';
 import { TimerStatus, type Game, type GameTimer } from '../model/GameModels.ts';
 import type { Tournament } from '../model/TournamentModels.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
@@ -6,8 +5,9 @@ import { TournamentStatus } from '../model/TournamentModels.ts';
 type TimerGame = Pick<Game, 'tournamentRound'>;
 
 interface TimerEvent {
-    config: Pick<EventConfig, 'roundDurationSec'> | null;
-    tournament: Pick<Tournament, 'status' | 'currentRound' | 'currentRoundStartedAt'> | null;
+    tournament:
+        | Pick<Tournament, 'status' | 'currentRound' | 'currentRoundStartedAt' | 'roundDurationSec'>
+        | null;
 }
 
 export function computeTournamentGameTimer(
@@ -15,8 +15,8 @@ export function computeTournamentGameTimer(
     event: TimerEvent,
     serverNow: Date = new Date()
 ): GameTimer {
-    const durationSec = event.config?.roundDurationSec ?? 0;
     const tournament = event.tournament;
+    const durationSec = tournament?.roundDurationSec ?? 0;
     if (
         durationSec <= 0 ||
         tournament === null ||
@@ -29,7 +29,7 @@ export function computeTournamentGameTimer(
             status: TimerStatus.STOPPED,
             durationSec,
             remainingSec: durationSec,
-            serverNow,
+            serverNow: serverNow.toISOString(),
         };
     }
 
@@ -45,6 +45,6 @@ export function computeTournamentGameTimer(
         status: remainingSec > 0 ? TimerStatus.RUNNING : TimerStatus.EXPIRED,
         durationSec,
         remainingSec,
-        serverNow,
+        serverNow: serverNow.toISOString(),
     };
 }

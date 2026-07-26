@@ -23,6 +23,11 @@ const teamConfigSchema = z.strictObject({
 
 const tournamentConfigSchema = z.strictObject({
     totalRounds: z.number().int('totalRounds must be an integer').positive('totalRounds must be positive'),
+    // Rounds only exist for tournaments, so the round timer duration lives here
+    // rather than in the generic event config.
+    roundDurationSec: z.number().int('roundDurationSec must be an integer')
+        .positive('roundDurationSec must be positive')
+        .nullish(),
 });
 
 const playerNameDisplayEnum = z.enum(Object.values(PlayerNameDisplay));
@@ -31,15 +36,12 @@ const minParticipantsSchema = z.number().int('minParticipants must be an integer
 const maxParticipantsSchema = z.number().int('maxParticipants must be an integer')
     .min(1, 'maxParticipants must be at least 1');
 const registrationDeadlineSchema = dateSchema;
-const roundDurationSecSchema = z.number().int('roundDurationSec must be an integer')
-    .positive('roundDurationSec must be positive');
 
 const eventConfigSchema = z.strictObject({
     playerNameDisplay: playerNameDisplayEnum.optional(),
     minParticipants: minParticipantsSchema.optional(),
     maxParticipants: maxParticipantsSchema.optional(),
     registrationDeadline: registrationDeadlineSchema.optional(),
-    roundDurationSec: roundDurationSecSchema.optional(),
     teamConfig: teamConfigSchema.optional(),
 });
 
@@ -48,7 +50,6 @@ const eventConfigPatchSchema = z.strictObject({
     minParticipants: minParticipantsSchema.nullish(),
     maxParticipants: maxParticipantsSchema.nullish(),
     registrationDeadline: registrationDeadlineSchema.nullish(),
-    roundDurationSec: roundDurationSecSchema.nullish(),
     teamConfig: teamConfigSchema.nullish(),
 });
 
@@ -143,7 +144,6 @@ const eventSchema = z.object({
         ['minParticipants', data.config?.minParticipants],
         ['maxParticipants', data.config?.maxParticipants],
         ['registrationDeadline', data.config?.registrationDeadline],
-        ['roundDurationSec', data.config?.roundDurationSec],
     ] as const;
     if (data.type !== EventType.TOURNAMENT) {
         for (const [field, value] of participantConfigFields) {

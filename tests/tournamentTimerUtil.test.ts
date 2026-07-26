@@ -17,10 +17,10 @@ function timerFor({
     return computeTournamentGameTimer(
         { tournamentRound: gameRound },
         {
-            config: durationSec === null ? null : { roundDurationSec: durationSec },
             tournament: {
                 currentRound,
                 currentRoundStartedAt: startedAt,
+                roundDurationSec: durationSec ?? null,
                 status: 'IN_PROGRESS',
             },
         },
@@ -34,7 +34,7 @@ describe('computeTournamentGameTimer', () => {
             status: TimerStatus.RUNNING,
             durationSec: 3600,
             remainingSec: 1800,
-            serverNow,
+            serverNow: serverNow.toISOString(),
         });
     });
 
@@ -43,7 +43,7 @@ describe('computeTournamentGameTimer', () => {
             status: TimerStatus.EXPIRED,
             durationSec: 1200,
             remainingSec: 0,
-            serverNow,
+            serverNow: serverNow.toISOString(),
         });
     });
 
@@ -52,7 +52,7 @@ describe('computeTournamentGameTimer', () => {
             status: TimerStatus.STOPPED,
             durationSec: 3600,
             remainingSec: 3600,
-            serverNow,
+            serverNow: serverNow.toISOString(),
         });
     });
 
@@ -61,7 +61,7 @@ describe('computeTournamentGameTimer', () => {
             status: TimerStatus.STOPPED,
             durationSec: 0,
             remainingSec: 0,
-            serverNow,
+            serverNow: serverNow.toISOString(),
         });
     });
 });

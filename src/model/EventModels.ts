@@ -122,7 +122,6 @@ export interface EventConfig {
     minParticipants?: number | undefined;
     maxParticipants?: number | undefined;
     registrationDeadline?: Date | undefined;
-    roundDurationSec?: number | undefined;
     teamConfig?: TeamTournamentConfig | undefined;
 }
 

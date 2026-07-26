@@ -703,15 +703,17 @@ export class EventService {
                 this.tournamentRepository.createTournament(
                     eventId,
                     data.tournament!.totalRounds,
+                    data.tournament!.roundDurationSec ?? null,
                     modifiedAt,
                     modifiedBy
                 );
                 return;
             }
 
-            this.tournamentRepository.updateTournamentTotalRounds(
+            this.tournamentRepository.updateTournamentConfig(
                 eventId,
                 data.tournament!.totalRounds,
+                data.tournament!.roundDurationSec ?? null,
                 modifiedAt,
                 modifiedBy
             );
@@ -746,7 +748,10 @@ export function projectEventToData(event: Event): EventData {
         blockGameCreation: event.blockGameCreation,
     };
     if (event.tournament !== null) {
-        base.tournament = { totalRounds: event.tournament.totalRounds };
+        base.tournament = {
+            totalRounds: event.tournament.totalRounds,
+            roundDurationSec: event.tournament.roundDurationSec,
+        };
     }
     return base;
 }
@@ -826,6 +831,7 @@ function mergeEventConfig(
 
 export interface TournamentData {
     totalRounds: number;
+    roundDurationSec?: number | null | undefined;
 }
 
 export interface EventData {

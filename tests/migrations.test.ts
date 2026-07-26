@@ -744,7 +744,7 @@ describe('Database Migrations', () => {
         db.close();
     });
 
-    test('migration 12 adds a nullable current-round start timestamp', () => {
+    test('migration 12 adds nullable round timer columns', () => {
         const db = createMigratedDb(11);
 
         runMigration(db, 12);
@@ -760,11 +760,21 @@ describe('Database Migrations', () => {
             notnull: 0,
             dflt_value: null,
         });
+        expect(tournamentColumns.find(column => column.name === 'roundDurationSec')).toMatchObject({
+            type: 'INTEGER',
+            notnull: 0,
+            dflt_value: null,
+        });
 
-        const existingRows = db.prepare('SELECT currentRoundStartedAt FROM tournament').all() as Array<{
+        const existingRows = db.prepare(
+            'SELECT currentRoundStartedAt, roundDurationSec FROM tournament'
+        ).all() as Array<{
             currentRoundStartedAt: string | null;
+            roundDurationSec: number | null;
         }>;
-        expect(existingRows.every(row => row.currentRoundStartedAt === null)).toBe(true);
+        expect(
+            existingRows.every(row => row.currentRoundStartedAt === null && row.roundDurationSec === null)
+        ).toBe(true);
 
         db.close();
     });
