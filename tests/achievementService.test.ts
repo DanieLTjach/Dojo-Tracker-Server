@@ -4,6 +4,8 @@ import { createCustomEvent } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { ProfileService } from '../src/service/ProfileService.ts';
 import { AchievementService } from '../src/service/AchievementService.ts';
+import { EventService } from '../src/service/EventService.ts';
+import { GameService } from '../src/service/GameService.ts';
 import { AchievementCriterion } from '../src/model/AchievementModels.ts';
 import { AchievementsOnlyForTournamentsError } from '../src/error/EventErrors.ts';
 import type { GameRoundResult } from '../src/model/GameRoundResultModels.ts';
@@ -76,6 +78,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
             1,
             'TOURNAMENT'
         );
+        dbManager.db.prepare("UPDATE tournament SET status = 'FINISHED' WHERE eventId = ?").run(EVENT_ID);
 
         const gameId = insertFinishedGame(EVENT_ID);
         addPlayer(gameId, u1, 'EAST', 40000, 0);
@@ -101,6 +104,8 @@ describe('AchievementService (persisted tournament achievements)', () => {
         addRatingChange(u2, EVENT_ID, gameId, 10);
         addRatingChange(u3, EVENT_ID, gameId, 0);
         addRatingChange(u4, EVENT_ID, gameId, 10);
+
+        achievementService.recomputeEventAchievements(new EventService().getEventById(EVENT_ID));
     });
 
     afterAll(() => {
@@ -108,7 +113,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
         cleanupTestDatabase();
     });
 
-    it('computes and returns tournament achievements with winners', () => {
+    it('returns stored tournament achievements with winners', () => {
         const results = achievementService.getEventAchievements(EVENT_ID, u1);
         expect(results).toHaveLength(21);
 
@@ -132,12 +137,151 @@ describe('AchievementService (persisted tournament achievements)', () => {
         expect(yakuman.value).toBeUndefined();
     });
 
-    it('marks the event computed so a second read does not recompute from scratch', () => {
+    it('does not recompute achievements when retrieving an event', () => {
+        dbManager.db
+            .prepare('UPDATE event SET achievementsComputedAt = ? WHERE id = ?')
+            .run('2000-01-01T00:00:00.000Z', EVENT_ID);
+
         achievementService.getEventAchievements(EVENT_ID, u1);
         const computed = dbManager.db
             .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
             .get(EVENT_ID) as { achievementsComputedAt: string | null };
-        expect(computed.achievementsComputedAt).not.toBeNull();
+        expect(computed.achievementsComputedAt).toBe('2000-01-01T00:00:00.000Z');
+    });
+
+    it('does not compute missing achievements when retrieving a finished event', () => {
+        const unfinishedEventId = 9102;
+        createCustomEvent(
+            unfinishedEventId,
+            'Unfinished Achievements Cup',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z',
+            2,
+            1,
+            'TOURNAMENT'
+        );
+        dbManager.db.prepare("UPDATE tournament SET status = 'FINISHED' WHERE eventId = ?").run(unfinishedEventId);
+
+        const results = achievementService.getEventAchievements(unfinishedEventId, u1);
+        const computed = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(unfinishedEventId) as { achievementsComputedAt: string | null };
+
+        expect(results).toEqual([]);
+        expect(computed.achievementsComputedAt).toBeNull();
+    });
+
+    it('does not compute missing achievements when retrieving a user', () => {
+        const unfinishedEventId = 9103;
+        createCustomEvent(
+            unfinishedEventId,
+            'Unfinished User Achievements Cup',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z',
+            2,
+            1,
+            'TOURNAMENT'
+        );
+        dbManager.db.prepare("UPDATE tournament SET status = 'FINISHED' WHERE eventId = ?").run(unfinishedEventId);
+        const gameId = insertFinishedGame(unfinishedEventId);
+        addPlayer(gameId, u1, 'EAST', 40000, 0);
+
+        achievementService.getUserAchievements(u1, u1);
+        const computed = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(unfinishedEventId) as { achievementsComputedAt: string | null };
+
+        expect(computed.achievementsComputedAt).toBeNull();
+    });
+
+    it('does not conditionally recompute achievements that have never been computed', () => {
+        const eventId = 9104;
+        createCustomEvent(
+            eventId,
+            'Never Computed Cup',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z',
+            2,
+            1,
+            'TOURNAMENT'
+        );
+        dbManager.db.prepare("UPDATE tournament SET status = 'FINISHED' WHERE eventId = ?").run(eventId);
+
+        achievementService.recomputeEventAchievementsIfAlreadyComputed(new EventService().getEventById(eventId));
+
+        const computed = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(eventId) as { achievementsComputedAt: string | null };
+        expect(computed.achievementsComputedAt).toBeNull();
+    });
+
+    it('conditionally recomputes achievements once they have been computed before', () => {
+        const eventId = 9105;
+        createCustomEvent(
+            eventId,
+            'Previously Computed Cup',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z',
+            2,
+            1,
+            'TOURNAMENT'
+        );
+        dbManager.db
+            .prepare('UPDATE event SET achievementsComputedAt = ? WHERE id = ?')
+            .run('2000-01-01T00:00:00.000Z', eventId);
+        const gameId = insertFinishedGame(eventId);
+        addPlayer(gameId, u1, 'EAST', 40000, 0);
+
+        achievementService.recomputeEventAchievementsIfAlreadyComputed(new EventService().getEventById(eventId));
+
+        const computed = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(eventId) as { achievementsComputedAt: string | null };
+        const storedAchievements = dbManager.db
+            .prepare('SELECT COUNT(*) AS count FROM eventAchievement WHERE eventId = ?')
+            .get(eventId) as { count: number };
+        expect(computed.achievementsComputedAt).not.toBe('2000-01-01T00:00:00.000Z');
+        expect(storedAchievements.count).toBeGreaterThan(0);
+    });
+
+    it('recomputes initialized achievements when a finished game is created', () => {
+        const eventId = 9106;
+        createCustomEvent(
+            eventId,
+            'New Finished Game Cup',
+            '2024-01-01T00:00:00.000Z',
+            '2026-12-31T23:59:59.999Z',
+            2,
+            1,
+            'TOURNAMENT'
+        );
+        dbManager.db
+            .prepare('UPDATE event SET achievementsComputedAt = ? WHERE id = ?')
+            .run('2000-01-01T00:00:00.000Z', eventId);
+
+        new GameService().addGame(
+            eventId,
+            [
+                { userId: u1, points: 50000, startPlace: 'EAST' },
+                { userId: u2, points: 30000, startPlace: 'SOUTH' },
+                { userId: u3, points: 20000, startPlace: 'WEST' },
+                { userId: u4, points: 20000, startPlace: 'NORTH' },
+            ],
+            0,
+            new Date('2025-02-01T00:00:00.000Z'),
+            true,
+            null,
+            null
+        );
+
+        const bestGamePoints = dbManager.db
+            .prepare(
+                `SELECT userId, value
+                 FROM eventAchievement
+                 WHERE eventId = ? AND metric = 'best_game_points'`
+            )
+            .get(eventId) as { userId: number, value: number } | undefined;
+        expect(bestGamePoints).toEqual({ userId: u1, value: 50000 });
     });
 
     it('force recompute returns results and refreshes the computed marker', () => {

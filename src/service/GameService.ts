@@ -105,6 +105,7 @@ export class GameService {
             event.gameRules,
             event.startingRating
         );
+        this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
 
@@ -203,9 +204,9 @@ export class GameService {
             event.startingRating
         );
 
-        this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
+        this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
         if (oldEvent.id !== event.id) {
-            this.achievementService.recomputeEventAchievementsIfTournamentFinished(oldEvent);
+            this.achievementService.recomputeEventAchievementsIfAlreadyComputed(oldEvent);
         }
 
         const updatedGame = this.getGameById(gameId);
@@ -233,7 +234,7 @@ export class GameService {
 
         if (game.status === GameStatus.FINISHED) {
             this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
-            this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
+            this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
         }
 
         return this.gameRepository.findGamePlayersByGameId(gameId)
@@ -267,7 +268,7 @@ export class GameService {
         this.gameRepository.deleteGameById(gameId);
 
         if (game.status === GameStatus.FINISHED) {
-            this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
+            this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
         }
 
         this.logDeletedGame(game, event, deletedBy);

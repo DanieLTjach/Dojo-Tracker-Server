@@ -11,7 +11,6 @@ import { AchievementRepository, type EventAchievementWinnerRow } from '../reposi
 import { GameRepository } from '../repository/GameRepository.ts';
 import { computeAchievements } from '../util/AchievementCalculator.ts';
 import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
-import { TournamentStatus } from '../model/TournamentModels.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
@@ -45,14 +44,9 @@ export class AchievementService {
         }
     }
 
-    /**
-     * Recompute only when the tournament is already finished. Achievements are derived from a
-     * tournament's final results, so there is no point recomputing them on every game action
-     * (creation/update/deletion) while the tournament is still running — only a change to a
-     * finished tournament's games can affect its achievements.
-     */
-    recomputeEventAchievementsIfTournamentFinished(event: Event): void {
-        if (event.tournament?.status !== TournamentStatus.FINISHED) {
+    /** Recompute after game changes only when achievements have already been initialized. */
+    recomputeEventAchievementsIfAlreadyComputed(event: Event): void {
+        if (!this.achievementRepository.areEventAchievementsComputed(event.id)) {
             return;
         }
         this.recomputeEventAchievements(event);
@@ -72,6 +66,14 @@ export class AchievementService {
 
         this.computeAndPersist(event);
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
+    }
+
+    clearEventAchievements(eventId: number): void {
+        const event = this.eventService.getEventById(eventId);
+        if (event.type !== 'TOURNAMENT') {
+            throw new AchievementsOnlyForTournamentsError();
+        }
+        this.achievementRepository.clearEventAchievements(eventId);
     }
 
     private computeAndPersist(event: Event): void {
@@ -101,25 +103,21 @@ export class AchievementService {
         this.achievementRepository.replaceEventAchievements(event.id, rows, new Date());
     }
 
-    /** Achievements for the tournament page. Computes lazily on first read for historical tournaments. */
+    /** Read the stored achievements for the tournament page. */
     getEventAchievements(eventId: number, requestingUserId: number): EventAchievementResult[] {
-        const event = this.eventService.getEventById(eventId);
+        this.eventService.getEventById(eventId);
         const user = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(user);
 
         if (!this.achievementRepository.areEventAchievementsComputed(eventId)) {
-            this.recomputeEventAchievements(event);
+            return [];
         }
 
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 
-    /** Achievements a user has won across all tournaments, for the profile page. */
+    /** Read a user's stored achievements across all tournaments. */
     getUserAchievements(userId: number, requestingUserId: number): UserAchievement[] {
-        for (const eventId of this.achievementRepository.findUncomputedTournamentEventIdsForUser(userId)) {
-            this.recomputeEventAchievements(this.eventService.getEventById(eventId));
-        }
-
         const requestingUser = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(requestingUser);
 

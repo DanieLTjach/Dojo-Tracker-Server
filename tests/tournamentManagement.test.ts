@@ -42,6 +42,7 @@ function cleanupEvent(eventId: number): void {
     dbManager.db.prepare('DELETE FROM gameRound WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
     dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
     dbManager.db.prepare('DELETE FROM userRatingChange WHERE eventId = ?').run(eventId);
+    dbManager.db.prepare('DELETE FROM eventAchievement WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM tournament WHERE eventId = ?').run(eventId);
@@ -64,6 +65,16 @@ function markRoundFinished(round: number): void {
             endedAt = '2026-06-01T12:00:00.000Z'
         WHERE eventId = ? AND tournamentRound = ?
     `).run(TOURNAMENT_EVENT_ID, round);
+}
+
+function seedStoredAchievements(): void {
+    dbManager.db
+        .prepare('UPDATE event SET achievementsComputedAt = ? WHERE id = ?')
+        .run('2026-06-01T12:00:00.000Z', TOURNAMENT_EVENT_ID);
+    dbManager.db.prepare(
+        `INSERT INTO eventAchievement (eventId, metric, userId, value)
+         VALUES (?, 'best_game_points', ?, 40000)`
+    ).run(TOURNAMENT_EVENT_ID, PLAYER_IDS[0]);
 }
 
 describe('Tournament management', () => {
@@ -280,6 +291,88 @@ describe('Tournament management', () => {
             status: 'FINISHED',
             currentRound: 2,
         });
+
+        const achievementState = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null };
+        expect(achievementState.achievementsComputedAt).not.toBeNull();
+    });
+
+    test.each([
+        ['admin', adminAuthHeader],
+        ['club owner', ownerAuthHeader],
+        ['club moderator', moderatorAuthHeader],
+    ])('allows a %s to clear stored tournament achievements', async (_role, authHeader) => {
+        seedStoredAchievements();
+
+        await request(app)
+            .delete(`/api/events/${TOURNAMENT_EVENT_ID}/achievements`)
+            .set('Authorization', authHeader)
+            .expect(204);
+
+        const state = dbManager.db
+            .prepare(
+                `SELECT e.achievementsComputedAt,
+                        (SELECT COUNT(*) FROM eventAchievement ea WHERE ea.eventId = e.id) AS achievementCount
+                 FROM event e
+                 WHERE e.id = ?`
+            )
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null, achievementCount: number };
+        expect(state).toEqual({ achievementsComputedAt: null, achievementCount: 0 });
+    });
+
+    test('rejects clearing tournament achievements by a regular club member', async () => {
+        seedStoredAchievements();
+
+        const response = await request(app)
+            .delete(`/api/events/${TOURNAMENT_EVENT_ID}/achievements`)
+            .set('Authorization', playerAuthHeader);
+        expect(response.status).toBe(403);
+        expect(response.body.errorCode).toBe('insufficientEventManagementPermissions');
+
+        const state = dbManager.db
+            .prepare(
+                `SELECT e.achievementsComputedAt,
+                        (SELECT COUNT(*) FROM eventAchievement ea WHERE ea.eventId = e.id) AS achievementCount
+                 FROM event e
+                 WHERE e.id = ?`
+            )
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null, achievementCount: number };
+        expect(state).toEqual({
+            achievementsComputedAt: '2026-06-01T12:00:00.000Z',
+            achievementCount: 1,
+        });
+    });
+
+    test.each([
+        ['admin', adminAuthHeader],
+        ['club owner', ownerAuthHeader],
+        ['club moderator', moderatorAuthHeader],
+    ])('allows a %s to recompute tournament achievements', async (_role, authHeader) => {
+        await request(app)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/achievements/recompute`)
+            .set('Authorization', authHeader)
+            .send({})
+            .expect(200);
+
+        const state = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null };
+        expect(state.achievementsComputedAt).not.toBeNull();
+    });
+
+    test('rejects recomputing tournament achievements by a regular club member', async () => {
+        const response = await request(app)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/achievements/recompute`)
+            .set('Authorization', playerAuthHeader)
+            .send({});
+        expect(response.status).toBe(403);
+        expect(response.body.errorCode).toBe('insufficientEventManagementPermissions');
+
+        const state = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null };
+        expect(state.achievementsComputedAt).toBeNull();
     });
 
     test('allows club moderator to start a tournament round', async () => {

@@ -1,8 +1,14 @@
-import { NotFoundError, BadRequestError, InternalServerError } from './BaseErrors.ts';
+import { NotFoundError, BadRequestError, ForbiddenError, InternalServerError } from './BaseErrors.ts';
 
 export class EventNotFoundError extends NotFoundError {
     constructor(eventId: number) {
         super('eventNotFound', { eventId });
+    }
+}
+
+export class InsufficientEventManagementPermissionsError extends ForbiddenError {
+    constructor() {
+        super('insufficientEventManagementPermissions');
     }
 }
 

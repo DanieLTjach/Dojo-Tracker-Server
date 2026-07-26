@@ -36,6 +36,10 @@ export class AchievementRepository {
         return dbManager.db.prepare('UPDATE event SET achievementsComputedAt = :computedAt WHERE id = :eventId');
     }
 
+    private clearComputedAtStatement(): Statement<{ eventId: number }, void> {
+        return dbManager.db.prepare('UPDATE event SET achievementsComputedAt = NULL WHERE id = :eventId');
+    }
+
     /** Atomically replace all stored achievements for an event and record the computation time. */
     replaceEventAchievements(eventId: number, rows: EventAchievementRow[], computedAt: Date): void {
         this.deleteByEventStatement().run({ eventId });
@@ -44,6 +48,11 @@ export class AchievementRepository {
             insert.run(row);
         }
         this.markComputedStatement().run({ eventId, computedAt: computedAt.toISOString() });
+    }
+
+    clearEventAchievements(eventId: number): void {
+        this.deleteByEventStatement().run({ eventId });
+        this.clearComputedAtStatement().run({ eventId });
     }
 
     private areEventAchievementsComputedStatement(): Statement<{ eventId: number }, { eventId: number }> {
@@ -82,22 +91,5 @@ export class AchievementRepository {
 
     findByUserId(userId: number): UserAchievementRow[] {
         return this.findByUserIdStatement().all({ userId });
-    }
-
-    private findUncomputedTournamentEventIdsForUserStatement(): Statement<{ userId: number }, { eventId: number }> {
-        return dbManager.db.prepare(`
-            SELECT DISTINCT g.eventId AS eventId
-            FROM userToGame utg
-            JOIN game g ON g.id = utg.gameId
-            JOIN event e ON e.id = g.eventId
-            WHERE utg.userId = :userId
-              AND e.type = 'TOURNAMENT'
-              AND g.status = 'FINISHED'
-              AND e.achievementsComputedAt IS NULL`);
-    }
-
-    /** Tournament events the user played a finished game in that have never been computed. */
-    findUncomputedTournamentEventIdsForUser(userId: number): number[] {
-        return this.findUncomputedTournamentEventIdsForUserStatement().all({ userId }).map(row => row.eventId);
     }
 }
