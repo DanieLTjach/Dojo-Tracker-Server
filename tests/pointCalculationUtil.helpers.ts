@@ -99,7 +99,7 @@ export function detailedGame(players: GamePlayer[], currentState: GameState): De
             status: 'STOPPED',
             durationSec: 0,
             remainingSec: 0,
-            serverNow: timestamp.toISOString(),
+            serverNow: timestamp,
         },
     };
 }

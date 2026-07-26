@@ -29,7 +29,7 @@ export function computeTournamentGameTimer(
             status: TimerStatus.STOPPED,
             durationSec,
             remainingSec: durationSec,
-            serverNow: serverNow.toISOString(),
+            serverNow,
         };
     }
 
@@ -45,6 +45,6 @@ export function computeTournamentGameTimer(
         status: remainingSec > 0 ? TimerStatus.RUNNING : TimerStatus.EXPIRED,
         durationSec,
         remainingSec,
-        serverNow: serverNow.toISOString(),
+        serverNow,
     };
 }
