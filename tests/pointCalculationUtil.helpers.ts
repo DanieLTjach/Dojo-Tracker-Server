@@ -95,6 +95,12 @@ export function detailedGame(players: GamePlayer[], currentState: GameState): De
         players,
         rounds: [],
         currentState,
+        timer: {
+            status: 'STOPPED',
+            durationSec: 0,
+            remainingSec: 0,
+            serverNow: timestamp,
+        },
     };
 }
 

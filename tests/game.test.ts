@@ -1242,7 +1242,17 @@ describe('Game API Endpoints', () => {
 
             expect(afterGame.status).toBe(200);
             expect(afterGame.body.rounds).toHaveLength(0);
-            expect(afterGame.body).toEqual(beforeGame.body);
+            // timer.serverNow is the wall clock at serialization time, so it differs
+            // between two reads of an unchanged game. Compare everything else to prove
+            // the preview persisted nothing.
+            const { timer: afterTimer, ...afterRest } = afterGame.body;
+            const { timer: beforeTimer, ...beforeRest } = beforeGame.body;
+            expect(afterRest).toEqual(beforeRest);
+            expect(afterTimer).toMatchObject({
+                status: beforeTimer.status,
+                durationSec: beforeTimer.durationSec,
+                remainingSec: beforeTimer.remainingSec,
+            });
         });
 
         test('should reject preview for an already posted round', async () => {

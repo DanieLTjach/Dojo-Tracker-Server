@@ -7,47 +7,68 @@ export class TournamentRepository {
         eventId: number;
         status: TournamentStatus;
         totalRounds: number;
+        roundDurationSec: number | null;
         createdAt: string;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO tournament (eventId, status, totalRounds, createdAt, modifiedAt, modifiedBy)
-            VALUES (:eventId, :status, :totalRounds, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO tournament (
+                eventId, status, totalRounds, roundDurationSec, createdAt, modifiedAt, modifiedBy
+            )
+            VALUES (
+                :eventId, :status, :totalRounds, :roundDurationSec, :createdAt, :modifiedAt, :modifiedBy
+            )
         `);
     }
 
-    createTournament(eventId: number, totalRounds: number, createdAt: Date, modifiedBy: number): void {
+    createTournament(
+        eventId: number,
+        totalRounds: number,
+        roundDurationSec: number | null,
+        createdAt: Date,
+        modifiedBy: number
+    ): void {
         const timestamp = createdAt.toISOString();
         this.createTournamentStatement().run({
             eventId,
             status: TournamentStatus.CREATED,
             totalRounds,
+            roundDurationSec,
             createdAt: timestamp,
             modifiedAt: timestamp,
             modifiedBy,
         });
     }
 
-    private updateTournamentTotalRoundsStatement(): Statement<{
+    private updateTournamentConfigStatement(): Statement<{
         eventId: number;
         totalRounds: number;
+        roundDurationSec: number | null;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
         return dbManager.db.prepare(`
             UPDATE tournament
             SET totalRounds = :totalRounds,
+                roundDurationSec = :roundDurationSec,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
             WHERE eventId = :eventId
         `);
     }
 
-    updateTournamentTotalRounds(eventId: number, totalRounds: number, modifiedAt: Date, modifiedBy: number): void {
-        this.updateTournamentTotalRoundsStatement().run({
+    updateTournamentConfig(
+        eventId: number,
+        totalRounds: number,
+        roundDurationSec: number | null,
+        modifiedAt: Date,
+        modifiedBy: number
+    ): void {
+        this.updateTournamentConfigStatement().run({
             eventId,
             totalRounds,
+            roundDurationSec,
             modifiedAt: modifiedAt.toISOString(),
             modifiedBy,
         });
@@ -57,6 +78,7 @@ export class TournamentRepository {
         eventId: number;
         status: TournamentStatus;
         currentRound: number | null;
+        currentRoundStartedAt: string | null;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
@@ -64,6 +86,7 @@ export class TournamentRepository {
             UPDATE tournament
             SET status = :status,
                 currentRound = :currentRound,
+                currentRoundStartedAt = :currentRoundStartedAt,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
             WHERE eventId = :eventId
@@ -74,6 +97,7 @@ export class TournamentRepository {
         eventId: number,
         status: TournamentStatus,
         currentRound: number | null,
+        currentRoundStartedAt: Date | null,
         modifiedAt: Date,
         modifiedBy: number
     ): void {
@@ -81,6 +105,7 @@ export class TournamentRepository {
             eventId,
             status,
             currentRound,
+            currentRoundStartedAt: currentRoundStartedAt?.toISOString() ?? null,
             modifiedAt: modifiedAt.toISOString(),
             modifiedBy,
         });

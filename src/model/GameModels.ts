@@ -25,6 +25,21 @@ export const GameStatus = {
 
 export type GameStatus = typeof GameStatus[keyof typeof GameStatus];
 
+export const TimerStatus = {
+    STOPPED: 'STOPPED',
+    RUNNING: 'RUNNING',
+    EXPIRED: 'EXPIRED',
+} as const;
+
+export type TimerStatus = typeof TimerStatus[keyof typeof TimerStatus];
+
+export interface GameTimer {
+    status: TimerStatus;
+    durationSec: number;
+    remainingSec: number;
+    serverNow: Date;
+}
+
 export const GameFinishReason = {
     BANKRUPTCY: 'BANKRUPTCY',
     MAX_POINTS: 'MAX_POINTS',
@@ -86,6 +101,7 @@ export interface GameWithPlayers extends Game {
 export interface DetailedGame extends GameWithPlayers {
     rounds: GameRound[];
     currentState: GameState | null;
+    timer: GameTimer;
 }
 
 export interface PlayerData {

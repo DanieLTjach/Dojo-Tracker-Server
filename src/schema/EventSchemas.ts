@@ -23,6 +23,11 @@ const teamConfigSchema = z.strictObject({
 
 const tournamentConfigSchema = z.strictObject({
     totalRounds: z.number().int('totalRounds must be an integer').positive('totalRounds must be positive'),
+    // Rounds only exist for tournaments, so the round timer duration lives here
+    // rather than in the generic event config.
+    roundDurationSec: z.number().int('roundDurationSec must be an integer')
+        .positive('roundDurationSec must be positive')
+        .nullish(),
 });
 
 const playerNameDisplayEnum = z.enum(Object.values(PlayerNameDisplay));

@@ -1,4 +1,5 @@
 import express from 'express';
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import gameRoutes from '../src/routes/GameRoutes.ts';
@@ -173,11 +174,13 @@ describe('Tournament management', () => {
     test('is idempotent: re-posting the current round is a no-op, not a skip', async () => {
         importRound(1);
 
-        await request(app)
+        const firstStart = await request(app)
             .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
             .set('Authorization', adminAuthHeader)
             .send({})
             .expect(200);
+
+        expect(firstStart.body.tournament.currentRoundStartedAt).toEqual(expect.any(String));
 
         const duplicate = await request(app)
             .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
@@ -188,6 +191,7 @@ describe('Tournament management', () => {
         expect(duplicate.body.tournament).toMatchObject({
             status: 'IN_PROGRESS',
             currentRound: 1,
+            currentRoundStartedAt: firstStart.body.tournament.currentRoundStartedAt,
         });
     });
 
@@ -487,6 +491,96 @@ describe('Tournament management', () => {
 
         expect(startResponse.status).toBe(200);
         expect(startResponse.body.status).toBe('IN_PROGRESS');
+        expect(startResponse.body.timer).toMatchObject({
+            status: 'STOPPED',
+            durationSec: 0,
+            remainingSec: 0,
+        });
+        expect(startResponse.body.timer.serverNow).toEqual(expect.any(String));
+    });
+
+    test('returns the synchronized round timer when getting and starting a tracked game', async () => {
+        jest.useFakeTimers();
+        try {
+            const roundStartedAt = new Date('2026-07-26T12:00:00.000Z');
+            jest.setSystemTime(roundStartedAt);
+            dbManager.db.prepare('UPDATE tournament SET roundDurationSec = ? WHERE eventId = ?')
+                .run(3600, TOURNAMENT_EVENT_ID);
+            const gameId = importRound(1);
+
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            const serverNow = new Date('2026-07-26T12:15:00.000Z');
+            jest.setSystemTime(serverNow);
+            const fetched = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', playerAuthHeader);
+
+            expect(fetched.status).toBe(200);
+            expect(fetched.body.timer).toEqual({
+                status: 'RUNNING',
+                durationSec: 3600,
+                remainingSec: 2700,
+                serverNow: serverNow.toISOString(),
+            });
+
+            const started = await request(app)
+                .post(`/api/games/${gameId}/start`)
+                .set('Authorization', playerAuthHeader)
+                .send({});
+
+            expect(started.status).toBe(200);
+            expect(started.body.timer).toEqual(fetched.body.timer);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    test('a repeated round start is idempotent and does not restart the timer', async () => {
+        jest.useFakeTimers();
+        try {
+            const roundStartedAt = new Date('2026-07-26T12:00:00.000Z');
+            jest.setSystemTime(roundStartedAt);
+            dbManager.db.prepare('UPDATE tournament SET roundDurationSec = ? WHERE eventId = ?')
+                .run(3600, TOURNAMENT_EVENT_ID);
+            const gameId = importRound(1);
+
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            // Ten minutes later, a retry (double tap, network retry) must not re-arm the
+            // clock — the round is still the same round, so the countdown keeps running.
+            jest.setSystemTime(new Date('2026-07-26T12:10:00.000Z'));
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            const serverNow = new Date('2026-07-26T12:15:00.000Z');
+            jest.setSystemTime(serverNow);
+            const fetched = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', playerAuthHeader);
+
+            expect(fetched.status).toBe(200);
+            // 2700, not 3300: elapsed time is measured from the original start.
+            expect(fetched.body.timer).toEqual({
+                status: 'RUNNING',
+                durationSec: 3600,
+                remainingSec: 2700,
+                serverNow: serverNow.toISOString(),
+            });
+        } finally {
+            jest.useRealTimers();
+        }
     });
 
     describe('cancel tournament round', () => {
