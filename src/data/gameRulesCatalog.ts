@@ -115,6 +115,13 @@ export const gameRulesCatalog = {
         { key: 'two_han_minimum', type: 'boolean' },
         { key: 'ura_dora', type: 'boolean' },
         { key: 'west_round', type: 'boolean' },
+        {
+            key: 'yakitori_payment_step',
+            type: 'integer',
+            min: 0,
+            multipleOf: 100,
+            suggestions: [0, 4000, 5000, 10000],
+        },
         { key: 'yakuman_stacking', type: 'boolean' },
     ],
 } as const satisfies GameRulesCatalog;
