@@ -45,6 +45,7 @@ import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import { ClubRole } from '../model/ClubModels.ts';
 import { getYakitoriPaymentStep } from '../util/RulesUtils.ts';
 import { calculateYakitoriPointChanges } from '../util/YakitoriUtil.ts';
+import { mergePlayerPointChanges } from '../util/PointCalculationUtil.ts';
 import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
@@ -274,6 +275,71 @@ export class GameService {
         if (game.status === GameStatus.FINISHED) {
             this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+        }
+
+        return this.gameRepository.findGamePlayersByGameId(gameId)
+            .find(p => p.userId === targetUserId)!;
+    }
+
+    setPlayerYakitori(
+        gameId: number,
+        targetUserId: number,
+        isYakitori: boolean,
+        modifiedBy: number
+    ): GamePlayer {
+        const game = this.getGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+        this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
+
+        const player = game.players.find(p => p.userId === targetUserId);
+        if (player === undefined) {
+            throw new GamePlayerNotFoundError(gameId, targetUserId);
+        }
+
+        if (player.isYakitori === isYakitori) {
+            return player;
+        }
+
+        if (game.status === GameStatus.FINISHED) {
+            const rulesValues = event.gameRules.details?.rules ?? {};
+            const oldYakitoriSet = new Set(game.players.filter(p => p.isYakitori).map(p => p.userId));
+            const oldPointChanges = calculateYakitoriPointChanges(game.players, rulesValues, oldYakitoriSet);
+            const reverseOldChanges = oldPointChanges.map(c => ({
+                playerId: c.playerId,
+                pointChange: -c.pointChange,
+            }));
+
+            const newPlayers = game.players.map(p => p.userId === targetUserId ? { ...p, isYakitori } : p);
+            const newYakitoriSet = new Set(newPlayers.filter(p => p.isYakitori).map(p => p.userId));
+            const newPointChanges = calculateYakitoriPointChanges(newPlayers, rulesValues, newYakitoriSet);
+
+            const netPointChanges = mergePlayerPointChanges(reverseOldChanges, newPointChanges);
+
+            this.gameRepository.updatePlayerIsYakitori(gameId, targetUserId, isYakitori, modifiedBy);
+
+            if (netPointChanges.length > 0) {
+                this.gameRepository.applyPlayerPointChanges(gameId, netPointChanges, modifiedBy);
+
+                const detailedGame = this.getDetailedGameById(gameId);
+                if (detailedGame.rounds.length > 0) {
+                    const lastRound = detailedGame.rounds[detailedGame.rounds.length - 1]!;
+                    const updatedResult = {
+                        ...lastRound.result,
+                        playerPointChanges: mergePlayerPointChanges(
+                            lastRound.result.playerPointChanges,
+                            netPointChanges
+                        ),
+                    };
+                    this.gameRepository.updateGameRoundResult(gameId, lastRound.roundNumber, updatedResult);
+                }
+            }
+
+            this.gameRepository.touchGame(gameId, modifiedBy);
+            this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
+            this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+        } else {
+            this.gameRepository.updatePlayerIsYakitori(gameId, targetUserId, isYakitori, modifiedBy);
+            this.gameRepository.touchGame(gameId, modifiedBy);
         }
 
         return this.gameRepository.findGamePlayersByGameId(gameId)

@@ -47,6 +47,11 @@ router.patch(
     requireAuth,
     withTransaction((req, res) => gameController.setSubstitutePlayer(req, res))
 );
+router.patch(
+    '/:gameId/players/:userId/yakitori',
+    requireAuth,
+    withTransaction((req, res) => gameController.setPlayerYakitori(req, res))
+);
 router.delete('/:gameId', requireAuth, withTransaction((req, res) => gameController.deleteGame(req, res)));
 
 export default router;

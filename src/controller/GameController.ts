@@ -16,6 +16,7 @@ import {
     gameUndoFinishSchema,
     gameStartSchema,
     gamePlayerSubstitutePlayerSchema,
+    gamePlayerYakitoriSchema,
 } from '../schema/GameSchemas.ts';
 import { TrackedGameService } from '../service/TrackedGameService.ts';
 
@@ -150,6 +151,16 @@ export class GameController {
         } = gamePlayerSubstitutePlayerSchema.parse(req);
         const modifiedBy = req.user!.userId;
         const player = this.gameService.setSubstitutePlayer(gameId, userId, isSubstitutePlayer, modifiedBy);
+        return res.status(StatusCodes.OK).json(player);
+    }
+
+    setPlayerYakitori(req: Request, res: Response) {
+        const {
+            params: { gameId, userId },
+            body: { isYakitori },
+        } = gamePlayerYakitoriSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const player = this.gameService.setPlayerYakitori(gameId, userId, isYakitori, modifiedBy);
         return res.status(StatusCodes.OK).json(player);
     }
 }
