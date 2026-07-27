@@ -66,6 +66,7 @@ function player(
         startPlace,
         chomboCount: opts.chomboCount ?? 0,
         isSubstitutePlayer: opts.isSubstitutePlayer ?? false,
+        isYakitori: false,
     };
 }
 

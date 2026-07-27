@@ -651,6 +651,7 @@ export class GameService {
                 player.startPlace ?? undefined,
                 player.chomboCount ?? 0,
                 player.isSubstitutePlayer ?? false,
+                player.isYakitori ?? false,
                 modifiedBy
             );
         }

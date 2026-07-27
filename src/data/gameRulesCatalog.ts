@@ -16,6 +16,7 @@ interface IntegerRuleSpec extends RuleSpecBase {
     min?: number;
     max?: number;
     multipleOf?: number;
+    suggestions?: readonly number[];
 }
 
 interface EnumStringRuleSpec extends RuleSpecBase {

@@ -16,6 +16,7 @@ const playerDataSchema = z.object({
     startPlace: windSchema.nullish(),
     chomboCount: z.number().int('Chombo count must be an integer').nonnegative().max(10).nullish(),
     isSubstitutePlayer: z.boolean().nullish(),
+    isYakitori: z.boolean().nullish(),
 });
 
 const playerListSchema = z.array(playerDataSchema).refine(players => {
@@ -31,6 +32,7 @@ const trackedGamePlayerDataSchema = z.object({
     userId: userIdSchema,
     startPlace: windSchema,
     isSubstitutePlayer: z.boolean().optional(),
+    isYakitori: z.boolean().optional(),
 });
 
 const trackedGamePlayerListSchema = z.array(trackedGamePlayerDataSchema).refine(players => {
@@ -134,6 +136,8 @@ export const plannedGameResultSchema = z.object({
             userId: userIdSchema,
             points: z.number().int('Points must be an integer'),
             chomboCount: z.number().int('Chombo count must be an integer').nonnegative().max(10).default(0),
+            isSubstitutePlayer: z.boolean().optional(),
+            isYakitori: z.boolean().optional(),
         })),
     }),
 });
@@ -157,5 +161,15 @@ export const gamePlayerSubstitutePlayerSchema = z.object({
     }),
     body: z.object({
         isSubstitutePlayer: z.boolean(),
+    }),
+});
+
+export const gamePlayerYakitoriSchema = z.object({
+    params: z.object({
+        gameId: gameIdParamSchema,
+        userId: userIdParamSchema,
+    }),
+    body: z.object({
+        isYakitori: z.boolean(),
     }),
 });

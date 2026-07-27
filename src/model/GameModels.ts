@@ -92,6 +92,7 @@ export interface GamePlayer {
     startPlace: Wind | null;
     chomboCount: number;
     isSubstitutePlayer: boolean;
+    isYakitori: boolean;
 }
 
 export interface GameWithPlayers extends Game {
@@ -110,12 +111,14 @@ export interface PlayerData {
     startPlace?: Wind | undefined | null;
     chomboCount?: number | undefined | null;
     isSubstitutePlayer?: boolean | undefined | null;
+    isYakitori?: boolean | undefined | null;
 }
 
 export interface TrackedGamePlayerData {
     userId: number;
     startPlace: Wind;
     isSubstitutePlayer?: boolean | undefined;
+    isYakitori?: boolean | undefined;
 }
 
 export interface PlannedGamePlayerResult {

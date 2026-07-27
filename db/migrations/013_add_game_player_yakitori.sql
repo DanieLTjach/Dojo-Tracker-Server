@@ -1,0 +1,1 @@
+ALTER TABLE userToGame ADD COLUMN isYakitori BOOL NOT NULL DEFAULT false;

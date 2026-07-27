@@ -320,6 +320,7 @@ export class TrackedGameService {
                 player.startPlace,
                 0,
                 player.isSubstitutePlayer ?? false,
+                player.isYakitori ?? false,
                 modifiedBy
             );
         }

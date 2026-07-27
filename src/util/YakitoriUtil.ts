@@ -1,6 +1,6 @@
 import type { GamePlayer, GameRound } from '../model/GameModels.ts';
 import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
-import type { PlayerPointChange } from '../model/PointCalculationModels.ts';
+import type { PlayerPointChange } from '../model/GameRoundResultModels.ts';
 import { getYakitoriPaymentStep } from './RulesUtils.ts';
 
 export function findPlayersWhoWonAHand(rounds: GameRound[]): Set<number> {

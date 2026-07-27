@@ -18,6 +18,7 @@ function sanmaPlayers(): GamePlayer[] {
             startPlace: Wind.EAST,
             chomboCount: 0,
             isSubstitutePlayer: false,
+            isYakitori: false,
         },
         {
             gameId: 1,
@@ -32,6 +33,7 @@ function sanmaPlayers(): GamePlayer[] {
             startPlace: Wind.SOUTH,
             chomboCount: 0,
             isSubstitutePlayer: false,
+            isYakitori: false,
         },
         {
             gameId: 1,
@@ -46,6 +48,7 @@ function sanmaPlayers(): GamePlayer[] {
             startPlace: Wind.WEST,
             chomboCount: 0,
             isSubstitutePlayer: false,
+            isYakitori: false,
         },
     ];
 }
@@ -63,9 +66,11 @@ describe('YakitoriUtil', () => {
                     riichiSticks: 0,
                     result: {
                         type: 'TSUMO',
-                        winningHandData: { winnerPlayerId: 1, han: 1, fu: 30, yaku: [] },
+                        winningHandData: { winnerPlayerId: 1, yakumanCount: 0, han: 1, fu: 30 },
                         riichiPlayerIds: [],
-                        paos: [],
+                        playerPointChanges: [],
+                        nextState: undefined,
+                        gameFinishReason: undefined,
                     },
                 },
                 {
@@ -77,12 +82,15 @@ describe('YakitoriUtil', () => {
                     riichiSticks: 0,
                     result: {
                         type: 'RON',
+                        dealInPlayerId: 4,
                         winningHandData: [
-                            { winnerPlayerId: 2, loserPlayerId: 4, han: 2, fu: 30, yaku: [] },
-                            { winnerPlayerId: 3, loserPlayerId: 4, han: 3, fu: 30, yaku: [] },
+                            { winnerPlayerId: 2, yakumanCount: 0, han: 2, fu: 30 },
+                            { winnerPlayerId: 3, yakumanCount: 0, han: 3, fu: 30 },
                         ],
                         riichiPlayerIds: [],
-                        paos: [],
+                        playerPointChanges: [],
+                        nextState: undefined,
+                        gameFinishReason: undefined,
                     },
                 },
             ];
@@ -105,6 +113,9 @@ describe('YakitoriUtil', () => {
                         tenpaiPlayerIds: [1],
                         nagashiManganPlayerIds: [1],
                         riichiPlayerIds: [],
+                        playerPointChanges: [],
+                        nextState: undefined,
+                        gameFinishReason: undefined,
                     },
                 },
                 {
@@ -116,8 +127,11 @@ describe('YakitoriUtil', () => {
                     riichiSticks: 0,
                     result: {
                         type: 'ABORTIVE_DRAW',
-                        reason: 'FOUR_RIICHI',
+                        drawType: 'FOUR_RIICHI',
                         riichiPlayerIds: [1, 2, 3, 4],
+                        playerPointChanges: [],
+                        nextState: undefined,
+                        gameFinishReason: undefined,
                     },
                 },
                 {
@@ -129,7 +143,10 @@ describe('YakitoriUtil', () => {
                     riichiSticks: 4,
                     result: {
                         type: 'CHOMBO',
-                        chomboPlayerId: 2,
+                        offenderPlayerId: 2,
+                        playerPointChanges: [],
+                        nextState: undefined,
+                        gameFinishReason: undefined,
                     },
                 },
             ];

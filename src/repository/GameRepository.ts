@@ -81,12 +81,13 @@ export class GameRepository {
         startPlace: string | undefined;
         chomboCount: number;
         isSubstitutePlayer: number;
+        isYakitori: number;
         modifiedBy: number;
         timestamp: string;
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO userToGame (gameId, userId, points, startPlace, chomboCount, isSubstitutePlayer, modifiedBy, createdAt, modifiedAt)
-            VALUES (:gameId, :userId, :points, :startPlace, :chomboCount, :isSubstitutePlayer, :modifiedBy, :timestamp, :timestamp)`);
+            INSERT INTO userToGame (gameId, userId, points, startPlace, chomboCount, isSubstitutePlayer, isYakitori, modifiedBy, createdAt, modifiedAt)
+            VALUES (:gameId, :userId, :points, :startPlace, :chomboCount, :isSubstitutePlayer, :isYakitori, :modifiedBy, :timestamp, :timestamp)`);
     }
 
     addGamePlayer(
@@ -96,6 +97,7 @@ export class GameRepository {
         startPlace: string | undefined,
         chomboCount: number,
         isSubstitutePlayer: boolean,
+        isYakitori: boolean,
         modifiedBy: number
     ): void {
         this.addGamePlayerStatement().run({
@@ -105,6 +107,7 @@ export class GameRepository {
             startPlace,
             chomboCount,
             isSubstitutePlayer: booleanToInteger(isSubstitutePlayer),
+            isYakitori: booleanToInteger(isYakitori),
             modifiedBy,
             timestamp: new Date().toISOString(),
         });
@@ -133,6 +136,34 @@ export class GameRepository {
             gameId,
             userId,
             isSubstitutePlayer: booleanToInteger(isSubstitutePlayer),
+            modifiedBy,
+            modifiedAt: new Date().toISOString(),
+        });
+    }
+
+    private updatePlayerIsYakitoriStatement(): Statement<{
+        gameId: number;
+        userId: number;
+        isYakitori: number;
+        modifiedBy: number;
+        modifiedAt: string;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE userToGame
+            SET isYakitori = :isYakitori, modifiedAt = :modifiedAt, modifiedBy = :modifiedBy
+            WHERE gameId = :gameId AND userId = :userId`);
+    }
+
+    updatePlayerIsYakitori(
+        gameId: number,
+        userId: number,
+        isYakitori: boolean,
+        modifiedBy: number
+    ): void {
+        this.updatePlayerIsYakitoriStatement().run({
+            gameId,
+            userId,
+            isYakitori: booleanToInteger(isYakitori),
             modifiedBy,
             modifiedAt: new Date().toISOString(),
         });
@@ -747,6 +778,7 @@ export interface GamePlayerDBEntity {
     startPlace: string | null;
     chomboCount: number;
     isSubstitutePlayer: number;
+    isYakitori: number;
 }
 
 function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
@@ -756,5 +788,6 @@ function gamePlayerFromDBEntity(dbEntity: GamePlayerDBEntity): GamePlayer {
         startPlace: dbEntity.startPlace !== null ? parseWind(dbEntity.startPlace) : null,
         ratingChange: dbEntity.ratingChange / RATING_TO_POINTS_COEFFICIENT,
         isSubstitutePlayer: Boolean(dbEntity.isSubstitutePlayer),
+        isYakitori: Boolean(dbEntity.isYakitori),
     };
 }
