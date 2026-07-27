@@ -122,6 +122,37 @@ export class GameService {
         return newGame;
     }
 
+    /**
+     * Reverses the yakitori transfer already baked into a stored game's points, so an edit
+     * can re-apply it from a clean baseline. Uses the old game's flags and ruleset, which
+     * are what produced the stored adjustment in the first place.
+     */
+    private removeStoredYakitoriFromPlayerData(
+        playersData: PlayerData[],
+        oldGame: GameWithPlayers,
+        oldEvent: Event
+    ): PlayerData[] {
+        const oldRulesValues = oldEvent.gameRules.details?.rules ?? {};
+        const storedYakitoriIds = new Set(
+            oldGame.players.filter(p => p.isYakitori).map(p => p.userId)
+        );
+        if (storedYakitoriIds.size === 0) {
+            return playersData;
+        }
+
+        const storedChanges = calculateYakitoriPointChanges(
+            oldGame.players,
+            oldRulesValues,
+            storedYakitoriIds
+        );
+        const changeMap = new Map(storedChanges.map(c => [c.playerId, c.pointChange]));
+
+        return playersData.map(p => ({
+            ...p,
+            points: p.points - (changeMap.get(p.userId) ?? 0),
+        }));
+    }
+
     applyYakitoriToPlayerData(
         playersData: PlayerData[],
         gameRules: GameRules
@@ -225,7 +256,12 @@ export class GameService {
             this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
         }
         this.validatePlayers(playersData, event.gameRules);
-        const adjustedPlayersData = this.applyYakitoriToPlayerData(playersData, event.gameRules);
+        // The submitted points come from a form seeded by GET, so they already include any
+        // yakitori transfer stored on the old game. Strip that before re-applying, or a
+        // no-op edit would charge the penalty a second time -- invisibly, since the
+        // transfer is zero-sum and validateTotalPoints stays happy either way.
+        const unadjustedPlayersData = this.removeStoredYakitoriFromPlayerData(playersData, oldGame, oldEvent);
+        const adjustedPlayersData = this.applyYakitoriToPlayerData(unadjustedPlayersData, event.gameRules);
         this.validateUniqueTournamentRoundTable(event, tournamentRound, tournamentTable, gameId);
 
         const newGameTimestamp = createdAt ?? oldGame.createdAt;

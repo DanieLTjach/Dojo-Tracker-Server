@@ -3068,6 +3068,48 @@ describe('Game API Endpoints', () => {
                 expect(patchRes.body.points).toBe(25000); // 13000 + 12000 restored
             });
 
+            test('(6b) re-saving a game unchanged does not charge yakitori twice', async () => {
+                const createRes = await request(app)
+                    .post('/api/games')
+                    .set('Authorization', adminAuthHeader)
+                    .send({
+                        eventId: YAKITORI_EVENT_ID,
+                        playersData: [
+                            { userId: testUser1Id, points: 40000, isYakitori: false },
+                            { userId: testUser2Id, points: 30000, isYakitori: false },
+                            { userId: testUser3Id, points: 20000, isYakitori: false },
+                            { userId: testUser4Id, points: 10000, isYakitori: true },
+                        ],
+                        hideNewGameMessage: true,
+                    });
+                const gameId = createRes.body.id;
+                const storedPoints = (players: { userId: number, points: number }[]) =>
+                    [testUser1Id, testUser2Id, testUser3Id, testUser4Id]
+                        .map(id => players.find(p => p.userId === id)!.points);
+
+                // 4000 step, 1 yakitori vs 3 winners: -12000 / +4000 each.
+                expect(storedPoints(createRes.body.players)).toEqual([44000, 34000, 24000, -2000]);
+
+                // An admin opening the edit form gets these adjusted points back and saves
+                // without changing anything. The result must be identical, not re-penalized.
+                const editRes = await request(app)
+                    .put(`/api/games/${gameId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({
+                        eventId: YAKITORI_EVENT_ID,
+                        playersData: createRes.body.players.map(
+                            (p: { userId: number, points: number, isYakitori: boolean }) => ({
+                                userId: p.userId,
+                                points: p.points,
+                                isYakitori: p.isYakitori,
+                            })
+                        ),
+                    });
+
+                expect(editRes.status).toBe(200);
+                expect(storedPoints(editRes.body.players)).toEqual([44000, 34000, 24000, -2000]);
+            });
+
             test('(7) rule disabled -> hand-less player is entirely unaffected', async () => {
                 const createRes = await request(app)
                     .post('/api/games/tracked')
