@@ -125,6 +125,7 @@ export interface PlannedGamePlayerResult {
     userId: number;
     points: number;
     chomboCount: number;
+    isYakitori?: boolean | undefined;
 }
 
 export interface GameFilters {

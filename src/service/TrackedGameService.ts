@@ -128,29 +128,37 @@ export class TrackedGameService {
                 ...result,
                 startPlace: plannedPlayer.startPlace,
                 isSubstitutePlayer: plannedPlayer.isSubstitutePlayer,
+                isYakitori: result.isYakitori ?? plannedPlayer.isYakitori,
             };
         });
         this.gameService.validatePlayers(players, event.gameRules);
+        const adjustedPlayers = this.gameService.applyYakitoriToPlayerData(players, event.gameRules);
 
         const completedAt = new Date();
         this.gameService.validateGameWithinEventDates(event, completedAt, modifiedBy, GameStatus.FINISHED);
         const standingsBefore = this.ratingService.calculateStandings(event.id);
 
-        for (const result of results) {
+        for (const result of adjustedPlayers) {
             this.gameRepository.setPlannedGamePlayerResult(
                 gameId,
                 result.userId,
                 result.points,
-                result.chomboCount,
+                result.chomboCount ?? 0,
                 modifiedBy,
                 completedAt
+            );
+            this.gameRepository.updatePlayerIsYakitori(
+                gameId,
+                result.userId,
+                Boolean(result.isYakitori),
+                modifiedBy
             );
         }
         this.gameRepository.recordPlannedGameResult(gameId, modifiedBy, completedAt);
         this.ratingService.addRatingChangesFromGame(
             gameId,
             completedAt,
-            players,
+            adjustedPlayers,
             event.id,
             event.gameRules,
             event.startingRating

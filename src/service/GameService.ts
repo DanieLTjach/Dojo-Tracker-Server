@@ -43,6 +43,8 @@ import {
 } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import { ClubRole } from '../model/ClubModels.ts';
+import { getYakitoriPaymentStep } from '../util/RulesUtils.ts';
+import { calculateYakitoriPointChanges } from '../util/YakitoriUtil.ts';
 import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
@@ -83,6 +85,7 @@ export class GameService {
         const event = this.eventService.getEventById(eventId);
         this.authorizeGameCreation(event, playersData, createdBy);
         this.validatePlayers(playersData, event.gameRules);
+        const adjustedPlayersData = this.applyYakitoriToPlayerData(playersData, event.gameRules);
         this.validateGameWithinEventDates(event, gameTimestamp, createdBy);
         this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
         this.validateUniqueTournamentRoundTable(event, tournamentRound, tournamentTable, null);
@@ -97,11 +100,11 @@ export class GameService {
             tournamentRound,
             tournamentTable
         );
-        this.addPlayersToGame(newGameId, playersData, createdBy);
+        this.addPlayersToGame(newGameId, adjustedPlayersData, createdBy);
         this.ratingService.addRatingChangesFromGame(
             newGameId,
             gameTimestamp,
-            playersData,
+            adjustedPlayersData,
             eventId,
             event.gameRules,
             event.startingRating
@@ -116,6 +119,34 @@ export class GameService {
             this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter, createdBy);
         }
         return newGame;
+    }
+
+    applyYakitoriToPlayerData(
+        playersData: PlayerData[],
+        gameRules: GameRules
+    ): PlayerData[] {
+        const rulesValues = gameRules.details?.rules ?? {};
+        const step = getYakitoriPaymentStep(rulesValues);
+        if (step === 0) return playersData;
+
+        const hasExplicitFlags = playersData.some(
+            p => p.isYakitori !== undefined && p.isYakitori !== null
+        );
+        const yakitoriPlayerIds = hasExplicitFlags
+            ? new Set(playersData.filter(p => p.isYakitori).map(p => p.userId))
+            : new Set<number>();
+
+        if (yakitoriPlayerIds.size === 0) return playersData;
+
+        const dummyPlayers = playersData.map(p => ({ userId: p.userId }) as GamePlayer);
+        const pointChanges = calculateYakitoriPointChanges(dummyPlayers, rulesValues, yakitoriPlayerIds);
+        const changeMap = new Map(pointChanges.map(c => [c.playerId, c.pointChange]));
+
+        return playersData.map(p => ({
+            ...p,
+            points: p.points + (changeMap.get(p.userId) ?? 0),
+            isYakitori: yakitoriPlayerIds.has(p.userId),
+        }));
     }
 
     getGameById(gameId: number): GameWithPlayers {
@@ -193,19 +224,20 @@ export class GameService {
             this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
         }
         this.validatePlayers(playersData, event.gameRules);
+        const adjustedPlayersData = this.applyYakitoriToPlayerData(playersData, event.gameRules);
         this.validateUniqueTournamentRoundTable(event, tournamentRound, tournamentTable, gameId);
 
         const newGameTimestamp = createdAt ?? oldGame.createdAt;
 
         this.gameRepository.updateGame(gameId, eventId, modifiedBy, newGameTimestamp, tournamentRound, tournamentTable);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
-        this.addPlayersToGame(gameId, playersData, modifiedBy);
+        this.addPlayersToGame(gameId, adjustedPlayersData, modifiedBy);
 
         this.ratingService.deleteRatingChangesFromGame(oldGame);
         this.ratingService.addRatingChangesFromGame(
             gameId,
             newGameTimestamp,
-            playersData,
+            adjustedPlayersData,
             eventId,
             event.gameRules,
             event.startingRating
