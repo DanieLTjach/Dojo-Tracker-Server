@@ -23,7 +23,6 @@ export function fourPlayers(
             startPlace: Wind.EAST,
             chomboCount: 0,
             isSubstitutePlayer: false,
-            isYakitori: false,
         },
         {
             gameId: 1,
@@ -38,7 +37,6 @@ export function fourPlayers(
             startPlace: Wind.SOUTH,
             chomboCount: 0,
             isSubstitutePlayer: false,
-            isYakitori: false,
         },
         {
             gameId: 1,
@@ -53,7 +51,6 @@ export function fourPlayers(
             startPlace: Wind.WEST,
             chomboCount: 0,
             isSubstitutePlayer: false,
-            isYakitori: false,
         },
         {
             gameId: 1,
@@ -68,7 +65,6 @@ export function fourPlayers(
             startPlace: Wind.NORTH,
             chomboCount: 0,
             isSubstitutePlayer: false,
-            isYakitori: false,
         },
     ];
 }

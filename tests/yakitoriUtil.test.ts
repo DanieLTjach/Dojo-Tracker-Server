@@ -18,7 +18,6 @@ function sanmaPlayers(): GamePlayer[] {
             startPlace: Wind.EAST,
             chomboCount: 0,
             isSubstitutePlayer: false,
-            isYakitori: false,
         },
         {
             gameId: 1,
@@ -33,7 +32,6 @@ function sanmaPlayers(): GamePlayer[] {
             startPlace: Wind.SOUTH,
             chomboCount: 0,
             isSubstitutePlayer: false,
-            isYakitori: false,
         },
         {
             gameId: 1,
@@ -48,7 +46,6 @@ function sanmaPlayers(): GamePlayer[] {
             startPlace: Wind.WEST,
             chomboCount: 0,
             isSubstitutePlayer: false,
-            isYakitori: false,
         },
     ];
 }

@@ -2870,15 +2870,7 @@ describe('Game API Endpoints', () => {
                 expect(finishRes.status).toBe(200);
 
                 const players = finishRes.body.players;
-                const p1 = players.find((p: any) => p.userId === testUser1Id);
-                const p2 = players.find((p: any) => p.userId === testUser2Id);
-                const p3 = players.find((p: any) => p.userId === testUser3Id);
                 const p4 = players.find((p: any) => p.userId === testUser4Id);
-
-                expect(p4.isYakitori).toBe(true);
-                expect(p1.isYakitori).toBe(false);
-                expect(p2.isYakitori).toBe(false);
-                expect(p3.isYakitori).toBe(false);
 
                 // Check total points remains zero-sum (100,000)
                 const totalPoints = players.reduce((sum: number, p: any) => sum + p.points, 0);
@@ -2924,19 +2916,12 @@ describe('Game API Endpoints', () => {
                     'Authorization',
                     adminAuthHeader
                 );
-                if (undoRes.status !== 200) {
-                    console.log('test (2) undoRes.body:', undoRes.body);
-                }
                 expect(undoRes.status).toBe(200);
 
                 expect(
-                    undoRes.body.players.map((p: any) => ({ id: p.userId, points: p.points, isYakitori: p.isYakitori }))
+                    undoRes.body.players.map((p: any) => ({ id: p.userId, points: p.points }))
                 ).toEqual(
-                    beforeFinish.body.players.map((p: any) => ({
-                        id: p.userId,
-                        points: p.points,
-                        isYakitori: p.isYakitori,
-                    }))
+                    beforeFinish.body.players.map((p: any) => ({ id: p.userId, points: p.points }))
                 );
             });
 
@@ -2968,146 +2953,31 @@ describe('Game API Endpoints', () => {
                     riichiPlayerIds: [],
                 });
 
+                const beforeFinish = await request(app).get(`/api/games/${gameId}`).set(
+                    'Authorization',
+                    user1AuthHeader
+                );
+                const pointsBefore = new Map<number, number>(
+                    beforeFinish.body.players.map((p: any) => [p.userId, p.points])
+                );
+
                 const finishRes = await request(app).post(`/api/games/${gameId}/finish`).set(
                     'Authorization',
                     user1AuthHeader
                 );
                 expect(finishRes.status).toBe(200);
 
-                const p4 = finishRes.body.players.find((p: any) => p.userId === testUser4Id);
-                expect(p4.isYakitori).toBe(true);
-            });
+                const players = finishRes.body.players;
+                const yakitoriDelta = (userId: number) =>
+                    players.find((p: any) => p.userId === userId).points - pointsBefore.get(userId)!;
 
-            test('(4) manual POST /games with explicit isYakitori flag', async () => {
-                const response = await request(app)
-                    .post('/api/games')
-                    .set('Authorization', adminAuthHeader)
-                    .send({
-                        eventId: YAKITORI_EVENT_ID,
-                        playersData: [
-                            { userId: testUser1Id, points: 25000, isYakitori: false },
-                            { userId: testUser2Id, points: 25000, isYakitori: false },
-                            { userId: testUser3Id, points: 25000, isYakitori: false },
-                            { userId: testUser4Id, points: 25000, isYakitori: true },
-                        ],
-                        hideNewGameMessage: true,
-                    });
-
-                expect(response.status).toBe(201);
-                const players = response.body.players;
-                const p4 = players.find((p: any) => p.userId === testUser4Id);
-                const p1 = players.find((p: any) => p.userId === testUser1Id);
-
-                expect(p4.isYakitori).toBe(true);
-                expect(p4.points).toBe(13000); // 25000 - 12000
-                expect(p1.points).toBe(29000); // 25000 + 4000
-            });
-
-            test('(5) recordPlannedGameResult with explicit isYakitori flag', async () => {
-                const createRes = await request(app)
-                    .post('/api/games/tracked')
-                    .set('Authorization', user1AuthHeader)
-                    .send({
-                        eventId: YAKITORI_EVENT_ID,
-                        players: [
-                            { userId: testUser1Id, startPlace: 'EAST' },
-                            { userId: testUser2Id, startPlace: 'SOUTH' },
-                            { userId: testUser3Id, startPlace: 'WEST' },
-                            { userId: testUser4Id, startPlace: 'NORTH' },
-                        ],
-                        status: 'CREATED',
-                    });
-                const gameId = createRes.body.id;
-
-                const plannedRes = await request(app)
-                    .post(`/api/games/${gameId}/result`)
-                    .set('Authorization', user1AuthHeader)
-                    .send({
-                        results: [
-                            { userId: testUser1Id, points: 25000, isYakitori: false },
-                            { userId: testUser2Id, points: 25000, isYakitori: false },
-                            { userId: testUser3Id, points: 25000, isYakitori: false },
-                            { userId: testUser4Id, points: 25000, isYakitori: true },
-                        ],
-                    });
-
-                if (plannedRes.status !== 200) {
-                    console.log('test (5) plannedRes.body:', plannedRes.body);
-                }
-                expect(plannedRes.status).toBe(200);
-                const players = plannedRes.body.players;
-                const p4 = players.find((p: any) => p.userId === testUser4Id);
-                expect(p4.isYakitori).toBe(true);
-                expect(p4.points).toBe(13000);
-            });
-
-            test('(6) PATCH on a finished game recomputes points and rating', async () => {
-                const response = await request(app)
-                    .post('/api/games')
-                    .set('Authorization', adminAuthHeader)
-                    .send({
-                        eventId: YAKITORI_EVENT_ID,
-                        playersData: [
-                            { userId: testUser1Id, points: 25000, isYakitori: false },
-                            { userId: testUser2Id, points: 25000, isYakitori: false },
-                            { userId: testUser3Id, points: 25000, isYakitori: false },
-                            { userId: testUser4Id, points: 25000, isYakitori: true },
-                        ],
-                        hideNewGameMessage: true,
-                    });
-                const gameId = response.body.id;
-
-                // Remove yakitori from p4
-                const patchRes = await request(app)
-                    .patch(`/api/games/${gameId}/players/${testUser4Id}/yakitori`)
-                    .set('Authorization', adminAuthHeader)
-                    .send({ isYakitori: false });
-
-                expect(patchRes.status).toBe(200);
-                expect(patchRes.body.isYakitori).toBe(false);
-                expect(patchRes.body.points).toBe(25000); // 13000 + 12000 restored
-            });
-
-            test('(6b) re-saving a game unchanged does not charge yakitori twice', async () => {
-                const createRes = await request(app)
-                    .post('/api/games')
-                    .set('Authorization', adminAuthHeader)
-                    .send({
-                        eventId: YAKITORI_EVENT_ID,
-                        playersData: [
-                            { userId: testUser1Id, points: 40000, isYakitori: false },
-                            { userId: testUser2Id, points: 30000, isYakitori: false },
-                            { userId: testUser3Id, points: 20000, isYakitori: false },
-                            { userId: testUser4Id, points: 10000, isYakitori: true },
-                        ],
-                        hideNewGameMessage: true,
-                    });
-                const gameId = createRes.body.id;
-                const storedPoints = (players: { userId: number, points: number }[]) =>
-                    [testUser1Id, testUser2Id, testUser3Id, testUser4Id]
-                        .map(id => players.find(p => p.userId === id)!.points);
-
-                // 4000 step, 1 yakitori vs 3 winners: -12000 / +4000 each.
-                expect(storedPoints(createRes.body.players)).toEqual([44000, 34000, 24000, -2000]);
-
-                // An admin opening the edit form gets these adjusted points back and saves
-                // without changing anything. The result must be identical, not re-penalized.
-                const editRes = await request(app)
-                    .put(`/api/games/${gameId}`)
-                    .set('Authorization', adminAuthHeader)
-                    .send({
-                        eventId: YAKITORI_EVENT_ID,
-                        playersData: createRes.body.players.map(
-                            (p: { userId: number, points: number, isYakitori: boolean }) => ({
-                                userId: p.userId,
-                                points: p.points,
-                                isYakitori: p.isYakitori,
-                            })
-                        ),
-                    });
-
-                expect(editRes.status).toBe(200);
-                expect(storedPoints(editRes.body.players)).toEqual([44000, 34000, 24000, -2000]);
+                // Nagashi mangan does not flip the marker, so p4 is still yakitori despite
+                // scoring in round 1. Only p1 won a hand, so p2/p3/p4 each pay it 4,000.
+                expect(yakitoriDelta(testUser1Id)).toBe(12000);
+                expect(yakitoriDelta(testUser2Id)).toBe(-4000);
+                expect(yakitoriDelta(testUser3Id)).toBe(-4000);
+                expect(yakitoriDelta(testUser4Id)).toBe(-4000);
+                expect(players.reduce((sum: number, pl: any) => sum + pl.points, 0)).toBe(100000);
             });
 
             test('(7) rule disabled -> hand-less player is entirely unaffected', async () => {
@@ -3139,7 +3009,6 @@ describe('Game API Endpoints', () => {
                 expect(finishRes.status).toBe(200);
 
                 const p4 = finishRes.body.players.find((p: any) => p.userId === testUser4Id);
-                expect(p4.isYakitori).toBe(false);
                 expect(p4.points).toBe(24500); // 25000 - 500 from tsumo, 0 yakitori penalty
             });
 
@@ -3176,10 +3045,8 @@ describe('Game API Endpoints', () => {
                 expect(finishRes.status).toBe(200);
 
                 const players = finishRes.body.players;
-                const p3 = players.find((p: any) => p.userId === testUser3Id);
 
-                expect(p3.isYakitori).toBe(true);
-                // p3 pays -8,000 (-4,000 x 2 winners)
+                // p3 never won a hand: pays -8,000 (-4,000 x 2 winners)
                 const totalPoints = players.reduce((sum: number, p: any) => sum + p.points, 0);
                 expect(totalPoints).toBe(105000);
             });

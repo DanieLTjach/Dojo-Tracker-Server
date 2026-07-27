@@ -128,17 +128,15 @@ export class TrackedGameService {
                 ...result,
                 startPlace: plannedPlayer.startPlace,
                 isSubstitutePlayer: plannedPlayer.isSubstitutePlayer,
-                isYakitori: result.isYakitori ?? plannedPlayer.isYakitori,
             };
         });
         this.gameService.validatePlayers(players, event.gameRules);
-        const adjustedPlayers = this.gameService.applyYakitoriToPlayerData(players, event.gameRules);
 
         const completedAt = new Date();
         this.gameService.validateGameWithinEventDates(event, completedAt, modifiedBy, GameStatus.FINISHED);
         const standingsBefore = this.ratingService.calculateStandings(event.id);
 
-        for (const result of adjustedPlayers) {
+        for (const result of players) {
             this.gameRepository.setPlannedGamePlayerResult(
                 gameId,
                 result.userId,
@@ -147,18 +145,12 @@ export class TrackedGameService {
                 modifiedBy,
                 completedAt
             );
-            this.gameRepository.updatePlayerIsYakitori(
-                gameId,
-                result.userId,
-                Boolean(result.isYakitori),
-                modifiedBy
-            );
         }
         this.gameRepository.recordPlannedGameResult(gameId, modifiedBy, completedAt);
         this.ratingService.addRatingChangesFromGame(
             gameId,
             completedAt,
-            adjustedPlayers,
+            players,
             event.id,
             event.gameRules,
             event.startingRating
@@ -333,7 +325,6 @@ export class TrackedGameService {
                 player.startPlace,
                 0,
                 player.isSubstitutePlayer ?? false,
-                player.isYakitori ?? false,
                 modifiedBy
             );
         }
@@ -489,15 +480,17 @@ export class TrackedGameService {
         this.persistFinishAdjustmentPointChanges(game, reversedPointChanges, modifiedBy);
     }
 
+    /**
+     * Derived from the recorded hands rather than stored per player: the tracker already
+     * knows who won what, and the penalty only touches points, never round results, so
+     * this returns the same set before and after it is applied. That keeps undo exact.
+     */
     public resolveYakitoriPlayerIds(game: DetailedGame): ReadonlySet<number> {
-        if (game.players.some(p => p.isYakitori)) {
-            return new Set(game.players.filter(p => p.isYakitori).map(p => p.userId));
+        if (game.rounds.length === 0) {
+            return new Set();
         }
-        if (game.rounds.length > 0) {
-            const winners = findPlayersWhoWonAHand(game.rounds);
-            return new Set(game.players.filter(p => !winners.has(p.userId)).map(p => p.userId));
-        }
-        return new Set();
+        const winners = findPlayersWhoWonAHand(game.rounds);
+        return new Set(game.players.filter(p => !winners.has(p.userId)).map(p => p.userId));
     }
 
     private applyYakitoriPenaltyOnFinish(
@@ -505,23 +498,9 @@ export class TrackedGameService {
         gameRules: GameRules,
         modifiedBy: number
     ): GamePlayer[] {
-        const yakitoriPlayerIds = this.resolveYakitoriPlayerIds(game);
-        const pointChanges = calculateYakitoriPointChanges(
-            game.players,
-            gameRules.details?.rules ?? {},
-            yakitoriPlayerIds
-        );
+        const pointChanges = this.calculateYakitoriPointChangesForGame(game, gameRules);
         if (pointChanges.length === 0) {
             return game.players;
-        }
-
-        for (const p of game.players) {
-            this.gameRepository.updatePlayerIsYakitori(
-                game.id,
-                p.userId,
-                yakitoriPlayerIds.has(p.userId),
-                modifiedBy
-            );
         }
 
         this.persistFinishAdjustmentPointChanges(game, pointChanges, modifiedBy);
@@ -534,12 +513,7 @@ export class TrackedGameService {
         gameRules: GameRules,
         modifiedBy: number
     ): void {
-        const yakitoriPlayerIds = new Set(game.players.filter(p => p.isYakitori).map(p => p.userId));
-        const pointChanges = calculateYakitoriPointChanges(
-            game.players,
-            gameRules.details?.rules ?? {},
-            yakitoriPlayerIds
-        );
+        const pointChanges = this.calculateYakitoriPointChangesForGame(game, gameRules);
         if (pointChanges.length === 0) {
             return;
         }
@@ -550,10 +524,17 @@ export class TrackedGameService {
         }));
 
         this.persistFinishAdjustmentPointChanges(game, reversedPointChanges, modifiedBy);
+    }
 
-        for (const p of game.players) {
-            this.gameRepository.updatePlayerIsYakitori(game.id, p.userId, false, modifiedBy);
-        }
+    private calculateYakitoriPointChangesForGame(
+        game: DetailedGame,
+        gameRules: GameRules
+    ): PlayerPointChange[] {
+        return calculateYakitoriPointChanges(
+            game.players,
+            gameRules.details?.rules ?? {},
+            this.resolveYakitoriPlayerIds(game)
+        );
     }
 
     private calculateRemainingRiichiSticksPointChangesForGame(

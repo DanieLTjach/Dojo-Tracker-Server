@@ -43,9 +43,6 @@ import {
 } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
 import { ClubRole } from '../model/ClubModels.ts';
-import { getYakitoriPaymentStep } from '../util/RulesUtils.ts';
-import { calculateYakitoriPointChanges } from '../util/YakitoriUtil.ts';
-import { mergePlayerPointChanges } from '../util/PointCalculationUtil.ts';
 import { ClubService } from './ClubService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
@@ -86,7 +83,6 @@ export class GameService {
         const event = this.eventService.getEventById(eventId);
         this.authorizeGameCreation(event, playersData, createdBy);
         this.validatePlayers(playersData, event.gameRules);
-        const adjustedPlayersData = this.applyYakitoriToPlayerData(playersData, event.gameRules);
         this.validateGameWithinEventDates(event, gameTimestamp, createdBy);
         this.validateNoDuplicateGameTimestamp(eventId, gameTimestamp);
         this.validateUniqueTournamentRoundTable(event, tournamentRound, tournamentTable, null);
@@ -101,11 +97,11 @@ export class GameService {
             tournamentRound,
             tournamentTable
         );
-        this.addPlayersToGame(newGameId, adjustedPlayersData, createdBy);
+        this.addPlayersToGame(newGameId, playersData, createdBy);
         this.ratingService.addRatingChangesFromGame(
             newGameId,
             gameTimestamp,
-            adjustedPlayersData,
+            playersData,
             eventId,
             event.gameRules,
             event.startingRating
@@ -120,65 +116,6 @@ export class GameService {
             this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter, createdBy);
         }
         return newGame;
-    }
-
-    /**
-     * Reverses the yakitori transfer already baked into a stored game's points, so an edit
-     * can re-apply it from a clean baseline. Uses the old game's flags and ruleset, which
-     * are what produced the stored adjustment in the first place.
-     */
-    private removeStoredYakitoriFromPlayerData(
-        playersData: PlayerData[],
-        oldGame: GameWithPlayers,
-        oldEvent: Event
-    ): PlayerData[] {
-        const oldRulesValues = oldEvent.gameRules.details?.rules ?? {};
-        const storedYakitoriIds = new Set(
-            oldGame.players.filter(p => p.isYakitori).map(p => p.userId)
-        );
-        if (storedYakitoriIds.size === 0) {
-            return playersData;
-        }
-
-        const storedChanges = calculateYakitoriPointChanges(
-            oldGame.players,
-            oldRulesValues,
-            storedYakitoriIds
-        );
-        const changeMap = new Map(storedChanges.map(c => [c.playerId, c.pointChange]));
-
-        return playersData.map(p => ({
-            ...p,
-            points: p.points - (changeMap.get(p.userId) ?? 0),
-        }));
-    }
-
-    applyYakitoriToPlayerData(
-        playersData: PlayerData[],
-        gameRules: GameRules
-    ): PlayerData[] {
-        const rulesValues = gameRules.details?.rules ?? {};
-        const step = getYakitoriPaymentStep(rulesValues);
-        if (step === 0) return playersData;
-
-        const hasExplicitFlags = playersData.some(
-            p => p.isYakitori !== undefined && p.isYakitori !== null
-        );
-        const yakitoriPlayerIds = hasExplicitFlags
-            ? new Set(playersData.filter(p => p.isYakitori).map(p => p.userId))
-            : new Set<number>();
-
-        if (yakitoriPlayerIds.size === 0) return playersData;
-
-        const dummyPlayers = playersData.map(p => ({ userId: p.userId }) as GamePlayer);
-        const pointChanges = calculateYakitoriPointChanges(dummyPlayers, rulesValues, yakitoriPlayerIds);
-        const changeMap = new Map(pointChanges.map(c => [c.playerId, c.pointChange]));
-
-        return playersData.map(p => ({
-            ...p,
-            points: p.points + (changeMap.get(p.userId) ?? 0),
-            isYakitori: yakitoriPlayerIds.has(p.userId),
-        }));
     }
 
     getGameById(gameId: number): GameWithPlayers {
@@ -256,25 +193,19 @@ export class GameService {
             this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
         }
         this.validatePlayers(playersData, event.gameRules);
-        // The submitted points come from a form seeded by GET, so they already include any
-        // yakitori transfer stored on the old game. Strip that before re-applying, or a
-        // no-op edit would charge the penalty a second time -- invisibly, since the
-        // transfer is zero-sum and validateTotalPoints stays happy either way.
-        const unadjustedPlayersData = this.removeStoredYakitoriFromPlayerData(playersData, oldGame, oldEvent);
-        const adjustedPlayersData = this.applyYakitoriToPlayerData(unadjustedPlayersData, event.gameRules);
         this.validateUniqueTournamentRoundTable(event, tournamentRound, tournamentTable, gameId);
 
         const newGameTimestamp = createdAt ?? oldGame.createdAt;
 
         this.gameRepository.updateGame(gameId, eventId, modifiedBy, newGameTimestamp, tournamentRound, tournamentTable);
         this.gameRepository.deleteGamePlayersByGameId(gameId);
-        this.addPlayersToGame(gameId, adjustedPlayersData, modifiedBy);
+        this.addPlayersToGame(gameId, playersData, modifiedBy);
 
         this.ratingService.deleteRatingChangesFromGame(oldGame);
         this.ratingService.addRatingChangesFromGame(
             gameId,
             newGameTimestamp,
-            adjustedPlayersData,
+            playersData,
             eventId,
             event.gameRules,
             event.startingRating
@@ -311,71 +242,6 @@ export class GameService {
         if (game.status === GameStatus.FINISHED) {
             this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
-        }
-
-        return this.gameRepository.findGamePlayersByGameId(gameId)
-            .find(p => p.userId === targetUserId)!;
-    }
-
-    setPlayerYakitori(
-        gameId: number,
-        targetUserId: number,
-        isYakitori: boolean,
-        modifiedBy: number
-    ): GamePlayer {
-        const game = this.getGameById(gameId);
-        const event = this.eventService.getEventById(game.eventId);
-        this.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
-
-        const player = game.players.find(p => p.userId === targetUserId);
-        if (player === undefined) {
-            throw new GamePlayerNotFoundError(gameId, targetUserId);
-        }
-
-        if (player.isYakitori === isYakitori) {
-            return player;
-        }
-
-        if (game.status === GameStatus.FINISHED) {
-            const rulesValues = event.gameRules.details?.rules ?? {};
-            const oldYakitoriSet = new Set(game.players.filter(p => p.isYakitori).map(p => p.userId));
-            const oldPointChanges = calculateYakitoriPointChanges(game.players, rulesValues, oldYakitoriSet);
-            const reverseOldChanges = oldPointChanges.map(c => ({
-                playerId: c.playerId,
-                pointChange: -c.pointChange,
-            }));
-
-            const newPlayers = game.players.map(p => p.userId === targetUserId ? { ...p, isYakitori } : p);
-            const newYakitoriSet = new Set(newPlayers.filter(p => p.isYakitori).map(p => p.userId));
-            const newPointChanges = calculateYakitoriPointChanges(newPlayers, rulesValues, newYakitoriSet);
-
-            const netPointChanges = mergePlayerPointChanges(reverseOldChanges, newPointChanges);
-
-            this.gameRepository.updatePlayerIsYakitori(gameId, targetUserId, isYakitori, modifiedBy);
-
-            if (netPointChanges.length > 0) {
-                this.gameRepository.applyPlayerPointChanges(gameId, netPointChanges, modifiedBy);
-
-                const detailedGame = this.getDetailedGameById(gameId);
-                if (detailedGame.rounds.length > 0) {
-                    const lastRound = detailedGame.rounds[detailedGame.rounds.length - 1]!;
-                    const updatedResult = {
-                        ...lastRound.result,
-                        playerPointChanges: mergePlayerPointChanges(
-                            lastRound.result.playerPointChanges,
-                            netPointChanges
-                        ),
-                    };
-                    this.gameRepository.updateGameRoundResult(gameId, lastRound.roundNumber, updatedResult);
-                }
-            }
-
-            this.gameRepository.touchGame(gameId, modifiedBy);
-            this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
-            this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
-        } else {
-            this.gameRepository.updatePlayerIsYakitori(gameId, targetUserId, isYakitori, modifiedBy);
-            this.gameRepository.touchGame(gameId, modifiedBy);
         }
 
         return this.gameRepository.findGamePlayersByGameId(gameId)
@@ -785,7 +651,6 @@ export class GameService {
                 player.startPlace ?? undefined,
                 player.chomboCount ?? 0,
                 player.isSubstitutePlayer ?? false,
-                player.isYakitori ?? false,
                 modifiedBy
             );
         }
