@@ -1,5 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
+import { booleanToInteger } from '../db/dbUtils.ts';
 import type { GameRules, GameRulesDetails } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
@@ -16,6 +17,7 @@ export class GameRulesRepository {
                 uma,
                 startingPoints,
                 umaTieBreak,
+                allowNonZeroSumUma,
                 details
             FROM gameRules
             ORDER BY id ASC`);
@@ -35,6 +37,7 @@ export class GameRulesRepository {
                 uma,
                 startingPoints,
                 umaTieBreak,
+                allowNonZeroSumUma,
                 details
             FROM gameRules
             WHERE clubId = :clubId OR clubId IS NULL
@@ -55,6 +58,7 @@ export class GameRulesRepository {
                 uma,
                 startingPoints,
                 umaTieBreak,
+                allowNonZeroSumUma,
                 details
             FROM gameRules
             WHERE id = :id`);
@@ -80,30 +84,31 @@ export class GameRulesRepository {
         });
     }
 
-    private insertGameRulesStatement(): Statement<Omit<InsertGameRulesParams, 'uma'> & { uma: string }, void> {
+    private insertGameRulesStatement(): Statement<GameRulesWriteParams, void> {
         return dbManager.db.prepare(`
-            INSERT INTO gameRules (name, numberOfPlayers, uma, startingPoints, umaTieBreak, clubId)
-            VALUES (:name, :numberOfPlayers, :uma, :startingPoints, :umaTieBreak, :clubId)
+            INSERT INTO gameRules (name, numberOfPlayers, uma, startingPoints, umaTieBreak, clubId, allowNonZeroSumUma)
+            VALUES (:name, :numberOfPlayers, :uma, :startingPoints, :umaTieBreak, :clubId, :allowNonZeroSumUma)
         `);
     }
 
     insertGameRules(params: InsertGameRulesParams): number {
-        const result = this.insertGameRulesStatement().run({ ...params, uma: JSON.stringify(params.uma) });
+        const result = this.insertGameRulesStatement().run(toGameRulesWriteParams(params));
         return Number(result.lastInsertRowid);
     }
 
-    private updateGameRulesStatement(): Statement<Omit<UpdateGameRulesParams, 'uma'> & { uma: string }, void> {
+    private updateGameRulesStatement(): Statement<GameRulesWriteParams & { id: number }, void> {
         return dbManager.db.prepare(`
             UPDATE gameRules
             SET name = :name, numberOfPlayers = :numberOfPlayers, uma = :uma,
                 startingPoints = :startingPoints,
-                umaTieBreak = :umaTieBreak
+                umaTieBreak = :umaTieBreak,
+                allowNonZeroSumUma = :allowNonZeroSumUma
             WHERE id = :id
         `);
     }
 
     updateGameRules(id: number, params: InsertGameRulesParams): void {
-        this.updateGameRulesStatement().run({ id, ...params, uma: JSON.stringify(params.uma) });
+        this.updateGameRulesStatement().run({ id, ...toGameRulesWriteParams(params) });
     }
 
     private deleteGameRulesStatement(): Statement<{ id: number }, void> {
@@ -115,10 +120,6 @@ export class GameRulesRepository {
     }
 }
 
-interface UpdateGameRulesParams extends InsertGameRulesParams {
-    id: number;
-}
-
 export interface InsertGameRulesParams {
     name: string;
     numberOfPlayers: number;
@@ -126,6 +127,21 @@ export interface InsertGameRulesParams {
     startingPoints: number;
     umaTieBreak: string;
     clubId: number | null;
+    allowNonZeroSumUma?: boolean | undefined;
+}
+
+// SQLite has no boolean type, so uma is serialized and the opt-in flag stored as 0/1.
+type GameRulesWriteParams = Omit<InsertGameRulesParams, 'uma' | 'allowNonZeroSumUma'> & {
+    uma: string;
+    allowNonZeroSumUma: number;
+};
+
+function toGameRulesWriteParams(params: InsertGameRulesParams): GameRulesWriteParams {
+    return {
+        ...params,
+        uma: JSON.stringify(params.uma),
+        allowNonZeroSumUma: booleanToInteger(params.allowNonZeroSumUma ?? false),
+    };
 }
 
 interface GameRulesDBEntity {
@@ -136,6 +152,7 @@ interface GameRulesDBEntity {
     uma: string;
     startingPoints: number;
     umaTieBreak: string;
+    allowNonZeroSumUma: number;
     details: string | null;
 }
 
@@ -148,6 +165,7 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         uma: parseUma(dbEntity.uma),
         startingPoints: dbEntity.startingPoints,
         umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak),
+        allowNonZeroSumUma: Boolean(dbEntity.allowNonZeroSumUma),
         details: parseGameRulesDetailsAndApplyPresets(dbEntity.details, {
             numberOfPlayers: dbEntity.numberOfPlayers,
             startingPoints: dbEntity.startingPoints,

@@ -4,6 +4,8 @@ errors:
   gameRulesValidationCoreFieldMismatch: Значення має збігатися з основним налаштуванням набору правил.
   gameRulesValidationNotenPenaltySplit: Штраф за нотен має ділитися на цілу кількість очок для цієї кількості гравців.
   gameRulesValidationHonbaPayerCount: Значення хонби має відповідати кількості гравців, що платять, для цього набору правил.
+  gameRulesValidationUmaSumNonZero: Сума ума має дорівнювати 0, або увімкніть ума з ненульовою сумою для цього набору правил.
+  gameRulesValidationUmaNonZeroSumMatrix: Ума з ненульовою сумою підтримується лише для простої ума, а не для матричної.
   gameRulesValidationInteger: Введіть ціле число.
   gameRulesValidationMultipleOf: Введіть значення з потрібним кроком.
   gameRulesValidationInvalidType: Введіть значення очікуваного типу.

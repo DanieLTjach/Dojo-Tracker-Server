@@ -4,6 +4,8 @@ import {
     CORE_FIELD_MISMATCH_MESSAGES,
     HONBA_PAYER_COUNT_MESSAGE,
     NOTEN_PENALTY_DIVISIBILITY_MESSAGE,
+    UMA_NON_ZERO_SUM_MATRIX_MESSAGE,
+    UMA_SUM_NON_ZERO_MESSAGE,
 } from '../schema/GameRulesSchemas.ts';
 
 // Custom refine messages map to a stable user-facing code by exact identity, so
@@ -13,6 +15,8 @@ const CUSTOM_MESSAGE_CODES = new Map<string, string>([
     [CORE_FIELD_MISMATCH_MESSAGES.starting_points, 'coreFieldMismatch'],
     [NOTEN_PENALTY_DIVISIBILITY_MESSAGE, 'notenPenaltySplit'],
     [HONBA_PAYER_COUNT_MESSAGE, 'honbaPayerCount'],
+    [UMA_SUM_NON_ZERO_MESSAGE, 'umaSumNonZero'],
+    [UMA_NON_ZERO_SUM_MATRIX_MESSAGE, 'umaNonZeroSumMatrix'],
 ]);
 
 export interface GameRulesValidationErrorEntry {

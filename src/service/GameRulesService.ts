@@ -137,6 +137,11 @@ const GAME_RULES_CORE_FIELDS = [
 ] as const satisfies readonly (keyof InsertGameRulesParams)[];
 
 function gameRulesCoreFieldsEqual(gameRules: GameRules, params: InsertGameRulesParams): boolean {
+    // The opt-in flag is optional on the wire but always stored, so compare it
+    // against its persisted default rather than through isDeepStrictEqual.
+    if (gameRules.allowNonZeroSumUma !== (params.allowNonZeroSumUma ?? false)) {
+        return false;
+    }
     return GAME_RULES_CORE_FIELDS.every(key => isDeepStrictEqual(gameRules[key], params[key]));
 }
 

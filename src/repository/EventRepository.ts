@@ -23,6 +23,7 @@ export class EventRepository {
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
                 gr.umaTieBreak as gr_umaTieBreak,
+                gr.allowNonZeroSumUma as gr_allowNonZeroSumUma,
                 gr.details as gr_details,
                 t.status as tournament_status,
                 t.currentRound as tournament_currentRound,
@@ -57,6 +58,7 @@ export class EventRepository {
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
                 gr.umaTieBreak as gr_umaTieBreak,
+                gr.allowNonZeroSumUma as gr_allowNonZeroSumUma,
                 gr.details as gr_details,
                 t.status as tournament_status,
                 t.currentRound as tournament_currentRound,
@@ -92,6 +94,7 @@ export class EventRepository {
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
                 gr.umaTieBreak as gr_umaTieBreak,
+                gr.allowNonZeroSumUma as gr_allowNonZeroSumUma,
                 gr.details as gr_details,
                 t.status as tournament_status,
                 t.currentRound as tournament_currentRound,
@@ -318,6 +321,7 @@ interface EventWithGameRulesDBEntity {
     gr_uma: string;
     gr_startingPoints: number;
     gr_umaTieBreak: string;
+    gr_allowNonZeroSumUma: number;
     gr_details: string | null;
     tournament_status: TournamentStatus | null;
     tournament_currentRound: number | null;
@@ -400,6 +404,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             uma: parseUma(dbEntity.gr_uma),
             startingPoints: dbEntity.gr_startingPoints,
             umaTieBreak: parseUmaTieBreak(dbEntity.gr_umaTieBreak),
+            allowNonZeroSumUma: Boolean(dbEntity.gr_allowNonZeroSumUma),
             details: parseGameRulesDetailsAndApplyPresets(dbEntity.gr_details, {
                 numberOfPlayers: dbEntity.gr_numberOfPlayers,
                 startingPoints: dbEntity.gr_startingPoints,

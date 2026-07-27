@@ -685,6 +685,57 @@ describe('Game Rules API Endpoints', () => {
             expect(response.status).toBe(400);
         });
 
+        test('POST with a non-zero-sum uma returns 400 without the opt-in', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'Non-zero Uma', uma: [15, 5, 0, -5] });
+
+            expect(response.status).toBe(400);
+            expect(response.body.validationErrors).toContainEqual(
+                expect.objectContaining({ path: 'uma', code: 'umaSumNonZero' })
+            );
+        });
+
+        test('POST accepts a non-zero-sum uma when the ruleset opts in', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...validBody,
+                    name: 'Non-zero Uma Allowed',
+                    uma: [15, 5, 0, -5],
+                    allowNonZeroSumUma: true,
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body.allowNonZeroSumUma).toBe(true);
+            expect(response.body.uma).toEqual([15, 5, 0, -5]);
+
+            // The opt-in must survive a read back from the database.
+            const read = await request(app)
+                .get(`/api/game-rules/${response.body.id}`)
+                .set('Authorization', adminAuthHeader);
+            expect(read.body.allowNonZeroSumUma).toBe(true);
+        });
+
+        test('POST rejects the opt-in combined with a matrix uma', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...validBody,
+                    name: 'Matrix Non-zero Uma',
+                    uma: [[15, 5, 0, -5]],
+                    allowNonZeroSumUma: true,
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.validationErrors).toContainEqual(
+                expect.objectContaining({ path: 'allowNonZeroSumUma', code: 'umaNonZeroSumMatrix' })
+            );
+        });
+
         test('POST with global clubId by non-admin returns 403', async () => {
             const response = await request(app)
                 .post('/api/game-rules')

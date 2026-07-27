@@ -111,6 +111,14 @@ export const SANMA_RED_FIVES = new Set([
 ]);
 export const SANMA_RED_FIVES_MESSAGE = 'red_fives must represent 0, 2, or 3 red fives for sanma';
 
+// Uma normally nets to zero, which keeps total rating in the system conserved.
+// A ruleset can opt out to reward activity (e.g. +15/+5/0/-5 sums to +15), but
+// only for a flat uma: a MATRIX uma resolves through resolveDynamicUma, whose
+// all-above-starting branch returns an all-zero row and would silently drop the
+// bonus for exactly the games where everyone did well.
+export const UMA_SUM_NON_ZERO_MESSAGE = 'uma must sum to 0 unless the ruleset allows a non-zero-sum uma';
+export const UMA_NON_ZERO_SUM_MATRIX_MESSAGE = 'a non-zero-sum uma is only supported for a flat (non-matrix) uma';
+
 export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRulesDetails> {
     const allOptionalShape = Object.fromEntries(
         catalog.rules.map(spec => [spec.key, ruleSpecToSchema(spec).optional()])
@@ -234,12 +242,18 @@ export const gameRulesDetailsUpdateSchema = z.object({
     }),
 });
 
+function sumOf(values: readonly number[]): number {
+    return values.reduce((total, value) => total + value, 0);
+}
+
 const umaEntrySchema = z.number().int();
 const umaSchema = z.union([
     z.array(umaEntrySchema).min(3).max(4),
     z.array(z.array(umaEntrySchema).min(3).max(4)).min(1),
 ]);
 
+// Kept free of refinements so callers can still .extend() it; the uma-sum rule
+// is applied via withUmaSumRule() once a body shape is final.
 export const gameRulesUpsertBodySchema = z.strictObject({
     name: z.string().trim().min(1, 'Name cannot be empty'),
     numberOfPlayers: z.union([z.literal(3), z.literal(4)]),
@@ -247,19 +261,51 @@ export const gameRulesUpsertBodySchema = z.strictObject({
     startingPoints: z.number().int().min(0),
     umaTieBreak: z.enum(['WIND', 'DIVIDE']),
     clubId: z.number().int().nullable(),
+    allowNonZeroSumUma: z.boolean().optional(),
 });
 
-const gameRulesCreateBodySchema = gameRulesUpsertBodySchema.extend({
+interface UmaSumRuleBody {
+    uma: number[] | number[][];
+    allowNonZeroSumUma?: boolean | undefined;
+}
+
+function withUmaSumRule<T extends z.ZodType<UmaSumRuleBody>>(schema: T) {
+    return schema.superRefine((body, ctx) => {
+        const isMatrix = Array.isArray(body.uma[0]);
+        if (!body.allowNonZeroSumUma) {
+            const rows = isMatrix ? body.uma as number[][] : [body.uma as number[]];
+            rows.forEach((row, index) => {
+                if (sumOf(row) === 0) return;
+                ctx.addIssue({
+                    code: 'custom',
+                    message: UMA_SUM_NON_ZERO_MESSAGE,
+                    path: isMatrix ? ['uma', index] : ['uma'],
+                });
+            });
+            return;
+        }
+
+        if (isMatrix) {
+            ctx.addIssue({
+                code: 'custom',
+                message: UMA_NON_ZERO_SUM_MATRIX_MESSAGE,
+                path: ['allowNonZeroSumUma'],
+            });
+        }
+    });
+}
+
+const gameRulesCreateBodySchema = withUmaSumRule(gameRulesUpsertBodySchema.extend({
     details: gameRulesDetailsSchema.optional(),
-});
+}));
 
 export const gameRulesCreateSchema = z.object({
     body: gameRulesCreateBodySchema,
 });
 
-const gameRulesUpdateBodySchema = gameRulesUpsertBodySchema.extend({
+const gameRulesUpdateBodySchema = withUmaSumRule(gameRulesUpsertBodySchema.extend({
     details: gameRulesDetailsSchema.optional(),
-});
+}));
 
 export const gameRulesUpdateSchema = z.object({
     params: z.object({
