@@ -4,6 +4,7 @@ import type { DecodedToken } from '../src/model/AuthModels.ts';
 import config from '../config/config.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { HashUtil } from '../src/util/HashUtil.ts';
+import { cleanupTestDatabase } from './setup.ts';
 
 /**
  * Generates a JWT token for testing purposes.
@@ -123,4 +124,19 @@ export function createTelegramInitData(telegramId: number, username?: string): R
     params['hash'] = hash;
 
     return params;
+}
+
+/**
+ * Tear down a suite's database and leave a clean, migrated one in its place.
+ *
+ * Call this from `afterAll` instead of `closeDB()` + `cleanupTestDatabase()`. Every suite
+ * shares a single process and a single `dbManager` under `--runInBand`, so a teardown that
+ * only deleted the file left every suite that ran afterwards talking to a database that no
+ * longer existed — whichever suite happened to run first passed and the rest failed with
+ * opaque 400s, which is why results depended on file ordering.
+ */
+export function resetTestDatabase(): void {
+    dbManager.closeDB();
+    cleanupTestDatabase();
+    dbManager.reinitDB();
 }
