@@ -1,3 +1,4 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import type { NextFunction, Request, Response } from 'express';
 import { jest } from '@jest/globals';
 import { dbManager } from '../src/db/dbInit.ts';
@@ -13,7 +14,6 @@ import {
     InsufficientClubPermissionsError,
     InvalidClubMembershipStateError,
 } from '../src/error/ClubErrors.ts';
-import { cleanupTestDatabase } from './setup.ts';
 
 const SYSTEM_USER_ID = 0;
 const SERVICE_TEST_USER_ID = 92001;
@@ -137,8 +137,7 @@ afterEach(() => {
 
 afterAll(() => {
     cleanupServiceFixtures();
-    dbManager.closeDB();
-    cleanupTestDatabase();
+    resetTestDatabase();
 });
 
 describe('ClubService and MembershipService', () => {

@@ -5,8 +5,7 @@ import gameRoutes from '../src/routes/GameRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent, createTelegramInitData } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent, createTelegramInitData, resetTestDatabase } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -17,16 +16,14 @@ app.use(handleErrors);
 
 describe('Rating API Endpoints', () => {
     beforeEach(async () => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
         dbManager.reinitDB();
         // Create test event for each test
         createTestEvent();
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     const SYSTEM_USER_ID = 0;

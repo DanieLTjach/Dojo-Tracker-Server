@@ -1,5 +1,5 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 import { TeamService } from '../src/service/TeamService.ts';
 import { RatingService } from '../src/service/RatingService.ts';
 import { RatingRepository } from '../src/repository/RatingRepository.ts';
@@ -159,8 +159,7 @@ describe('TeamService', () => {
         dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ?').run(CLUB_ID);
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(CLUB_ID);
         dbManager.db.prepare('DELETE FROM user WHERE id >= 97200 AND id < 97300').run();
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     afterEach(() => {

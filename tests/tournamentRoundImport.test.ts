@@ -3,8 +3,7 @@ import request from 'supertest';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createCustomEvent } from './testHelpers.ts';
+import { createAuthHeader, createCustomEvent, resetTestDatabase } from './testHelpers.ts';
 import { TournamentRoundImportService } from '../src/service/TournamentRoundImportService.ts';
 import { TrackedGameService } from '../src/service/TrackedGameService.ts';
 import { DEFAULT_LOCALE, t } from '../src/i18n/index.ts';
@@ -489,8 +488,7 @@ describe('createTrackedGame options', () => {
         );
         dbManager.db.prepare('DELETE FROM tournament WHERE eventId IN (?, ?)').run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
         dbManager.db.prepare('DELETE FROM event WHERE id IN (?, ?)').run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     test('POST /api/games/tracked still creates IN_PROGRESS without tournament fields', async () => {

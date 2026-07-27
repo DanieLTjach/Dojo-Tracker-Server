@@ -4,8 +4,7 @@ import { jest } from '@jest/globals';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createCustomEvent } from './testHelpers.ts';
+import { createAuthHeader, createCustomEvent, resetTestDatabase } from './testHelpers.ts';
 import LogService from '../src/service/LogService.ts';
 
 const SYSTEM_USER_ID = 0;
@@ -91,8 +90,7 @@ describe('Tournament rating update logs', () => {
     afterAll(() => {
         dbManager.db.prepare('DELETE FROM clubMembership WHERE userId IN (?, ?, ?, ?)').run(...PLAYER_IDS);
         dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?, ?, ?)').run(...PLAYER_IDS);
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     test('emits rating update log before LAST_ROUND', async () => {

@@ -1,6 +1,5 @@
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createCustomEvent } from './testHelpers.ts';
+import { createCustomEvent, resetTestDatabase } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { ProfileService } from '../src/service/ProfileService.ts';
 import { AchievementService } from '../src/service/AchievementService.ts';
@@ -109,8 +108,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     it('returns stored tournament achievements with winners', () => {

@@ -4,8 +4,13 @@ import gameRoutes from '../src/routes/GameRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent, createCustomEvent, createTelegramInitData } from './testHelpers.ts';
+import {
+    createAuthHeader,
+    createTestEvent,
+    createCustomEvent,
+    createTelegramInitData,
+    resetTestDatabase,
+} from './testHelpers.ts';
 import type { ExhaustiveDraw } from '../src/model/GameRoundResultModels.ts';
 import { ProfileRepository } from '../src/repository/ProfileRepository.ts';
 
@@ -94,8 +99,7 @@ describe('Game API Endpoints', () => {
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('POST /api/games - Create Game', () => {

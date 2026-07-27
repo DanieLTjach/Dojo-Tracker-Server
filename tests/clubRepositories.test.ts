@@ -1,7 +1,7 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import { ClubRepository } from '../src/repository/ClubRepository.ts';
 import { ClubMembershipRepository } from '../src/repository/ClubMembershipRepository.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 
 const SYSTEM_USER_ID = 0;
 const TEST_USER_A_ID = 91001;
@@ -67,8 +67,7 @@ describe('Club and Membership repositories', () => {
 
     afterAll(() => {
         cleanupRepositoryFixtures();
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     it('ClubRepository creates, reads, updates and deletes a club with proper mapping', () => {

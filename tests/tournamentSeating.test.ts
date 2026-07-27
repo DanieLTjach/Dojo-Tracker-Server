@@ -3,8 +3,7 @@ import request from 'supertest';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createCustomEvent } from './testHelpers.ts';
+import { createAuthHeader, createCustomEvent, resetTestDatabase } from './testHelpers.ts';
 
 const SYSTEM_USER_ID = 0;
 const TOURNAMENT_EVENT_ID = 99500;
@@ -111,8 +110,7 @@ describe('Tournament seating generation', () => {
             MODERATOR_USER_ID,
             OUTSIDER_USER_ID
         );
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('POST /tournament/seating/generate', () => {

@@ -5,8 +5,7 @@ import eventRoutes from '../src/routes/EventRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, resetTestDatabase } from './testHelpers.ts';
 import { ProfileRepository } from '../src/repository/ProfileRepository.ts';
 
 const app = express();
@@ -185,8 +184,7 @@ describe('Event registration permissions matrix', () => {
             PENDING_USER_ID,
             OTHER_CLUB_OWNER_USER_ID
         );
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('apply (self-action) — everyone authenticated can apply on a closed tournament', () => {

@@ -2,9 +2,8 @@ import request from 'supertest';
 import express from 'express';
 import gameRulesRoutes from '../src/routes/GameRulesRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, resetTestDatabase } from './testHelpers.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 
 const app = express();
 app.use(express.json());
@@ -16,8 +15,7 @@ describe('Game Rules API Endpoints', () => {
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('GET /api/game-rules/catalog', () => {

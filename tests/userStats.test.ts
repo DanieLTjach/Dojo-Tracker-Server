@@ -5,8 +5,7 @@ import gameRoutes from '../src/routes/GameRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent, createTelegramInitData } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent, createTelegramInitData, resetTestDatabase } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -22,15 +21,13 @@ describe('User Stats API Endpoints', () => {
     const adminAuthHeader = createAuthHeader(SYSTEM_USER_ID);
 
     beforeEach(async () => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
         dbManager.reinitDB();
         createTestEvent();
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     // Helper to create test users

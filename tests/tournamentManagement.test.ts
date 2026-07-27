@@ -5,8 +5,7 @@ import eventRoutes from '../src/routes/EventRoutes.ts';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createCustomEvent } from './testHelpers.ts';
+import { createAuthHeader, createCustomEvent, resetTestDatabase } from './testHelpers.ts';
 import { TournamentRoundImportService } from '../src/service/TournamentRoundImportService.ts';
 
 const SYSTEM_USER_ID = 0;
@@ -137,8 +136,7 @@ describe('Tournament management', () => {
             OWNER_USER_ID,
             MODERATOR_USER_ID
         );
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     test('starts round 1 even without pre-generated games (seating done outside the app)', async () => {
