@@ -159,3 +159,40 @@ export const gamePlayerSubstitutePlayerSchema = z.object({
         isSubstitutePlayer: z.boolean(),
     }),
 });
+
+const scorePreviewPlayerDataSchema = z.object({
+    userId: userIdSchema,
+    points: z.number().int('Points must be an integer'),
+    startPlace: windSchema,
+    chomboCount: z.number().int('Chombo count must be an integer').nonnegative().max(10).default(0),
+});
+
+const scorePreviewPlayerListSchema = z.array(scorePreviewPlayerDataSchema)
+    .min(3, 'Players list must have 3 or 4 players')
+    .max(4, 'Players list must have 3 or 4 players')
+    .refine(players => {
+        const startPlaces = players.map(p => p.startPlace);
+        return new Set(startPlaces).size === startPlaces.length;
+    }, {
+        message: 'Each player must have a unique start place',
+    })
+    .refine(players => {
+        const userIds = players.map(p => p.userId);
+        return new Set(userIds).size === userIds.length;
+    }, {
+        message: 'Each player must have a unique user ID',
+    });
+
+export const gameScorePreviewSchema = z.object({
+    body: z.object({
+        gameRulesId: z.number().int().positive(),
+        players: scorePreviewPlayerListSchema,
+        currentState: z.object({
+            wind: windSchema,
+            dealerNumber: z.number().int().min(1).max(4),
+            counters: z.number().int().nonnegative(),
+            riichiSticks: z.number().int().nonnegative(),
+        }),
+        result: gameRoundResultWithoutPointsSchema,
+    }),
+});
