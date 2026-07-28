@@ -3,8 +3,7 @@ import express from 'express';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, resetTestDatabase } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -15,8 +14,13 @@ describe('POST /api/games/score-preview', () => {
     const authHeader = createAuthHeader(0);
 
     beforeAll(() => {
-        cleanupTestDatabase();
         dbManager.reinitDB();
+    });
+
+    // Leave a clean, migrated database behind rather than deleting the shared
+    // file — suites run in one process under --runInBand.
+    afterAll(() => {
+        resetTestDatabase();
     });
 
     const validPayload = {

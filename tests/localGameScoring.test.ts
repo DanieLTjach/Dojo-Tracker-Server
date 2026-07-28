@@ -1,16 +1,23 @@
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
+import { resetTestDatabase } from './testHelpers.ts';
 import { LocalGameScoringService } from '../src/service/LocalGameScoringService.ts';
 import { IncorrectPlayerCountError } from '../src/error/GameErrors.ts';
+import { SelectedRulesetHasNoDetailedRulesError } from '../src/error/PointCalculationErrors.ts';
 import { Wind } from '../src/model/GameModels.ts';
 
 describe('LocalGameScoringService', () => {
     let service: LocalGameScoringService;
 
     beforeAll(() => {
-        cleanupTestDatabase();
         dbManager.reinitDB();
         service = new LocalGameScoringService();
+    });
+
+    // Leave a clean, migrated database behind rather than deleting the shared
+    // file — suites run in one process under --runInBand. This also discards the
+    // legacy no-details ruleset the last test inserts.
+    afterAll(() => {
+        resetTestDatabase();
     });
 
     const currentState = {
@@ -176,5 +183,26 @@ describe('LocalGameScoringService', () => {
         // Player 1 wins round (1000 pts) + claims riichi stick (1000 pts) = +2000 total
         const winner = result.playerPointChanges.find(p => p.playerId === 1);
         expect(winner?.pointChange).toBe(2000);
+    });
+
+    it('rejects a ruleset with no detailed rules as bad input, not a 500', () => {
+        // Legacy rows can still have a NULL details column in production.
+        dbManager.db.prepare(
+            `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, umaTieBreak, clubId, details)
+             VALUES (9001, 'Legacy no-details', 4, '[15,5,-5,-15]', 25000, 'WIND', NULL, NULL)`
+        ).run();
+
+        expect(() =>
+            service.scoreRoundPreview({
+                gameRulesId: 9001,
+                players: players4,
+                currentState,
+                result: {
+                    type: 'TSUMO',
+                    winningHandData: { winnerPlayerId: 1, han: 1, fu: 30, yakumanCount: 0 },
+                    riichiPlayerIds: [],
+                },
+            })
+        ).toThrow(SelectedRulesetHasNoDetailedRulesError);
     });
 });
