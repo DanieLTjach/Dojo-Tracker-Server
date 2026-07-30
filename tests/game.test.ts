@@ -2853,7 +2853,7 @@ describe('Game API Endpoints', () => {
                     });
 
                 // Round 3: TSUMO winner testUser3Id
-                await request(app)
+                const lastRoundBeforeFinish = await request(app)
                     .post(`/api/games/${gameId}/rounds/3`)
                     .set('Authorization', user1AuthHeader)
                     .send({
@@ -2878,6 +2878,31 @@ describe('Game API Endpoints', () => {
 
                 // p4 pays 12,000, points = 23800 - 12000 = 11800
                 expect(p4.points).toBe(11800);
+
+                const pointChangesBeforeFinish = new Map<number, number>(
+                    lastRoundBeforeFinish.body.rounds[2].result.playerPointChanges.map(
+                        (change: { playerId: number, pointChange: number }) => [
+                            change.playerId,
+                            change.pointChange,
+                        ]
+                    )
+                );
+                const pointChangesAfterFinish = new Map<number, number>(
+                    finishRes.body.rounds[2].result.playerPointChanges.map(
+                        (change: { playerId: number, pointChange: number }) => [
+                            change.playerId,
+                            change.pointChange,
+                        ]
+                    )
+                );
+                expect(pointChangesAfterFinish).toEqual(
+                    new Map([
+                        [testUser1Id, (pointChangesBeforeFinish.get(testUser1Id) ?? 0) + 4000],
+                        [testUser2Id, (pointChangesBeforeFinish.get(testUser2Id) ?? 0) + 4000],
+                        [testUser3Id, (pointChangesBeforeFinish.get(testUser3Id) ?? 0) + 4000],
+                        [testUser4Id, (pointChangesBeforeFinish.get(testUser4Id) ?? 0) - 12000],
+                    ])
+                );
             });
 
             test('(2) undoFinishGame round-trips exactly', async () => {
@@ -2901,6 +2926,12 @@ describe('Game API Endpoints', () => {
                     winningHandData: { winnerPlayerId: testUser1Id, han: 1, fu: 30, yakumanCount: 0 },
                     riichiPlayerIds: [],
                 });
+                await request(app).post(`/api/games/${gameId}/rounds/2`).set('Authorization', user1AuthHeader).send({
+                    type: 'EXHAUSTIVE_DRAW',
+                    tenpaiPlayerIds: [testUser1Id, testUser2Id, testUser3Id, testUser4Id],
+                    nagashiManganPlayerIds: [],
+                    riichiPlayerIds: [testUser2Id],
+                });
 
                 const beforeFinish = await request(app).get(`/api/games/${gameId}`).set(
                     'Authorization',
@@ -2911,6 +2942,12 @@ describe('Game API Endpoints', () => {
                     user1AuthHeader
                 );
                 expect(finishRes.status).toBe(200);
+                expect(finishRes.body.rounds.at(-1).result.playerPointChanges).toEqual([
+                    { playerId: testUser2Id, pointChange: -5000 },
+                    { playerId: testUser3Id, pointChange: -4000 },
+                    { playerId: testUser4Id, pointChange: -4000 },
+                    { playerId: testUser1Id, pointChange: 13000 },
+                ]);
 
                 const undoRes = await request(app).post(`/api/games/${gameId}/undo-finish`).set(
                     'Authorization',
@@ -2923,6 +2960,7 @@ describe('Game API Endpoints', () => {
                 ).toEqual(
                     beforeFinish.body.players.map((p: any) => ({ id: p.userId, points: p.points }))
                 );
+                expect(undoRes.body.rounds.at(-1).result).toEqual(beforeFinish.body.rounds.at(-1).result);
             });
 
             test('(3) a nagashi-mangan-only player is still yakitori', async () => {
@@ -2952,6 +2990,12 @@ describe('Game API Endpoints', () => {
                     winningHandData: { winnerPlayerId: testUser1Id, han: 1, fu: 30, yakumanCount: 0 },
                     riichiPlayerIds: [],
                 });
+                await request(app).post(`/api/games/${gameId}/rounds/3`).set('Authorization', user1AuthHeader).send({
+                    type: 'EXHAUSTIVE_DRAW',
+                    tenpaiPlayerIds: [testUser1Id, testUser2Id, testUser3Id, testUser4Id],
+                    nagashiManganPlayerIds: [],
+                    riichiPlayerIds: [testUser2Id],
+                });
 
                 const beforeFinish = await request(app).get(`/api/games/${gameId}`).set(
                     'Authorization',
@@ -2972,8 +3016,9 @@ describe('Game API Endpoints', () => {
                     players.find((p: any) => p.userId === userId).points - pointsBefore.get(userId)!;
 
                 // Nagashi mangan does not flip the marker, so p4 is still yakitori despite
-                // scoring in round 1. Only p1 won a hand, so p2/p3/p4 each pay it 4,000.
-                expect(yakitoriDelta(testUser1Id)).toBe(12000);
+                // leading before finish. Yakitori puts p1 in first place, so p1 also receives
+                // the remaining 1,000-point riichi stick after the yakitori transfer.
+                expect(yakitoriDelta(testUser1Id)).toBe(13000);
                 expect(yakitoriDelta(testUser2Id)).toBe(-4000);
                 expect(yakitoriDelta(testUser3Id)).toBe(-4000);
                 expect(yakitoriDelta(testUser4Id)).toBe(-4000);
