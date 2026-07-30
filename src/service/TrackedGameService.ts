@@ -5,6 +5,7 @@ import {
     GameNotCreatedWhenRecordingResultError,
     GameNotCreatedWhenStartingError,
     GameNotFinishedWhenUndoingFinishError,
+    GameFinishedByPreviousRoundError,
     GameNotInProgressWhenAddingNewRoundError,
     GameNotInProgressWhenDeletingRoundError,
     GameNotInProgressWhenFinishingError,
@@ -379,7 +380,14 @@ export class TrackedGameService {
     ): void {
         this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
         this.validateGameIsInProgress(game, () => new GameNotInProgressWhenAddingNewRoundError());
+        this.validatePreviousRoundDidNotFinishGame(game.rounds);
         this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
+    }
+
+    private validatePreviousRoundDidNotFinishGame(rounds: GameRound[]): void {
+        if (rounds[rounds.length - 1]?.result.gameFinishReason !== undefined) {
+            throw new GameFinishedByPreviousRoundError();
+        }
     }
 
     private validateCurrentRoundIdBeforeAdding(rounds: GameRound[], roundId: number): void {

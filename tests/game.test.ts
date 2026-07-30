@@ -1140,6 +1140,56 @@ describe('Game API Endpoints', () => {
             expect(duplicateRoundResponse.body.errorCode).toBe('roundAlreadyExists');
         });
 
+        test('should reject a new round after a finish caused by the previous round is undone', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayersPayload(),
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+            const finishingRoundResult = {
+                type: 'CHOMBO',
+                offenderPlayerId: testUser1Id,
+                playerPointChanges: [],
+                gameFinishReason: 'BANKRUPTCY',
+            };
+
+            dbManager.db.prepare(`
+                INSERT INTO gameRound (gameId, roundNumber, wind, dealerNumber, counters, riichiSticks, result)
+                VALUES (?, 1, 'EAST', 1, 0, 0, ?)
+            `).run(gameId, JSON.stringify(finishingRoundResult));
+
+            dbManager.db.prepare("UPDATE game SET status = 'FINISHED' WHERE id = ?").run(gameId);
+
+            const finishedGameResponse = await request(app)
+                .post(`/api/games/${gameId}/rounds/2`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(finishedGameResponse.status).toBe(400);
+            expect(finishedGameResponse.body.errorCode).toBe('gameNotInProgress');
+
+            dbManager.db.prepare("UPDATE game SET status = 'IN_PROGRESS' WHERE id = ?").run(gameId);
+
+            const response = await request(app)
+                .post(`/api/games/${gameId}/rounds/2`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameFinishedByPreviousRound');
+
+            const gameResponse = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(gameResponse.body.rounds).toHaveLength(1);
+        });
+
         test('should reject round id that is not the current round', async () => {
             const response = await request(app)
                 .post(`/api/games/${trackedGameId}/rounds/99`)
