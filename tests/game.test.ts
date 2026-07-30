@@ -951,7 +951,7 @@ describe('Game API Endpoints', () => {
                 status: 'FINISHED',
                 createdAt: created.body.createdAt,
                 startedAt: response.body.endedAt,
-                currentState: null,
+                currentState: { wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 },
                 rounds: [],
             });
             expect(response.body.startedAt).not.toBeNull();
@@ -1614,7 +1614,12 @@ describe('Game API Endpoints', () => {
             expect(response.body.id).toBe(gameId);
             expect(response.body.status).toBe('FINISHED');
             expect(response.body.endedAt).not.toBeNull();
-            expect(response.body.currentState).toBeNull();
+            expect(response.body.currentState).toEqual({
+                wind: 'EAST',
+                dealerNumber: 1,
+                counters: 0,
+                riichiSticks: 0,
+            });
             expect(response.body.rounds).toHaveLength(1);
             response.body.players.forEach((player: { ratingChange: number }) => {
                 expect(typeof player.ratingChange).toBe('number');
@@ -1960,7 +1965,12 @@ describe('Game API Endpoints', () => {
             expect(response.body.status).toBe('FINISHED');
             expect(response.body.lastRoundWasDeleted).toBe(false);
             expect(response.body.rounds).toEqual([]);
-            expect(response.body.currentState).toBeNull();
+            expect(response.body.currentState).toEqual({
+                wind: 'EAST',
+                dealerNumber: 1,
+                counters: 0,
+                riichiSticks: 0,
+            });
 
             // Verify players have ratingChange field
             response.body.players.forEach((player: any) => {
@@ -2033,6 +2043,42 @@ describe('Game API Endpoints', () => {
                     result: roundTwoResult,
                 },
             ]);
+            expect(response.body.currentState).toEqual({
+                wind: 'EAST',
+                dealerNumber: 2,
+                counters: 1,
+                riichiSticks: 0,
+            });
+        });
+
+        test('should return null when an in-progress game has no next state', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayersPayload(),
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+            const resultWithoutNextState = {
+                type: 'CHOMBO',
+                offenderPlayerId: testUser1Id,
+            };
+
+            dbManager.db.prepare(`
+                INSERT INTO gameRound (gameId, roundNumber, wind, dealerNumber, counters, riichiSticks, result)
+                VALUES (?, 1, 'SOUTH', 3, 4, 2, ?)
+            `).run(gameId, JSON.stringify(resultWithoutNextState));
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toBe('IN_PROGRESS');
+            expect(response.body.currentState).toBeNull();
         });
 
         test('should fail with non-existent game ID', async () => {
