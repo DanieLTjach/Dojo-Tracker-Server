@@ -141,7 +141,7 @@ export class TrackedGameService {
                 gameId,
                 result.userId,
                 result.points,
-                result.chomboCount ?? 0,
+                result.chomboCount,
                 modifiedBy,
                 completedAt
             );
