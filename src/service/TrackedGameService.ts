@@ -33,7 +33,7 @@ import {
     calculateRemainingRiichiSticksPointChanges,
     mergePlayerPointChanges,
 } from '../util/PointCalculationUtil.ts';
-import { calculateYakitoriPointChanges, findPlayersWhoWonAHand } from '../util/YakitoriUtil.ts';
+import { calculateYakitoriPointChanges } from '../util/YakitoriUtil.ts';
 import { AchievementService } from './AchievementService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
@@ -480,19 +480,6 @@ export class TrackedGameService {
         this.persistFinishAdjustmentPointChanges(game, reversedPointChanges, modifiedBy);
     }
 
-    /**
-     * Derived from the recorded hands rather than stored per player: the tracker already
-     * knows who won what, and the penalty only touches points, never round results, so
-     * this returns the same set before and after it is applied. That keeps undo exact.
-     */
-    public resolveYakitoriPlayerIds(game: DetailedGame): ReadonlySet<number> {
-        if (game.rounds.length === 0) {
-            return new Set();
-        }
-        const winners = findPlayersWhoWonAHand(game.rounds);
-        return new Set(game.players.filter(p => !winners.has(p.userId)).map(p => p.userId));
-    }
-
     private applyYakitoriPenaltyOnFinish(
         game: DetailedGame,
         gameRules: GameRules,
@@ -533,7 +520,7 @@ export class TrackedGameService {
         return calculateYakitoriPointChanges(
             game.players,
             gameRules.details?.rules ?? {},
-            this.resolveYakitoriPlayerIds(game)
+            game.rounds
         );
     }
 
