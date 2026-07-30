@@ -134,7 +134,6 @@ export const plannedGameResultSchema = z.object({
             userId: userIdSchema,
             points: z.number().int('Points must be an integer'),
             chomboCount: z.number().int('Chombo count must be an integer').nonnegative().max(10).default(0),
-            isSubstitutePlayer: z.boolean().optional(),
         })),
     }),
 });
