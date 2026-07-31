@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals';
-import { gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
+import { buildDetailsSchemaForCore, gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
 import { gameRulesPresets } from '../src/data/gameRulesPresets.ts';
 import { gameRulesCatalogByKey } from '../src/data/gameRulesCatalog.ts';
 
@@ -163,12 +163,12 @@ describe('preset validation', () => {
         expect(result.success).toBe(false);
     });
 
-    test('without preset, required keys must be present', () => {
+    test('without preset, duplicated core keys are optional', () => {
         const result = gameRulesDetailsSchema.safeParse({
             rules: { open_tanyao: true },
         });
 
-        expect(result.success).toBe(false);
+        expect(result.success).toBe(true);
     });
 
     test('accepts all public presets with their full rules', () => {
@@ -180,6 +180,49 @@ describe('preset validation', () => {
 
             expect(result.success).toBe(true);
         }
+    });
+});
+
+describe('top-level core field validation', () => {
+    const sanmaSchema = buildDetailsSchemaForCore({ numberOfPlayers: 3, startingPoints: 40000 });
+
+    test('accepts the screenshot sanma details without duplicated core fields', () => {
+        const result = sanmaSchema.safeParse({
+            rules: {
+                goal: 40000,
+                honba: '2x500',
+                noten_penalty: 2000,
+                red_fives: 'two_red_fives_five_pin_and_five_sou',
+                double_ron: 'yes',
+                triple_ron: 'first',
+                riichi_1000_points_min: true,
+                riichi_without_a_next_draw: true,
+                open_tanyao: true,
+            },
+        });
+
+        expect(result.success).toBe(true);
+    });
+
+    test.each([
+        ['number_of_players', 4],
+        ['starting_points', 35000],
+    ])('rejects compatibility duplicate %s when it conflicts with top-level core', (key, value) => {
+        const result = sanmaSchema.safeParse({ rules: { [key]: value } });
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.issues[0]?.path).toEqual(['rules', key]);
+        }
+    });
+
+    test('uses top-level sanma player count for noten validation even when preset is yonma', () => {
+        const result = sanmaSchema.safeParse({
+            preset: 'ema_2025',
+            rules: { noten_penalty: 2500 },
+        });
+
+        expect(result.success).toBe(true);
     });
 });
 

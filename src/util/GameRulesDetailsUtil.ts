@@ -1,17 +1,33 @@
 import { gameRulesPresetsByKey } from '../data/gameRulesPresets.ts';
 import type { GameRulesDetails } from '../model/EventModels.ts';
 
-export function parseGameRulesDetailsAndApplyPresets(details: string | null): GameRulesDetails | null {
+interface GameRulesCoreValues {
+    numberOfPlayers: number;
+    startingPoints: number;
+}
+
+export function parseGameRulesDetailsAndApplyPresets(
+    details: string | null,
+    core?: GameRulesCoreValues
+): GameRulesDetails | null {
     if (!details) return null;
 
     const parsed: GameRulesDetails = JSON.parse(details);
-    if (!parsed.preset) return parsed;
-
-    const preset = gameRulesPresetsByKey.get(parsed.preset);
-    if (!preset) return parsed;
+    const presetRules = parsed.preset
+        ? gameRulesPresetsByKey.get(parsed.preset)?.rules ?? {}
+        : {};
 
     return {
         ...parsed,
-        rules: { ...preset.rules, ...parsed.rules },
+        rules: {
+            ...presetRules,
+            ...parsed.rules,
+            ...(core
+                ? {
+                    number_of_players: core.numberOfPlayers as 3 | 4,
+                    starting_points: core.startingPoints,
+                }
+                : {}),
+        },
     };
 }

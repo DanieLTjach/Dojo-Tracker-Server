@@ -43,6 +43,8 @@ export class GameRulesController {
                         key,
                         name,
                         extends: parentPreset,
+                        numberOfPlayers: rules.number_of_players,
+                        startingPoints: rules.starting_points,
                         rules,
                         ownRules,
                     }))
