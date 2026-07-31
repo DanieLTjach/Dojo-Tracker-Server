@@ -210,3 +210,25 @@ describe('preset values match catalog constraints', () => {
         });
     }
 });
+
+describe('yakitori_payment_step validation', () => {
+    test('accepts valid yakitori_payment_step values', () => {
+        for (const value of [0, 4000, 10000]) {
+            const result = gameRulesDetailsSchema.safeParse({
+                preset: 'ema_2025',
+                rules: { yakitori_payment_step: value },
+            });
+            expect(result.success).toBe(true);
+        }
+    });
+
+    test('rejects negative and non-multiple of 100 yakitori_payment_step values', () => {
+        for (const value of [-4000, 4050, 4000.5]) {
+            const result = gameRulesDetailsSchema.safeParse({
+                preset: 'ema_2025',
+                rules: { yakitori_payment_step: value },
+            });
+            expect(result.success).toBe(false);
+        }
+    });
+});

@@ -33,6 +33,7 @@ import {
     calculateRemainingRiichiSticksPointChanges,
     mergePlayerPointChanges,
 } from '../util/PointCalculationUtil.ts';
+import { calculateYakitoriPointChanges } from '../util/YakitoriUtil.ts';
 import { AchievementService } from './AchievementService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
@@ -135,7 +136,7 @@ export class TrackedGameService {
         this.gameService.validateGameWithinEventDates(event, completedAt, modifiedBy, GameStatus.FINISHED);
         const standingsBefore = this.ratingService.calculateStandings(event.id);
 
-        for (const result of results) {
+        for (const result of players) {
             this.gameRepository.setPlannedGamePlayerResult(
                 gameId,
                 result.userId,
@@ -240,7 +241,7 @@ export class TrackedGameService {
         this.validateGameIsInProgress(game, () => new GameNotInProgressWhenFinishingError());
         this.validateGameHasAtLeastOneRound(game.rounds);
 
-        const players = this.applyRemainingRiichiSticksOnFinish(game, event.gameRules, modifiedBy);
+        const players = this.applyFinishPointChanges(game, event.gameRules, modifiedBy);
 
         const finishedAt = new Date();
         const standingsBefore = this.ratingService.calculateStandings(event.id);
@@ -297,7 +298,7 @@ export class TrackedGameService {
 
         this.ratingService.deleteRatingChangesFromGame(game);
         this.gameRepository.undoFinishGame(gameId, modifiedBy);
-        this.undoRemainingRiichiSticksOnFinish(game, event.gameRules, modifiedBy);
+        this.undoFinishPointChanges(game, event.gameRules, modifiedBy);
 
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
 
@@ -442,37 +443,81 @@ export class TrackedGameService {
         }
     }
 
-    private applyRemainingRiichiSticksOnFinish(
+    private applyFinishPointChanges(
         game: DetailedGame,
         gameRules: GameRules,
         modifiedBy: number
     ): GamePlayer[] {
-        const extraPointChanges = this.calculateRemainingRiichiSticksPointChangesForGame(game, gameRules);
-        if (extraPointChanges.length === 0) {
+        const pointChanges = this.calculateFinishPointChangesForGame(game, gameRules);
+        if (pointChanges.length === 0) {
             return game.players;
         }
 
-        this.persistRemainingRiichiSticksPointChanges(game, extraPointChanges, modifiedBy);
+        this.persistFinishAdjustmentPointChanges(game, pointChanges, modifiedBy);
 
         return this.gameRepository.findGamePlayersByGameId(game.id);
     }
 
-    private undoRemainingRiichiSticksOnFinish(
+    private undoFinishPointChanges(
         game: DetailedGame,
         gameRules: GameRules,
         modifiedBy: number
     ): void {
-        const extraPointChanges = this.calculateRemainingRiichiSticksPointChangesForGame(game, gameRules);
-        if (extraPointChanges.length === 0) {
+        const pointChanges = mergePlayerPointChanges(
+            this.calculateYakitoriPointChangesForGame(game, gameRules),
+            this.calculateRemainingRiichiSticksPointChangesForGame(game, gameRules)
+        );
+        if (pointChanges.length === 0) {
             return;
         }
 
-        const reversedPointChanges = extraPointChanges.map(change => ({
+        const reversedPointChanges = pointChanges.map(change => ({
             playerId: change.playerId,
             pointChange: -change.pointChange,
         }));
 
-        this.persistRemainingRiichiSticksPointChanges(game, reversedPointChanges, modifiedBy);
+        this.persistFinishAdjustmentPointChanges(game, reversedPointChanges, modifiedBy);
+    }
+
+    // Ordering is important: applying yakitori can change the winners.
+    // First calculate and apply yakitori, then give bank riichi sticks to the winners.
+    private calculateFinishPointChangesForGame(
+        game: DetailedGame,
+        gameRules: GameRules
+    ): PlayerPointChange[] {
+        const yakitoriPointChanges = this.calculateYakitoriPointChangesForGame(game, gameRules);
+        const gameAfterYakitori = this.applyPlayerPointChangesToGame(game, yakitoriPointChanges);
+        return mergePlayerPointChanges(
+            yakitoriPointChanges,
+            this.calculateRemainingRiichiSticksPointChangesForGame(gameAfterYakitori, gameRules)
+        );
+    }
+
+    private applyPlayerPointChangesToGame(
+        game: DetailedGame,
+        pointChanges: PlayerPointChange[]
+    ): DetailedGame {
+        const pointChangesByPlayerId = new Map(
+            pointChanges.map(change => [change.playerId, change.pointChange])
+        );
+        return {
+            ...game,
+            players: game.players.map(player => ({
+                ...player,
+                points: player.points + (pointChangesByPlayerId.get(player.userId) ?? 0),
+            })),
+        };
+    }
+
+    private calculateYakitoriPointChangesForGame(
+        game: DetailedGame,
+        gameRules: GameRules
+    ): PlayerPointChange[] {
+        return calculateYakitoriPointChanges(
+            game.players,
+            gameRules.details?.rules ?? {},
+            game.rounds
+        );
     }
 
     private calculateRemainingRiichiSticksPointChangesForGame(
@@ -492,7 +537,7 @@ export class TrackedGameService {
         return lastRound?.result.nextState?.riichiSticks ?? 0;
     }
 
-    private persistRemainingRiichiSticksPointChanges(
+    private persistFinishAdjustmentPointChanges(
         game: DetailedGame,
         pointChanges: PlayerPointChange[],
         modifiedBy: number
@@ -503,7 +548,7 @@ export class TrackedGameService {
             playerPointChanges: mergePlayerPointChanges(
                 lastRound.result.playerPointChanges,
                 pointChanges
-            ),
+            ).filter(change => change.pointChange !== 0),
         };
 
         this.gameRepository.updateGameRoundResult(game.id, lastRound.roundNumber, updatedResult);

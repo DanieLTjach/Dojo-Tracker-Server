@@ -118,3 +118,7 @@ export function getHonbaValue(rules: GameRulesValues): number {
 
     return value;
 }
+
+export function getYakitoriPaymentStep(rules: GameRulesValues): number {
+    return rules.yakitori_payment_step ?? 0;
+}
