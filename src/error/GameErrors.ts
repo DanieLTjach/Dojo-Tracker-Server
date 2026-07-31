@@ -102,6 +102,12 @@ export class RoundAlreadyExistsError extends BadRequestError {
     }
 }
 
+export class GameFinishedByPreviousRoundError extends BadRequestError {
+    constructor() {
+        super('gameFinishedByPreviousRound');
+    }
+}
+
 export class NotAuthorizedToModifyGameError extends ForbiddenError {
     constructor() {
         super('notAuthorizedToModifyGame');

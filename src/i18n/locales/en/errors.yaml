@@ -114,6 +114,7 @@ errors:
   gameNotInProgressWhenFinishing: Only a game in progress can be finished
   invalidRoundId: Expected round {{expectedRoundId}}, got {{actualRoundId}}
   roundAlreadyExists: This round is already finished
+  gameFinishedByPreviousRound: A new round cannot be added because the previous round finished the game
   notAuthorizedToModifyGame: Only players in the game, club moderators, and admins can modify the game
   gamePlayerNotFound: Player with id {{userId}} was not found in game {{gameId}}
   noRoundsToRollback: This game has no rounds to roll back

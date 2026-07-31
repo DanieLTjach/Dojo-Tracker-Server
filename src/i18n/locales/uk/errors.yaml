@@ -114,6 +114,7 @@ errors:
   gameNotInProgressWhenFinishing: Можна завершити лише гру, що триває
   invalidRoundId: Очікується раунд {{expectedRoundId}}, отримано {{actualRoundId}}
   roundAlreadyExists: Цей раунд вже завершено
+  gameFinishedByPreviousRound: Новий раунд не можна додати, оскільки попередній раунд завершив гру
   notAuthorizedToModifyGame: Лише гравці, модератори клубу та адміністратори можуть змінювати гру
   gamePlayerNotFound: Гравець з id {{userId}} не знайдений у грі {{gameId}}
   noRoundsToRollback: У цій грі немає раундів для відкату
