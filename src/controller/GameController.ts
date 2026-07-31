@@ -16,12 +16,21 @@ import {
     gameUndoFinishSchema,
     gameStartSchema,
     gamePlayerSubstitutePlayerSchema,
+    gameScorePreviewSchema,
 } from '../schema/GameSchemas.ts';
 import { TrackedGameService } from '../service/TrackedGameService.ts';
+import { LocalGameScoringService } from '../service/LocalGameScoringService.ts';
 
 export class GameController {
     private gameService: GameService = new GameService();
     private trackedGameService: TrackedGameService = new TrackedGameService();
+    private localGameScoringService: LocalGameScoringService = new LocalGameScoringService();
+
+    scoreRoundPreview(req: Request, res: Response) {
+        const { body } = gameScorePreviewSchema.parse(req);
+        const result = this.localGameScoringService.scoreRoundPreview(body);
+        return res.status(StatusCodes.OK).json(result);
+    }
 
     addGame(req: Request, res: Response) {
         const { body: { eventId, playersData, createdAt, hideNewGameMessage, tournamentRound, tournamentTable } } =
