@@ -25,6 +25,14 @@ const teamController = new TeamController();
 router.get('/', requireAuth, withTransaction((req, res) => eventController.getAllEvents(req, res)));
 
 /**
+ * GET /api/events/categories
+ * Get available event categories
+ *
+ * Authentication: Required
+ */
+router.get('/categories', requireAuth, withTransaction((req, res) => eventController.getEventCategories(req, res)));
+
+/**
  * GET /api/events/:eventId
  * Get event by ID (includes game rules)
  *

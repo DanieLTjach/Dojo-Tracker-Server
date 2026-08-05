@@ -106,6 +106,8 @@ const eventSchema = z.object({
     type: eventTypeEnum,
     format: eventFormatEnum.default(EventFormat.INDIVIDUAL),
     isCurrentRating: z.boolean().nullish(),
+    isRated: z.boolean().default(true),
+    category: z.string().nullable().optional(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer'),

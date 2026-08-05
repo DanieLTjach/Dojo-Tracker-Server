@@ -1,6 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
-import type { Event, EventFormat, EventType } from '../model/EventModels.ts';
+import type { Event, EventCategory, EventFormat, EventType } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseEventFormat, parseEventType, parseTournamentStatus, parseUmaTieBreak } from '../util/EnumUtil.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
@@ -122,6 +122,8 @@ export class EventRepository {
         description: string | null;
         type: string;
         format: string;
+        isRated: number;
+        category: string | null;
         gameRules: number;
         clubId: number | null;
         dateFrom: string | null;
@@ -136,8 +138,8 @@ export class EventRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, format, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :format, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, format, isRated, category, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :format, :isRated, :category, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -145,6 +147,8 @@ export class EventRepository {
     createEvent(params: EventCreateParams): number {
         const result = this.createEventStatement().get({
             ...params,
+            isRated: booleanToInteger(params.isRated ?? true),
+            category: params.category ?? null,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             info: serializeEventInfo(params.info),
@@ -162,6 +166,8 @@ export class EventRepository {
         description: string | null;
         type: string;
         format: string;
+        isRated: number;
+        category: string | null;
         gameRules: number;
         clubId: number | null;
         dateFrom: string | null;
@@ -180,6 +186,8 @@ export class EventRepository {
                 description = :description,
                 type = :type,
                 format = :format,
+                isRated = :isRated,
+                category = :category,
                 gameRules = :gameRules,
                 clubId = :clubId,
                 dateFrom = :dateFrom,
@@ -198,6 +206,8 @@ export class EventRepository {
     updateEvent(params: EventUpdateParams): void {
         this.updateEventStatement().run({
             ...params,
+            isRated: booleanToInteger(params.isRated ?? true),
+            category: params.category ?? null,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             info: serializeEventInfo(params.info),
@@ -255,6 +265,16 @@ export class EventRepository {
     countGamesByGameRulesId(gameRulesId: number): number {
         return this.countGamesByGameRulesIdStatement().get({ gameRulesId })!.count;
     }
+
+    categoryExists(category: string): boolean {
+        const result = dbManager.db.prepare(`SELECT 1 FROM eventCategory WHERE category = ?`).get(category);
+        return result !== undefined;
+    }
+
+    findAllCategories(): EventCategory[] {
+        return dbManager.db.prepare(`SELECT category, description FROM eventCategory ORDER BY category ASC`)
+            .all() as EventCategory[];
+    }
 }
 
 export interface EventCreateParams {
@@ -262,6 +282,8 @@ export interface EventCreateParams {
     description: string | null;
     type: EventType;
     format: EventFormat;
+    isRated?: boolean;
+    category?: string | null;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -282,6 +304,8 @@ export interface EventUpdateParams {
     description: string | null;
     type: EventType;
     format: EventFormat;
+    isRated?: boolean;
+    category?: string | null;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -304,6 +328,8 @@ interface EventWithGameRulesDBEntity {
     gameRules: number;
     clubId: number | null;
     isCurrentRating: number;
+    isRated: number;
+    category: string | null;
     startingRating: number;
     minimumGamesForRating: number;
     dateFrom: string | null;
@@ -394,6 +420,8 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         format: parseEventFormat(dbEntity.format),
         clubId: dbEntity.clubId,
         isCurrentRating: Boolean(dbEntity.isCurrentRating),
+        isRated: Boolean(dbEntity.isRated),
+        category: dbEntity.category ?? null,
         startingRating: dbEntity.startingRating,
         minimumGamesForRating: dbEntity.minimumGamesForRating,
         gameRules: {
