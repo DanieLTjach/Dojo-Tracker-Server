@@ -442,42 +442,39 @@ export class SkillRatingService {
             // Delete outcome rows first
             this.skillRatingRepository.deleteSkillRatingGamesByGameId(gameId);
 
-            for (const row of outcomeRows) {
-                const existing = this.skillRatingRepository.findSkillRating(clubId, row.userId, gameSize);
-                if (!existing) continue;
+            if (isNewest) {
+                for (const row of outcomeRows) {
+                    const existing = this.skillRatingRepository.findSkillRating(clubId, row.userId, gameSize);
+                    if (!existing) continue;
 
-                const newGamesPlayed = existing.gamesPlayed - 1;
-                if (newGamesPlayed <= 0) {
-                    this.skillRatingRepository.deleteSkillRatingForUser(clubId, row.userId, gameSize);
-                } else {
-                    // Restore muBefore, sigmaBefore and find latest lastRatedGameAt
-                    const lastGame = this.skillRatingRepository.findLastSkillRatingGame(
-                        clubId,
-                        row.userId,
-                        gameSize
-                    );
-                    const lastRatedGameAt = lastGame ? lastGame.playedAt : existing.firstRatedGameAt;
+                    const newGamesPlayed = existing.gamesPlayed - 1;
+                    if (newGamesPlayed <= 0) {
+                        this.skillRatingRepository.deleteSkillRatingForUser(clubId, row.userId, gameSize);
+                    } else {
+                        // Restore muBefore, sigmaBefore and find latest lastRatedGameAt
+                        const lastGame = this.skillRatingRepository.findLastSkillRatingGame(
+                            clubId,
+                            row.userId,
+                            gameSize
+                        );
+                        const lastRatedGameAt = lastGame ? lastGame.playedAt : existing.firstRatedGameAt;
 
-                    this.skillRatingRepository.upsertSkillRating({
-                        clubId,
-                        userId: row.userId,
-                        gameSize,
-                        mu: row.muBefore,
-                        sigma: row.sigmaBefore,
-                        gamesPlayed: newGamesPlayed,
-                        firstRatedGameAt: existing.firstRatedGameAt,
-                        lastRatedGameAt,
-                        modifiedAt: new Date(),
-                    });
+                        this.skillRatingRepository.upsertSkillRating({
+                            clubId,
+                            userId: row.userId,
+                            gameSize,
+                            mu: row.muBefore,
+                            sigma: row.sigmaBefore,
+                            gamesPlayed: newGamesPlayed,
+                            firstRatedGameAt: existing.firstRatedGameAt,
+                            lastRatedGameAt,
+                            modifiedAt: new Date(),
+                        });
+                    }
                 }
-            }
-
-            if (!isNewest) {
-                this.skillRatingRepository.markTrackDirty(
-                    clubId,
-                    gameSize,
-                    `Reverted non-head game ${gameId}`
-                );
+            } else {
+                // Non-head revert: recompute the entire track to restore consistent state
+                this.recomputeTrack(clubId, gameSize, gameId);
             }
         } catch (error) {
             LogService.logError(
@@ -487,7 +484,7 @@ export class SkillRatingService {
         }
     }
 
-    recomputeTrack(clubId: number, gameSize: number): SkillRecomputeResult {
+    recomputeTrack(clubId: number, gameSize: number, excludeGameId?: number): SkillRecomputeResult {
         if (gameSize !== 3 && gameSize !== 4) {
             throw new InvalidGameSize(gameSize);
         }
@@ -500,6 +497,9 @@ export class SkillRatingService {
         // Group rows by gameId preserving chronological order
         const gameMap = new Map<number, RatableGamePlayerDBEntity[]>();
         for (const row of rows) {
+            if (excludeGameId !== undefined && row.gameId === excludeGameId) {
+                continue;
+            }
             const list = gameMap.get(row.gameId) ?? [];
             list.push(row);
             gameMap.set(row.gameId, list);

@@ -173,7 +173,7 @@ describe('SkillRatingService', () => {
             expect(skillRepo.isTrackDirty(CLUB_ID, 4)).toBe(false);
         });
 
-        it('should mark track dirty when reverting a non-head game', () => {
+        it('should recompute track when reverting a non-head game and leave track clean', () => {
             const gameDate1 = new Date('2025-01-10T12:00:00.000Z');
             const gameId1 = gameRepo.createGame(EVENT_ID, 0, gameDate1, null, null);
             gameRepo.addGamePlayer(gameId1, USER_1, 40000, 'EAST', 0, false, 0);
@@ -193,7 +193,21 @@ describe('SkillRatingService', () => {
             // Revert game 1 (older)
             service.revertFinishedGame(gameId1);
 
-            expect(skillRepo.isTrackDirty(CLUB_ID, 4)).toBe(true);
+            // Track should be clean, and resulting rating should match having only played game 2
+            expect(skillRepo.isTrackDirty(CLUB_ID, 4)).toBe(false);
+            const r1 = skillRepo.findSkillRating(CLUB_ID, USER_1, 4);
+            expect(r1).toBeDefined();
+            expect(r1!.gamesPlayed).toBe(1);
+
+            // Delete game 1 from DB and compare with fresh from-scratch recompute to ensure exact equality
+            gameRepo.deleteGamePlayersByGameId(gameId1);
+            gameRepo.deleteGameById(gameId1);
+
+            const expectedRecompute = service.recomputeTrack(CLUB_ID, 4);
+            expect(expectedRecompute.gamesProcessed).toBe(1);
+            const r1AfterRecompute = skillRepo.findSkillRating(CLUB_ID, USER_1, 4);
+            expect(r1!.mu).toBeCloseTo(r1AfterRecompute!.mu, 6);
+            expect(r1!.sigma).toBeCloseTo(r1AfterRecompute!.sigma, 6);
         });
     });
 
