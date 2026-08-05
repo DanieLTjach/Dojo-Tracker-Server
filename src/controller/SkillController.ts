@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import {
+    getClubSkillConfigSchema,
     getClubSkillLeaderboardSchema,
     getUserSkillSchema,
     recomputeAdminSkillSchema,
@@ -62,6 +63,12 @@ export class SkillController {
         }
 
         return res.status(StatusCodes.OK).json(result);
+    }
+
+    getClubSkillConfig(req: Request, res: Response) {
+        const { params: { clubId } } = getClubSkillConfigSchema.parse(req);
+        const config = this.skillRatingService.getOrCreateConfig(clubId);
+        return res.status(StatusCodes.OK).json(config);
     }
 
     updateClubSkillConfig(req: Request, res: Response) {

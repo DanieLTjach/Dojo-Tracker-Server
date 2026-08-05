@@ -33,6 +33,12 @@ export const recomputeAdminSkillSchema = z.object({
     }),
 });
 
+export const getClubSkillConfigSchema = z.object({
+    params: z.object({
+        clubId: clubIdParamSchema,
+    }),
+});
+
 export const updateClubSkillConfigSchema = z.object({
     params: z.object({
         clubId: clubIdParamSchema,

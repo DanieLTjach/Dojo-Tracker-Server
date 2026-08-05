@@ -33,7 +33,20 @@ router.post(
     withTransaction((req, res) => skillController.recomputeAdminSkill(req, res))
 );
 
+router.get(
+    '/clubs/:clubId/skill/config',
+    requireAuth,
+    withTransaction((req, res) => skillController.getClubSkillConfig(req, res))
+);
+
 router.patch(
+    '/clubs/:clubId/skill/config',
+    requireAuth,
+    requireClubRole('OWNER'),
+    withTransaction((req, res) => skillController.updateClubSkillConfig(req, res))
+);
+
+router.put(
     '/clubs/:clubId/skill/config',
     requireAuth,
     requireClubRole('OWNER'),
