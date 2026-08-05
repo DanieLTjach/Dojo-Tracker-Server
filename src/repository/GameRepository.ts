@@ -78,7 +78,7 @@ export class GameRepository {
         gameId: number;
         userId: number;
         points: number;
-        startPlace: string | undefined;
+        startPlace: string | null;
         chomboCount: number;
         isSubstitutePlayer: number;
         modifiedBy: number;
@@ -102,7 +102,7 @@ export class GameRepository {
             gameId,
             userId,
             points,
-            startPlace,
+            startPlace: startPlace ?? null,
             chomboCount,
             isSubstitutePlayer: booleanToInteger(isSubstitutePlayer),
             modifiedBy,

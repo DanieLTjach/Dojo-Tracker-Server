@@ -182,3 +182,7 @@ errors:
   userIsNotActive: Користувач з id {{id}} не активний
 
   enumParsingError: "Неприпустиме значення '{{value}}' для enum {{enumName}}. Дозволені значення: {{allowedValues}}"
+
+  skillRatingNotEnabledForClub: Рейтинг OpenSkill не увімкнено для клубу {{clubId}}
+  invalidGameSize: "Неприпустимий розмір гри {{gameSize}}. Дозволені значення: 3, 4"
+  skillTrackRecomputeFailed: "Не вдалося перерахувати трек навичок для клубу {{clubId}} та розміру гри {{gameSize}}: {{reason}}"

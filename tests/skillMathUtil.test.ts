@@ -1,7 +1,6 @@
 import {
     DEFAULT_MU,
     DEFAULT_SIGMA,
-    INACTIVITY_GRACE_DAYS,
     INACTIVITY_SIGMA_RATE,
     MAX_SIGMA,
 } from '../src/model/SkillModels.ts';

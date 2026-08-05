@@ -1,6 +1,6 @@
 CREATE TABLE skillRating (
-    clubId INTEGER NOT NULL REFERENCES club(id),
-    userId INTEGER NOT NULL REFERENCES user(id),
+    clubId INTEGER NOT NULL REFERENCES club(id) ON DELETE CASCADE,
+    userId INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE,
     gameSize INTEGER NOT NULL CHECK (gameSize IN (3, 4)),
     mu REAL NOT NULL,
     sigma REAL NOT NULL,
@@ -15,9 +15,9 @@ CREATE INDEX idx_skillRating_clubId_gameSize ON skillRating(clubId, gameSize);
 CREATE INDEX idx_skillRating_userId ON skillRating(userId);
 
 CREATE TABLE skillRatingGame (
-    gameId INTEGER NOT NULL REFERENCES game(id),
-    userId INTEGER NOT NULL REFERENCES user(id),
-    clubId INTEGER NOT NULL REFERENCES club(id),
+    gameId INTEGER NOT NULL REFERENCES game(id) ON DELETE CASCADE,
+    userId INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    clubId INTEGER NOT NULL REFERENCES club(id) ON DELETE CASCADE,
     gameSize INTEGER NOT NULL CHECK (gameSize IN (3, 4)),
     rank INTEGER NOT NULL,
     muBefore REAL NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE skillRatingGame (
 CREATE INDEX idx_skillRatingGame_club_size_played ON skillRatingGame(clubId, gameSize, playedAt);
 
 CREATE TABLE clubSkillConfig (
-    clubId INTEGER PRIMARY KEY REFERENCES club(id),
+    clubId INTEGER PRIMARY KEY REFERENCES club(id) ON DELETE CASCADE,
     provisionalGameThreshold INTEGER NOT NULL DEFAULT 30,
     isEnabled BOOL NOT NULL DEFAULT true,
     createdAt TIMESTAMP NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE clubSkillConfig (
 );
 
 CREATE TABLE skillTrackDirty (
-    clubId INTEGER NOT NULL REFERENCES club(id),
+    clubId INTEGER NOT NULL REFERENCES club(id) ON DELETE CASCADE,
     gameSize INTEGER NOT NULL CHECK (gameSize IN (3, 4)),
     markedAt TIMESTAMP NOT NULL,
     reason TEXT NOT NULL,
