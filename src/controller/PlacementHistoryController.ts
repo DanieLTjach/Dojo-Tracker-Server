@@ -11,8 +11,8 @@ export class PlacementHistoryController {
     }
 
     getUserPlacements(req: Request, res: Response) {
-        const { params: { userId } } = getUserPlacementsSchema.parse(req);
-        const placements = this.placementHistoryService.getUserPlacementHistory(userId);
+        const { params: { id } } = getUserPlacementsSchema.parse(req);
+        const placements = this.placementHistoryService.getUserPlacementHistory(id);
         return res.status(StatusCodes.OK).json(placements);
     }
 }
