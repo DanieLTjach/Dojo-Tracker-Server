@@ -141,8 +141,8 @@ export function resolvePlayerNameDisplay(config: EventConfig | null, eventType: 
     return eventType === EventType.TOURNAMENT ? PlayerNameDisplay.REAL_NAME : PlayerNameDisplay.NICKNAME;
 }
 
-export interface EventCategory {
-    category: string;
+export interface EventTag {
+    tag: string;
     description: string | null;
 }
 
@@ -155,7 +155,7 @@ export interface Event {
     clubId: number | null;
     isCurrentRating: boolean;
     isRated: boolean;
-    category: string | null;
+    tags: string[];
     gameRules: GameRules;
     startingRating: number;
     minimumGamesForRating: number;

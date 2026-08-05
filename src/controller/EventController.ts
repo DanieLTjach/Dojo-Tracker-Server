@@ -27,9 +27,9 @@ export class EventController {
         return res.status(StatusCodes.OK).json(events);
     }
 
-    getEventCategories(_req: Request, res: Response) {
-        const categories = this.eventService.findAllCategories();
-        return res.status(StatusCodes.OK).json(categories);
+    getEventTags(_req: Request, res: Response) {
+        const tags = this.eventService.findAllTags();
+        return res.status(StatusCodes.OK).json(tags);
     }
 
     getEventById(req: Request, res: Response) {

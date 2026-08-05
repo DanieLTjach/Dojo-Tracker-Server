@@ -56,7 +56,7 @@ errors:
   participantConfigOnlyForTournament: Налаштування кількості учасників і терміну реєстрації можна вказувати лише для турнірів
   tournamentConfigOnlyForTournament: Налаштування турніру можна вказувати лише для турнірів
   eventIsNotTournament: 'Подія "{{eventName}}" не є турніром'
-  unknownEventCategory: 'Невідома категорія події: "{{category}}"'
+  unknownEventTag: 'Невідомий тег події: "{{tag}}"'
   cannotUnrateCurrentSeason: Неможливо скасувати рейтинговий статус для активного рейтингового сезону клубу
   tournamentMisconfigured: Цей турнір був неправильно сконфігурований. Будь ласка, звʼяжіться з підтримкою
   tournamentTotalRoundsLessThanCurrentRound: Кількість раундів ({{totalRounds}}) не може бути меншою за поточний раунд ({{currentRound}})

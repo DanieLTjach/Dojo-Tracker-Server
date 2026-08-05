@@ -779,7 +779,7 @@ describe('Database Migrations', () => {
         db.close();
     });
 
-    test('migration 14 adds isRated and category to event and seeds eventCategory', () => {
+    test('migration 14 adds isRated to event and creates the event tag tables', () => {
         const db = createMigratedDb(13);
 
         db.prepare(`
@@ -793,17 +793,16 @@ describe('Database Migrations', () => {
         runMigration(db, 14);
         db.pragma('foreign_keys = ON');
 
-        const categories = db.prepare('SELECT category, description FROM eventCategory ORDER BY category')
-            .all() as Array<{
-                category: string;
-                description: string;
-            }>;
-        expect(categories).toEqual([
-            { category: 'CLUB_TOURNAMENT', description: 'Internal club tournament' },
-            { category: 'EMA', description: 'Official European Mahjong Association tournament' },
-            { category: 'FRIENDLY', description: 'Casual or non-competitive event' },
-            { category: 'LEAGUE', description: 'Club league / season play' },
-            { category: 'ONLINE', description: 'Online tournament or season' },
+        const tags = db.prepare('SELECT tag, description FROM eventTag ORDER BY tag').all() as Array<{
+            tag: string;
+            description: string;
+        }>;
+        expect(tags).toEqual([
+            { tag: 'CLUB_TOURNAMENT', description: 'Internal club tournament' },
+            { tag: 'EMA', description: 'Official European Mahjong Association tournament' },
+            { tag: 'FRIENDLY', description: 'Casual or non-competitive event' },
+            { tag: 'LEAGUE', description: 'Club league / season play' },
+            { tag: 'ONLINE', description: 'Played online' },
         ]);
 
         const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{
@@ -820,12 +819,30 @@ describe('Database Migrations', () => {
             dflt_value: 'true',
         });
 
-        expect(eventColumns.find(c => c.name === 'category')).toMatchObject({
-            name: 'category',
-            type: 'TEXT',
-            notnull: 0,
-            dflt_value: null,
-        });
+        expect(eventColumns.find(c => c.name === 'category')).toBeUndefined();
+
+        // The join table is what makes tags many-to-many: the same event carries two.
+        db.prepare(`
+            INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
+            VALUES
+                (9903, 'EMA', '2026-01-01T00:00:00.000Z', 0),
+                (9903, 'ONLINE', '2026-01-01T00:00:00.000Z', 0)
+        `).run();
+
+        const assignedTags = db.prepare('SELECT tag FROM eventToTag WHERE eventId = 9903 ORDER BY tag')
+            .all() as Array<{ tag: string }>;
+        expect(assignedTags).toEqual([{ tag: 'EMA' }, { tag: 'ONLINE' }]);
+
+        expect(() =>
+            db.prepare(`
+                INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
+                VALUES (9903, 'EMA', '2026-01-01T00:00:00.000Z', 0)
+            `).run()
+        ).toThrow();
+
+        const tagIndex = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?`)
+            .get('idx_eventToTag_tag');
+        expect(tagIndex).toBeDefined();
 
         const unratedEvents = db.prepare('SELECT id, name, isRated FROM event WHERE isRated = 0 ORDER BY id')
             .all() as Array<{ id: number, name: string, isRated: number }>;

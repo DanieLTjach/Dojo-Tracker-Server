@@ -285,9 +285,9 @@ export class MinParticipantsMustMatchTeamConfigError extends BadRequestError {
     }
 }
 
-export class UnknownEventCategoryError extends BadRequestError {
-    constructor(category: string) {
-        super('unknownEventCategory', { category });
+export class UnknownEventTagError extends BadRequestError {
+    constructor(tag: string) {
+        super('unknownEventTag', { tag });
     }
 }
 

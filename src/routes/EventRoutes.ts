@@ -25,12 +25,12 @@ const teamController = new TeamController();
 router.get('/', requireAuth, withTransaction((req, res) => eventController.getAllEvents(req, res)));
 
 /**
- * GET /api/events/categories
- * Get available event categories
+ * GET /api/events/tags
+ * Get available event tags
  *
  * Authentication: Required
  */
-router.get('/categories', requireAuth, withTransaction((req, res) => eventController.getEventCategories(req, res)));
+router.get('/tags', requireAuth, withTransaction((req, res) => eventController.getEventTags(req, res)));
 
 /**
  * GET /api/events/:eventId

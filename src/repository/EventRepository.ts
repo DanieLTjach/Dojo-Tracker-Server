@@ -1,6 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
-import type { Event, EventCategory, EventFormat, EventType } from '../model/EventModels.ts';
+import type { Event, EventFormat, EventTag, EventType } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseEventFormat, parseEventType, parseTournamentStatus, parseUmaTieBreak } from '../util/EnumUtil.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
@@ -33,7 +33,10 @@ export class EventRepository {
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
                 t.modifiedBy as tournament_modifiedBy,
-                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount,
+                (SELECT GROUP_CONCAT(t.tag) FROM (
+                    SELECT tag FROM eventToTag WHERE eventId = e.id ORDER BY tag ASC
+                ) t) as tags
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
@@ -68,7 +71,10 @@ export class EventRepository {
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
                 t.modifiedBy as tournament_modifiedBy,
-                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount,
+                (SELECT GROUP_CONCAT(t.tag) FROM (
+                    SELECT tag FROM eventToTag WHERE eventId = e.id ORDER BY tag ASC
+                ) t) as tags
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
@@ -104,7 +110,10 @@ export class EventRepository {
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
                 t.modifiedBy as tournament_modifiedBy,
-                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount,
+                (SELECT GROUP_CONCAT(t.tag) FROM (
+                    SELECT tag FROM eventToTag WHERE eventId = e.id ORDER BY tag ASC
+                ) t) as tags
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
@@ -123,7 +132,6 @@ export class EventRepository {
         type: string;
         format: string;
         isRated: number;
-        category: string | null;
         gameRules: number;
         clubId: number | null;
         dateFrom: string | null;
@@ -138,8 +146,8 @@ export class EventRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, format, isRated, category, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :format, :isRated, :category, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, format, isRated, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :format, :isRated, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -148,7 +156,6 @@ export class EventRepository {
         const result = this.createEventStatement().get({
             ...params,
             isRated: booleanToInteger(params.isRated ?? true),
-            category: params.category ?? null,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             info: serializeEventInfo(params.info),
@@ -167,7 +174,6 @@ export class EventRepository {
         type: string;
         format: string;
         isRated: number;
-        category: string | null;
         gameRules: number;
         clubId: number | null;
         dateFrom: string | null;
@@ -187,7 +193,6 @@ export class EventRepository {
                 type = :type,
                 format = :format,
                 isRated = :isRated,
-                category = :category,
                 gameRules = :gameRules,
                 clubId = :clubId,
                 dateFrom = :dateFrom,
@@ -207,7 +212,6 @@ export class EventRepository {
         this.updateEventStatement().run({
             ...params,
             isRated: booleanToInteger(params.isRated),
-            category: params.category ?? null,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             info: serializeEventInfo(params.info),
@@ -266,14 +270,35 @@ export class EventRepository {
         return this.countGamesByGameRulesIdStatement().get({ gameRulesId })!.count;
     }
 
-    categoryExists(category: string): boolean {
-        const result = dbManager.db.prepare(`SELECT 1 FROM eventCategory WHERE category = ?`).get(category);
+    tagExists(tag: string): boolean {
+        const result = dbManager.db.prepare(`SELECT 1 FROM eventTag WHERE tag = ?`).get(tag);
         return result !== undefined;
     }
 
-    findAllCategories(): EventCategory[] {
-        return dbManager.db.prepare(`SELECT category, description FROM eventCategory ORDER BY category ASC`)
-            .all() as EventCategory[];
+    findAllTags(): EventTag[] {
+        return dbManager.db.prepare(`SELECT tag, description FROM eventTag ORDER BY tag ASC`).all() as EventTag[];
+    }
+
+    findTagsByEventId(eventId: number): string[] {
+        const rows = dbManager.db.prepare(`SELECT tag FROM eventToTag WHERE eventId = ? ORDER BY tag ASC`)
+            .all(eventId) as { tag: string }[];
+        return rows.map(row => row.tag);
+    }
+
+    /**
+     * Replaces an event's tags wholesale. Runs inside the ambient request transaction,
+     * so the delete and the inserts commit together.
+     */
+    setEventTags(eventId: number, tags: string[], modifiedBy: number, createdAt: Date): void {
+        dbManager.db.prepare(`DELETE FROM eventToTag WHERE eventId = ?`).run(eventId);
+
+        const insert = dbManager.db.prepare(`
+            INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
+            VALUES (:eventId, :tag, :createdAt, :modifiedBy)
+        `);
+        for (const tag of new Set(tags)) {
+            insert.run({ eventId, tag, createdAt: createdAt.toISOString(), modifiedBy });
+        }
     }
 }
 
@@ -283,7 +308,6 @@ export interface EventCreateParams {
     type: EventType;
     format: EventFormat;
     isRated?: boolean;
-    category?: string | null;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -305,7 +329,6 @@ export interface EventUpdateParams {
     type: EventType;
     format: EventFormat;
     isRated: boolean;
-    category?: string | null;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -329,7 +352,7 @@ interface EventWithGameRulesDBEntity {
     clubId: number | null;
     isCurrentRating: number;
     isRated: number;
-    category: string | null;
+    tags: string | null;
     startingRating: number;
     minimumGamesForRating: number;
     dateFrom: string | null;
@@ -421,7 +444,7 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         clubId: dbEntity.clubId,
         isCurrentRating: Boolean(dbEntity.isCurrentRating),
         isRated: Boolean(dbEntity.isRated),
-        category: dbEntity.category ?? null,
+        tags: dbEntity.tags ? dbEntity.tags.split(',') : [],
         startingRating: dbEntity.startingRating,
         minimumGamesForRating: dbEntity.minimumGamesForRating,
         gameRules: {

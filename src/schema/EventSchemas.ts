@@ -110,7 +110,7 @@ const eventSchema = z.object({
     // would silently re-rate an event whose body omits the field. Create defaults to
     // true in EventService instead.
     isRated: z.boolean().optional(),
-    category: z.string().nullable().optional(),
+    tags: z.array(z.string().min(1)).optional(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer'),
@@ -199,7 +199,7 @@ export const eventPatchBodySchema = z.strictObject({
     format: eventFormatEnum.optional(),
     isCurrentRating: z.boolean().nullish(),
     isRated: z.boolean().optional(),
-    category: z.string().nullable().optional(),
+    tags: z.array(z.string().min(1)).optional(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer').optional(),
