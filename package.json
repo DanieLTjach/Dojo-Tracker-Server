@@ -32,6 +32,7 @@
         "js-yaml": "^5.1.0",
         "jsonwebtoken": "^9.0.3",
         "node-cron": "^4.2.1",
+        "openskill": "^5.0.1",
         "qrcode": "^1.5.4",
         "telegraf": "^4.16.3",
         "zod": "^4.1.13"
