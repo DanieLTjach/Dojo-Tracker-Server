@@ -106,7 +106,10 @@ const eventSchema = z.object({
     type: eventTypeEnum,
     format: eventFormatEnum.default(EventFormat.INDIVIDUAL),
     isCurrentRating: z.boolean().nullish(),
-    isRated: z.boolean().default(true),
+    // Not `.default(true)`: this schema also backs PUT, where a materialized default
+    // would silently re-rate an event whose body omits the field. Create defaults to
+    // true in EventService instead.
+    isRated: z.boolean().optional(),
     category: z.string().nullable().optional(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),

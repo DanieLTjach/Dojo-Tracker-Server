@@ -206,7 +206,7 @@ export class EventRepository {
     updateEvent(params: EventUpdateParams): void {
         this.updateEventStatement().run({
             ...params,
-            isRated: booleanToInteger(params.isRated ?? true),
+            isRated: booleanToInteger(params.isRated),
             category: params.category ?? null,
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
@@ -304,7 +304,7 @@ export interface EventUpdateParams {
     description: string | null;
     type: EventType;
     format: EventFormat;
-    isRated?: boolean;
+    isRated: boolean;
     category?: string | null;
     gameRules: number;
     clubId: number | null;

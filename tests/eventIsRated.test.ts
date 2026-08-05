@@ -150,6 +150,87 @@ describe('Event isRated Flag Endpoints', () => {
         expect(patchRes.body.isRated).toBe(false);
     });
 
+    test('PUT /api/events/:eventId should preserve isRated=false when the body omits it', async () => {
+        const createRes = await request(app)
+            .post('/api/events')
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Omitted IsRated Event',
+                type: 'SEASON',
+                isRated: false,
+                gameRulesId: 1,
+                clubId: 1,
+            });
+
+        expect(createRes.status).toBe(201);
+        expect(createRes.body.isRated).toBe(false);
+
+        const updateRes = await request(app)
+            .put(`/api/events/${createRes.body.id}`)
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Omitted IsRated Event Renamed',
+                type: 'SEASON',
+                gameRulesId: 1,
+                clubId: 1,
+            });
+
+        expect(updateRes.status).toBe(200);
+        expect(updateRes.body.isRated).toBe(false);
+    });
+
+    test('PATCH /api/events/:eventId should preserve isRated=false when patching another field', async () => {
+        const createRes = await request(app)
+            .post('/api/events')
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Patch Unrelated Field Event',
+                type: 'SEASON',
+                isRated: false,
+                gameRulesId: 1,
+                clubId: 1,
+            });
+
+        expect(createRes.status).toBe(201);
+
+        const patchRes = await request(app)
+            .patch(`/api/events/${createRes.body.id}`)
+            .set('Authorization', adminAuthHeader)
+            .send({ description: 'unrelated change' });
+
+        expect(patchRes.status).toBe(200);
+        expect(patchRes.body.isRated).toBe(false);
+    });
+
+    test('PUT /api/events/:eventId should preserve category when the body omits it', async () => {
+        const createRes = await request(app)
+            .post('/api/events')
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Omitted Category Event',
+                type: 'SEASON',
+                category: 'EMA',
+                gameRulesId: 1,
+                clubId: 1,
+            });
+
+        expect(createRes.status).toBe(201);
+        expect(createRes.body.category).toBe('EMA');
+
+        const updateRes = await request(app)
+            .put(`/api/events/${createRes.body.id}`)
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Omitted Category Event Renamed',
+                type: 'SEASON',
+                gameRulesId: 1,
+                clubId: 1,
+            });
+
+        expect(updateRes.status).toBe(200);
+        expect(updateRes.body.category).toBe('EMA');
+    });
+
     test('PUT /api/events/:eventId should reject non-moderator/non-owner with 403', async () => {
         const response = await request(app)
             .put('/api/events/1')

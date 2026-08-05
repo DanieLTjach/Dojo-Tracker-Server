@@ -194,11 +194,11 @@ export class EventService {
             }
         }
 
-        if (existingEvent.clubId !== null && data.isRated !== undefined && data.isRated !== existingEvent.isRated) {
+        if (existingEvent.clubId !== null && newIsRated !== existingEvent.isRated) {
             const topics = this.clubRepository.getClubTelegramTopics(existingEvent.clubId);
             if (topics?.clubLogs) {
                 LogService.logInfo(
-                    `Event "${existingEvent.name}" (id ${existingEvent.id}) isRated: ${existingEvent.isRated} → ${data.isRated} by user ${modifiedBy}`,
+                    `Event "${existingEvent.name}" (id ${existingEvent.id}) isRated: ${existingEvent.isRated} → ${newIsRated} by user ${modifiedBy}`,
                     topics.clubLogs
                 );
             }
