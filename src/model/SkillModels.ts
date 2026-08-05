@@ -2,7 +2,8 @@ export const DEFAULT_MU = 25;
 export const DEFAULT_SIGMA = 25 / 3;
 export const SKILL_TAU = 25 / 3 / 100;
 export const SKILL_DISPLAY_BASE = 1500;
-export const SKILL_DISPLAY_SCALE = 60;
+// Tuned against real club data so ranked players land in ~1700-2100.
+export const SKILL_DISPLAY_SCALE = 22;
 export const INACTIVITY_GRACE_DAYS = 30;
 export const INACTIVITY_SIGMA_RATE = 0.0015;
 export const MAX_SIGMA = DEFAULT_SIGMA;
