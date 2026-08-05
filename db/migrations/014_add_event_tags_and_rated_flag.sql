@@ -1,16 +1,16 @@
 ALTER TABLE event ADD COLUMN isRated BOOL NOT NULL DEFAULT true;
 
+-- No description column: the frontend renders translated labels from its own i18n
+-- catalog, so a copy here would only drift out of sync with it.
 CREATE TABLE eventTag (
-    tag TEXT PRIMARY KEY,
-    description TEXT
+    tag TEXT PRIMARY KEY
 );
 
-INSERT INTO eventTag (tag, description) VALUES
-    ('EMA', 'Official European Mahjong Association tournament'),
-    ('CLUB_TOURNAMENT', 'Internal club tournament'),
-    ('LEAGUE', 'Club league / season play'),
-    ('FRIENDLY', 'Casual or non-competitive event'),
-    ('ONLINE', 'Played online');
+INSERT INTO eventTag (tag) VALUES
+    ('EMA'),
+    ('CLUB_TOURNAMENT'),
+    ('LEAGUE'),
+    ('ONLINE');
 
 CREATE TABLE eventToTag (
     eventId INTEGER NOT NULL REFERENCES event(id),

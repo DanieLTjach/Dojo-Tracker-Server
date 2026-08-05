@@ -36,7 +36,7 @@ import {
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
-import type { Event, EventConfig, EventInfo, EventTag, EventType } from '../model/EventModels.ts';
+import type { Event, EventConfig, EventInfo, EventType } from '../model/EventModels.ts';
 import { EventFormat } from '../model/EventModels.ts';
 import type { Game } from '../model/GameModels.ts';
 import { ClubRole } from '../model/ClubModels.ts';
@@ -108,7 +108,7 @@ export class EventService {
         }
     }
 
-    findAllTags(): EventTag[] {
+    findAllTags(): string[] {
         return this.eventRepository.findAllTags();
     }
 

@@ -141,11 +141,6 @@ export function resolvePlayerNameDisplay(config: EventConfig | null, eventType: 
     return eventType === EventType.TOURNAMENT ? PlayerNameDisplay.REAL_NAME : PlayerNameDisplay.NICKNAME;
 }
 
-export interface EventTag {
-    tag: string;
-    description: string | null;
-}
-
 export interface Event {
     id: number;
     name: string;

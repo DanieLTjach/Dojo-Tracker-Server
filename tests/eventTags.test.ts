@@ -37,10 +37,23 @@ describe('Event Tag Endpoints', () => {
             .set('Authorization', adminAuthHeader);
 
         expect(response.status).toBe(200);
-        expect(Array.isArray(response.body)).toBe(true);
+        expect(response.body).toEqual(['CLUB_TOURNAMENT', 'EMA', 'LEAGUE', 'ONLINE']);
+    });
 
-        const tags = response.body.map((t: { tag: string }) => t.tag);
-        expect(tags).toEqual(['CLUB_TOURNAMENT', 'EMA', 'FRIENDLY', 'LEAGUE', 'ONLINE']);
+    test('FRIENDLY is not a tag — non-rated events are expressed with isRated', async () => {
+        const response = await request(app)
+            .post('/api/events')
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Friendly Tag Event',
+                type: 'SEASON',
+                tags: ['FRIENDLY'],
+                gameRulesId: 1,
+                clubId: 1,
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.errorCode).toBe('unknownEventTag');
     });
 
     test('POST /api/events should allow setting a single tag', async () => {
@@ -135,7 +148,7 @@ describe('Event Tag Endpoints', () => {
             .send({
                 name: 'Club League 2026',
                 type: 'SEASON',
-                tags: ['FRIENDLY'],
+                tags: ['ONLINE'],
                 gameRulesId: 1,
                 clubId: 1,
             });
@@ -222,7 +235,7 @@ describe('Event Tag Endpoints', () => {
             .send({
                 name: 'Patch Tags Event',
                 type: 'SEASON',
-                tags: ['FRIENDLY'],
+                tags: ['ONLINE'],
                 gameRulesId: 1,
                 clubId: 1,
             });

@@ -793,17 +793,17 @@ describe('Database Migrations', () => {
         runMigration(db, 14);
         db.pragma('foreign_keys = ON');
 
-        const tags = db.prepare('SELECT tag, description FROM eventTag ORDER BY tag').all() as Array<{
-            tag: string;
-            description: string;
-        }>;
+        const tags = db.prepare('SELECT tag FROM eventTag ORDER BY tag').all() as Array<{ tag: string }>;
         expect(tags).toEqual([
-            { tag: 'CLUB_TOURNAMENT', description: 'Internal club tournament' },
-            { tag: 'EMA', description: 'Official European Mahjong Association tournament' },
-            { tag: 'FRIENDLY', description: 'Casual or non-competitive event' },
-            { tag: 'LEAGUE', description: 'Club league / season play' },
-            { tag: 'ONLINE', description: 'Played online' },
+            { tag: 'CLUB_TOURNAMENT' },
+            { tag: 'EMA' },
+            { tag: 'LEAGUE' },
+            { tag: 'ONLINE' },
         ]);
+
+        // Labels are translated on the frontend, so the table carries no description column.
+        const tagColumns = db.prepare('PRAGMA table_info(eventTag)').all() as Array<{ name: string }>;
+        expect(tagColumns.map(c => c.name)).toEqual(['tag']);
 
         const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{
             name: string;

@@ -1,6 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
-import type { Event, EventFormat, EventTag, EventType } from '../model/EventModels.ts';
+import type { Event, EventFormat, EventType } from '../model/EventModels.ts';
 import { parseUma } from '../util/UmaUtil.ts';
 import { parseEventFormat, parseEventType, parseTournamentStatus, parseUmaTieBreak } from '../util/EnumUtil.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
@@ -275,8 +275,9 @@ export class EventRepository {
         return result !== undefined;
     }
 
-    findAllTags(): EventTag[] {
-        return dbManager.db.prepare(`SELECT tag, description FROM eventTag ORDER BY tag ASC`).all() as EventTag[];
+    findAllTags(): string[] {
+        const rows = dbManager.db.prepare(`SELECT tag FROM eventTag ORDER BY tag ASC`).all() as { tag: string }[];
+        return rows.map(row => row.tag);
     }
 
     findTagsByEventId(eventId: number): string[] {
