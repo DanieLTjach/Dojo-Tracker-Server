@@ -193,6 +193,8 @@ export const eventPatchBodySchema = z.strictObject({
     type: eventTypeEnum.optional(),
     format: eventFormatEnum.optional(),
     isCurrentRating: z.boolean().nullish(),
+    isRated: z.boolean().optional(),
+    category: z.string().nullable().optional(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer').optional(),
