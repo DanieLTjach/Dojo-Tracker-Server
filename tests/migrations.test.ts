@@ -778,4 +778,71 @@ describe('Database Migrations', () => {
 
         db.close();
     });
+
+    test('migration 14 adds isRated and category to event and seeds eventCategory', () => {
+        const db = createMigratedDb(13);
+
+        db.prepare(`
+            INSERT INTO event (id, name, type, gameRules, createdAt, modifiedAt, modifiedBy)
+            VALUES
+                (9901, 'Нерейтинг 2026', 'SEASON', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+                (9902, 'Тестовий Турнір', 'TOURNAMENT', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+                (9903, 'Regular Season', 'SEASON', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
+        `).run();
+
+        runMigration(db, 14);
+        db.pragma('foreign_keys = ON');
+
+        const categories = db.prepare('SELECT category, description FROM eventCategory ORDER BY category')
+            .all() as Array<{
+                category: string;
+                description: string;
+            }>;
+        expect(categories).toEqual([
+            { category: 'CLUB_TOURNAMENT', description: 'Internal club tournament' },
+            { category: 'EMA', description: 'Official European Mahjong Association tournament' },
+            { category: 'FRIENDLY', description: 'Casual or non-competitive event' },
+            { category: 'LEAGUE', description: 'Club league / season play' },
+        ]);
+
+        const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{
+            name: string;
+            type: string;
+            notnull: number;
+            dflt_value: string | null;
+        }>;
+
+        expect(eventColumns.find(c => c.name === 'isRated')).toMatchObject({
+            name: 'isRated',
+            type: 'BOOL',
+            notnull: 1,
+            dflt_value: 'true',
+        });
+
+        expect(eventColumns.find(c => c.name === 'category')).toMatchObject({
+            name: 'category',
+            type: 'TEXT',
+            notnull: 0,
+            dflt_value: null,
+        });
+
+        const unratedEvents = db.prepare('SELECT id, name, isRated FROM event WHERE isRated = 0 ORDER BY id')
+            .all() as Array<{ id: number, name: string, isRated: number }>;
+        expect(unratedEvents).toEqual([
+            { id: 9901, name: 'Нерейтинг 2026', isRated: 0 },
+            { id: 9902, name: 'Тестовий Турнір', isRated: 0 },
+        ]);
+
+        const ratedEvent = db.prepare('SELECT id, name, isRated FROM event WHERE id = 9903').get() as {
+            id: number;
+            name: string;
+            isRated: number;
+        };
+        expect(ratedEvent.isRated).toBe(1);
+
+        const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+        expect(foreignKeyViolations).toEqual([]);
+
+        db.close();
+    });
 });
