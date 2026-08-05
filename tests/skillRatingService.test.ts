@@ -144,6 +144,22 @@ describe('SkillRatingService', () => {
             expect(r1Second!.sigma).toBeCloseTo(r1First!.sigma, 5);
             expect(r1Second!.gamesPlayed).toBe(1);
         });
+
+        it('should mark track dirty when applyFinishedGame encounters an error', () => {
+            const gameDate = new Date('2025-01-10T12:00:00.000Z');
+            const gameId = gameRepo.createGame(EVENT_ID, 0, gameDate, null, null);
+            gameRepo.addGamePlayer(gameId, USER_1, 40000, 'EAST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_2, 30000, 'SOUTH', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_3, 20000, 'WEST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_4, 10000, 'NORTH', 0, false, 0);
+
+            jest.spyOn(skillRepo, 'insertSkillRatingGame').mockImplementationOnce(() => {
+                throw new Error('Database error during insert');
+            });
+
+            service.applyFinishedGame(gameId);
+            expect(skillRepo.isTrackDirty(CLUB_ID, 4)).toBe(true);
+        });
     });
 
     describe('revertFinishedGame', () => {

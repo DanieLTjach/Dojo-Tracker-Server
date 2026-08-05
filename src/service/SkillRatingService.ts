@@ -306,6 +306,9 @@ export class SkillRatingService {
     }
 
     applyFinishedGame(gameId: number, now: Date = new Date()): void {
+        let targetClubId: number | undefined;
+        let targetGameSize: number | undefined;
+
         try {
             const game = this.gameRepository.findGameById(gameId);
             if (!game || game.status !== 'FINISHED') {
@@ -318,6 +321,8 @@ export class SkillRatingService {
             }
 
             const clubId = event.clubId;
+            targetClubId = clubId;
+
             const config = this.getOrCreateConfig(clubId);
             if (!config.isEnabled) {
                 return;
@@ -327,6 +332,7 @@ export class SkillRatingService {
             if (gameSize !== 3 && gameSize !== 4) {
                 return;
             }
+            targetGameSize = gameSize;
 
             // Idempotency: if outcome rows exist for this game, revert first
             const existingOutcomes = this.skillRatingRepository.findSkillRatingGamesByGameId(gameId);
@@ -403,19 +409,18 @@ export class SkillRatingService {
                 'SkillRatingService.applyFinishedGame failed',
                 error instanceof Error ? error : new Error(String(error))
             );
-            // Mark track dirty so the failure is visible and recoverable
-            const game = this.gameRepository.findGameById(gameId);
-            if (game) {
-                const event = this.eventRepository.findEventById(game.eventId);
-                if (event?.clubId !== null && event?.clubId !== undefined) {
-                    const gameSize = event.gameRules?.numberOfPlayers ?? 4;
-                    if (gameSize === 3 || gameSize === 4) {
-                        this.skillRatingRepository.markTrackDirty(
-                            event.clubId,
-                            gameSize,
-                            `applyFinishedGame error: ${error}`
-                        );
-                    }
+            // Mark track dirty if clubId and valid gameSize were resolved
+            if (targetClubId !== undefined && targetGameSize !== undefined) {
+                try {
+                    this.skillRatingRepository.markTrackDirty(
+                        targetClubId,
+                        targetGameSize,
+                        `applyFinishedGame failed for game ${gameId}: ${
+                            error instanceof Error ? error.message : String(error)
+                        }`
+                    );
+                } catch {
+                    // Ignore secondary error
                 }
             }
         }
