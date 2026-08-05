@@ -229,6 +229,26 @@ export class SkillRatingService {
         return { ranked, provisional };
     }
 
+    private calculateUserRankInTrack(
+        clubId: number,
+        gameSize: number,
+        targetSkill: number,
+        targetGamesPlayed: number,
+        threshold: number,
+        now: Date
+    ): number {
+        const rows = this.skillRatingRepository.findNonProvisionalTrackRatings(clubId, gameSize, threshold);
+        let strictlyBetterCount = 0;
+        for (const row of rows) {
+            const effSigma = calculateEffectiveSigma(row.sigma, row.lastRatedGameAt, now);
+            const skill = calculateConservativeSkill(row.mu, effSigma);
+            if (skill > targetSkill || (skill === targetSkill && row.gamesPlayed > targetGamesPlayed)) {
+                strictlyBetterCount++;
+            }
+        }
+        return strictlyBetterCount + 1;
+    }
+
     getUserSkillAcrossClubs(userId: number, now: Date = new Date()): UserSkillProfileResponse {
         const rows = this.skillRatingRepository.findUserSkillRatings(userId);
 
@@ -266,10 +286,14 @@ export class SkillRatingService {
                 const resolved = this.resolve(row, config.provisionalGameThreshold, isDirty, now);
 
                 if (!resolved.isProvisional) {
-                    // Compute place from club leaderboard
-                    const leaderboard = this.getClubLeaderboard(clubId, row.gameSize, now);
-                    const found = leaderboard.entries.find(e => e.userId === userId);
-                    resolved.place = found?.place ?? null;
+                    resolved.place = this.calculateUserRankInTrack(
+                        clubId,
+                        row.gameSize,
+                        resolved.skill,
+                        row.gamesPlayed,
+                        config.provisionalGameThreshold,
+                        now
+                    );
                 } else {
                     resolved.place = null;
                 }

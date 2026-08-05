@@ -103,6 +103,21 @@ export class SkillRatingRepository {
         return this.findClubSkillRatingsWithUsersStatement().all({ clubId, gameSize });
     }
 
+    private findNonProvisionalTrackRatingsStatement(): Statement<
+        { clubId: number, gameSize: number, threshold: number },
+        SkillRatingDBEntity
+    > {
+        return dbManager.db.prepare(`
+            SELECT * FROM skillRating
+            WHERE clubId = :clubId AND gameSize = :gameSize AND gamesPlayed >= :threshold`);
+    }
+
+    findNonProvisionalTrackRatings(clubId: number, gameSize: number, threshold: number): SkillRating[] {
+        return this.findNonProvisionalTrackRatingsStatement().all({ clubId, gameSize, threshold }).map(
+            skillRatingFromDBEntity
+        );
+    }
+
     private insertSkillRatingGameStatement(): Statement<{
         gameId: number;
         userId: number;
