@@ -7,12 +7,14 @@
 //   player{1..N}_username, player{1..N}_points, player{1..N}_startPlace, player{1..N}_chombo,
 //   [createdAt], [tournamentRound], [tournamentTable]
 //
-// Users are matched by their telegramUsername (including the leading '@').
+// Users are matched by their telegramUsername (including the leading '@') by default. Pass
+// --match-by name to match on the user's display name instead — needed for historical imports
+// whose players have no telegramUsername on record.
 
 import fs from 'node:fs';
 import { parseArgs } from 'node:util';
 import { dbManager } from '../src/db/dbInit.ts';
-import { ImportService } from '../src/service/ImportService.ts';
+import { ImportService, IMPORT_MATCH_BY_VALUES, type ImportMatchBy } from '../src/service/ImportService.ts';
 import LogService from '../src/service/LogService.ts';
 
 const { values } = parseArgs({
@@ -20,6 +22,7 @@ const { values } = parseArgs({
         file: { type: 'string' },
         eventId: { type: 'string' },
         importedBy: { type: 'string', default: '0' },
+        'match-by': { type: 'string', default: 'username' },
         'dry-run': { type: 'boolean', default: false },
     },
 });
@@ -27,17 +30,24 @@ const { values } = parseArgs({
 const filePath = values.file;
 const eventId = Number(values.eventId);
 const importedBy = Number(values.importedBy);
+const matchBy = values['match-by'] as ImportMatchBy;
 const dryRun = values['dry-run'] ?? false;
 
+const USAGE = 'Usage: npx tsx scripts/import-games.ts --file <csv> --eventId <id> ' +
+    `[--importedBy <userId>] [--match-by ${IMPORT_MATCH_BY_VALUES.join('|')}] [--dry-run]`;
+
 if (!filePath || !fs.existsSync(filePath)) {
-    console.error(
-        'Usage: npx tsx scripts/import-games.ts --file <csv> --eventId <id> [--importedBy <userId>] [--dry-run]'
-    );
+    console.error(USAGE);
     console.error('Error: --file is required and must exist');
     process.exit(1);
 }
 if (!eventId || isNaN(eventId)) {
     console.error('Error: --eventId is required and must be a number');
+    process.exit(1);
+}
+if (!IMPORT_MATCH_BY_VALUES.includes(matchBy)) {
+    console.error(USAGE);
+    console.error(`Error: --match-by must be one of: ${IMPORT_MATCH_BY_VALUES.join(', ')}`);
     process.exit(1);
 }
 
@@ -53,11 +63,13 @@ if (!event) {
 const csvContent = fs.readFileSync(filePath, 'utf-8');
 const importService = new ImportService();
 
-console.log(`Importing into event #${event.id} "${event.name}"${dryRun ? ' (DRY RUN)' : ''}...`);
+console.log(
+    `Importing into event #${event.id} "${event.name}" (matching users by ${matchBy})${dryRun ? ' (DRY RUN)' : ''}...`
+);
 
 const result = dryRun
-    ? importService.validateGames(eventId, csvContent)
-    : importService.importGames(eventId, csvContent, importedBy);
+    ? importService.validateGames(eventId, csvContent, matchBy)
+    : importService.importGames(eventId, csvContent, importedBy, matchBy);
 
 if (dryRun) {
     console.log(`Validated CSV (no games written).`);
