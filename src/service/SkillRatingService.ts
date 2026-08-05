@@ -422,6 +422,9 @@ export class SkillRatingService {
     }
 
     revertFinishedGame(gameId: number): void {
+        let targetClubId: number | undefined;
+        let targetGameSize: number | undefined;
+
         try {
             const outcomeRows = this.skillRatingRepository.findSkillRatingGamesByGameId(gameId);
             if (outcomeRows.length === 0) {
@@ -431,6 +434,8 @@ export class SkillRatingService {
             const clubId = outcomeRows[0]!.clubId;
             const gameSize = outcomeRows[0]!.gameSize;
             const playedAt = outcomeRows[0]!.playedAt;
+            targetClubId = clubId;
+            targetGameSize = gameSize;
 
             const isNewest = this.skillRatingRepository.isNewestGameInTrack(
                 gameId,
@@ -481,6 +486,19 @@ export class SkillRatingService {
                 'SkillRatingService.revertFinishedGame failed',
                 error instanceof Error ? error : new Error(String(error))
             );
+            if (targetClubId !== undefined && targetGameSize !== undefined) {
+                try {
+                    this.skillRatingRepository.markTrackDirty(
+                        targetClubId,
+                        targetGameSize,
+                        `revertFinishedGame failed for game ${gameId}: ${
+                            error instanceof Error ? error.message : String(error)
+                        }`
+                    );
+                } catch {
+                    // Ignore secondary error
+                }
+            }
         }
     }
 

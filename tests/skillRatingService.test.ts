@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createCustomEvent } from './testHelpers.ts';
@@ -26,10 +27,10 @@ describe('SkillRatingService', () => {
         cleanupTestDatabase();
         dbManager.reinitDB();
 
-        service = new SkillRatingService();
         skillRepo = new SkillRatingRepository();
         gameRepo = new GameRepository();
         regRepo = new EventRegistrationRepository();
+        service = new SkillRatingService(skillRepo, undefined, undefined, gameRepo, regRepo);
 
         // Create users
         const now = '2025-01-01T00:00:00.000Z';
@@ -208,6 +209,23 @@ describe('SkillRatingService', () => {
             const r1AfterRecompute = skillRepo.findSkillRating(CLUB_ID, USER_1, 4);
             expect(r1!.mu).toBeCloseTo(r1AfterRecompute!.mu, 6);
             expect(r1!.sigma).toBeCloseTo(r1AfterRecompute!.sigma, 6);
+        });
+
+        it('should mark track dirty when revertFinishedGame encounters an error', () => {
+            const gameDate = new Date('2025-01-10T12:00:00.000Z');
+            const gameId = gameRepo.createGame(EVENT_ID, 0, gameDate, null, null);
+            gameRepo.addGamePlayer(gameId, USER_1, 40000, 'EAST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_2, 30000, 'SOUTH', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_3, 20000, 'WEST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_4, 10000, 'NORTH', 0, false, 0);
+            service.applyFinishedGame(gameId);
+
+            jest.spyOn(skillRepo, 'deleteSkillRatingGamesByGameId').mockImplementationOnce(() => {
+                throw new Error('Database error during delete');
+            });
+
+            service.revertFinishedGame(gameId);
+            expect(skillRepo.isTrackDirty(CLUB_ID, 4)).toBe(true);
         });
     });
 
