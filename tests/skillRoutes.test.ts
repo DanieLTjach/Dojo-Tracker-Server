@@ -230,18 +230,27 @@ describe('Skill Routes API', () => {
             const res = await request(app)
                 .patch(`/api/clubs/${CLUB_1}/skill/config`)
                 .set('Authorization', ownerAuthHeader)
-                .send({ provisionalGameThreshold: 15, isEnabled: false });
+                .send({ provisionalGameThreshold: 10, isEnabled: false });
 
             expect(res.status).toBe(200);
-            expect(res.body.provisionalGameThreshold).toBe(15);
+            expect(res.body.provisionalGameThreshold).toBe(10);
             expect(res.body.isEnabled).toBe(false);
 
             // Verify via GET
             const check = await request(app)
                 .get(`/api/clubs/${CLUB_1}/skill/config`)
                 .set('Authorization', regularAuthHeader);
-            expect(check.body.provisionalGameThreshold).toBe(15);
+            expect(check.body.provisionalGameThreshold).toBe(10);
             expect(check.body.isEnabled).toBe(false);
+        });
+
+        it('PATCH /api/clubs/:clubId/skill/config rejects a threshold not a multiple of 10 (400)', async () => {
+            const res = await request(app)
+                .patch(`/api/clubs/${CLUB_1}/skill/config`)
+                .set('Authorization', ownerAuthHeader)
+                .send({ provisionalGameThreshold: 15 });
+
+            expect(res.status).toBe(400);
         });
 
         it('PUT /api/clubs/:clubId/skill/config updates config for OWNER (200)', async () => {

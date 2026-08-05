@@ -8,6 +8,8 @@ export const INACTIVITY_GRACE_DAYS = 30;
 export const INACTIVITY_SIGMA_RATE = 0.0015;
 export const MAX_SIGMA = DEFAULT_SIGMA;
 export const DEFAULT_PROVISIONAL_GAME_THRESHOLD = 30;
+/** Clubs tune the threshold in steps of 10 (10, 20, 30, ...). */
+export const PROVISIONAL_GAME_THRESHOLD_STEP = 10;
 
 export interface SkillRating {
     clubId: number;

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { clubIdParamSchema } from './CommonSchemas.ts';
 import { userIdParamSchema } from './UserSchemas.ts';
+import { PROVISIONAL_GAME_THRESHOLD_STEP } from '../model/SkillModels.ts';
 
 export const getUserSkillSchema = z.object({
     params: z.object({
@@ -44,7 +45,11 @@ export const updateClubSkillConfigSchema = z.object({
         clubId: clubIdParamSchema,
     }),
     body: z.object({
-        provisionalGameThreshold: z.number().int().min(1).optional(),
+        provisionalGameThreshold: z.number()
+            .int()
+            .min(PROVISIONAL_GAME_THRESHOLD_STEP)
+            .multipleOf(PROVISIONAL_GAME_THRESHOLD_STEP)
+            .optional(),
         isEnabled: z.boolean().optional(),
     }),
 });
