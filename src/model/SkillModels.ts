@@ -42,13 +42,6 @@ export interface ClubSkillConfig {
     modifiedBy: number;
 }
 
-export interface SkillTrackDirty {
-    clubId: number;
-    gameSize: number;
-    markedAt: Date;
-    reason: string;
-}
-
 export interface ResolvedSkillRating {
     gameSize: number;
     skill: number;
@@ -97,8 +90,8 @@ export interface SkillLeaderboardResponse {
 }
 
 export interface SkillRecomputeResult {
-    clubId?: number;
-    gameSize?: number;
+    clubId: number;
+    gameSize: number;
     gamesProcessed: number;
     playersAffected: number;
     durationMs: number;

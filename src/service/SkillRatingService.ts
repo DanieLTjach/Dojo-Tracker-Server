@@ -20,8 +20,11 @@ import {
     type RatableGamePlayerDBEntity,
     type SkillRatingWithUserDBEntity,
 } from '../repository/SkillRatingRepository.ts';
+import { UserRepository } from '../repository/UserRepository.ts';
 import { InvalidGameSize, SkillRatingNotEnabledForClub } from '../error/SkillErrors.ts';
-import { inflateSigma, rateGame, toDisplaySkill } from '../util/SkillMathUtil.ts';
+import { ClubNotFoundError } from '../error/ClubErrors.ts';
+import { UserNotFoundById } from '../error/UserErrors.ts';
+import { inflateSigma, rateGame, toDisplaySkill, toOrdinal } from '../util/SkillMathUtil.ts';
 import { calculatePlacements } from '../util/GamePlacementUtil.ts';
 import type { Wind } from '../model/GameModels.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
@@ -33,22 +36,30 @@ export class SkillRatingService {
     private eventRepository: EventRepository;
     private gameRepository: GameRepository;
     private eventRegistrationRepository: EventRegistrationRepository;
+    private userRepository: UserRepository;
 
     constructor(
         skillRatingRepository = new SkillRatingRepository(),
         clubRepository = new ClubRepository(),
         eventRepository = new EventRepository(),
         gameRepository = new GameRepository(),
-        eventRegistrationRepository = new EventRegistrationRepository()
+        eventRegistrationRepository = new EventRegistrationRepository(),
+        userRepository = new UserRepository()
     ) {
         this.skillRatingRepository = skillRatingRepository;
         this.clubRepository = clubRepository;
         this.eventRepository = eventRepository;
         this.gameRepository = gameRepository;
         this.eventRegistrationRepository = eventRegistrationRepository;
+        this.userRepository = userRepository;
     }
 
     getOrCreateConfig(clubId: number, modifiedBy: number = 0): ClubSkillConfig {
+        const club = this.clubRepository.findClubById(clubId);
+        if (!club) {
+            throw new ClubNotFoundError(clubId);
+        }
+
         const existing = this.skillRatingRepository.findClubSkillConfig(clubId);
         if (existing) {
             return existing;
@@ -104,7 +115,7 @@ export class SkillRatingService {
     ): ResolvedSkillRating {
         const effectiveSigma = inflateSigma(row.sigma, row.lastRatedGameAt, now);
         const skill = toDisplaySkill(row.mu, effectiveSigma);
-        const ordinal = row.mu - 3 * effectiveSigma;
+        const ordinal = toOrdinal(row.mu, effectiveSigma);
         const isProvisional = row.gamesPlayed < threshold;
         const gamesUntilRanked = Math.max(0, threshold - row.gamesPlayed);
         const diffMs = now.getTime() - row.lastRatedGameAt.getTime();
@@ -240,8 +251,8 @@ export class SkillRatingService {
         const rows = this.skillRatingRepository.findNonProvisionalTrackRatings(clubId, gameSize, threshold);
         let strictlyBetterCount = 0;
         for (const row of rows) {
-            const effSigma = calculateEffectiveSigma(row.sigma, row.lastRatedGameAt, now);
-            const skill = calculateConservativeSkill(row.mu, effSigma);
+            const effSigma = inflateSigma(row.sigma, row.lastRatedGameAt, now);
+            const skill = toDisplaySkill(row.mu, effSigma);
             if (skill > targetSkill || (skill === targetSkill && row.gamesPlayed > targetGamesPlayed)) {
                 strictlyBetterCount++;
             }
@@ -250,6 +261,11 @@ export class SkillRatingService {
     }
 
     getUserSkillAcrossClubs(userId: number, now: Date = new Date()): UserSkillProfileResponse {
+        const user = this.userRepository.findUserById(userId);
+        if (!user) {
+            throw new UserNotFoundById(userId);
+        }
+
         const rows = this.skillRatingRepository.findUserSkillRatings(userId);
 
         if (rows.length === 0) {
@@ -534,6 +550,11 @@ export class SkillRatingService {
     recomputeTrack(clubId: number, gameSize: number, excludeGameId?: number): SkillRecomputeResult {
         if (gameSize !== 3 && gameSize !== 4) {
             throw new InvalidGameSize(gameSize);
+        }
+
+        const club = this.clubRepository.findClubById(clubId);
+        if (!club) {
+            throw new ClubNotFoundError(clubId);
         }
 
         const startTime = Date.now();

@@ -30,12 +30,8 @@ export function toOrdinal(mu: number, effectiveSigma: number): number {
     return mu - 3 * effectiveSigma;
 }
 
-/**
- * Converts (mu, effectiveSigma) to friendly integer display skill rating.
- * A new player with (25, 25/3) maps to exactly 1500.
- */
 export function toDisplaySkill(mu: number, effectiveSigma: number): number {
-    return Math.round(SKILL_DISPLAY_BASE + SKILL_DISPLAY_SCALE * (mu - 3 * effectiveSigma));
+    return Math.round(SKILL_DISPLAY_BASE + SKILL_DISPLAY_SCALE * toOrdinal(mu, effectiveSigma));
 }
 
 export interface PlayerRatingInput {
