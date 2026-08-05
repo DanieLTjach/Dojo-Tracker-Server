@@ -40,7 +40,7 @@ describe('Event Category Endpoints', () => {
         expect(Array.isArray(response.body)).toBe(true);
 
         const categories = response.body.map((c: { category: string }) => c.category);
-        expect(categories).toEqual(['CLUB_TOURNAMENT', 'EMA', 'FRIENDLY', 'LEAGUE']);
+        expect(categories).toEqual(['CLUB_TOURNAMENT', 'EMA', 'FRIENDLY', 'LEAGUE', 'ONLINE']);
     });
 
     test('POST /api/events should allow setting a valid category', async () => {

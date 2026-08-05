@@ -9,7 +9,8 @@ INSERT INTO eventCategory (category, description) VALUES
     ('EMA', 'Official European Mahjong Association tournament'),
     ('CLUB_TOURNAMENT', 'Internal club tournament'),
     ('LEAGUE', 'Club league / season play'),
-    ('FRIENDLY', 'Casual or non-competitive event');
+    ('FRIENDLY', 'Casual or non-competitive event'),
+    ('ONLINE', 'Online tournament or season');
 
 ALTER TABLE event ADD COLUMN category TEXT REFERENCES eventCategory(category);
 

@@ -803,6 +803,7 @@ describe('Database Migrations', () => {
             { category: 'EMA', description: 'Official European Mahjong Association tournament' },
             { category: 'FRIENDLY', description: 'Casual or non-competitive event' },
             { category: 'LEAGUE', description: 'Club league / season play' },
+            { category: 'ONLINE', description: 'Online tournament or season' },
         ]);
 
         const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{
