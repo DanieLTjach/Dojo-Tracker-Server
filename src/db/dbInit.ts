@@ -34,13 +34,21 @@ class DBManager {
         }
     }
 
+    /**
+     * Reopen the database. Closes the current handle first: assigning over `this.db` while it is
+     * still open abandons the old connection, and an abandoned handle keeps its WAL/SHM state
+     * alive against a file that may since have been deleted and rebuilt.
+     */
     reinitDB() {
+        this.closeDB();
         this.db = new Database(config.dbPath);
         this.initDB();
     }
 
     closeDB() {
-        this.db.close();
+        if (this.db.open) {
+            this.db.close();
+        }
     }
 
     runMigrations() {

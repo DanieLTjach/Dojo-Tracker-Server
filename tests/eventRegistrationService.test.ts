@@ -1,5 +1,5 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 import { EventRegistrationService } from '../src/service/EventRegistrationService.ts';
 import { EventRegistrationRepository } from '../src/repository/EventRegistrationRepository.ts';
 import { ClubMembershipRepository } from '../src/repository/ClubMembershipRepository.ts';
@@ -172,8 +172,7 @@ describe('EventRegistrationService', () => {
             CAPACITY_USER_B,
             SEASON_USER_ID
         );
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     afterEach(() => {

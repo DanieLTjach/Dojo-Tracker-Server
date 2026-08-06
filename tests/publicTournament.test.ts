@@ -1,9 +1,9 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import request from 'supertest';
 import express from 'express';
 import publicRoutes from '../src/routes/PublicRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 import { TeamService } from '../src/service/TeamService.ts';
 
 const app = express();
@@ -103,8 +103,7 @@ describe('Public tournament endpoint', () => {
             HIDDEN_PARTICIPANT_USER_ID,
             PENDING_PARTICIPANT_USER_ID
         );
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     afterEach(() => {

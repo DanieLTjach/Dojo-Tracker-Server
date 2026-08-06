@@ -6,8 +6,7 @@ import request from 'supertest';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent } from './testHelpers.ts';
+import { createAuthHeader, createTestEvent, resetTestDatabase } from './testHelpers.ts';
 
 const SYSTEM_USER_ID = 0;
 const CLUB_ID = 1;
@@ -42,8 +41,7 @@ describe('Import Users CLI Script', () => {
 
     afterAll(() => {
         if (fs.existsSync(CSV_PATH)) fs.unlinkSync(CSV_PATH);
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     test('imports users into DB with correct fields', () => {

@@ -1,10 +1,9 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import request from 'supertest';
 import express from 'express';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
-import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 import config from '../config/config.ts';
 
 const app = express();
@@ -18,9 +17,7 @@ describe('Tournament Mode', () => {
     const originalTournamentUserId = config.tournamentUserId;
 
     beforeEach(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
-        dbManager.reinitDB();
+        resetTestDatabase();
     });
 
     afterEach(() => {
@@ -30,8 +27,7 @@ describe('Tournament Mode', () => {
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('When tournament mode is DISABLED', () => {

@@ -1,10 +1,10 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import { ClubInviteService } from '../src/service/ClubInviteService.ts';
 import { ClubInviteRepository } from '../src/repository/ClubInviteRepository.ts';
 import { ClubMembershipRepository } from '../src/repository/ClubMembershipRepository.ts';
 import { ClubRepository } from '../src/repository/ClubRepository.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 import type { TelegramUser } from '../src/model/AuthModels.ts';
 import {
     InviteExhaustedError,
@@ -60,8 +60,7 @@ describe('ClubInviteService', () => {
 
     afterAll(() => {
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(clubId);
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     function createInvite(overrides: Partial<Parameters<ClubInviteService['createInvite']>[0]> = {}) {

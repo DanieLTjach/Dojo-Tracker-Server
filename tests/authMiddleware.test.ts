@@ -1,3 +1,4 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import type { Request, Response, NextFunction } from 'express';
 import { requireAuth, requireAdmin } from '../src/middleware/AuthMiddleware.ts';
 import { TokenService } from '../src/service/TokenService.ts';
@@ -6,8 +7,6 @@ import { UserRepository } from '../src/repository/UserRepository.ts';
 import { MissingAuthTokenError, InvalidAuthTokenError, InsufficientPermissionsError } from '../src/error/AuthErrors.ts';
 import type { User } from '../src/model/UserModels.ts';
 import { jest } from '@jest/globals';
-import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 
 describe('AuthMiddleware', () => {
     let mockReq: Partial<Request>;
@@ -32,8 +31,7 @@ describe('AuthMiddleware', () => {
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     beforeEach(() => {

@@ -3,8 +3,7 @@ import request from 'supertest';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createCustomEvent } from './testHelpers.ts';
+import { createAuthHeader, createCustomEvent, openEventWindow, resetTestDatabase } from './testHelpers.ts';
 import { TournamentRoundImportService } from '../src/service/TournamentRoundImportService.ts';
 import { TrackedGameService } from '../src/service/TrackedGameService.ts';
 import { DEFAULT_LOCALE, t } from '../src/i18n/index.ts';
@@ -66,8 +65,8 @@ describe('TournamentRoundImportService', () => {
         createCustomEvent(
             TOURNAMENT_EVENT_ID,
             'Import Test Tournament',
-            '2024-01-01T00:00:00.000Z',
-            '2026-12-31T23:59:59.999Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             GAME_RULES_ID,
             TEST_CLUB_ID,
             'TOURNAMENT',
@@ -474,8 +473,8 @@ describe('createTrackedGame options', () => {
         createCustomEvent(
             TEST_EVENT_ID,
             'Tracked options test',
-            '2024-01-01T00:00:00.000Z',
-            '2026-12-31T23:59:59.999Z'
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo
         );
     });
 
@@ -489,8 +488,7 @@ describe('createTrackedGame options', () => {
         );
         dbManager.db.prepare('DELETE FROM tournament WHERE eventId IN (?, ?)').run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
         dbManager.db.prepare('DELETE FROM event WHERE id IN (?, ?)').run(TOURNAMENT_EVENT_ID, TEST_EVENT_ID);
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     test('POST /api/games/tracked still creates IN_PROGRESS without tournament fields', async () => {

@@ -64,17 +64,54 @@ export function createCustomEvent(
 }
 
 /**
+ * An event window wide enough to contain "now", computed at call time.
+ *
+ * Tests create games at `Date.now()`, and a game must fall inside its event's window, so a
+ * hardcoded window silently becomes a time bomb: it keeps passing until the end date goes by,
+ * then every affected suite fails permanently with no code change having occurred. Deriving the
+ * window from the current date means it is always valid, whenever the suite happens to run.
+ */
+const OPEN_WINDOW_YEARS = 5;
+
+export function openEventWindow(): { dateFrom: string, dateTo: string } {
+    const now = new Date();
+
+    const dateFrom = new Date(now);
+    dateFrom.setUTCFullYear(now.getUTCFullYear() - OPEN_WINDOW_YEARS);
+
+    const dateTo = new Date(now);
+    dateTo.setUTCFullYear(now.getUTCFullYear() + OPEN_WINDOW_YEARS);
+
+    return { dateFrom: dateFrom.toISOString(), dateTo: dateTo.toISOString() };
+}
+
+/**
+ * A timestamp `daysAgo` days in the past, guaranteed to sit inside {@link openEventWindow}.
+ *
+ * Use this instead of a hardcoded past date when a test needs a specific `createdAt`. A literal
+ * like `2024-06-11` looks stable but is only valid while it happens to fall inside the event
+ * window; once the relative window moves past it, the game is rejected as out of range.
+ */
+export function dateInsideEventWindow(daysAgo: number, hour = 12): string {
+    if (daysAgo >= OPEN_WINDOW_YEARS * 365) {
+        throw new Error(`daysAgo=${daysAgo} falls outside the ${OPEN_WINDOW_YEARS}-year event window`);
+    }
+
+    const date = new Date();
+    date.setUTCDate(date.getUTCDate() - daysAgo);
+    date.setUTCHours(hour, 0, 0, 0);
+
+    return date.toISOString();
+}
+
+/**
  * Creates the test event with ID 1000 for testing purposes.
  * This event is used across multiple test files.
- * Date range: Jan 1, 2024 - Dec 31, 2026 (covers current test date of Jan 22, 2026)
+ * Its window always spans the current date — see {@link openEventWindow}.
  */
 export function createTestEvent(): void {
-    createCustomEvent(
-        1000,
-        'Тестовий сезон',
-        '2024-01-01T00:00:00.000Z',
-        '2026-12-31T23:59:59.999Z'
-    );
+    const { dateFrom, dateTo } = openEventWindow();
+    createCustomEvent(1000, 'Тестовий сезон', dateFrom, dateTo);
 }
 
 /**
