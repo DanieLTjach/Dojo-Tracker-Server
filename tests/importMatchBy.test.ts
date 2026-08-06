@@ -1,5 +1,5 @@
 import { dbManager } from '../src/db/dbInit.ts';
-import { createCustomEvent, deleteEventById } from './testHelpers.ts';
+import { createCustomEvent, deleteEventById, openEventWindow } from './testHelpers.ts';
 import { ImportService } from '../src/service/ImportService.ts';
 
 const EVENT_ID = 99300;
@@ -66,8 +66,8 @@ describe('ImportService matchBy', () => {
         createCustomEvent(
             EVENT_ID,
             'MatchBy Import Season',
-            '2024-01-01T00:00:00.000Z',
-            '2026-12-31T23:59:59.999Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             GAME_RULES_ID,
             TEST_CLUB_ID,
             'SEASON'
