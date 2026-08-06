@@ -783,12 +783,12 @@ describe('Database Migrations', () => {
         const db = createMigratedDb(13);
 
         db.prepare(`
-            INSERT INTO event (id, name, type, gameRules, createdAt, modifiedAt, modifiedBy)
-            VALUES
-                (9901, 'Нерейтинг 2026', 'SEASON', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
-                (9902, 'Тестовий Турнір', 'TOURNAMENT', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
-                (9903, 'Regular Season', 'SEASON', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
-        `).run();
+                INSERT INTO event (id, name, type, gameRules, createdAt, modifiedAt, modifiedBy)
+                VALUES
+                    (9901, 'Нерейтинг 2026', 'SEASON', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+                    (9902, 'Тестовий Турнір', 'TOURNAMENT', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+                    (9903, 'Regular Season', 'SEASON', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
+            `).run();
 
         runMigration(db, 14);
         db.pragma('foreign_keys = ON');
@@ -806,6 +806,64 @@ describe('Database Migrations', () => {
         expect(tagColumns.map(c => c.name)).toEqual(['tag']);
 
         const eventColumns = db.prepare('PRAGMA table_info(event)').all() as Array<{
+            name: string;
+            type: string;
+            notnull: number;
+            dflt_value: string | null;
+        }>;
+
+        expect(eventColumns.find(c => c.name === 'isRated')).toMatchObject({
+            name: 'isRated',
+            type: 'BOOL',
+            notnull: 1,
+            dflt_value: 'true',
+        });
+
+        expect(eventColumns.find(c => c.name === 'category')).toBeUndefined();
+
+        // The join table is what makes tags many-to-many: the same event carries two.
+        db.prepare(`
+                INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
+                VALUES
+                    (9903, 'EMA', '2026-01-01T00:00:00.000Z', 0),
+                    (9903, 'ONLINE', '2026-01-01T00:00:00.000Z', 0)
+            `).run();
+
+        const assignedTags = db.prepare('SELECT tag FROM eventToTag WHERE eventId = 9903 ORDER BY tag')
+            .all() as Array<{ tag: string }>;
+        expect(assignedTags).toEqual([{ tag: 'EMA' }, { tag: 'ONLINE' }]);
+
+        expect(() =>
+            db.prepare(`
+                    INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
+                    VALUES (9903, 'EMA', '2026-01-01T00:00:00.000Z', 0)
+                `).run()
+        ).toThrow();
+
+        const tagIndex = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?`)
+            .get('idx_eventToTag_tag');
+        expect(tagIndex).toBeDefined();
+
+        const unratedEvents = db.prepare('SELECT id, name, isRated FROM event WHERE isRated = 0 ORDER BY id')
+            .all() as Array<{ id: number, name: string, isRated: number }>;
+        expect(unratedEvents).toEqual([
+            { id: 9901, name: 'Нерейтинг 2026', isRated: 0 },
+            { id: 9902, name: 'Тестовий Турнір', isRated: 0 },
+        ]);
+
+        const ratedEvent = db.prepare('SELECT id, name, isRated FROM event WHERE id = 9903').get() as {
+            id: number;
+            name: string;
+            isRated: number;
+        };
+        expect(ratedEvent.isRated).toBe(1);
+
+        const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+        expect(foreignKeyViolations).toEqual([]);
+
+        db.close();
+    });
+
     test('migration 15 creates skill rating tables and constraints', () => {
         const db = createMigratedDb(14);
 
@@ -859,53 +917,6 @@ describe('Database Migrations', () => {
             type: string;
             notnull: number;
             dflt_value: string | null;
-        }>;
-
-        expect(eventColumns.find(c => c.name === 'isRated')).toMatchObject({
-            name: 'isRated',
-            type: 'BOOL',
-            notnull: 1,
-            dflt_value: 'true',
-        });
-
-        expect(eventColumns.find(c => c.name === 'category')).toBeUndefined();
-
-        // The join table is what makes tags many-to-many: the same event carries two.
-        db.prepare(`
-            INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
-            VALUES
-                (9903, 'EMA', '2026-01-01T00:00:00.000Z', 0),
-                (9903, 'ONLINE', '2026-01-01T00:00:00.000Z', 0)
-        `).run();
-
-        const assignedTags = db.prepare('SELECT tag FROM eventToTag WHERE eventId = 9903 ORDER BY tag')
-            .all() as Array<{ tag: string }>;
-        expect(assignedTags).toEqual([{ tag: 'EMA' }, { tag: 'ONLINE' }]);
-
-        expect(() =>
-            db.prepare(`
-                INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
-                VALUES (9903, 'EMA', '2026-01-01T00:00:00.000Z', 0)
-            `).run()
-        ).toThrow();
-
-        const tagIndex = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?`)
-            .get('idx_eventToTag_tag');
-        expect(tagIndex).toBeDefined();
-
-        const unratedEvents = db.prepare('SELECT id, name, isRated FROM event WHERE isRated = 0 ORDER BY id')
-            .all() as Array<{ id: number, name: string, isRated: number }>;
-        expect(unratedEvents).toEqual([
-            { id: 9901, name: 'Нерейтинг 2026', isRated: 0 },
-            { id: 9902, name: 'Тестовий Турнір', isRated: 0 },
-        ]);
-
-        const ratedEvent = db.prepare('SELECT id, name, isRated FROM event WHERE id = 9903').get() as {
-            id: number;
-            name: string;
-            isRated: number;
-        };
-        expect(ratedEvent.isRated).toBe(1);
             pk: number;
         }>).map(({ name, type, notnull, dflt_value, pk }) => ({ name, type, notnull, dflt_value, pk }));
 
