@@ -349,6 +349,7 @@ export class SkillRatingRepository {
             JOIN userToGame utg ON g.id = utg.gameId
             WHERE g.status = 'FINISHED'
               AND e.clubId = :clubId
+              AND e.isRated = 1
               AND gr.numberOfPlayers = :gameSize
               AND NOT EXISTS (
                   SELECT 1 FROM eventRegistration er
