@@ -23,7 +23,6 @@ app.use(handleErrors);
 describe('Rating API Endpoints', () => {
     beforeEach(async () => {
         resetTestDatabase();
-        dbManager.reinitDB();
         // Create test event for each test
         createTestEvent();
     });

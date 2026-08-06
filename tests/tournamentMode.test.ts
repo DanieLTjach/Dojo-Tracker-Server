@@ -4,7 +4,6 @@ import express from 'express';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
-import { dbManager } from '../src/db/dbInit.ts';
 import config from '../config/config.ts';
 
 const app = express();
@@ -19,7 +18,6 @@ describe('Tournament Mode', () => {
 
     beforeEach(() => {
         resetTestDatabase();
-        dbManager.reinitDB();
     });
 
     afterEach(() => {

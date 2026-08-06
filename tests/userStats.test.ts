@@ -22,7 +22,6 @@ describe('User Stats API Endpoints', () => {
 
     beforeEach(async () => {
         resetTestDatabase();
-        dbManager.reinitDB();
         createTestEvent();
     });
 
