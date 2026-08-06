@@ -1,5 +1,5 @@
 import { dbManager } from '../src/db/dbInit.ts';
-import { createCustomEvent, resetTestDatabase } from './testHelpers.ts';
+import { createCustomEvent, dateInsideEventWindow, openEventWindow, resetTestDatabase } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { ProfileService } from '../src/service/ProfileService.ts';
 import { AchievementService } from '../src/service/AchievementService.ts';
@@ -71,8 +71,8 @@ describe('AchievementService (persisted tournament achievements)', () => {
         createCustomEvent(
             EVENT_ID,
             'Achievements Cup',
-            '2024-01-01T00:00:00.000Z',
-            '2026-12-31T23:59:59.999Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             2,
             1,
             'TOURNAMENT'
@@ -152,8 +152,8 @@ describe('AchievementService (persisted tournament achievements)', () => {
         createCustomEvent(
             unfinishedEventId,
             'Unfinished Achievements Cup',
-            '2024-01-01T00:00:00.000Z',
-            '2026-12-31T23:59:59.999Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             2,
             1,
             'TOURNAMENT'
@@ -174,8 +174,8 @@ describe('AchievementService (persisted tournament achievements)', () => {
         createCustomEvent(
             unfinishedEventId,
             'Unfinished User Achievements Cup',
-            '2024-01-01T00:00:00.000Z',
-            '2026-12-31T23:59:59.999Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             2,
             1,
             'TOURNAMENT'
@@ -197,8 +197,8 @@ describe('AchievementService (persisted tournament achievements)', () => {
         createCustomEvent(
             eventId,
             'Never Computed Cup',
-            '2024-01-01T00:00:00.000Z',
-            '2026-12-31T23:59:59.999Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             2,
             1,
             'TOURNAMENT'
@@ -218,8 +218,8 @@ describe('AchievementService (persisted tournament achievements)', () => {
         createCustomEvent(
             eventId,
             'Previously Computed Cup',
-            '2024-01-01T00:00:00.000Z',
-            '2026-12-31T23:59:59.999Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             2,
             1,
             'TOURNAMENT'
@@ -247,8 +247,8 @@ describe('AchievementService (persisted tournament achievements)', () => {
         createCustomEvent(
             eventId,
             'New Finished Game Cup',
-            '2024-01-01T00:00:00.000Z',
-            '2026-12-31T23:59:59.999Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             2,
             1,
             'TOURNAMENT'
@@ -266,7 +266,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
                 { userId: u4, points: 20000, startPlace: 'NORTH' },
             ],
             0,
-            new Date('2025-02-01T00:00:00.000Z'),
+            new Date(dateInsideEventWindow(30)),
             true,
             null,
             null
@@ -293,8 +293,8 @@ describe('AchievementService (persisted tournament achievements)', () => {
         createCustomEvent(
             seasonEventId,
             'Achievements Season',
-            '2024-01-01T00:00:00.000Z',
-            '2026-12-31T23:59:59.999Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             2,
             1,
             'SEASON'

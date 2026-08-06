@@ -4,7 +4,7 @@ import { jest } from '@jest/globals';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { createAuthHeader, createCustomEvent, resetTestDatabase } from './testHelpers.ts';
+import { createAuthHeader, createCustomEvent, openEventWindow, resetTestDatabase } from './testHelpers.ts';
 import LogService from '../src/service/LogService.ts';
 
 const SYSTEM_USER_ID = 0;
@@ -73,8 +73,8 @@ describe('Tournament rating update logs', () => {
         createCustomEvent(
             TOURNAMENT_EVENT_ID,
             'Rating Log Tournament',
-            '2026-01-01T00:00:00.000Z',
-            '2030-01-01T00:00:00.000Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             GAME_RULES_ID,
             TEST_CLUB_ID,
             'TOURNAMENT',

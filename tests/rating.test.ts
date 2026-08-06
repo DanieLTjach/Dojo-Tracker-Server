@@ -5,7 +5,13 @@ import gameRoutes from '../src/routes/GameRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { createAuthHeader, createTestEvent, createTelegramInitData, resetTestDatabase } from './testHelpers.ts';
+import {
+    createAuthHeader,
+    createTestEvent,
+    createTelegramInitData,
+    openEventWindow,
+    resetTestDatabase,
+} from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -574,8 +580,8 @@ describe('Rating API Endpoints', () => {
                 'SEASON',
                 WIND_GAME_RULES_ID,
                 1,
-                '2024-01-01T00:00:00.000Z',
-                '2026-12-31T23:59:59.999Z',
+                openEventWindow().dateFrom,
+                openEventWindow().dateTo,
                 1000,
                 0,
                 0,

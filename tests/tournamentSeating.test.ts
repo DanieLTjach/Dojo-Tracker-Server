@@ -3,7 +3,7 @@ import request from 'supertest';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { createAuthHeader, createCustomEvent, resetTestDatabase } from './testHelpers.ts';
+import { createAuthHeader, createCustomEvent, openEventWindow, resetTestDatabase } from './testHelpers.ts';
 
 const SYSTEM_USER_ID = 0;
 const TOURNAMENT_EVENT_ID = 99500;
@@ -80,8 +80,8 @@ describe('Tournament seating generation', () => {
         createCustomEvent(
             TOURNAMENT_EVENT_ID,
             'Seating Tournament',
-            '2026-01-01T00:00:00.000Z',
-            '2030-01-01T00:00:00.000Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             GAME_RULES_ID,
             TEST_CLUB_ID,
             'TOURNAMENT',
@@ -376,8 +376,16 @@ describe('Tournament seating generation', () => {
             // TEAM tournament with teamConfig {teamSize:4, teamCount:2} in DRAFT.
             dbManager.db.prepare(
                 `INSERT INTO event (id, name, type, format, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, config, createdAt, modifiedAt, modifiedBy)
-             VALUES (?, 'Team Seating Tournament', 'TOURNAMENT', 'TEAM', ?, ?, '2026-01-01T00:00:00.000Z', '2030-01-01T00:00:00.000Z', 0, 0, '{"teamConfig":{"teamSize":2,"teamCount":4},"minParticipants":8}', ?, ?, 0)`
-            ).run(TEAM_EVENT_ID, GAME_RULES_ID, TEST_CLUB_ID, ts, ts);
+             VALUES (?, 'Team Seating Tournament', 'TOURNAMENT', 'TEAM', ?, ?, ?, ?, 0, 0, '{"teamConfig":{"teamSize":2,"teamCount":4},"minParticipants":8}', ?, ?, 0)`
+            ).run(
+                TEAM_EVENT_ID,
+                GAME_RULES_ID,
+                TEST_CLUB_ID,
+                openEventWindow().dateFrom,
+                openEventWindow().dateTo,
+                ts,
+                ts
+            );
             dbManager.db.prepare(
                 `INSERT INTO tournament (eventId, status, totalRounds, createdAt, modifiedAt, modifiedBy)
              VALUES (?, 'DRAFT', 1, ?, ?, 0)`
