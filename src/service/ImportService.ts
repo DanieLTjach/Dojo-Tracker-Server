@@ -32,6 +32,15 @@ interface ParsedGameRow {
 const PLAYER_COLUMNS = ['username', 'points', 'startPlace', 'chombo'] as const;
 const VALID_WINDS = ['EAST', 'SOUTH', 'WEST', 'NORTH'] as const satisfies readonly Wind[];
 
+/**
+ * How the `player{p}_username` cells identify users. Defaults to 'username' (telegramUsername,
+ * including the leading '@'). Use 'name' for historical imports whose players predate Telegram
+ * registration and therefore have no telegramUsername in the database.
+ */
+export type ImportMatchBy = 'username' | 'name';
+
+export const IMPORT_MATCH_BY_VALUES = ['username', 'name'] as const satisfies readonly ImportMatchBy[];
+
 // Sentinel error: thrown inside the import transaction to force a rollback after collecting all per-row errors.
 class ImportRollbackError extends Error {}
 
@@ -45,8 +54,8 @@ export class ImportService {
      * with imported=0 and games=[]. Catches both row-parse errors and per-game rule errors
      * (point sums, duplicate players, etc.) so callers can surface every problem in one pass.
      */
-    validateGames(eventId: number, csvContent: string): ImportResult {
-        const { event, parsedRows, errors } = this.parseAndValidate(eventId, csvContent);
+    validateGames(eventId: number, csvContent: string, matchBy: ImportMatchBy = 'username'): ImportResult {
+        const { event, parsedRows, errors } = this.parseAndValidate(eventId, csvContent, matchBy);
 
         if (errors.length === 0) {
             for (let i = 0; i < parsedRows.length; i++) {
@@ -62,8 +71,13 @@ export class ImportService {
         return { imported: 0, errors, games: [] };
     }
 
-    importGames(eventId: number, csvContent: string, importedBy: number): ImportResult {
-        const { parsedRows, errors } = this.parseAndValidate(eventId, csvContent);
+    importGames(
+        eventId: number,
+        csvContent: string,
+        importedBy: number,
+        matchBy: ImportMatchBy = 'username'
+    ): ImportResult {
+        const { parsedRows, errors } = this.parseAndValidate(eventId, csvContent, matchBy);
 
         if (errors.length > 0) {
             return { imported: 0, errors, games: [] };
@@ -112,7 +126,8 @@ export class ImportService {
 
     private parseAndValidate(
         eventId: number,
-        csvContent: string
+        csvContent: string,
+        matchBy: ImportMatchBy
     ): { event: Event, parsedRows: ParsedGameRow[], errors: RowError[] } {
         const event = this.eventService.getEventById(eventId);
         const numberOfPlayers = event.gameRules.numberOfPlayers;
@@ -128,7 +143,7 @@ export class ImportService {
             const cells = dataRows[i]!;
 
             try {
-                const parsed = this.parseGameRow(cells, headers, numberOfPlayers, rowNumber);
+                const parsed = this.parseGameRow(cells, headers, numberOfPlayers, rowNumber, matchBy);
                 parsedRows.push(parsed);
             } catch (error: any) {
                 errors.push({ row: rowNumber, message: error.message });
@@ -171,7 +186,8 @@ export class ImportService {
         cells: string[],
         headers: string[],
         numberOfPlayers: number,
-        rowNumber: number
+        rowNumber: number,
+        matchBy: ImportMatchBy
     ): ParsedGameRow {
         const getValue = (colName: string): string => {
             const index = headers.indexOf(colName);
@@ -190,7 +206,9 @@ export class ImportService {
                 throw new Error(t('import.rowUsernameEmpty', DEFAULT_LOCALE, { row: rowNumber, player: p }));
             }
 
-            const user = this.userRepository.findUserByTelegramUsername(username);
+            const user = matchBy === 'name'
+                ? this.userRepository.findUserByName(username)
+                : this.userRepository.findUserByTelegramUsername(username);
             if (!user) {
                 throw new Error(t('import.rowUserNotFound', DEFAULT_LOCALE, { row: rowNumber, username }));
             }
