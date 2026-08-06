@@ -517,6 +517,7 @@ describe('TeamService', () => {
             uma: [15, 5, -5, -15],
             startingPoints: 30000,
             umaTieBreak: 'DIVIDE',
+            allowNonZeroSumUma: false,
             details: null,
         };
 

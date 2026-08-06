@@ -11,7 +11,9 @@ router.get('/', requireAuth, withTransaction((req, res) => gameController.getGam
 router.get('/:gameId', requireAuth, withTransaction((req, res) => gameController.getGameById(req, res)));
 
 // Authenticated users - create games
+router.post('/score-preview', requireAuth, withTransaction((req, res) => gameController.scoreRoundPreview(req, res)));
 router.post('/tracked', requireAuth, withTransaction((req, res) => gameController.addTrackedGame(req, res)));
+
 router.post('/', requireAuth, withTransaction((req, res) => gameController.addGame(req, res)));
 router.post(
     '/:gameId/rounds/:roundId/preview',

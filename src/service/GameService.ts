@@ -383,7 +383,7 @@ export class GameService {
     }
 
     private calculateCurrentGameState(game: GameWithPlayers, rounds: GameRound[]): GameState | null {
-        if (game.status !== GameStatus.IN_PROGRESS) {
+        if (game.status === GameStatus.CREATED) {
             return null;
         }
 
@@ -391,7 +391,17 @@ export class GameService {
             return { wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 };
         }
 
-        return rounds[rounds.length - 1]!.result.nextState ?? null;
+        const lastRound = rounds[rounds.length - 1]!;
+        if (game.status === GameStatus.IN_PROGRESS) {
+            return lastRound.result.nextState ?? null;
+        }
+
+        return {
+            wind: lastRound.wind,
+            dealerNumber: lastRound.dealerNumber,
+            counters: lastRound.counters,
+            riichiSticks: 0,
+        };
     }
 
     private logNewGame(game: GameWithPlayers, event: Event): void {

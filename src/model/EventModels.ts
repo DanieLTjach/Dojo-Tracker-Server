@@ -52,6 +52,9 @@ export interface GameRules {
     uma: number[] | number[][];
     startingPoints: number;
     umaTieBreak: UmaTieBreak;
+    // Opt-in: uma need not sum to 0, so total rating is not conserved and
+    // activity is rewarded. Only supported for a flat (non-matrix) uma.
+    allowNonZeroSumUma: boolean;
     details: GameRulesDetails | null;
 }
 

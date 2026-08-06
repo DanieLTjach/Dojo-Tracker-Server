@@ -9,6 +9,7 @@ import {
     createTestEvent,
     createCustomEvent,
     createTelegramInitData,
+    deleteEventById,
     resetTestDatabase,
 } from './testHelpers.ts';
 import type { ExhaustiveDraw } from '../src/model/GameRoundResultModels.ts';
@@ -955,7 +956,7 @@ describe('Game API Endpoints', () => {
                 status: 'FINISHED',
                 createdAt: created.body.createdAt,
                 startedAt: response.body.endedAt,
-                currentState: null,
+                currentState: { wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 },
                 rounds: [],
             });
             expect(response.body.startedAt).not.toBeNull();
@@ -1142,6 +1143,56 @@ describe('Game API Endpoints', () => {
 
             expect(duplicateRoundResponse.status).toBe(400);
             expect(duplicateRoundResponse.body.errorCode).toBe('roundAlreadyExists');
+        });
+
+        test('should reject a new round after a finish caused by the previous round is undone', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayersPayload(),
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+            const finishingRoundResult = {
+                type: 'CHOMBO',
+                offenderPlayerId: testUser1Id,
+                playerPointChanges: [],
+                gameFinishReason: 'BANKRUPTCY',
+            };
+
+            dbManager.db.prepare(`
+                INSERT INTO gameRound (gameId, roundNumber, wind, dealerNumber, counters, riichiSticks, result)
+                VALUES (?, 1, 'EAST', 1, 0, 0, ?)
+            `).run(gameId, JSON.stringify(finishingRoundResult));
+
+            dbManager.db.prepare("UPDATE game SET status = 'FINISHED' WHERE id = ?").run(gameId);
+
+            const finishedGameResponse = await request(app)
+                .post(`/api/games/${gameId}/rounds/2`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(finishedGameResponse.status).toBe(400);
+            expect(finishedGameResponse.body.errorCode).toBe('gameNotInProgress');
+
+            dbManager.db.prepare("UPDATE game SET status = 'IN_PROGRESS' WHERE id = ?").run(gameId);
+
+            const response = await request(app)
+                .post(`/api/games/${gameId}/rounds/2`)
+                .set('Authorization', user1AuthHeader)
+                .send(exhaustiveDrawResult);
+
+            expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameFinishedByPreviousRound');
+
+            const gameResponse = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(gameResponse.body.rounds).toHaveLength(1);
         });
 
         test('should reject round id that is not the current round', async () => {
@@ -1618,7 +1669,12 @@ describe('Game API Endpoints', () => {
             expect(response.body.id).toBe(gameId);
             expect(response.body.status).toBe('FINISHED');
             expect(response.body.endedAt).not.toBeNull();
-            expect(response.body.currentState).toBeNull();
+            expect(response.body.currentState).toEqual({
+                wind: 'EAST',
+                dealerNumber: 1,
+                counters: 0,
+                riichiSticks: 0,
+            });
             expect(response.body.rounds).toHaveLength(1);
             response.body.players.forEach((player: { ratingChange: number }) => {
                 expect(typeof player.ratingChange).toBe('number');
@@ -1947,6 +2003,94 @@ describe('Game API Endpoints', () => {
 
             setClubRole(1, testUser2Id, 'MEMBER');
         });
+
+        test('should use a custom riichi value through submit, finish, undo, and finish again', async () => {
+            const eventRow = dbManager.db.prepare('SELECT gameRules FROM event WHERE id = ?').get(TEST_EVENT_ID) as {
+                gameRules: number;
+            };
+            const rulesRow = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(
+                eventRow.gameRules
+            ) as {
+                details: string | null;
+            };
+            dbManager.db.prepare('UPDATE gameRules SET details = ? WHERE id = ?').run(
+                JSON.stringify({
+                    rules: {
+                        riichi_deposit_value: 1500,
+                        remaining_riichi_deposits: 'final_winner',
+                    },
+                }),
+                eventRow.gameRules
+            );
+
+            try {
+                const createResponse = await createTrackedGame();
+                const gameId = createResponse.body.id;
+                const roundWithRiichi = await request(app)
+                    .post(`/api/games/${gameId}/rounds/1`)
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        type: 'EXHAUSTIVE_DRAW',
+                        riichiPlayerIds: [testUser1Id],
+                        tenpaiPlayerIds: [],
+                        nagashiManganPlayerIds: [],
+                    });
+
+                expect(roundWithRiichi.status).toBe(200);
+                expect(roundWithRiichi.body.currentState.riichiSticks).toBe(1);
+                expect(
+                    roundWithRiichi.body.players.find((player: { userId: number }) => player.userId === testUser1Id)
+                        .points
+                ).toBe(28500);
+
+                const firstFinish = await finishGame(gameId, user1AuthHeader);
+                expect(firstFinish.status).toBe(200);
+                const firstFinishPoints = Object.fromEntries(
+                    firstFinish.body.players.map((player: { userId: number, points: number }) => [
+                        player.userId,
+                        player.points,
+                    ])
+                );
+                expect(firstFinishPoints).toMatchObject({
+                    [testUser1Id]: 28500,
+                    [testUser2Id]: 30500,
+                    [testUser3Id]: 30500,
+                    [testUser4Id]: 30500,
+                });
+
+                setClubRole(1, testUser2Id, 'MODERATOR');
+                const undoResponse = await undoFinishGame(gameId, createAuthHeader(testUser2Id));
+                expect(undoResponse.status).toBe(200);
+                expect(undoResponse.body.currentState.riichiSticks).toBe(1);
+                const undoPoints = Object.fromEntries(
+                    undoResponse.body.players.map((player: { userId: number, points: number }) => [
+                        player.userId,
+                        player.points,
+                    ])
+                );
+                expect(undoPoints).toMatchObject({
+                    [testUser1Id]: 28500,
+                    [testUser2Id]: 30000,
+                    [testUser3Id]: 30000,
+                    [testUser4Id]: 30000,
+                });
+
+                const secondFinish = await finishGame(gameId, user1AuthHeader);
+                expect(secondFinish.status).toBe(200);
+                expect(Object.fromEntries(
+                    secondFinish.body.players.map((player: { userId: number, points: number }) => [
+                        player.userId,
+                        player.points,
+                    ])
+                )).toEqual(firstFinishPoints);
+            } finally {
+                setClubRole(1, testUser2Id, 'MEMBER');
+                dbManager.db.prepare('UPDATE gameRules SET details = ? WHERE id = ?').run(
+                    rulesRow.details,
+                    eventRow.gameRules
+                );
+            }
+        });
     });
 
     describe('GET /api/games/:gameId - Get Game by ID', () => {
@@ -1964,7 +2108,12 @@ describe('Game API Endpoints', () => {
             expect(response.body.status).toBe('FINISHED');
             expect(response.body.lastRoundWasDeleted).toBe(false);
             expect(response.body.rounds).toEqual([]);
-            expect(response.body.currentState).toBeNull();
+            expect(response.body.currentState).toEqual({
+                wind: 'EAST',
+                dealerNumber: 1,
+                counters: 0,
+                riichiSticks: 0,
+            });
 
             // Verify players have ratingChange field
             response.body.players.forEach((player: any) => {
@@ -2037,6 +2186,42 @@ describe('Game API Endpoints', () => {
                     result: roundTwoResult,
                 },
             ]);
+            expect(response.body.currentState).toEqual({
+                wind: 'EAST',
+                dealerNumber: 2,
+                counters: 1,
+                riichiSticks: 0,
+            });
+        });
+
+        test('should return null when an in-progress game has no next state', async () => {
+            const createResponse = await request(app)
+                .post('/api/games/tracked')
+                .set('Authorization', user1AuthHeader)
+                .send({
+                    eventId: TEST_EVENT_ID,
+                    players: trackedPlayersPayload(),
+                });
+
+            expect(createResponse.status).toBe(201);
+            const gameId = createResponse.body.id;
+            const resultWithoutNextState = {
+                type: 'CHOMBO',
+                offenderPlayerId: testUser1Id,
+            };
+
+            dbManager.db.prepare(`
+                INSERT INTO gameRound (gameId, roundNumber, wind, dealerNumber, counters, riichiSticks, result)
+                VALUES (?, 1, 'SOUTH', 3, 4, 2, ?)
+            `).run(gameId, JSON.stringify(resultWithoutNextState));
+
+            const response = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', user1AuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toBe('IN_PROGRESS');
+            expect(response.body.currentState).toBeNull();
         });
 
         test('should fail with non-existent game ID', async () => {
@@ -2754,6 +2939,344 @@ describe('Game API Endpoints', () => {
                 // createdAt should remain unchanged from the previous update
                 const newDate = new Date('2024-06-11T12:00:00.000Z');
                 expect(new Date(response.body.createdAt).getTime()).toBe(newDate.getTime());
+            });
+        });
+
+        describe('Yakitori Rule Integration', () => {
+            const YAKITORI_RULES_ID = 9001;
+            const YAKITORI_EVENT_ID = 9002;
+            const DISABLED_RULES_ID = 9003;
+            const DISABLED_EVENT_ID = 9004;
+            const SANMA_RULES_ID = 9005;
+            const SANMA_EVENT_ID = 9006;
+
+            beforeAll(() => {
+                deleteEventById(YAKITORI_EVENT_ID);
+                deleteEventById(DISABLED_EVENT_ID);
+                deleteEventById(SANMA_EVENT_ID);
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id IN (?, ?, ?)').run(
+                    YAKITORI_RULES_ID,
+                    DISABLED_RULES_ID,
+                    SANMA_RULES_ID
+                );
+
+                // 4-player rules with yakitori 4000 & nagashi mangan enabled
+                dbManager.db.prepare(
+                    `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, clubId, details)
+                     VALUES (?, 'Yakitori Rules', 4, '[15,5,-5,-15]', 25000, 1, ?)`
+                ).run(
+                    YAKITORI_RULES_ID,
+                    JSON.stringify({
+                        rules: { yakitori_payment_step: 4000, number_of_players: 4, nagashi_mangan: true },
+                    })
+                );
+
+                createCustomEvent(YAKITORI_EVENT_ID, 'Yakitori Event', undefined, undefined, YAKITORI_RULES_ID);
+
+                // 4-player rules with yakitori 0 (disabled)
+                dbManager.db.prepare(
+                    `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, clubId, details)
+                     VALUES (?, 'Yakitori Disabled', 4, '[15,5,-5,-15]', 25000, 1, ?)`
+                ).run(DISABLED_RULES_ID, JSON.stringify({ rules: { yakitori_payment_step: 0, number_of_players: 4 } }));
+
+                createCustomEvent(
+                    DISABLED_EVENT_ID,
+                    'Yakitori Disabled Event',
+                    undefined,
+                    undefined,
+                    DISABLED_RULES_ID
+                );
+
+                // 3-player rules with yakitori 4000
+                dbManager.db.prepare(
+                    `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, clubId, details)
+                     VALUES (?, 'Sanma Yakitori Rules', 3, '[15,-5,-10]', 35000, 1, ?)`
+                ).run(SANMA_RULES_ID, JSON.stringify({ rules: { yakitori_payment_step: 4000, number_of_players: 3 } }));
+
+                createCustomEvent(SANMA_EVENT_ID, 'Sanma Yakitori Event', undefined, undefined, SANMA_RULES_ID);
+            });
+
+            test('(1) tracked yonma, one hand-less player receives -12,000 penalty and winners receive +4,000 each', async () => {
+                const createRes = await request(app)
+                    .post('/api/games/tracked')
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        eventId: YAKITORI_EVENT_ID,
+                        players: [
+                            { userId: testUser1Id, startPlace: 'EAST' },
+                            { userId: testUser2Id, startPlace: 'SOUTH' },
+                            { userId: testUser3Id, startPlace: 'WEST' },
+                            { userId: testUser4Id, startPlace: 'NORTH' },
+                        ],
+                    });
+                const gameId = createRes.body.id;
+
+                await request(app)
+                    .post(`/api/games/${gameId}/start`)
+                    .set('Authorization', user1AuthHeader);
+
+                // Round 1: TSUMO winner testUser1Id
+                await request(app)
+                    .post(`/api/games/${gameId}/rounds/1`)
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        type: 'TSUMO',
+                        winningHandData: { winnerPlayerId: testUser1Id, han: 1, fu: 30, yakumanCount: 0 },
+                        riichiPlayerIds: [],
+                    });
+
+                // Round 2: TSUMO winner testUser2Id
+                await request(app)
+                    .post(`/api/games/${gameId}/rounds/2`)
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        type: 'TSUMO',
+                        winningHandData: { winnerPlayerId: testUser2Id, han: 1, fu: 30, yakumanCount: 0 },
+                        riichiPlayerIds: [],
+                    });
+
+                // Round 3: TSUMO winner testUser3Id
+                const lastRoundBeforeFinish = await request(app)
+                    .post(`/api/games/${gameId}/rounds/3`)
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        type: 'TSUMO',
+                        winningHandData: { winnerPlayerId: testUser3Id, han: 1, fu: 30, yakumanCount: 0 },
+                        riichiPlayerIds: [],
+                    });
+
+                // Finish game
+                const finishRes = await request(app)
+                    .post(`/api/games/${gameId}/finish`)
+                    .set('Authorization', user1AuthHeader);
+
+                expect(finishRes.status).toBe(200);
+
+                const players = finishRes.body.players;
+                const p4 = players.find((p: any) => p.userId === testUser4Id);
+
+                // Check total points remains zero-sum (100,000)
+                const totalPoints = players.reduce((sum: number, p: any) => sum + p.points, 0);
+                expect(totalPoints).toBe(100000);
+
+                // p4 pays 12,000, points = 23800 - 12000 = 11800
+                expect(p4.points).toBe(11800);
+
+                const pointChangesBeforeFinish = new Map<number, number>(
+                    lastRoundBeforeFinish.body.rounds[2].result.playerPointChanges.map(
+                        (change: { playerId: number, pointChange: number }) => [
+                            change.playerId,
+                            change.pointChange,
+                        ]
+                    )
+                );
+                const pointChangesAfterFinish = new Map<number, number>(
+                    finishRes.body.rounds[2].result.playerPointChanges.map(
+                        (change: { playerId: number, pointChange: number }) => [
+                            change.playerId,
+                            change.pointChange,
+                        ]
+                    )
+                );
+                expect(pointChangesAfterFinish).toEqual(
+                    new Map([
+                        [testUser1Id, (pointChangesBeforeFinish.get(testUser1Id) ?? 0) + 4000],
+                        [testUser2Id, (pointChangesBeforeFinish.get(testUser2Id) ?? 0) + 4000],
+                        [testUser3Id, (pointChangesBeforeFinish.get(testUser3Id) ?? 0) + 4000],
+                        [testUser4Id, (pointChangesBeforeFinish.get(testUser4Id) ?? 0) - 12000],
+                    ])
+                );
+            });
+
+            test('(2) undoFinishGame round-trips exactly', async () => {
+                const createRes = await request(app)
+                    .post('/api/games/tracked')
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        eventId: YAKITORI_EVENT_ID,
+                        players: [
+                            { userId: testUser1Id, startPlace: 'EAST' },
+                            { userId: testUser2Id, startPlace: 'SOUTH' },
+                            { userId: testUser3Id, startPlace: 'WEST' },
+                            { userId: testUser4Id, startPlace: 'NORTH' },
+                        ],
+                    });
+                const gameId = createRes.body.id;
+
+                await request(app).post(`/api/games/${gameId}/start`).set('Authorization', user1AuthHeader);
+                await request(app).post(`/api/games/${gameId}/rounds/1`).set('Authorization', user1AuthHeader).send({
+                    type: 'TSUMO',
+                    winningHandData: { winnerPlayerId: testUser1Id, han: 1, fu: 30, yakumanCount: 0 },
+                    riichiPlayerIds: [],
+                });
+                await request(app).post(`/api/games/${gameId}/rounds/2`).set('Authorization', user1AuthHeader).send({
+                    type: 'EXHAUSTIVE_DRAW',
+                    tenpaiPlayerIds: [testUser1Id, testUser2Id, testUser3Id, testUser4Id],
+                    nagashiManganPlayerIds: [],
+                    riichiPlayerIds: [testUser2Id],
+                });
+
+                const beforeFinish = await request(app).get(`/api/games/${gameId}`).set(
+                    'Authorization',
+                    user1AuthHeader
+                );
+                const finishRes = await request(app).post(`/api/games/${gameId}/finish`).set(
+                    'Authorization',
+                    user1AuthHeader
+                );
+                expect(finishRes.status).toBe(200);
+                expect(finishRes.body.rounds.at(-1).result.playerPointChanges).toEqual([
+                    { playerId: testUser2Id, pointChange: -5000 },
+                    { playerId: testUser3Id, pointChange: -4000 },
+                    { playerId: testUser4Id, pointChange: -4000 },
+                    { playerId: testUser1Id, pointChange: 13000 },
+                ]);
+
+                const undoRes = await request(app).post(`/api/games/${gameId}/undo-finish`).set(
+                    'Authorization',
+                    adminAuthHeader
+                );
+                expect(undoRes.status).toBe(200);
+
+                expect(
+                    undoRes.body.players.map((p: any) => ({ id: p.userId, points: p.points }))
+                ).toEqual(
+                    beforeFinish.body.players.map((p: any) => ({ id: p.userId, points: p.points }))
+                );
+                expect(undoRes.body.rounds.at(-1).result).toEqual(beforeFinish.body.rounds.at(-1).result);
+            });
+
+            test('(3) a nagashi-mangan-only player is still yakitori', async () => {
+                const createRes = await request(app)
+                    .post('/api/games/tracked')
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        eventId: YAKITORI_EVENT_ID,
+                        players: [
+                            { userId: testUser1Id, startPlace: 'EAST' },
+                            { userId: testUser2Id, startPlace: 'SOUTH' },
+                            { userId: testUser3Id, startPlace: 'WEST' },
+                            { userId: testUser4Id, startPlace: 'NORTH' },
+                        ],
+                    });
+                const gameId = createRes.body.id;
+
+                await request(app).post(`/api/games/${gameId}/start`).set('Authorization', user1AuthHeader);
+                await request(app).post(`/api/games/${gameId}/rounds/1`).set('Authorization', user1AuthHeader).send({
+                    type: 'EXHAUSTIVE_DRAW',
+                    tenpaiPlayerIds: [testUser4Id],
+                    nagashiManganPlayerIds: [testUser4Id],
+                    riichiPlayerIds: [],
+                });
+                await request(app).post(`/api/games/${gameId}/rounds/2`).set('Authorization', user1AuthHeader).send({
+                    type: 'TSUMO',
+                    winningHandData: { winnerPlayerId: testUser1Id, han: 1, fu: 30, yakumanCount: 0 },
+                    riichiPlayerIds: [],
+                });
+                await request(app).post(`/api/games/${gameId}/rounds/3`).set('Authorization', user1AuthHeader).send({
+                    type: 'EXHAUSTIVE_DRAW',
+                    tenpaiPlayerIds: [testUser1Id, testUser2Id, testUser3Id, testUser4Id],
+                    nagashiManganPlayerIds: [],
+                    riichiPlayerIds: [testUser2Id],
+                });
+
+                const beforeFinish = await request(app).get(`/api/games/${gameId}`).set(
+                    'Authorization',
+                    user1AuthHeader
+                );
+                const pointsBefore = new Map<number, number>(
+                    beforeFinish.body.players.map((p: any) => [p.userId, p.points])
+                );
+
+                const finishRes = await request(app).post(`/api/games/${gameId}/finish`).set(
+                    'Authorization',
+                    user1AuthHeader
+                );
+                expect(finishRes.status).toBe(200);
+
+                const players = finishRes.body.players;
+                const yakitoriDelta = (userId: number) =>
+                    players.find((p: any) => p.userId === userId).points - pointsBefore.get(userId)!;
+
+                // Nagashi mangan does not flip the marker, so p4 is still yakitori despite
+                // leading before finish. Yakitori puts p1 in first place, so p1 also receives
+                // the remaining 1,000-point riichi stick after the yakitori transfer.
+                expect(yakitoriDelta(testUser1Id)).toBe(13000);
+                expect(yakitoriDelta(testUser2Id)).toBe(-4000);
+                expect(yakitoriDelta(testUser3Id)).toBe(-4000);
+                expect(yakitoriDelta(testUser4Id)).toBe(-4000);
+                expect(players.reduce((sum: number, pl: any) => sum + pl.points, 0)).toBe(100000);
+            });
+
+            test('(7) rule disabled -> hand-less player is entirely unaffected', async () => {
+                const createRes = await request(app)
+                    .post('/api/games/tracked')
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        eventId: DISABLED_EVENT_ID,
+                        players: [
+                            { userId: testUser1Id, startPlace: 'EAST' },
+                            { userId: testUser2Id, startPlace: 'SOUTH' },
+                            { userId: testUser3Id, startPlace: 'WEST' },
+                            { userId: testUser4Id, startPlace: 'NORTH' },
+                        ],
+                    });
+                const gameId = createRes.body.id;
+
+                await request(app).post(`/api/games/${gameId}/start`).set('Authorization', user1AuthHeader);
+                await request(app).post(`/api/games/${gameId}/rounds/1`).set('Authorization', user1AuthHeader).send({
+                    type: 'TSUMO',
+                    winningHandData: { winnerPlayerId: testUser1Id, han: 1, fu: 30, yakumanCount: 0 },
+                    riichiPlayerIds: [],
+                });
+
+                const finishRes = await request(app).post(`/api/games/${gameId}/finish`).set(
+                    'Authorization',
+                    user1AuthHeader
+                );
+                expect(finishRes.status).toBe(200);
+
+                const p4 = finishRes.body.players.find((p: any) => p.userId === testUser4Id);
+                expect(p4.points).toBe(24500); // 25000 - 500 from tsumo, 0 yakitori penalty
+            });
+
+            test('(8) sanma yakitori transfer', async () => {
+                const createRes = await request(app)
+                    .post('/api/games/tracked')
+                    .set('Authorization', user1AuthHeader)
+                    .send({
+                        eventId: SANMA_EVENT_ID,
+                        players: [
+                            { userId: testUser1Id, startPlace: 'EAST' },
+                            { userId: testUser2Id, startPlace: 'SOUTH' },
+                            { userId: testUser3Id, startPlace: 'WEST' },
+                        ],
+                    });
+                const gameId = createRes.body.id;
+
+                await request(app).post(`/api/games/${gameId}/start`).set('Authorization', user1AuthHeader);
+                await request(app).post(`/api/games/${gameId}/rounds/1`).set('Authorization', user1AuthHeader).send({
+                    type: 'TSUMO',
+                    winningHandData: { winnerPlayerId: testUser1Id, han: 1, fu: 30, yakumanCount: 0 },
+                    riichiPlayerIds: [],
+                });
+                await request(app).post(`/api/games/${gameId}/rounds/2`).set('Authorization', user1AuthHeader).send({
+                    type: 'TSUMO',
+                    winningHandData: { winnerPlayerId: testUser2Id, han: 1, fu: 30, yakumanCount: 0 },
+                    riichiPlayerIds: [],
+                });
+
+                const finishRes = await request(app).post(`/api/games/${gameId}/finish`).set(
+                    'Authorization',
+                    user1AuthHeader
+                );
+                expect(finishRes.status).toBe(200);
+
+                const players = finishRes.body.players;
+
+                // p3 never won a hand: pays -8,000 (-4,000 x 2 winners)
+                const totalPoints = players.reduce((sum: number, p: any) => sum + p.points, 0);
+                expect(totalPoints).toBe(105000);
             });
         });
     });

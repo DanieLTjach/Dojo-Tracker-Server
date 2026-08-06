@@ -42,6 +42,25 @@ describe('Game Rules API Endpoints', () => {
             });
         });
 
+        test('should expose suggestions for configurable scoring values', async () => {
+            const response = await request(app)
+                .get('/api/game-rules/catalog')
+                .set('Authorization', adminAuthHeader);
+
+            expect(response.status).toBe(200);
+            expect(response.body.rules.find((rule: { key: string }) => rule.key === 'riichi_deposit_value'))
+                .toMatchObject({
+                    type: 'integer',
+                    min: 0,
+                    multipleOf: 100,
+                    suggestions: [500, 1000, 1500, 2000],
+                });
+            expect(response.body.rules.find((rule: { key: string }) => rule.key === 'honba')).toMatchObject({
+                type: 'string',
+                suggestions: [100, 200, 300, 500],
+            });
+        });
+
         test('should require authentication', async () => {
             const response = await request(app).get('/api/game-rules/catalog');
             expect(response.status).toBe(401);
@@ -77,10 +96,14 @@ describe('Game Rules API Endpoints', () => {
             expect(preset).toHaveProperty('key');
             expect(preset).toHaveProperty('name');
             expect(preset).toHaveProperty('extends');
+            expect(preset).toHaveProperty('numberOfPlayers');
+            expect(preset).toHaveProperty('startingPoints');
             expect(preset).toHaveProperty('rules');
             expect(preset).toHaveProperty('ownRules');
             expect(typeof preset.rules).toBe('object');
             expect(typeof preset.ownRules).toBe('object');
+            expect([3, 4]).toContain(preset.numberOfPlayers);
+            expect(typeof preset.startingPoints).toBe('number');
         });
 
         test('should include public presets and hide the internal default preset', async () => {
@@ -243,6 +266,7 @@ describe('Game Rules API Endpoints', () => {
                 .get('/api/game-rules/invalid')
                 .set('Authorization', adminAuthHeader);
             expect(response.status).toBe(400);
+            expect(response.body.errorCode).toBe('gameRulesValidationFailed');
         });
 
         test('should require authentication', async () => {
@@ -275,7 +299,7 @@ describe('Game Rules API Endpoints', () => {
                         details: {
                             preset: 'ema_2025',
                             rules: {
-                                starting_points: 25000,
+                                starting_points: 30000,
                                 red_fives: 'three_one_per_suit',
                             },
                         },
@@ -287,7 +311,7 @@ describe('Game Rules API Endpoints', () => {
                 });
                 expect(response.body.details.rules.number_of_players).toBe(4);
                 expect(response.body.details.rules.open_tanyao).toBe(true);
-                expect(response.body.details.rules.starting_points).toBe(25000);
+                expect(response.body.details.rules.starting_points).toBe(30000);
                 expect(response.body.details.rules.red_fives).toBe('three_one_per_suit');
 
                 const raw = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(ruleId) as {
@@ -297,7 +321,6 @@ describe('Game Rules API Endpoints', () => {
                 expect(stored).toEqual({
                     preset: 'ema_2025',
                     rules: {
-                        starting_points: 25000,
                         red_fives: 'three_one_per_suit',
                     },
                 });
@@ -319,6 +342,16 @@ describe('Game Rules API Endpoints', () => {
                 });
 
             expect(response.status).toBe(400);
+            expect(response.body).toMatchObject({
+                errorCode: 'gameRulesValidationFailed',
+                message: 'Виправте виділені поля правил гри',
+                validationErrors: [{
+                    path: 'details.preset',
+                    code: 'invalidValue',
+                    message: 'Виберіть або введіть дозволене значення.',
+                }],
+            });
+            expect(response.body).not.toHaveProperty('details');
         });
 
         test('should reject unknown top-level key in details', async () => {
@@ -454,11 +487,11 @@ describe('Game Rules API Endpoints', () => {
                     .put(`/api/game-rules/${ruleId}/details`)
                     .set('Authorization', createAuthHeader(ownerId))
                     .send({
-                        details: { preset: 'ema_2025', rules: { starting_points: 25000 } },
+                        details: { preset: 'ema_2025', rules: { starting_points: 30000 } },
                     });
                 expect(response.status).toBe(200);
                 expect(response.body.details.preset).toBe('ema_2025');
-                expect(response.body.details.rules.starting_points).toBe(25000);
+                expect(response.body.details.rules.starting_points).toBe(30000);
             } finally {
                 dbManager.db.prepare('DELETE FROM clubMembership WHERE clubId = ? AND userId = ?').run(clubId, ownerId);
                 dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(ownerId);
@@ -521,6 +554,91 @@ describe('Game Rules API Endpoints', () => {
             dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(response.body.id);
         });
 
+        test('POST creates the screenshot sanma core and details atomically', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Lviv Sanma 2026 Summer',
+                    numberOfPlayers: 3,
+                    uma: [15, 0, -15],
+                    startingPoints: 40000,
+                    umaTieBreak: 'DIVIDE',
+                    clubId,
+                    details: {
+                        rules: {
+                            goal: 40000,
+                            honba: '2x500',
+                            noten_penalty: 2000,
+                            red_fives: 'two_red_fives_five_pin_and_five_sou',
+                            double_ron: 'yes',
+                            triple_ron: 'first',
+                            riichi_1000_points_min: true,
+                            riichi_without_a_next_draw: true,
+                            open_tanyao: true,
+                            counted_yakuman: true,
+                            yakuman_stacking: true,
+                            north_as_yaku: true,
+                        },
+                    },
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body).toMatchObject({
+                name: 'Lviv Sanma 2026 Summer',
+                numberOfPlayers: 3,
+                startingPoints: 40000,
+                details: {
+                    rules: {
+                        number_of_players: 3,
+                        starting_points: 40000,
+                        goal: 40000,
+                        honba: '2x500',
+                        noten_penalty: 2000,
+                    },
+                },
+            });
+
+            const stored = dbManager.db.prepare('SELECT details FROM gameRules WHERE id = ?').get(response.body.id) as {
+                details: string;
+            };
+            expect(JSON.parse(stored.details).rules).toMatchObject({
+                goal: 40000,
+                honba: '2x500',
+                noten_penalty: 2000,
+            });
+            expect(JSON.parse(stored.details).rules.number_of_players).toBeUndefined();
+            expect(JSON.parse(stored.details).rules.starting_points).toBeUndefined();
+
+            dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(response.body.id);
+        });
+
+        test('POST with invalid details leaves no partial ruleset', async () => {
+            const name = 'Invalid Atomic POST';
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...validBody,
+                    name,
+                    numberOfPlayers: 3,
+                    startingPoints: 40000,
+                    uma: [15, 0, -15],
+                    details: { rules: { starting_points: 35000 } },
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body).toMatchObject({
+                errorCode: 'gameRulesValidationFailed',
+                validationErrors: [{
+                    path: 'details.rules.starting_points',
+                    code: 'coreFieldMismatch',
+                }],
+            });
+            const row = dbManager.db.prepare('SELECT id FROM gameRules WHERE name = ?').get(name);
+            expect(row).toBeUndefined();
+        });
+
         test('POST creates rule as club owner', async () => {
             const response = await request(app)
                 .post('/api/game-rules')
@@ -563,6 +681,57 @@ describe('Game Rules API Endpoints', () => {
                 .send({ ...validBody, chomboPointsAfterUma: 20000 });
 
             expect(response.status).toBe(400);
+        });
+
+        test('POST with a non-zero-sum uma returns 400 without the opt-in', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'Non-zero Uma', uma: [15, 5, 0, -5] });
+
+            expect(response.status).toBe(400);
+            expect(response.body.validationErrors).toContainEqual(
+                expect.objectContaining({ path: 'uma', code: 'umaSumNonZero' })
+            );
+        });
+
+        test('POST accepts a non-zero-sum uma when the ruleset opts in', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...validBody,
+                    name: 'Non-zero Uma Allowed',
+                    uma: [15, 5, 0, -5],
+                    allowNonZeroSumUma: true,
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body.allowNonZeroSumUma).toBe(true);
+            expect(response.body.uma).toEqual([15, 5, 0, -5]);
+
+            // The opt-in must survive a read back from the database.
+            const read = await request(app)
+                .get(`/api/game-rules/${response.body.id}`)
+                .set('Authorization', adminAuthHeader);
+            expect(read.body.allowNonZeroSumUma).toBe(true);
+        });
+
+        test('POST rejects the opt-in combined with a matrix uma', async () => {
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...validBody,
+                    name: 'Matrix Non-zero Uma',
+                    uma: [[15, 5, 0, -5]],
+                    allowNonZeroSumUma: true,
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.validationErrors).toContainEqual(
+                expect.objectContaining({ path: 'allowNonZeroSumUma', code: 'umaNonZeroSumMatrix' })
+            );
         });
 
         test('POST with global clubId by non-admin returns 403', async () => {

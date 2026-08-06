@@ -113,6 +113,7 @@ export function makeGameRules(rules: GameRulesValues): GameRules {
         uma: [15, 5, -5, -15],
         startingPoints: 25000,
         umaTieBreak: UmaTieBreak.WIND,
+        allowNonZeroSumUma: false,
         details: { rules },
     };
 }
