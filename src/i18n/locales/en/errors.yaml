@@ -56,6 +56,8 @@ errors:
   participantConfigOnlyForTournament: Participant count and registration deadline settings can only be set for tournaments
   tournamentConfigOnlyForTournament: Tournament settings can only be set for tournaments
   eventIsNotTournament: 'Event "{{eventName}}" is not a tournament'
+  unknownEventTag: 'Unknown event tag: "{{tag}}"'
+  cannotUnrateCurrentSeason: Cannot remove rated status from the club''s active rating season
   tournamentMisconfigured: This tournament is misconfigured. Please contact support
   tournamentTotalRoundsLessThanCurrentRound: Total rounds ({{totalRounds}}) cannot be less than current round ({{currentRound}})
   tournamentRoundOutOfSequence: 'Cannot start round {{requestedRound}} of tournament "{{eventName}}": the next available round is {{expectedRound}}'

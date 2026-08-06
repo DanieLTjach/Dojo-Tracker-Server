@@ -27,6 +27,11 @@ export class EventController {
         return res.status(StatusCodes.OK).json(events);
     }
 
+    getEventTags(_req: Request, res: Response) {
+        const tags = this.eventService.findAllTags();
+        return res.status(StatusCodes.OK).json(tags);
+    }
+
     getEventById(req: Request, res: Response) {
         const { params: { eventId } } = eventGetByIdSchema.parse(req);
         const event = this.eventService.getEventById(eventId);

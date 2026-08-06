@@ -149,6 +149,8 @@ export interface Event {
     format: EventFormat;
     clubId: number | null;
     isCurrentRating: boolean;
+    isRated: boolean;
+    tags: string[];
     gameRules: GameRules;
     startingRating: number;
     minimumGamesForRating: number;

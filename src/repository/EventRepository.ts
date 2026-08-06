@@ -33,7 +33,10 @@ export class EventRepository {
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
                 t.modifiedBy as tournament_modifiedBy,
-                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount,
+                (SELECT GROUP_CONCAT(t.tag) FROM (
+                    SELECT tag FROM eventToTag WHERE eventId = e.id ORDER BY tag ASC
+                ) t) as tags
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
@@ -68,7 +71,10 @@ export class EventRepository {
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
                 t.modifiedBy as tournament_modifiedBy,
-                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount,
+                (SELECT GROUP_CONCAT(t.tag) FROM (
+                    SELECT tag FROM eventToTag WHERE eventId = e.id ORDER BY tag ASC
+                ) t) as tags
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
@@ -104,7 +110,10 @@ export class EventRepository {
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
                 t.modifiedBy as tournament_modifiedBy,
-                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount,
+                (SELECT GROUP_CONCAT(t.tag) FROM (
+                    SELECT tag FROM eventToTag WHERE eventId = e.id ORDER BY tag ASC
+                ) t) as tags
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
@@ -122,6 +131,7 @@ export class EventRepository {
         description: string | null;
         type: string;
         format: string;
+        isRated: number;
         gameRules: number;
         clubId: number | null;
         dateFrom: string | null;
@@ -136,8 +146,8 @@ export class EventRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, format, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :format, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, format, isRated, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :format, :isRated, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -145,6 +155,7 @@ export class EventRepository {
     createEvent(params: EventCreateParams): number {
         const result = this.createEventStatement().get({
             ...params,
+            isRated: booleanToInteger(params.isRated ?? true),
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             info: serializeEventInfo(params.info),
@@ -162,6 +173,7 @@ export class EventRepository {
         description: string | null;
         type: string;
         format: string;
+        isRated: number;
         gameRules: number;
         clubId: number | null;
         dateFrom: string | null;
@@ -180,6 +192,7 @@ export class EventRepository {
                 description = :description,
                 type = :type,
                 format = :format,
+                isRated = :isRated,
                 gameRules = :gameRules,
                 clubId = :clubId,
                 dateFrom = :dateFrom,
@@ -198,6 +211,7 @@ export class EventRepository {
     updateEvent(params: EventUpdateParams): void {
         this.updateEventStatement().run({
             ...params,
+            isRated: booleanToInteger(params.isRated),
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             info: serializeEventInfo(params.info),
@@ -255,6 +269,38 @@ export class EventRepository {
     countGamesByGameRulesId(gameRulesId: number): number {
         return this.countGamesByGameRulesIdStatement().get({ gameRulesId })!.count;
     }
+
+    tagExists(tag: string): boolean {
+        const result = dbManager.db.prepare(`SELECT 1 FROM eventTag WHERE tag = ?`).get(tag);
+        return result !== undefined;
+    }
+
+    findAllTags(): string[] {
+        const rows = dbManager.db.prepare(`SELECT tag FROM eventTag ORDER BY tag ASC`).all() as { tag: string }[];
+        return rows.map(row => row.tag);
+    }
+
+    findTagsByEventId(eventId: number): string[] {
+        const rows = dbManager.db.prepare(`SELECT tag FROM eventToTag WHERE eventId = ? ORDER BY tag ASC`)
+            .all(eventId) as { tag: string }[];
+        return rows.map(row => row.tag);
+    }
+
+    /**
+     * Replaces an event's tags wholesale. Runs inside the ambient request transaction,
+     * so the delete and the inserts commit together.
+     */
+    setEventTags(eventId: number, tags: string[], modifiedBy: number, createdAt: Date): void {
+        dbManager.db.prepare(`DELETE FROM eventToTag WHERE eventId = ?`).run(eventId);
+
+        const insert = dbManager.db.prepare(`
+            INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
+            VALUES (:eventId, :tag, :createdAt, :modifiedBy)
+        `);
+        for (const tag of new Set(tags)) {
+            insert.run({ eventId, tag, createdAt: createdAt.toISOString(), modifiedBy });
+        }
+    }
 }
 
 export interface EventCreateParams {
@@ -262,6 +308,7 @@ export interface EventCreateParams {
     description: string | null;
     type: EventType;
     format: EventFormat;
+    isRated?: boolean;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -282,6 +329,7 @@ export interface EventUpdateParams {
     description: string | null;
     type: EventType;
     format: EventFormat;
+    isRated: boolean;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -304,6 +352,8 @@ interface EventWithGameRulesDBEntity {
     gameRules: number;
     clubId: number | null;
     isCurrentRating: number;
+    isRated: number;
+    tags: string | null;
     startingRating: number;
     minimumGamesForRating: number;
     dateFrom: string | null;
@@ -394,6 +444,8 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         format: parseEventFormat(dbEntity.format),
         clubId: dbEntity.clubId,
         isCurrentRating: Boolean(dbEntity.isCurrentRating),
+        isRated: Boolean(dbEntity.isRated),
+        tags: dbEntity.tags ? dbEntity.tags.split(',') : [],
         startingRating: dbEntity.startingRating,
         minimumGamesForRating: dbEntity.minimumGamesForRating,
         gameRules: {

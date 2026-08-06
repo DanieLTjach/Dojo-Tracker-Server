@@ -30,6 +30,8 @@ import {
     MinParticipantsRequiredForTeamConfigError,
     MinParticipantsMustMatchTeamConfigError,
     TournamentRoundNotStartedError,
+    UnknownEventTagError,
+    CannotUnrateCurrentSeasonError,
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
@@ -48,6 +50,7 @@ import { TournamentRepository } from '../repository/TournamentRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { GameRulesRepository } from '../repository/GameRulesRepository.ts';
 import type { EventPatchBody } from '../schema/EventSchemas.ts';
+import LogService from './LogService.ts';
 import {
     DraftNotStartableError,
     NotEnoughApprovedForDraftError,
@@ -105,6 +108,18 @@ export class EventService {
         }
     }
 
+    findAllTags(): string[] {
+        return this.eventRepository.findAllTags();
+    }
+
+    private validateTags(tags: string[]): void {
+        for (const tag of tags) {
+            if (!this.eventRepository.tagExists(tag)) {
+                throw new UnknownEventTagError(tag);
+            }
+        }
+    }
+
     createEvent(data: EventData, modifiedBy: number): Event {
         this.authorizeEventCreation(data.clubId, modifiedBy);
 
@@ -114,6 +129,10 @@ export class EventService {
 
         if (data.clubId !== null && data.clubId !== undefined && !this.clubRepository.clubExists(data.clubId)) {
             throw new ClubNotFoundError(data.clubId!);
+        }
+
+        if (data.tags !== undefined) {
+            this.validateTags(data.tags);
         }
 
         this.validateCurrentRatingEvent(data);
@@ -126,6 +145,7 @@ export class EventService {
             description: data.description ?? null,
             type: data.type,
             format: data.format,
+            isRated: data.isRated ?? true,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
@@ -139,6 +159,10 @@ export class EventService {
             modifiedAt: now,
             modifiedBy,
         });
+
+        if (data.tags !== undefined) {
+            this.eventRepository.setEventTags(eventId, data.tags, modifiedBy, now);
+        }
 
         this.syncTournamentConfig(undefined, eventId, data, modifiedBy, now);
         this.syncCurrentRatingEvent(
@@ -165,6 +189,28 @@ export class EventService {
             throw new ClubNotFoundError(data.clubId!);
         }
 
+        if (data.tags !== undefined) {
+            this.validateTags(data.tags);
+        }
+
+        const newIsRated = data.isRated ?? existingEvent.isRated;
+        if (existingEvent.clubId !== null && existingEvent.isRated && !newIsRated) {
+            const club = this.clubRepository.findClubById(existingEvent.clubId);
+            if (club?.currentRatingEventId === eventId) {
+                throw new CannotUnrateCurrentSeasonError();
+            }
+        }
+
+        if (existingEvent.clubId !== null && newIsRated !== existingEvent.isRated) {
+            const topics = this.clubRepository.getClubTelegramTopics(existingEvent.clubId);
+            if (topics?.clubLogs) {
+                LogService.logInfo(
+                    `Event "${existingEvent.name}" (id ${existingEvent.id}) isRated: ${existingEvent.isRated} → ${newIsRated} by user ${modifiedBy}`,
+                    topics.clubLogs
+                );
+            }
+        }
+
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
         this.validateEventDataInvariants(data, existingEvent);
@@ -185,6 +231,7 @@ export class EventService {
             description: data.description ?? null,
             type: data.type,
             format: data.format,
+            isRated: newIsRated,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
@@ -197,6 +244,11 @@ export class EventService {
             modifiedAt: now,
             modifiedBy,
         });
+
+        // Omitting `tags` preserves the existing set; passing [] clears it.
+        if (data.tags !== undefined) {
+            this.eventRepository.setEventTags(eventId, data.tags, modifiedBy, now);
+        }
 
         this.syncTournamentConfig(existingEvent, eventId, data, modifiedBy, now);
 
@@ -738,6 +790,8 @@ export function projectEventToData(event: Event): EventData {
         format: event.format,
         clubId: event.clubId,
         isCurrentRating: event.isCurrentRating,
+        isRated: event.isRated,
+        tags: event.tags,
         dateFrom: event.dateFrom,
         dateTo: event.dateTo,
         gameRulesId: event.gameRules.id,
@@ -766,6 +820,8 @@ export function mergeEventData(base: EventData, patch: EventPatchBody): EventDat
     assignIfPresent(merged, patch, 'type');
     assignIfPresent(merged, patch, 'format');
     assignIfPresent(merged, patch, 'isCurrentRating');
+    assignIfPresent(merged, patch, 'isRated');
+    assignIfPresent(merged, patch, 'tags');
     assignIfPresent(merged, patch, 'dateFrom');
     assignIfPresent(merged, patch, 'dateTo');
     assignIfPresent(merged, patch, 'clubId');
@@ -841,6 +897,8 @@ export interface EventData {
     format: EventFormat;
     clubId?: number | null | undefined;
     isCurrentRating?: boolean | null | undefined;
+    isRated?: boolean | undefined;
+    tags?: string[] | undefined;
     dateFrom?: Date | null | undefined;
     dateTo?: Date | null | undefined;
     gameRulesId: number;

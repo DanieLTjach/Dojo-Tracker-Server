@@ -1,4 +1,4 @@
-import { NotFoundError, BadRequestError, ForbiddenError, InternalServerError } from './BaseErrors.ts';
+import { NotFoundError, BadRequestError, ForbiddenError, InternalServerError, ConflictError } from './BaseErrors.ts';
 
 export class EventNotFoundError extends NotFoundError {
     constructor(eventId: number) {
@@ -282,5 +282,17 @@ export class MinParticipantsRequiredForTeamConfigError extends BadRequestError {
 export class MinParticipantsMustMatchTeamConfigError extends BadRequestError {
     constructor(minParticipants: number, expected: number) {
         super('minParticipantsMustMatchTeamConfig', { minParticipants, expected });
+    }
+}
+
+export class UnknownEventTagError extends BadRequestError {
+    constructor(tag: string) {
+        super('unknownEventTag', { tag });
+    }
+}
+
+export class CannotUnrateCurrentSeasonError extends ConflictError {
+    constructor() {
+        super('cannotUnrateCurrentSeason');
     }
 }

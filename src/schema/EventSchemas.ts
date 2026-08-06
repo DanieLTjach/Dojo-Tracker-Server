@@ -106,6 +106,11 @@ const eventSchema = z.object({
     type: eventTypeEnum,
     format: eventFormatEnum.default(EventFormat.INDIVIDUAL),
     isCurrentRating: z.boolean().nullish(),
+    // Not `.default(true)`: this schema also backs PUT, where a materialized default
+    // would silently re-rate an event whose body omits the field. Create defaults to
+    // true in EventService instead.
+    isRated: z.boolean().optional(),
+    tags: z.array(z.string().min(1)).optional(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer'),
@@ -193,6 +198,8 @@ export const eventPatchBodySchema = z.strictObject({
     type: eventTypeEnum.optional(),
     format: eventFormatEnum.optional(),
     isCurrentRating: z.boolean().nullish(),
+    isRated: z.boolean().optional(),
+    tags: z.array(z.string().min(1)).optional(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer').optional(),
