@@ -5,8 +5,13 @@ import eventRoutes from '../src/routes/EventRoutes.ts';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createCustomEvent } from './testHelpers.ts';
+import {
+    createAuthHeader,
+    createCustomEvent,
+    dateInsideEventWindow,
+    openEventWindow,
+    resetTestDatabase,
+} from './testHelpers.ts';
 import { TournamentRoundImportService } from '../src/service/TournamentRoundImportService.ts';
 
 const SYSTEM_USER_ID = 0;
@@ -109,8 +114,8 @@ describe('Tournament management', () => {
         createCustomEvent(
             TOURNAMENT_EVENT_ID,
             'Managed Tournament',
-            '2026-01-01T00:00:00.000Z',
-            '2030-01-01T00:00:00.000Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             GAME_RULES_ID,
             TEST_CLUB_ID,
             'TOURNAMENT',
@@ -137,8 +142,7 @@ describe('Tournament management', () => {
             OWNER_USER_ID,
             MODERATOR_USER_ID
         );
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     test('starts round 1 even without pre-generated games (seating done outside the app)', async () => {
@@ -464,8 +468,8 @@ describe('Tournament management', () => {
         createCustomEvent(
             SEASON_EVENT_ID,
             'Tracked Season Event',
-            '2026-01-01T00:00:00.000Z',
-            '2030-01-01T00:00:00.000Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             GAME_RULES_ID,
             TEST_CLUB_ID,
             'SEASON'
@@ -500,9 +504,9 @@ describe('Tournament management', () => {
     });
 
     test('returns the synchronized round timer when getting and starting a tracked game', async () => {
+        const roundStartedAt = new Date(dateInsideEventWindow(1, 12));
         jest.useFakeTimers();
         try {
-            const roundStartedAt = new Date('2026-07-26T12:00:00.000Z');
             jest.setSystemTime(roundStartedAt);
             dbManager.db.prepare('UPDATE tournament SET roundDurationSec = ? WHERE eventId = ?')
                 .run(3600, TOURNAMENT_EVENT_ID);
@@ -514,7 +518,7 @@ describe('Tournament management', () => {
                 .send({})
                 .expect(200);
 
-            const serverNow = new Date('2026-07-26T12:15:00.000Z');
+            const serverNow = new Date(roundStartedAt.getTime() + 15 * 60 * 1000);
             jest.setSystemTime(serverNow);
             const fetched = await request(app)
                 .get(`/api/games/${gameId}`)
@@ -541,9 +545,9 @@ describe('Tournament management', () => {
     });
 
     test('a repeated round start is idempotent and does not restart the timer', async () => {
+        const roundStartedAt = new Date(dateInsideEventWindow(1, 12));
         jest.useFakeTimers();
         try {
-            const roundStartedAt = new Date('2026-07-26T12:00:00.000Z');
             jest.setSystemTime(roundStartedAt);
             dbManager.db.prepare('UPDATE tournament SET roundDurationSec = ? WHERE eventId = ?')
                 .run(3600, TOURNAMENT_EVENT_ID);
@@ -557,14 +561,14 @@ describe('Tournament management', () => {
 
             // Ten minutes later, a retry (double tap, network retry) must not re-arm the
             // clock — the round is still the same round, so the countdown keeps running.
-            jest.setSystemTime(new Date('2026-07-26T12:10:00.000Z'));
+            jest.setSystemTime(new Date(roundStartedAt.getTime() + 10 * 60 * 1000));
             await request(app)
                 .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
                 .set('Authorization', adminAuthHeader)
                 .send({})
                 .expect(200);
 
-            const serverNow = new Date('2026-07-26T12:15:00.000Z');
+            const serverNow = new Date(roundStartedAt.getTime() + 15 * 60 * 1000);
             jest.setSystemTime(serverNow);
             const fetched = await request(app)
                 .get(`/api/games/${gameId}`)

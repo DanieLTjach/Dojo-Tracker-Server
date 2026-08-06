@@ -3,8 +3,13 @@ import express from 'express';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent, createCustomEvent, deleteEventById } from './testHelpers.ts';
+import {
+    createAuthHeader,
+    createTestEvent,
+    createCustomEvent,
+    deleteEventById,
+    resetTestDatabase,
+} from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
 import { EventRepository } from '../src/repository/EventRepository.ts';
@@ -34,8 +39,7 @@ describe('Event API Endpoints', () => {
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('GET /api/events - Get All Events', () => {

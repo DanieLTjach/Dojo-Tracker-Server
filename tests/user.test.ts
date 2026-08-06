@@ -3,8 +3,7 @@ import express from 'express';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTelegramInitData } from './testHelpers.ts';
+import { createAuthHeader, createTelegramInitData, resetTestDatabase } from './testHelpers.ts';
 import { DEFAULT_LOCALE, t } from '../src/i18n/index.ts';
 
 const app = express();
@@ -23,10 +22,7 @@ describe('User API Endpoints', () => {
     let regularUserAuthHeader: string;
 
     afterAll(() => {
-        // Close database connection
-        dbManager.closeDB();
-        // Clean up test database files
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('POST /api/users', () => {

@@ -1,3 +1,4 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import { GameRulesRepository, type InsertGameRulesParams } from '../src/repository/GameRulesRepository.ts';
 import { EventRepository } from '../src/repository/EventRepository.ts';
 import { GameRulesService } from '../src/service/GameRulesService.ts';
@@ -6,7 +7,6 @@ import { InsufficientClubPermissionsError } from '../src/error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../src/error/AuthErrors.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import type { GameRulesDetails } from '../src/model/EventModels.ts';
-import { cleanupTestDatabase } from './setup.ts';
 
 const TEST_CLUB_ID = 800;
 const ADMIN_USER_ID = 0;
@@ -38,8 +38,7 @@ describe('Game Rules CRUD', () => {
     afterAll(() => {
         dbManager.db.prepare('DELETE FROM gameRules WHERE clubId = ?').run(TEST_CLUB_ID);
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(TEST_CLUB_ID);
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('GameRulesRepository', () => {

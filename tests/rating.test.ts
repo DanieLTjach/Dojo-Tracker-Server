@@ -5,8 +5,13 @@ import gameRoutes from '../src/routes/GameRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent, createTelegramInitData } from './testHelpers.ts';
+import {
+    createAuthHeader,
+    createTestEvent,
+    createTelegramInitData,
+    openEventWindow,
+    resetTestDatabase,
+} from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -17,16 +22,13 @@ app.use(handleErrors);
 
 describe('Rating API Endpoints', () => {
     beforeEach(async () => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
-        dbManager.reinitDB();
+        resetTestDatabase();
         // Create test event for each test
         createTestEvent();
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     const SYSTEM_USER_ID = 0;
@@ -577,8 +579,8 @@ describe('Rating API Endpoints', () => {
                 'SEASON',
                 WIND_GAME_RULES_ID,
                 1,
-                '2024-01-01T00:00:00.000Z',
-                '2026-12-31T23:59:59.999Z',
+                openEventWindow().dateFrom,
+                openEventWindow().dateTo,
                 1000,
                 0,
                 0,

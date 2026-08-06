@@ -2,9 +2,7 @@ import request from 'supertest';
 import express from 'express';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
-import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTelegramInitData } from './testHelpers.ts';
+import { createAuthHeader, createTelegramInitData, resetTestDatabase } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -20,8 +18,7 @@ describe('Profile API Endpoints', () => {
     let regularUserAuthHeader: string;
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     beforeAll(async () => {

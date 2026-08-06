@@ -4,13 +4,15 @@ import gameRoutes from '../src/routes/GameRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 import {
     createAuthHeader,
     createTestEvent,
     createCustomEvent,
     createTelegramInitData,
+    dateInsideEventWindow,
     deleteEventById,
+    openEventWindow,
+    resetTestDatabase,
 } from './testHelpers.ts';
 import type { ExhaustiveDraw } from '../src/model/GameRoundResultModels.ts';
 import { ProfileRepository } from '../src/repository/ProfileRepository.ts';
@@ -100,8 +102,7 @@ describe('Game API Endpoints', () => {
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('POST /api/games - Create Game', () => {
@@ -244,8 +245,8 @@ describe('Game API Endpoints', () => {
             createCustomEvent(
                 tournamentEventId,
                 'Uniqueness Tournament',
-                '2024-01-01T00:00:00.000Z',
-                '2026-12-31T23:59:59.999Z',
+                openEventWindow().dateFrom,
+                openEventWindow().dateTo,
                 2,
                 1,
                 'TOURNAMENT'
@@ -293,8 +294,8 @@ describe('Game API Endpoints', () => {
             createCustomEvent(
                 tournamentEventId,
                 'Member Round Restriction Tournament',
-                '2024-01-01T00:00:00.000Z',
-                '2026-12-31T23:59:59.999Z',
+                openEventWindow().dateFrom,
+                openEventWindow().dateTo,
                 2,
                 1,
                 'TOURNAMENT'
@@ -867,8 +868,8 @@ describe('Game API Endpoints', () => {
             createCustomEvent(
                 tournamentEventId,
                 'Tracked Uniqueness Tournament',
-                '2024-01-01T00:00:00.000Z',
-                '2026-12-31T23:59:59.999Z',
+                openEventWindow().dateFrom,
+                openEventWindow().dateTo,
                 2,
                 1,
                 'TOURNAMENT'
@@ -2635,8 +2636,8 @@ describe('Game API Endpoints', () => {
             createCustomEvent(
                 TOURNAMENT_EVENT_ID,
                 'Test Tournament',
-                '2024-01-01T00:00:00.000Z',
-                '2026-12-31T23:59:59.999Z',
+                openEventWindow().dateFrom,
+                openEventWindow().dateTo,
                 2,
                 1,
                 'TOURNAMENT'
@@ -2812,7 +2813,7 @@ describe('Game API Endpoints', () => {
     describe('Custom createdAt field - Admin privileges', () => {
         describe('POST /api/games - Create Game with custom createdAt', () => {
             test('should allow admin to create a game with custom createdAt', async () => {
-                const customDate = new Date('2024-06-15T14:30:00.000Z');
+                const customDate = new Date(dateInsideEventWindow(30, 14));
                 const response = await request(app)
                     .post('/api/games')
                     .set('Authorization', adminAuthHeader)
@@ -2835,7 +2836,7 @@ describe('Game API Endpoints', () => {
             });
 
             test('should prevent non-admin from creating a game with custom createdAt', async () => {
-                const customDate = new Date('2024-06-15T15:30:00.000Z');
+                const customDate = new Date(dateInsideEventWindow(30, 15));
                 const response = await request(app)
                     .post('/api/games')
                     .set('Authorization', user1AuthHeader)
@@ -2880,7 +2881,7 @@ describe('Game API Endpoints', () => {
 
         describe('PUT /api/games/:gameId - Update Game with custom createdAt', () => {
             let gameToUpdateId: number;
-            const originalDate = new Date('2024-06-10T10:00:00.000Z');
+            const originalDate = new Date(dateInsideEventWindow(35, 10));
 
             beforeAll(async () => {
                 // Create a game with a custom date as admin
@@ -2901,7 +2902,7 @@ describe('Game API Endpoints', () => {
             });
 
             test('should allow admin to update game with new createdAt', async () => {
-                const newDate = new Date('2024-06-11T12:00:00.000Z');
+                const newDate = new Date(dateInsideEventWindow(34, 12));
                 const response = await request(app)
                     .put(`/api/games/${gameToUpdateId}`)
                     .set('Authorization', adminAuthHeader)
@@ -2938,7 +2939,7 @@ describe('Game API Endpoints', () => {
                 expect(response.status).toBe(200);
                 expect(response.body.id).toBe(gameToUpdateId);
                 // createdAt should remain unchanged from the previous update
-                const newDate = new Date('2024-06-11T12:00:00.000Z');
+                const newDate = new Date(dateInsideEventWindow(34, 12));
                 expect(new Date(response.body.createdAt).getTime()).toBe(newDate.getTime());
             });
         });

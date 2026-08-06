@@ -2,11 +2,10 @@ import request from 'supertest';
 import express from 'express';
 import authRoutes from '../src/routes/AuthRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
-import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 import { HashUtil } from '../src/util/HashUtil.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
+import { resetTestDatabase } from './testHelpers.ts';
 import config from '../config/config.ts';
 
 const app = express();
@@ -29,8 +28,7 @@ describe('Authentication API Endpoints', () => {
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     /**

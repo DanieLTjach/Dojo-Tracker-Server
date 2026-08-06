@@ -8,7 +8,13 @@ import { unlinkSync, existsSync } from 'fs';
 const TEST_DB_PATH = './db/data/test.db';
 
 /**
- * Clean up any existing test database files from previous runs
+ * Delete the test database files.
+ *
+ * All suites share one process and one `dbManager` singleton under `--runInBand`, so
+ * deleting the file without reopening it leaves every later suite pointing at a database
+ * that no longer exists. Suites should call `resetTestDatabase()` from `testHelpers.ts`
+ * in `afterAll` instead of calling this directly; it rebuilds an empty, migrated database
+ * so the shared handle stays valid for whichever suite runs next.
  */
 function cleanupTestDatabase() {
     const filesToClean = [
