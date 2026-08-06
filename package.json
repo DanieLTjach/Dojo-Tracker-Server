@@ -37,6 +37,8 @@
         "zod": "^4.1.13"
     },
     "devDependencies": {
+        "@swc/core": "^1.15.47",
+        "@swc/jest": "^0.2.39",
         "@types/better-sqlite3": "^7.6.13",
         "@types/cors": "^2.8.19",
         "@types/escape-html": "^1.0.4",
@@ -56,7 +58,6 @@
         "lint-staged": "^17.0.7",
         "nodemon": "^3.1.11",
         "supertest": "^7.1.4",
-        "ts-jest": "^29.4.6",
-        "typescript": "^5.9.3"
+        "typescript": "^7.0.2"
     }
 }
