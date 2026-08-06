@@ -6,5 +6,6 @@ import:
   rowPointsNotInteger: "Row {{row}}: player{{player}}_points must be an integer"
   rowInvalidStartPlace: "Row {{row}}: player{{player}}_startPlace must be one of: {{validWinds}}"
   rowChomboNotNonNegativeInteger: "Row {{row}}: player{{player}}_chombo must be a non-negative integer"
+  rowInvalidIsSubstitutePlayer: "Row {{row}}: player{{player}}_isSubstitutePlayer must be one of: 1, true, yes, 0, false, no"
   rowInvalidCreatedAt: "Row {{row}}: createdAt is not a valid date"
   rowTournamentRoundNotPositiveInteger: "Row {{row}}: tournamentRound must be a positive integer"

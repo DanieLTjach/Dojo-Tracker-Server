@@ -32,6 +32,11 @@ interface ParsedGameRow {
 const PLAYER_COLUMNS = ['username', 'points', 'startPlace', 'chombo'] as const;
 const VALID_WINDS = ['EAST', 'SOUTH', 'WEST', 'NORTH'] as const satisfies readonly Wind[];
 
+// Accepted truthy spellings for the optional `player{p}_isSubstitutePlayer` column.
+// The column is optional so pre-existing CSVs keep importing unchanged.
+const TRUTHY_VALUES = ['1', 'true', 'yes'] as const;
+const FALSY_VALUES = ['', '0', 'false', 'no'] as const;
+
 /**
  * How the `player{p}_username` cells identify users. Defaults to 'username' (telegramUsername,
  * including the leading '@'). Use 'name' for historical imports whose players predate Telegram
@@ -239,11 +244,23 @@ export class ImportService {
                 );
             }
 
+            const substituteStr = getValue(`player${p}_isSubstitutePlayer`).toLowerCase();
+            if (
+                !TRUTHY_VALUES.includes(substituteStr as typeof TRUTHY_VALUES[number]) &&
+                !FALSY_VALUES.includes(substituteStr as typeof FALSY_VALUES[number])
+            ) {
+                throw new Error(
+                    t('import.rowInvalidIsSubstitutePlayer', DEFAULT_LOCALE, { row: rowNumber, player: p })
+                );
+            }
+            const isSubstitutePlayer = TRUTHY_VALUES.includes(substituteStr as typeof TRUTHY_VALUES[number]);
+
             players.push({
                 userId: user.id,
                 points,
                 startPlace: startPlace ?? null,
                 chomboCount,
+                isSubstitutePlayer,
             });
         }
 
