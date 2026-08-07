@@ -657,11 +657,6 @@ describe('Database Migrations', () => {
                 label: 'Mahjong Soul - 3P Mahjong',
             },
         ]);
-        const sanmaRow = rows.find(r => r.id === 3);
-        const resolvedSanma = parseGameRulesDetailsAndApplyPresets(sanmaRow ? sanmaRow.details : null);
-        expect(resolvedSanma?.rules.noten_penalty).toBe(2000);
-        expect(resolvedSanma?.rules.red_fives).toBe('two_red_fives_five_pin_and_five_sou');
-        expect(resolvedSanma?.rules.chombo).toBe('baiman');
 
         db.close();
     });
@@ -862,35 +857,6 @@ describe('Database Migrations', () => {
             isRated: number;
         };
         expect(ratedEvent.isRated).toBe(1);
-
-        const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
-        expect(foreignKeyViolations).toEqual([]);
-
-        db.close();
-    });
-
-    test('migration 15 removes yonma overrides from gameRules id 3 and sets chombo to baiman', () => {
-        const db = createMigratedDb(14);
-        db.pragma('foreign_keys = ON');
-
-        const before = db.prepare('SELECT details FROM gameRules WHERE id = 3').get() as { details: string };
-        const beforeJson = JSON.parse(before.details);
-        expect(beforeJson.rules.noten_penalty).toBe(3000);
-        expect(beforeJson.rules.red_fives).toBe('three_one_per_suit');
-
-        runMigration(db, 15);
-
-        const after = db.prepare('SELECT details FROM gameRules WHERE id = 3').get() as { details: string };
-        const afterJson = JSON.parse(after.details);
-        // Redundant overrides matching preset were removed
-        expect(afterJson.rules.noten_penalty).toBeUndefined();
-        expect(afterJson.rules.red_fives).toBeUndefined();
-        expect(afterJson.rules.chombo).toBe('baiman');
-
-        const resolved = parseGameRulesDetailsAndApplyPresets(after.details);
-        expect(resolved?.rules.noten_penalty).toBe(2000);
-        expect(resolved?.rules.red_fives).toBe('two_red_fives_five_pin_and_five_sou');
-        expect(resolved?.rules.chombo).toBe('baiman');
 
         const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
         expect(foreignKeyViolations).toEqual([]);

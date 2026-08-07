@@ -102,7 +102,7 @@ describe('LocalGameScoringService', () => {
     });
 
     it('calculates sanma (3 players) scoring correctly', () => {
-        // ruleset 3 is a 3-player ruleset in global seeds
+        // ruleset 6 is a 3-player ruleset in global seeds (Mahjong Soul Sanma)
         const players3 = [
             { userId: 1, points: 35000, startPlace: Wind.EAST, chomboCount: 0 },
             { userId: 2, points: 35000, startPlace: Wind.SOUTH, chomboCount: 0 },
@@ -110,7 +110,7 @@ describe('LocalGameScoringService', () => {
         ];
 
         const result = service.scoreRoundPreview({
-            gameRulesId: 3,
+            gameRulesId: 6,
             players: players3,
             currentState,
             result: {
@@ -137,7 +137,7 @@ describe('LocalGameScoringService', () => {
 
         // 1 tenpai, 2 noten: player 1 receives +2000, players 2 and 3 pay -1000 each
         const result1Tenpai = service.scoreRoundPreview({
-            gameRulesId: 3, // Sanma ruleset fixed by migration 015
+            gameRulesId: 6, // Mahjong Soul Sanma preset
             players: players3,
             currentState,
             result: {
@@ -158,7 +158,7 @@ describe('LocalGameScoringService', () => {
 
         // 2 tenpai, 1 noten: players 1 and 2 receive +1000 each, player 3 pays -2000
         const result2Tenpai = service.scoreRoundPreview({
-            gameRulesId: 3,
+            gameRulesId: 6,
             players: players3,
             currentState,
             result: {
@@ -179,6 +179,11 @@ describe('LocalGameScoringService', () => {
     });
 
     it('calculates sanma (3 players) CHOMBO deltas correctly with baiman penalty', () => {
+        dbManager.db.prepare(
+            `INSERT INTO gameRules (id, name, numberOfPlayers, uma, startingPoints, umaTieBreak, clubId, details)
+             VALUES (9002, 'Sanma Baiman Chombo', 3, '[15,0,-15]', 35000, 'WIND', NULL, '{"preset":"mahjong_soul_sanma","rules":{"chombo":"baiman"}}')`
+        ).run();
+
         const players3 = [
             { userId: 1, points: 35000, startPlace: Wind.EAST, chomboCount: 0 },
             { userId: 2, points: 35000, startPlace: Wind.SOUTH, chomboCount: 0 },
@@ -187,7 +192,7 @@ describe('LocalGameScoringService', () => {
 
         // Non-dealer (player 2) commits chombo: dealer (p1) gets +8000, non-dealer (p3) gets +4000, offender (p2) pays -12000
         const result = service.scoreRoundPreview({
-            gameRulesId: 3,
+            gameRulesId: 9002,
             players: players3,
             currentState,
             result: {
