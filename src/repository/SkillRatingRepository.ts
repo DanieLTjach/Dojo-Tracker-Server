@@ -364,6 +364,107 @@ export class SkillRatingRepository {
         return this.findRatableGamesForTrackStatement().all({ clubId, gameSize });
     }
 
+    /** Display fields for the users produced by an ad-hoc replay. */
+    findUserDisplayFields(userIds: number[]): SkillUserDisplayDBEntity[] {
+        if (userIds.length === 0) {
+            return [];
+        }
+        const placeholders = userIds.map(() => '?').join(', ');
+        return dbManager.db.prepare(`
+            SELECT
+                u.id as userId,
+                u.name as userName,
+                u.telegramUsername,
+                p.firstName as profileFirstName,
+                p.lastName as profileLastName,
+                p.hideProfile as profileHidden
+            FROM user u
+            LEFT JOIN profile p ON u.id = p.userId
+            WHERE u.id IN (${placeholders})
+        `).all(userIds) as SkillUserDisplayDBEntity[];
+    }
+
+    /**
+     * Games matching an ad-hoc filter, for the on-demand custom leaderboard.
+     *
+     * Not cached and not stored — the caller replays these to build a ranking
+     * that exists only for the duration of the request.
+     *
+     * `clubId` null spans every club. `tags` empty means no tag restriction;
+     * otherwise `matchAll` picks between "has every tag" and "has any tag".
+     */
+    findRatableGamesFiltered(filter: {
+        clubId: number | null;
+        gameSize: number;
+        tags: string[];
+        matchAll: boolean;
+        eventType: string | null;
+    }): RatableGamePlayerDBEntity[] {
+        const conditions: string[] = [
+            `g.status = 'FINISHED'`,
+            `e.isRated = 1`,
+            `e.clubId IS NOT NULL`,
+            `gr.numberOfPlayers = :gameSize`,
+            `NOT EXISTS (
+                SELECT 1 FROM eventRegistration er
+                WHERE er.eventId = g.eventId AND er.userId = utg.userId AND er.isFillerPlayer = 1
+            )`,
+        ];
+
+        const params: Record<string, unknown> = { gameSize: filter.gameSize };
+
+        if (filter.clubId !== null) {
+            conditions.push(`e.clubId = :clubId`);
+            params['clubId'] = filter.clubId;
+        }
+
+        if (filter.eventType !== null) {
+            conditions.push(`e.type = :eventType`);
+            params['eventType'] = filter.eventType;
+        }
+
+        if (filter.tags.length > 0) {
+            // Tag names are validated against the eventTag table before we get
+            // here, but they are still bound as parameters rather than inlined.
+            const placeholders = filter.tags.map((_, i) => `:tag${i}`).join(', ');
+            filter.tags.forEach((tag, i) => {
+                params[`tag${i}`] = tag;
+            });
+
+            if (filter.matchAll) {
+                conditions.push(`(
+                    SELECT COUNT(DISTINCT ett.tag) FROM eventToTag ett
+                    WHERE ett.eventId = e.id AND ett.tag IN (${placeholders})
+                ) = :tagCount`);
+                params['tagCount'] = filter.tags.length;
+            } else {
+                conditions.push(`EXISTS (
+                    SELECT 1 FROM eventToTag ett
+                    WHERE ett.eventId = e.id AND ett.tag IN (${placeholders})
+                )`);
+            }
+        }
+
+        return dbManager.db.prepare(`
+            SELECT
+                g.id as gameId,
+                g.createdAt as gameCreatedAt,
+                e.clubId,
+                gr.numberOfPlayers as gameSize,
+                gr.umaTieBreak,
+                utg.userId,
+                utg.points,
+                utg.startPlace,
+                utg.isSubstitutePlayer
+            FROM game g
+            JOIN event e ON g.eventId = e.id
+            JOIN gameRules gr ON e.gameRules = gr.id
+            JOIN userToGame utg ON g.id = utg.gameId
+            WHERE ${conditions.join('\n              AND ')}
+            ORDER BY g.createdAt ASC, g.id ASC, utg.userId ASC
+        `).all(params) as RatableGamePlayerDBEntity[];
+    }
+
     private findAllActiveClubsWithGamesStatement(): Statement<[], { clubId: number }> {
         return dbManager.db.prepare(`
             SELECT DISTINCT e.clubId
@@ -388,6 +489,15 @@ export interface SkillRatingDBEntity {
     firstRatedGameAt: string;
     lastRatedGameAt: string;
     modifiedAt: string;
+}
+
+export interface SkillUserDisplayDBEntity {
+    userId: number;
+    userName: string;
+    telegramUsername: string | null;
+    profileFirstName: string | null;
+    profileLastName: string | null;
+    profileHidden: number | null;
 }
 
 export interface SkillRatingWithUserDBEntity extends SkillRatingDBEntity {

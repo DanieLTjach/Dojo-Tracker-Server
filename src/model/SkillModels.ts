@@ -8,6 +8,25 @@ export const INACTIVITY_GRACE_DAYS = 30;
 export const INACTIVITY_SIGMA_RATE = 0.0015;
 export const MAX_SIGMA = DEFAULT_SIGMA;
 export const DEFAULT_PROVISIONAL_GAME_THRESHOLD = 30;
+
+/**
+ * Response for the on-demand custom leaderboard. Unlike SkillLeaderboardResponse
+ * this reflects nothing stored — it is computed per request and discarded, so it
+ * carries the filter back so callers can label what they are looking at.
+ */
+export interface CustomSkillLeaderboardResponse {
+    clubId: number | null;
+    gameSize: number;
+    tags: string[];
+    matchAll: boolean;
+    eventType: string | null;
+    provisionalGameThreshold: number;
+    gamesProcessed: number;
+    playersTotal: number;
+    durationMs: number;
+    entries: SkillLeaderboardEntry[];
+    provisionalEntries: SkillLeaderboardEntry[];
+}
 /** Clubs tune the threshold in steps of 10 (10, 20, 30, ...). */
 export const PROVISIONAL_GAME_THRESHOLD_STEP = 10;
 

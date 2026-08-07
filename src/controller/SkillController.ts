@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import {
     getClubSkillConfigSchema,
     getClubSkillLeaderboardSchema,
+    getCustomSkillLeaderboardSchema,
     getUserSkillSchema,
     recomputeAdminSkillSchema,
     recomputeClubSkillSchema,
@@ -29,6 +30,19 @@ export class SkillController {
             query: { gameSize },
         } = getClubSkillLeaderboardSchema.parse(req);
         const leaderboard = this.skillRatingService.getClubLeaderboard(clubId, gameSize);
+        return res.status(StatusCodes.OK).json(leaderboard);
+    }
+
+    getCustomSkillLeaderboard(req: Request, res: Response) {
+        const { query } = getCustomSkillLeaderboardSchema.parse(req);
+        const leaderboard = this.skillRatingService.getCustomLeaderboard({
+            clubId: query.clubId ?? null,
+            gameSize: query.gameSize,
+            tags: query.tags ?? [],
+            matchAll: query.matchAll,
+            eventType: query.eventType ?? null,
+            provisionalGameThreshold: query.threshold,
+        });
         return res.status(StatusCodes.OK).json(leaderboard);
     }
 

@@ -19,6 +19,23 @@ router.get(
     withTransaction((req, res) => skillController.getClubSkillLeaderboard(req, res))
 );
 
+/**
+ * GET /api/skill/leaderboard
+ * Custom leaderboard computed on demand and not stored.
+ *
+ * Query: clubId (omit for all clubs), gameSize (3|4, default 4),
+ *        tags (comma-separated), matchAll (default false = any tag),
+ *        eventType (SEASON|TOURNAMENT), threshold (default 30).
+ *
+ * Read-only: unlike the recompute endpoints this never writes skillRating,
+ * so it needs no club role.
+ */
+router.get(
+    '/skill/leaderboard',
+    requireAuth,
+    withTransaction((req, res) => skillController.getCustomSkillLeaderboard(req, res))
+);
+
 router.post(
     '/clubs/:clubId/skill/recompute',
     requireAuth,

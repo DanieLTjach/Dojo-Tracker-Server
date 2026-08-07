@@ -3,6 +3,7 @@ import {
     DEFAULT_PROVISIONAL_GAME_THRESHOLD,
     DEFAULT_SIGMA,
     type ClubSkillConfig,
+    type CustomSkillLeaderboardResponse,
     type ResolvedSkillRating,
     type SkillLeaderboardEntry,
     type SkillLeaderboardResponse,
@@ -23,6 +24,7 @@ import {
 import { UserRepository } from '../repository/UserRepository.ts';
 import { InvalidGameSize, SkillRatingNotEnabledForClub } from '../error/SkillErrors.ts';
 import { ClubNotFoundError } from '../error/ClubErrors.ts';
+import { UnknownEventTagError } from '../error/EventErrors.ts';
 import { UserNotFoundById } from '../error/UserErrors.ts';
 import { inflateSigma, rateGame, toDisplaySkill, toOrdinal } from '../util/SkillMathUtil.ts';
 import { calculatePlacements } from '../util/GamePlacementUtil.ts';
@@ -168,6 +170,90 @@ export class SkillRatingService {
             gameSize,
             provisionalGameThreshold: config.provisionalGameThreshold,
             isStale,
+            entries: ranked,
+            provisionalEntries: provisional,
+        };
+    }
+
+    /**
+     * Builds a leaderboard for an arbitrary slice of games — a club, all clubs,
+     * specific tags, an event type — by replaying that slice on demand.
+     *
+     * Nothing is stored. The stored `skillRating` table always holds the
+     * all-games rating for a club; this exists so custom cuts can be explored
+     * without a second persisted rating to keep in sync.
+     *
+     * Each call is an independent replay from scratch, so scores from different
+     * filters are NOT comparable: a smaller pool leaves players less converged.
+     */
+    getCustomLeaderboard(
+        filter: {
+            clubId: number | null;
+            gameSize: number;
+            tags: string[];
+            matchAll: boolean;
+            eventType: string | null;
+            provisionalGameThreshold: number;
+        },
+        now: Date = new Date()
+    ): CustomSkillLeaderboardResponse {
+        if (filter.gameSize !== 3 && filter.gameSize !== 4) {
+            throw new InvalidGameSize(filter.gameSize);
+        }
+
+        for (const tag of filter.tags) {
+            if (!this.eventRepository.tagExists(tag)) {
+                throw new UnknownEventTagError(tag);
+            }
+        }
+
+        const startTime = Date.now();
+        const rows = this.skillRatingRepository.findRatableGamesFiltered(filter);
+        const { playerState, gamesProcessed } = replayGames(rows);
+
+        const users = this.skillRatingRepository.findUserDisplayFields([...playerState.keys()]);
+        const userById = new Map(users.map(u => [u.userId, u]));
+
+        // Reuse the stored leaderboard's resolve/sort path so an ad-hoc board
+        // formats and orders identically to the persisted one.
+        const asRows: SkillRatingWithUserDBEntity[] = [];
+        for (const [userId, state] of playerState.entries()) {
+            const user = userById.get(userId);
+            if (!user) {
+                continue;
+            }
+            asRows.push({
+                userId,
+                gameSize: filter.gameSize,
+                mu: state.mu,
+                sigma: state.sigma,
+                gamesPlayed: state.gamesPlayed,
+                lastRatedGameAt: state.lastRatedGameAt.toISOString(),
+                userName: user.userName,
+                telegramUsername: user.telegramUsername,
+                profileFirstName: user.profileFirstName,
+                profileLastName: user.profileLastName,
+                profileHidden: user.profileHidden,
+            } as SkillRatingWithUserDBEntity);
+        }
+
+        const { ranked, provisional } = this.buildResolvedLeaderboardEntries(
+            asRows,
+            filter.provisionalGameThreshold,
+            false,
+            now
+        );
+
+        return {
+            clubId: filter.clubId,
+            gameSize: filter.gameSize,
+            tags: filter.tags,
+            matchAll: filter.matchAll,
+            eventType: filter.eventType,
+            provisionalGameThreshold: filter.provisionalGameThreshold,
+            gamesProcessed,
+            playersTotal: playerState.size,
+            durationMs: Date.now() - startTime,
             entries: ranked,
             provisionalEntries: provisional,
         };
@@ -561,89 +647,10 @@ export class SkillRatingService {
         this.skillRatingRepository.deleteTrackData(clubId, gameSize);
 
         const rows = this.skillRatingRepository.findRatableGamesForTrack(clubId, gameSize);
+        const { playerState, gamesProcessed, outcomes } = replayGames(rows, excludeGameId);
 
-        // Group rows by gameId preserving chronological order
-        const gameMap = new Map<number, RatableGamePlayerDBEntity[]>();
-        for (const row of rows) {
-            if (excludeGameId !== undefined && row.gameId === excludeGameId) {
-                continue;
-            }
-            const list = gameMap.get(row.gameId) ?? [];
-            list.push(row);
-            gameMap.set(row.gameId, list);
-        }
-
-        const playerState = new Map<
-            number,
-            {
-                mu: number;
-                sigma: number;
-                gamesPlayed: number;
-                firstRatedGameAt: Date;
-                lastRatedGameAt: Date;
-            }
-        >();
-
-        let gamesProcessed = 0;
-
-        for (const [gameId, gamePlayers] of gameMap.entries()) {
-            if (gamePlayers.length < 2) {
-                continue;
-            }
-
-            const umaTieBreak = parseUmaTieBreak(gamePlayers[0]!.umaTieBreak);
-            const playedAt = new Date(gamePlayers[0]!.gameCreatedAt);
-
-            const rateInputs = gamePlayers.map(p => {
-                const state = playerState.get(p.userId);
-                return {
-                    userId: p.userId,
-                    points: p.points,
-                    startPlace: p.startPlace as Wind | null | undefined,
-                    mu: state?.mu ?? DEFAULT_MU,
-                    sigma: state?.sigma ?? DEFAULT_SIGMA,
-                };
-            });
-
-            const ranks = calculatePlacements(rateInputs, umaTieBreak);
-            const rateOutputs = rateGame(rateInputs, ranks);
-
-            for (let i = 0; i < rateInputs.length; i++) {
-                const p = rateInputs[i]!;
-                const rank = ranks[i]!;
-                const out = rateOutputs[i]!;
-
-                this.skillRatingRepository.insertSkillRatingGame({
-                    gameId,
-                    userId: p.userId,
-                    clubId,
-                    gameSize,
-                    rank,
-                    muBefore: p.mu,
-                    sigmaBefore: p.sigma,
-                    muAfter: out.mu,
-                    sigmaAfter: out.sigma,
-                    playedAt,
-                });
-
-                const state = playerState.get(p.userId);
-                if (state) {
-                    state.mu = out.mu;
-                    state.sigma = out.sigma;
-                    state.gamesPlayed += 1;
-                    state.lastRatedGameAt = playedAt;
-                } else {
-                    playerState.set(p.userId, {
-                        mu: out.mu,
-                        sigma: out.sigma,
-                        gamesPlayed: 1,
-                        firstRatedGameAt: playedAt,
-                        lastRatedGameAt: playedAt,
-                    });
-                }
-            }
-
-            gamesProcessed++;
+        for (const outcome of outcomes) {
+            this.skillRatingRepository.insertSkillRatingGame({ ...outcome, clubId, gameSize });
         }
 
         // Flush playerState to DB
@@ -691,4 +698,112 @@ export class SkillRatingService {
         }
         return results;
     }
+}
+
+export interface ReplayPlayerState {
+    mu: number;
+    sigma: number;
+    gamesPlayed: number;
+    firstRatedGameAt: Date;
+    lastRatedGameAt: Date;
+}
+
+export interface ReplayGameOutcome {
+    gameId: number;
+    userId: number;
+    rank: number;
+    muBefore: number;
+    sigmaBefore: number;
+    muAfter: number;
+    sigmaAfter: number;
+    playedAt: Date;
+}
+
+/**
+ * Replays rated games in the given order, accumulating per-player skill state.
+ *
+ * Pure: no DB access. This is the single implementation of the rating loop —
+ * both the stored `recomputeTrack` and the ad-hoc filtered leaderboard call it,
+ * so the two can never disagree about what a set of games implies. Do not
+ * inline a second copy of this loop.
+ *
+ * `rows` must already be ordered chronologically (createdAt, id, userId); the
+ * userId key fixes array order because float summation is not associative.
+ */
+export function replayGames(
+    rows: RatableGamePlayerDBEntity[],
+    excludeGameId?: number
+): { playerState: Map<number, ReplayPlayerState>, gamesProcessed: number, outcomes: ReplayGameOutcome[] } {
+    const gameMap = new Map<number, RatableGamePlayerDBEntity[]>();
+    for (const row of rows) {
+        if (excludeGameId !== undefined && row.gameId === excludeGameId) {
+            continue;
+        }
+        const list = gameMap.get(row.gameId) ?? [];
+        list.push(row);
+        gameMap.set(row.gameId, list);
+    }
+
+    const playerState = new Map<number, ReplayPlayerState>();
+    const outcomes: ReplayGameOutcome[] = [];
+    let gamesProcessed = 0;
+
+    for (const [gameId, gamePlayers] of gameMap.entries()) {
+        if (gamePlayers.length < 2) {
+            continue;
+        }
+
+        const umaTieBreak = parseUmaTieBreak(gamePlayers[0]!.umaTieBreak);
+        const playedAt = new Date(gamePlayers[0]!.gameCreatedAt);
+
+        const rateInputs = gamePlayers.map(p => {
+            const state = playerState.get(p.userId);
+            return {
+                userId: p.userId,
+                points: p.points,
+                startPlace: p.startPlace as Wind | null | undefined,
+                mu: state?.mu ?? DEFAULT_MU,
+                sigma: state?.sigma ?? DEFAULT_SIGMA,
+            };
+        });
+
+        const ranks = calculatePlacements(rateInputs, umaTieBreak);
+        const rateOutputs = rateGame(rateInputs, ranks);
+
+        for (let i = 0; i < rateInputs.length; i++) {
+            const p = rateInputs[i]!;
+            const out = rateOutputs[i]!;
+
+            outcomes.push({
+                gameId,
+                userId: p.userId,
+                rank: ranks[i]!,
+                muBefore: p.mu,
+                sigmaBefore: p.sigma,
+                muAfter: out.mu,
+                sigmaAfter: out.sigma,
+                playedAt,
+            });
+
+            const state = playerState.get(p.userId);
+            if (state) {
+                state.mu = out.mu;
+                state.sigma = out.sigma;
+                state.gamesPlayed += 1;
+                state.lastRatedGameAt = playedAt;
+            } else {
+                playerState.set(p.userId, {
+                    mu: out.mu,
+                    sigma: out.sigma,
+                    gamesPlayed: 1,
+                    firstRatedGameAt: playedAt,
+                    lastRatedGameAt: playedAt,
+                });
+            }
+        }
+
+        gamesProcessed++;
+    }
+
+    return { playerState, gamesProcessed, outcomes };
 }
