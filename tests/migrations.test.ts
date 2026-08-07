@@ -881,6 +881,7 @@ describe('Database Migrations', () => {
         const afterJson = JSON.parse(after.details);
         expect(afterJson.rules.noten_penalty).toBe(2000);
         expect(afterJson.rules.red_fives).toBe('two_red_fives_five_pin_and_five_sou');
+        expect(afterJson.rules.chombo).toBe('baiman');
 
         const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
         expect(foreignKeyViolations).toEqual([]);

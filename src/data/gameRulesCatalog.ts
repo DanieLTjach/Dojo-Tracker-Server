@@ -53,7 +53,7 @@ export const gameRulesCatalog = {
         { key: 'blessing_of_man', type: 'enumString', enum: ['none', 'mangan', 'yakuman'] },
         { key: 'call_precedence', type: 'enumString', enum: ['first', 'ron_first', 'ron_pon', 'sec3', 'sec05'] },
         { key: 'can_call_kita', type: 'boolean' },
-        { key: 'chombo', type: 'enumString', enum: ['twenty_thousand_after_uma', 'mangan'] },
+        { key: 'chombo', type: 'enumString', enum: ['twenty_thousand_after_uma', 'mangan', 'baiman'] },
         { key: 'concealed_quad_after_riichi', type: 'boolean' },
         { key: 'concealed_quad_after_riichi_if_changes_hand_structure', type: 'boolean' },
         { key: 'concealed_quad_after_riichi_if_changes_yaku', type: 'boolean' },

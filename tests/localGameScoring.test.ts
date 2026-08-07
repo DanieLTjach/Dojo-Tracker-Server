@@ -178,6 +178,33 @@ describe('LocalGameScoringService', () => {
         expect(r2p3?.pointChange).toBe(-2000);
     });
 
+    it('calculates sanma (3 players) CHOMBO deltas correctly with baiman penalty', () => {
+        const players3 = [
+            { userId: 1, points: 35000, startPlace: Wind.EAST, chomboCount: 0 },
+            { userId: 2, points: 35000, startPlace: Wind.SOUTH, chomboCount: 0 },
+            { userId: 3, points: 35000, startPlace: Wind.WEST, chomboCount: 0 },
+        ];
+
+        // Non-dealer (player 2) commits chombo: dealer (p1) gets +8000, non-dealer (p3) gets +4000, offender (p2) pays -12000
+        const result = service.scoreRoundPreview({
+            gameRulesId: 3,
+            players: players3,
+            currentState,
+            result: {
+                type: 'CHOMBO',
+                offenderPlayerId: 2,
+            },
+        });
+
+        expect(result.playerPointChanges).toHaveLength(3);
+        const p1 = result.playerPointChanges.find(p => p.playerId === 1);
+        const p2 = result.playerPointChanges.find(p => p.playerId === 2);
+        const p3 = result.playerPointChanges.find(p => p.playerId === 3);
+        expect(p1?.pointChange).toBe(8000);
+        expect(p2?.pointChange).toBe(-12000);
+        expect(p3?.pointChange).toBe(4000);
+    });
+
     it('throws IncorrectPlayerCountError when player count does not match ruleset', () => {
         expect(() => {
             service.scoreRoundPreview({

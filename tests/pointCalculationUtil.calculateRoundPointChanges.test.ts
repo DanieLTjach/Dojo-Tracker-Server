@@ -606,6 +606,32 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
             ]);
         });
 
+        it('baiman mode: a non-dealer offender pays a baiman to everyone', () => {
+            const rules: GameRulesValues = { ...ema, chombo: 'baiman' };
+            expectChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
+                type: 'CHOMBO',
+                offenderPlayerId: 2,
+            }, [
+                { playerId: 1, pointChange: 8000 },
+                { playerId: 3, pointChange: 4000 },
+                { playerId: 4, pointChange: 4000 },
+                { playerId: 2, pointChange: -16000 },
+            ]);
+        });
+
+        it('baiman mode: a dealer offender pays a dealer baiman to everyone', () => {
+            const rules: GameRulesValues = { ...ema, chombo: 'baiman' };
+            expectChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
+                type: 'CHOMBO',
+                offenderPlayerId: 1,
+            }, [
+                { playerId: 2, pointChange: 8000 },
+                { playerId: 3, pointChange: 8000 },
+                { playerId: 4, pointChange: 8000 },
+                { playerId: 1, pointChange: -24000 },
+            ]);
+        });
+
         describe('sanma chombo', () => {
             it('twenty_thousand_after_uma defers to rating (no point changes)', () => {
                 const rules: GameRulesValues = { ...mahjongSoulSanma, chombo: 'twenty_thousand_after_uma' };
@@ -636,6 +662,30 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
                     { playerId: 2, pointChange: 4000 },
                     { playerId: 3, pointChange: 4000 },
                     { playerId: 1, pointChange: -8000 },
+                ]);
+            });
+
+            it('baiman mode: non-dealer offender pays reverse baiman (dealer +8000, non-dealer +4000, offender -12000)', () => {
+                const rules: GameRulesValues = { ...mahjongSoulSanma, chombo: 'baiman' };
+                expectChangesSanma(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'CHOMBO',
+                    offenderPlayerId: 2,
+                }, [
+                    { playerId: 1, pointChange: 8000 },
+                    { playerId: 3, pointChange: 4000 },
+                    { playerId: 2, pointChange: -12000 },
+                ]);
+            });
+
+            it('baiman mode: dealer offender pays dealer baiman (+8000 each, dealer -16000)', () => {
+                const rules: GameRulesValues = { ...mahjongSoulSanma, chombo: 'baiman' };
+                expectChangesSanma(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'CHOMBO',
+                    offenderPlayerId: 1,
+                }, [
+                    { playerId: 2, pointChange: 8000 },
+                    { playerId: 3, pointChange: 8000 },
+                    { playerId: 1, pointChange: -16000 },
                 ]);
             });
         });
