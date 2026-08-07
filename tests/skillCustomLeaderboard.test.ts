@@ -121,6 +121,59 @@ describe('Custom skill leaderboard', () => {
         expect(high.body.provisionalEntries.length).toBeGreaterThan(0);
     });
 
+    it('excludes a filler player even in events where the registration row is missing', async () => {
+        // Mirrors the imported 2023-24 tournaments: a placeholder seat with game
+        // rows, flagged a filler in one event but with no registration in another.
+        const db = dbManager.db;
+        const ts = '2026-03-01T00:00:00.000Z';
+        const fillerId = 947900;
+        const flaggedEvent = 947103;
+
+        db.prepare(`
+            INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)
+            VALUES (?, 'Filler Seat', 'filler_seat_947', ?, ?, ?, 0, 1, 0, 'ACTIVE')
+        `).run(fillerId, fillerId, ts, ts);
+
+        db.prepare(`
+            INSERT INTO event (id, name, type, gameRules, clubId, isRated, createdAt, modifiedAt, modifiedBy)
+            VALUES (?, 'Filler Flagged Event', 'TOURNAMENT', 1, 1, 1, ?, ?, 0)
+        `).run(flaggedEvent, ts, ts);
+
+        db.prepare(`
+            INSERT INTO eventRegistration (eventId, userId, status, createdAt, modifiedAt, modifiedBy, isFillerPlayer)
+            VALUES (?, ?, 'APPROVED', ?, ?, 0, 1)
+        `).run(flaggedEvent, fillerId, ts, ts);
+
+        // Games live in EVENT_UNTAGGED, where the filler has NO registration row.
+        let gameId = 947400;
+        for (let n = 0; n < 6; n++) {
+            const createdAt = `2026-04-${String(n + 1).padStart(2, '0')}T12:00:00.000Z`;
+            db.prepare(`
+                INSERT INTO game (id, eventId, status, createdAt, modifiedAt, modifiedBy)
+                VALUES (?, ?, 'FINISHED', ?, ?, 0)
+            `).run(gameId, EVENT_UNTAGGED, createdAt, createdAt);
+
+            const seats = [U[0], U[1], U[2], fillerId];
+            const points = [40000, 30000, 25000, 5000];
+            seats.forEach((userId, i) => {
+                db.prepare(`
+                    INSERT INTO userToGame (userId, gameId, startPlace, points, chomboCount, isSubstitutePlayer, createdAt, modifiedAt, modifiedBy)
+                    VALUES (?, ?, ?, ?, 0, 0, ?, ?, 0)
+                `).run(userId, gameId, ['EAST', 'SOUTH', 'WEST', 'NORTH'][i], points[i], createdAt, createdAt);
+            });
+            gameId++;
+        }
+
+        const res = await request(app)
+            .get('/api/skill/leaderboard?threshold=1')
+            .set('Authorization', authHeader);
+
+        expect(res.status).toBe(200);
+        const allIds = [...res.body.entries, ...res.body.provisionalEntries]
+            .map((e: { userId: number }) => e.userId);
+        expect(allIds).not.toContain(fillerId);
+    });
+
     it('rejects an unknown tag with 400', async () => {
         const res = await request(app)
             .get('/api/skill/leaderboard?tags=NOT_A_TAG')

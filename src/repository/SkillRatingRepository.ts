@@ -7,6 +7,25 @@ import type {
     SkillRatingGame,
 } from '../model/SkillModels.ts';
 
+/**
+ * Excludes placeholder "filler" seats from rating.
+ *
+ * Deliberately checks whether the user is flagged a filler in ANY event, not
+ * just the one being rated. `isFillerPlayer` is only ever set when someone
+ * explicitly registers a filler for a tournament — no game-creation path
+ * (GameService.addGame, ImportService, the one-off SQL importers) creates
+ * registrations at all. So a per-event check silently rates the placeholder as
+ * a real player whenever the registration is missing, which is what happened to
+ * the imported 2023-2024 tournaments.
+ *
+ * These accounts are permanently not people, so "filler once, filler always" is
+ * the correct reading and is robust to the missing rows.
+ */
+const NOT_A_FILLER_PLAYER = `NOT EXISTS (
+    SELECT 1 FROM eventRegistration er
+    WHERE er.userId = utg.userId AND er.isFillerPlayer = 1
+)`;
+
 export class SkillRatingRepository {
     private upsertSkillRatingStatement(): Statement<{
         clubId: number;
@@ -351,12 +370,7 @@ export class SkillRatingRepository {
               AND e.clubId = :clubId
               AND e.isRated = 1
               AND gr.numberOfPlayers = :gameSize
-              AND NOT EXISTS (
-                  SELECT 1 FROM eventRegistration er
-                  WHERE er.eventId = g.eventId
-                    AND er.userId = utg.userId
-                    AND er.isFillerPlayer = 1
-              )
+              AND ${NOT_A_FILLER_PLAYER}
             ORDER BY g.createdAt ASC, g.id ASC, utg.userId ASC`);
     }
 
@@ -405,10 +419,7 @@ export class SkillRatingRepository {
             `e.isRated = 1`,
             `e.clubId IS NOT NULL`,
             `gr.numberOfPlayers = :gameSize`,
-            `NOT EXISTS (
-                SELECT 1 FROM eventRegistration er
-                WHERE er.eventId = g.eventId AND er.userId = utg.userId AND er.isFillerPlayer = 1
-            )`,
+            NOT_A_FILLER_PLAYER,
         ];
 
         const params: Record<string, unknown> = { gameSize: filter.gameSize };
