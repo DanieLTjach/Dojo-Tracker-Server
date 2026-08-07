@@ -128,6 +128,56 @@ describe('LocalGameScoringService', () => {
         expect(result.playerPointChanges).toHaveLength(3);
     });
 
+    it('calculates sanma (3 players) EXHAUSTIVE_DRAW deltas correctly with 2000 total penalty', () => {
+        const players3 = [
+            { userId: 1, points: 35000, startPlace: Wind.EAST, chomboCount: 0 },
+            { userId: 2, points: 35000, startPlace: Wind.SOUTH, chomboCount: 0 },
+            { userId: 3, points: 35000, startPlace: Wind.WEST, chomboCount: 0 },
+        ];
+
+        // 1 tenpai, 2 noten: player 1 receives +2000, players 2 and 3 pay -1000 each
+        const result1Tenpai = service.scoreRoundPreview({
+            gameRulesId: 3, // Sanma ruleset fixed by migration 015
+            players: players3,
+            currentState,
+            result: {
+                type: 'EXHAUSTIVE_DRAW',
+                tenpaiPlayerIds: [1],
+                nagashiManganPlayerIds: [],
+                riichiPlayerIds: [],
+            },
+        });
+
+        expect(result1Tenpai.playerPointChanges).toHaveLength(3);
+        const p1 = result1Tenpai.playerPointChanges.find(p => p.playerId === 1);
+        const p2 = result1Tenpai.playerPointChanges.find(p => p.playerId === 2);
+        const p3 = result1Tenpai.playerPointChanges.find(p => p.playerId === 3);
+        expect(p1?.pointChange).toBe(2000);
+        expect(p2?.pointChange).toBe(-1000);
+        expect(p3?.pointChange).toBe(-1000);
+
+        // 2 tenpai, 1 noten: players 1 and 2 receive +1000 each, player 3 pays -2000
+        const result2Tenpai = service.scoreRoundPreview({
+            gameRulesId: 3,
+            players: players3,
+            currentState,
+            result: {
+                type: 'EXHAUSTIVE_DRAW',
+                tenpaiPlayerIds: [1, 2],
+                nagashiManganPlayerIds: [],
+                riichiPlayerIds: [],
+            },
+        });
+
+        expect(result2Tenpai.playerPointChanges).toHaveLength(3);
+        const r2p1 = result2Tenpai.playerPointChanges.find(p => p.playerId === 1);
+        const r2p2 = result2Tenpai.playerPointChanges.find(p => p.playerId === 2);
+        const r2p3 = result2Tenpai.playerPointChanges.find(p => p.playerId === 3);
+        expect(r2p1?.pointChange).toBe(1000);
+        expect(r2p2?.pointChange).toBe(1000);
+        expect(r2p3?.pointChange).toBe(-2000);
+    });
+
     it('throws IncorrectPlayerCountError when player count does not match ruleset', () => {
         expect(() => {
             service.scoreRoundPreview({

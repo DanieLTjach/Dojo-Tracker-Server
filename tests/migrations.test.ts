@@ -657,6 +657,8 @@ describe('Database Migrations', () => {
                 label: 'Mahjong Soul - 3P Mahjong',
             },
         ]);
+        expect(parsedById.get(3)?.rules?.noten_penalty).toBe(2000);
+        expect(parsedById.get(3)?.rules?.red_fives).toBe('two_red_fives_five_pin_and_five_sou');
 
         db.close();
     });
@@ -857,6 +859,28 @@ describe('Database Migrations', () => {
             isRated: number;
         };
         expect(ratedEvent.isRated).toBe(1);
+
+        const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+        expect(foreignKeyViolations).toEqual([]);
+
+        db.close();
+    });
+
+    test('migration 15 updates gameRules id 3 details with sanma noten_penalty and red_fives', () => {
+        const db = createMigratedDb(14);
+        db.pragma('foreign_keys = ON');
+
+        const before = db.prepare('SELECT details FROM gameRules WHERE id = 3').get() as { details: string };
+        const beforeJson = JSON.parse(before.details);
+        expect(beforeJson.rules.noten_penalty).toBe(3000);
+        expect(beforeJson.rules.red_fives).toBe('three_one_per_suit');
+
+        runMigration(db, 15);
+
+        const after = db.prepare('SELECT details FROM gameRules WHERE id = 3').get() as { details: string };
+        const afterJson = JSON.parse(after.details);
+        expect(afterJson.rules.noten_penalty).toBe(2000);
+        expect(afterJson.rules.red_fives).toBe('two_red_fives_five_pin_and_five_sou');
 
         const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
         expect(foreignKeyViolations).toEqual([]);

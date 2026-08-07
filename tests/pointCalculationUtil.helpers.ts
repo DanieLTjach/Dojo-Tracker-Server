@@ -78,6 +78,55 @@ export function gameState(
     return { wind, dealerNumber, counters, riichiSticks };
 }
 
+export function threePlayers(
+    [p0, p1, p2]: [number, number, number] = [35000, 35000, 35000]
+): GamePlayer[] {
+    return [
+        {
+            gameId: 1,
+            userId: 1,
+            name: 'player-1',
+            telegramUsername: null,
+            profileFirstName: null,
+            profileLastName: null,
+            profileHidden: false,
+            points: p0,
+            ratingChange: 0,
+            startPlace: Wind.EAST,
+            chomboCount: 0,
+            isSubstitutePlayer: false,
+        },
+        {
+            gameId: 1,
+            userId: 2,
+            name: 'player-2',
+            telegramUsername: null,
+            profileFirstName: null,
+            profileLastName: null,
+            profileHidden: false,
+            points: p1,
+            ratingChange: 0,
+            startPlace: Wind.SOUTH,
+            chomboCount: 0,
+            isSubstitutePlayer: false,
+        },
+        {
+            gameId: 1,
+            userId: 3,
+            name: 'player-3',
+            telegramUsername: null,
+            profileFirstName: null,
+            profileLastName: null,
+            profileHidden: false,
+            points: p2,
+            ratingChange: 0,
+            startPlace: Wind.WEST,
+            chomboCount: 0,
+            isSubstitutePlayer: false,
+        },
+    ];
+}
+
 export function detailedGame(players: GamePlayer[], currentState: GameState): DetailedGame {
     const timestamp = new Date('2026-01-01T00:00:00.000Z');
     return {
@@ -105,13 +154,14 @@ export function detailedGame(players: GamePlayer[], currentState: GameState): De
 }
 
 export function makeGameRules(rules: GameRulesValues): GameRules {
+    const numberOfPlayers = (rules.number_of_players as 3 | 4 | undefined) ?? 4;
     return {
         id: 1,
         name: 'test',
         clubId: null,
-        numberOfPlayers: 4,
-        uma: [15, 5, -5, -15],
-        startingPoints: 25000,
+        numberOfPlayers,
+        uma: numberOfPlayers === 3 ? [15, 0, -15] : [15, 5, -5, -15],
+        startingPoints: (rules.starting_points as number | undefined) ?? (numberOfPlayers === 3 ? 35000 : 25000),
         umaTieBreak: UmaTieBreak.WIND,
         allowNonZeroSumUma: false,
         details: { rules },
