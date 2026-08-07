@@ -41,7 +41,7 @@ export function getNotenPenalty(rules: GameRulesValues): number {
     return rules.noten_penalty ?? 1000 * (getNumberOfPlayers(rules) - 1);
 }
 
-export function getChomboHandling(rules: GameRulesValues): 'twenty_thousand_after_uma' | 'mangan' {
+export function getChomboHandling(rules: GameRulesValues): 'twenty_thousand_after_uma' | 'mangan' | 'baiman' {
     return rules.chombo ?? 'twenty_thousand_after_uma';
 }
 

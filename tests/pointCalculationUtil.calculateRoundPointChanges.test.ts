@@ -16,10 +16,11 @@ import {
     NagashiManganNotInRulesetError,
     PlayerNotInGameError,
 } from '../src/error/PointCalculationErrors.ts';
-import { detailedGame, fourPlayers, gameState, makeGameRules } from './pointCalculationUtil.helpers.ts';
+import { detailedGame, fourPlayers, gameState, makeGameRules, threePlayers } from './pointCalculationUtil.helpers.ts';
 
 const ema = gameRulesPresetsByKey.get('ema_2025')!.rules;
 const mahjongSoul = gameRulesPresetsByKey.get('mahjong_soul')!.rules;
+const mahjongSoulSanma = gameRulesPresetsByKey.get('mahjong_soul_sanma')!.rules;
 
 function pointChanges(
     rules: GameRulesValues,
@@ -27,6 +28,15 @@ function pointChanges(
     result: GameRoundResultInputDTO
 ): PlayerPointChange[] {
     const game = detailedGame(fourPlayers(), state);
+    return calculateGameRoundResult(game, makeGameRules(rules), result).playerPointChanges;
+}
+
+function pointChangesSanma(
+    rules: GameRulesValues,
+    state: GameState,
+    result: GameRoundResultInputDTO
+): PlayerPointChange[] {
+    const game = detailedGame(threePlayers(), state);
     return calculateGameRoundResult(game, makeGameRules(rules), result).playerPointChanges;
 }
 
@@ -42,6 +52,15 @@ function expectChanges(
     expected: PlayerPointChange[]
 ): void {
     expect(sorted(pointChanges(rules, state, result))).toEqual(sorted(expected));
+}
+
+function expectChangesSanma(
+    rules: GameRulesValues,
+    state: GameState,
+    result: GameRoundResultInputDTO,
+    expected: PlayerPointChange[]
+): void {
+    expect(sorted(pointChangesSanma(rules, state, result))).toEqual(sorted(expected));
 }
 
 describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
@@ -394,6 +413,65 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
                 { playerId: 1, pointChange: 3000 },
             ]);
         });
+
+        describe('sanma (3 players, 2000 total noten penalty)', () => {
+            it('1 tenpai, 2 noten: tenpai receives +2000, notens pay -1000 each', () => {
+                expectChangesSanma(mahjongSoulSanma, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [],
+                    tenpaiPlayerIds: [1],
+                    nagashiManganPlayerIds: [],
+                }, [
+                    { playerId: 1, pointChange: 2000 },
+                    { playerId: 2, pointChange: -1000 },
+                    { playerId: 3, pointChange: -1000 },
+                ]);
+            });
+
+            it('2 tenpai, 1 noten: tenpais receive +1000 each, noten pays -2000', () => {
+                expectChangesSanma(mahjongSoulSanma, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [],
+                    tenpaiPlayerIds: [1, 2],
+                    nagashiManganPlayerIds: [],
+                }, [
+                    { playerId: 1, pointChange: 1000 },
+                    { playerId: 2, pointChange: 1000 },
+                    { playerId: 3, pointChange: -2000 },
+                ]);
+            });
+
+            it('all tenpai -> no payments', () => {
+                expectChangesSanma(mahjongSoulSanma, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [],
+                    tenpaiPlayerIds: [1, 2, 3],
+                    nagashiManganPlayerIds: [],
+                }, []);
+            });
+
+            it('all noten -> no payments', () => {
+                expectChangesSanma(mahjongSoulSanma, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [],
+                    tenpaiPlayerIds: [],
+                    nagashiManganPlayerIds: [],
+                }, []);
+            });
+
+            it('deducts declared riichi sticks alongside noten payments', () => {
+                expectChangesSanma(mahjongSoulSanma, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [1, 3],
+                    tenpaiPlayerIds: [1],
+                    nagashiManganPlayerIds: [],
+                }, [
+                    { playerId: 1, pointChange: 1000 },
+                    { playerId: 2, pointChange: -1000 },
+                    { playerId: 3, pointChange: -2000 },
+                ]);
+            });
+        });
     });
 
     describe('NAGASHI MANGAN', () => {
@@ -526,6 +604,90 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
                 { playerId: 4, pointChange: 4000 },
                 { playerId: 1, pointChange: -12000 },
             ]);
+        });
+
+        it('baiman mode: a non-dealer offender pays a baiman to everyone', () => {
+            const rules: GameRulesValues = { ...ema, chombo: 'baiman' };
+            expectChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
+                type: 'CHOMBO',
+                offenderPlayerId: 2,
+            }, [
+                { playerId: 1, pointChange: 8000 },
+                { playerId: 3, pointChange: 4000 },
+                { playerId: 4, pointChange: 4000 },
+                { playerId: 2, pointChange: -16000 },
+            ]);
+        });
+
+        it('baiman mode: a dealer offender pays a dealer baiman to everyone', () => {
+            const rules: GameRulesValues = { ...ema, chombo: 'baiman' };
+            expectChanges(rules, gameState(Wind.EAST, 1, 0, 0), {
+                type: 'CHOMBO',
+                offenderPlayerId: 1,
+            }, [
+                { playerId: 2, pointChange: 8000 },
+                { playerId: 3, pointChange: 8000 },
+                { playerId: 4, pointChange: 8000 },
+                { playerId: 1, pointChange: -24000 },
+            ]);
+        });
+
+        describe('sanma chombo', () => {
+            it('twenty_thousand_after_uma defers to rating (no point changes)', () => {
+                const rules: GameRulesValues = { ...mahjongSoulSanma, chombo: 'twenty_thousand_after_uma' };
+                expectChangesSanma(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'CHOMBO',
+                    offenderPlayerId: 2,
+                }, []);
+            });
+
+            it('mangan mode: non-dealer offender pays reverse mangan (dealer +4000, non-dealer +2000, offender -6000)', () => {
+                const rules: GameRulesValues = { ...mahjongSoulSanma, chombo: 'mangan' };
+                expectChangesSanma(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'CHOMBO',
+                    offenderPlayerId: 2,
+                }, [
+                    { playerId: 1, pointChange: 4000 },
+                    { playerId: 3, pointChange: 2000 },
+                    { playerId: 2, pointChange: -6000 },
+                ]);
+            });
+
+            it('mangan mode: dealer offender pays dealer mangan (+4000 each, dealer -8000)', () => {
+                const rules: GameRulesValues = { ...mahjongSoulSanma, chombo: 'mangan' };
+                expectChangesSanma(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'CHOMBO',
+                    offenderPlayerId: 1,
+                }, [
+                    { playerId: 2, pointChange: 4000 },
+                    { playerId: 3, pointChange: 4000 },
+                    { playerId: 1, pointChange: -8000 },
+                ]);
+            });
+
+            it('baiman mode: non-dealer offender pays reverse baiman (dealer +8000, non-dealer +4000, offender -12000)', () => {
+                const rules: GameRulesValues = { ...mahjongSoulSanma, chombo: 'baiman' };
+                expectChangesSanma(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'CHOMBO',
+                    offenderPlayerId: 2,
+                }, [
+                    { playerId: 1, pointChange: 8000 },
+                    { playerId: 3, pointChange: 4000 },
+                    { playerId: 2, pointChange: -12000 },
+                ]);
+            });
+
+            it('baiman mode: dealer offender pays dealer baiman (+8000 each, dealer -16000)', () => {
+                const rules: GameRulesValues = { ...mahjongSoulSanma, chombo: 'baiman' };
+                expectChangesSanma(rules, gameState(Wind.EAST, 1, 0, 0), {
+                    type: 'CHOMBO',
+                    offenderPlayerId: 1,
+                }, [
+                    { playerId: 2, pointChange: 8000 },
+                    { playerId: 3, pointChange: 8000 },
+                    { playerId: 1, pointChange: -16000 },
+                ]);
+            });
         });
     });
 

@@ -535,12 +535,14 @@ function calculateChomboPointChanges(
     rules: GameRulesValues,
     chombo: Chombo
 ): PlayerPointChange[] {
-    switch (getChomboHandling(rules)) {
+    const chomboHandling = getChomboHandling(rules);
+    switch (chomboHandling) {
         case 'twenty_thousand_after_uma':
             return [];
         case 'mangan':
+        case 'baiman':
             const gameStateWithoutBank: GameState = { ...gameState, riichiSticks: 0 };
-            const manganTsumoPayments = calculateTsumoPointChanges(
+            const tsumoPayments = calculateTsumoPointChanges(
                 gameStateWithoutBank,
                 players,
                 rules,
@@ -549,14 +551,14 @@ function calculateChomboPointChanges(
                     winningHandData: {
                         winnerPlayerId: chombo.offenderPlayerId,
                         yakumanCount: 0,
-                        han: 5,
+                        han: chomboHandling === 'baiman' ? 8 : 5,
                     },
                     riichiPlayerIds: [],
                 },
                 false
             );
 
-            return manganTsumoPayments.map(playerPointChange => ({
+            return tsumoPayments.map(playerPointChange => ({
                 playerId: playerPointChange.playerId,
                 pointChange: -playerPointChange.pointChange,
             }));
