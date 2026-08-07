@@ -657,8 +657,11 @@ describe('Database Migrations', () => {
                 label: 'Mahjong Soul - 3P Mahjong',
             },
         ]);
-        expect(parsedById.get(3)?.rules?.noten_penalty).toBe(2000);
-        expect(parsedById.get(3)?.rules?.red_fives).toBe('two_red_fives_five_pin_and_five_sou');
+        const sanmaRow = rows.find(r => r.id === 3);
+        const resolvedSanma = parseGameRulesDetailsAndApplyPresets(sanmaRow ? sanmaRow.details : null);
+        expect(resolvedSanma?.rules.noten_penalty).toBe(2000);
+        expect(resolvedSanma?.rules.red_fives).toBe('two_red_fives_five_pin_and_five_sou');
+        expect(resolvedSanma?.rules.chombo).toBe('baiman');
 
         db.close();
     });
@@ -866,7 +869,7 @@ describe('Database Migrations', () => {
         db.close();
     });
 
-    test('migration 15 updates gameRules id 3 details with sanma noten_penalty and red_fives', () => {
+    test('migration 15 removes yonma overrides from gameRules id 3 and sets chombo to baiman', () => {
         const db = createMigratedDb(14);
         db.pragma('foreign_keys = ON');
 
@@ -879,9 +882,15 @@ describe('Database Migrations', () => {
 
         const after = db.prepare('SELECT details FROM gameRules WHERE id = 3').get() as { details: string };
         const afterJson = JSON.parse(after.details);
-        expect(afterJson.rules.noten_penalty).toBe(2000);
-        expect(afterJson.rules.red_fives).toBe('two_red_fives_five_pin_and_five_sou');
+        // Redundant overrides matching preset were removed
+        expect(afterJson.rules.noten_penalty).toBeUndefined();
+        expect(afterJson.rules.red_fives).toBeUndefined();
         expect(afterJson.rules.chombo).toBe('baiman');
+
+        const resolved = parseGameRulesDetailsAndApplyPresets(after.details);
+        expect(resolved?.rules.noten_penalty).toBe(2000);
+        expect(resolved?.rules.red_fives).toBe('two_red_fives_five_pin_and_five_sou');
+        expect(resolved?.rules.chombo).toBe('baiman');
 
         const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
         expect(foreignKeyViolations).toEqual([]);
