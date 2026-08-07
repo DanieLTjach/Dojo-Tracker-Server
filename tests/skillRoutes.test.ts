@@ -118,6 +118,7 @@ describe('Skill Routes API', () => {
                 userId: USER_1,
                 primaryClubId: null,
                 clubs: [],
+                global: [],
             });
         });
 
@@ -153,6 +154,36 @@ describe('Skill Routes API', () => {
             expect(res.body.userId).toBe(USER_1);
             expect(res.body.primaryClubId).toBe(CLUB_1);
             expect(res.body.clubs).toHaveLength(2);
+
+            // The global entry spans both clubs, so it counts all 3 games —
+            // more than either club's track on its own.
+            const globalYonma = res.body.global.find((g: { gameSize: number }) => g.gameSize === 4);
+            expect(globalYonma).toBeDefined();
+            expect(globalYonma.gamesPlayed).toBe(3);
+
+            const club1Yonma = res.body.clubs
+                .find((c: { clubId: number }) => c.clubId === CLUB_1)
+                .tracks.find((t: { gameSize: number }) => t.gameSize === 4);
+            expect(club1Yonma.gamesPlayed).toBe(2);
+        });
+
+        it('reports the global entry as provisional below the threshold', async () => {
+            const g1 = gameRepo.createGame(EVENT_1, 0, new Date('2025-01-10T12:00:00.000Z'), null, null);
+            gameRepo.addGamePlayer(g1, USER_1, 40000, 'EAST', 0, false, 0);
+            gameRepo.addGamePlayer(g1, USER_2, 30000, 'SOUTH', 0, false, 0);
+            gameRepo.addGamePlayer(g1, USER_3, 20000, 'WEST', 0, false, 0);
+            gameRepo.addGamePlayer(g1, USER_4, 10000, 'NORTH', 0, false, 0);
+            skillService.applyFinishedGame(g1);
+
+            const res = await request(app)
+                .get(`/api/users/${USER_1}/skill`)
+                .set('Authorization', regularAuthHeader);
+
+            expect(res.status).toBe(200);
+            const globalYonma = res.body.global.find((g: { gameSize: number }) => g.gameSize === 4);
+            expect(globalYonma.isProvisional).toBe(true);
+            expect(globalYonma.place).toBeNull();
+            expect(globalYonma.rankedPlayers).toBe(0);
         });
     });
 

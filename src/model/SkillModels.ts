@@ -88,10 +88,23 @@ export interface UserClubSkillRatings {
     tracks: ResolvedSkillRating[];
 }
 
+/**
+ * A player's standing across every club, computed per request by replaying all
+ * rated games — never stored.
+ *
+ * NOT comparable with the per-club numbers in `clubs`: each is an independent
+ * replay from scratch, so a player converges differently in a larger pool.
+ * Label them distinctly in any UI that shows both.
+ */
+export interface UserGlobalSkillRating extends ResolvedSkillRating {
+    rankedPlayers: number;
+}
+
 export interface UserSkillProfileResponse {
     userId: number;
     primaryClubId: number | null;
     clubs: UserClubSkillRatings[];
+    global: UserGlobalSkillRating[];
 }
 
 export interface SkillLeaderboardEntry extends ResolvedSkillRating {

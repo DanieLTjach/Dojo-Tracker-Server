@@ -10,6 +10,7 @@ import {
     type SkillRating,
     type SkillRecomputeResult,
     type UserClubSkillRatings,
+    type UserGlobalSkillRating,
     type UserSkillProfileResponse,
 } from '../model/SkillModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
@@ -371,6 +372,7 @@ export class SkillRatingService {
                 userId,
                 primaryClubId: null,
                 clubs: [],
+                global: this.getUserGlobalSkill(userId, now),
             };
         }
 
@@ -440,7 +442,59 @@ export class SkillRatingService {
             userId,
             primaryClubId,
             clubs,
+            global: this.getUserGlobalSkill(userId, now),
         };
+    }
+
+    /**
+     * The player's cross-club standing, one entry per game size they have played.
+     *
+     * Computed by replaying every rated game (~70ms for the full history) rather
+     * than stored — see getCustomLeaderboard. Returns [] for a player with no
+     * rated games. Uses the default threshold, since no single club's config
+     * governs a global board.
+     */
+    private getUserGlobalSkill(userId: number, now: Date): UserGlobalSkillRating[] {
+        const result: UserGlobalSkillRating[] = [];
+
+        // Only replay sizes this player has actually played — a full replay per
+        // size is the dominant cost of a profile view, and most players have
+        // never played sanma.
+        const playedSizes = this.skillRatingRepository.findGameSizesPlayedByUser(userId);
+
+        for (const gameSize of playedSizes) {
+            const board = this.getCustomLeaderboard(
+                {
+                    clubId: null,
+                    gameSize,
+                    tags: [],
+                    matchAll: false,
+                    eventType: null,
+                    provisionalGameThreshold: DEFAULT_PROVISIONAL_GAME_THRESHOLD,
+                },
+                now
+            );
+
+            const entry = board.entries.find(e => e.userId === userId) ??
+                board.provisionalEntries.find(e => e.userId === userId);
+            if (!entry) {
+                continue;
+            }
+
+            // `place` is already set for ranked entries by the leaderboard sort;
+            // provisional players have no rank by definition.
+            const {
+                userId: _u,
+                userName: _n,
+                telegramUsername: _t,
+                profileFirstName: _f,
+                profileLastName: _l,
+                ...resolved
+            } = entry;
+            result.push({ ...resolved, rankedPlayers: board.entries.length });
+        }
+
+        return result;
     }
 
     applyFinishedGame(gameId: number, now: Date = new Date()): void {

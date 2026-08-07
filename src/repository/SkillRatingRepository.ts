@@ -391,6 +391,27 @@ export class SkillRatingRepository {
         return this.findRatableGamesForTrackStatement().all({ clubId, gameSize });
     }
 
+    /**
+     * Game sizes (4 before 3) the user has any rated game in, across all clubs.
+     * Lets the global profile skip replaying a size the player never played.
+     */
+    findGameSizesPlayedByUser(userId: number): number[] {
+        const rows = dbManager.db.prepare(`
+            SELECT DISTINCT gr.numberOfPlayers AS gameSize
+            FROM userToGame utg
+            JOIN game g ON g.id = utg.gameId
+            JOIN event e ON e.id = g.eventId
+            JOIN gameRules gr ON gr.id = e.gameRules
+            WHERE utg.userId = ?
+              AND g.status = 'FINISHED'
+              AND e.isRated = 1
+              AND e.clubId IS NOT NULL
+              AND gr.numberOfPlayers IN (3, 4)
+            ORDER BY gr.numberOfPlayers DESC
+        `).all(userId) as { gameSize: number }[];
+        return rows.map(r => r.gameSize);
+    }
+
     /** Display fields for the users produced by an ad-hoc replay. */
     findUserDisplayFields(userIds: number[]): SkillUserDisplayDBEntity[] {
         if (userIds.length === 0) {
