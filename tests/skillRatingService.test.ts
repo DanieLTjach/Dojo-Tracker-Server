@@ -30,7 +30,7 @@ describe('SkillRatingService', () => {
         skillRepo = new SkillRatingRepository();
         gameRepo = new GameRepository();
         regRepo = new EventRegistrationRepository();
-        service = new SkillRatingService(skillRepo, undefined, undefined, gameRepo, regRepo);
+        service = new SkillRatingService(skillRepo, undefined, undefined, gameRepo);
 
         // Create users
         const now = '2025-01-01T00:00:00.000Z';
@@ -159,6 +159,121 @@ describe('SkillRatingService', () => {
 
             service.applyFinishedGame(gameId);
             expect(skillRepo.isTrackDirty(CLUB_ID, 4)).toBe(true);
+        });
+    });
+
+    // The incremental path and the replay path must agree on which games and
+    // players are ratable, and in what order. Where they disagree the stored
+    // track silently diverges from a recompute with nothing marking it dirty.
+    describe('incremental path agrees with replay', () => {
+        const NON_RATED_EVENT = 2900;
+
+        function playGame(
+            eventId: number,
+            date: string,
+            points: [number, number, number, number] = [40000, 30000, 20000, 10000]
+        ): number {
+            const gameId = gameRepo.createGame(eventId, 0, new Date(date), null, null);
+            gameRepo.addGamePlayer(gameId, USER_1, points[0], 'EAST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_2, points[1], 'SOUTH', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_3, points[2], 'WEST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_4, points[3], 'NORTH', 0, false, 0);
+            return gameId;
+        }
+
+        function trackSnapshot() {
+            return [USER_1, USER_2, USER_3, USER_4].map(userId => {
+                const r = skillRepo.findSkillRating(CLUB_ID, userId, 4);
+                return r ? { userId, mu: r.mu, sigma: r.sigma, gamesPlayed: r.gamesPlayed } : { userId };
+            });
+        }
+
+        it('ignores games in a non-rated event, matching the replay filter', () => {
+            createCustomEvent(
+                NON_RATED_EVENT,
+                'Non Rated',
+                '2025-01-01T00:00:00.000Z',
+                '2025-12-31T23:59:59.000Z',
+                2,
+                CLUB_ID
+            );
+            dbManager.db.prepare('UPDATE event SET isRated = 0 WHERE id = ?').run(NON_RATED_EVENT);
+
+            const gameId = playGame(NON_RATED_EVENT, '2025-01-10T12:00:00.000Z');
+            service.applyFinishedGame(gameId);
+
+            expect(skillRepo.findSkillRatingGamesByGameId(gameId)).toHaveLength(0);
+            expect(skillRepo.findSkillRating(CLUB_ID, USER_1, 4)).toBeUndefined();
+
+            // And a recompute agrees there is nothing to rate.
+            service.recomputeTrack(CLUB_ID, 4);
+            expect(skillRepo.findSkillRating(CLUB_ID, USER_1, 4)).toBeUndefined();
+        });
+
+        it('excludes a filler flagged in another event, matching the replay filter', () => {
+            // Flagged filler in some other event, playing here with no registration —
+            // the normal case, since game-creation paths never write registrations.
+            const otherEvent = 2901;
+            createCustomEvent(otherEvent, 'Other', '2025-01-01T00:00:00.000Z', '2025-12-31T23:59:59.000Z', 2, CLUB_ID);
+            regRepo.createRegistration({
+                eventId: otherEvent,
+                userId: USER_FILLER,
+                status: 'APPROVED',
+                isFillerPlayer: true,
+                createdAt: new Date(),
+                modifiedAt: new Date(),
+                modifiedBy: 0,
+            });
+
+            const gameId = gameRepo.createGame(EVENT_ID, 0, new Date('2025-01-10T12:00:00.000Z'), null, null);
+            gameRepo.addGamePlayer(gameId, USER_1, 40000, 'EAST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_2, 30000, 'SOUTH', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_3, 20000, 'WEST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_FILLER, 10000, 'NORTH', 0, false, 0);
+
+            service.applyFinishedGame(gameId);
+
+            expect(skillRepo.findSkillRating(CLUB_ID, USER_FILLER, 4)).toBeUndefined();
+            expect(skillRepo.findSkillRatingGamesByGameId(gameId).map(r => r.userId))
+                .not.toContain(USER_FILLER);
+        });
+
+        it('rebuilds the track when a game is applied out of chronological order', () => {
+            // The two games must have DIFFERENT finishing orders, otherwise
+            // replaying them in either order converges to the same state and the
+            // test cannot detect the bug it exists to catch.
+            const newer = playGame(EVENT_ID, '2025-03-01T12:00:00.000Z', [40000, 30000, 20000, 10000]);
+            service.applyFinishedGame(newer);
+
+            // Backdated game: appending it at the head would order history
+            // differently from ORDER BY createdAt, id.
+            const older = playGame(EVENT_ID, '2025-02-01T12:00:00.000Z', [10000, 20000, 30000, 40000]);
+            service.applyFinishedGame(older);
+
+            const afterIncremental = trackSnapshot();
+
+            service.recomputeTrack(CLUB_ID, 4);
+            expect(trackSnapshot()).toEqual(afterIncremental);
+
+            // Both games are present, and each player has exactly two.
+            expect(skillRepo.findSkillRatingGamesByGameId(older)).toHaveLength(4);
+            expect(skillRepo.findSkillRatingGamesByGameId(newer)).toHaveLength(4);
+            expect(skillRepo.findSkillRating(CLUB_ID, USER_1, 4)!.gamesPlayed).toBe(2);
+        });
+
+        it('marks tracks dirty when skill rating is re-enabled', () => {
+            service.updateConfig(CLUB_ID, undefined, false, 0);
+
+            const gameId = playGame(EVENT_ID, '2025-01-10T12:00:00.000Z');
+            service.applyFinishedGame(gameId);
+            expect(skillRepo.findSkillRatingGamesByGameId(gameId)).toHaveLength(0);
+
+            service.updateConfig(CLUB_ID, undefined, true, 0);
+
+            // The game finished while disabled is missing forever, so the track
+            // must advertise that it is stale.
+            expect(skillRepo.isTrackDirty(CLUB_ID, 4)).toBe(true);
+            expect(skillRepo.isTrackDirty(CLUB_ID, 3)).toBe(true);
         });
     });
 

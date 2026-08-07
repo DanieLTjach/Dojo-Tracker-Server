@@ -13,7 +13,6 @@ import {
     type UserSkillProfileResponse,
 } from '../model/SkillModels.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
-import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { EventRepository } from '../repository/EventRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import {
@@ -37,7 +36,6 @@ export class SkillRatingService {
     private clubRepository: ClubRepository;
     private eventRepository: EventRepository;
     private gameRepository: GameRepository;
-    private eventRegistrationRepository: EventRegistrationRepository;
     private userRepository: UserRepository;
 
     constructor(
@@ -45,14 +43,12 @@ export class SkillRatingService {
         clubRepository = new ClubRepository(),
         eventRepository = new EventRepository(),
         gameRepository = new GameRepository(),
-        eventRegistrationRepository = new EventRegistrationRepository(),
         userRepository = new UserRepository()
     ) {
         this.skillRatingRepository = skillRatingRepository;
         this.clubRepository = clubRepository;
         this.eventRepository = eventRepository;
         this.gameRepository = gameRepository;
-        this.eventRegistrationRepository = eventRegistrationRepository;
         this.userRepository = userRepository;
     }
 
@@ -97,6 +93,22 @@ export class SkillRatingService {
         };
 
         this.skillRatingRepository.upsertClubSkillConfig(updated);
+
+        // Games that finished while rating was off never reached the stored
+        // track, so on re-enable it is missing them permanently. Flag both
+        // tracks so the staleness is visible and a recompute repairs it.
+        if (isEnabled === true && !current.isEnabled) {
+            const markedAt = new Date();
+            for (const gameSize of [3, 4]) {
+                this.skillRatingRepository.markTrackDirty(
+                    clubId,
+                    gameSize,
+                    'skill rating re-enabled; games finished while disabled are missing',
+                    markedAt
+                );
+            }
+        }
+
         return updated;
     }
 
@@ -446,6 +458,12 @@ export class SkillRatingService {
                 return;
             }
 
+            // Must mirror the `e.isRated = 1` filter in the replay queries: rating
+            // a non-rated game here would diverge from every later recompute.
+            if (!event.isRated) {
+                return;
+            }
+
             const clubId = event.clubId;
             targetClubId = clubId;
 
@@ -466,13 +484,22 @@ export class SkillRatingService {
                 this.revertFinishedGame(gameId);
             }
 
+            // Appending only reproduces a replay when this game is the newest in
+            // the track. Rating an older game against current state would order
+            // history differently from `ORDER BY createdAt, id` and leave the
+            // track wrong with nothing marking it dirty — so rebuild instead.
+            // Mirrors the non-head branch of revertFinishedGame.
+            if (!this.skillRatingRepository.isNewestGameInTrack(gameId, clubId, gameSize, game.createdAt)) {
+                this.recomputeTrack(clubId, gameSize);
+                return;
+            }
+
             const players = this.gameRepository.findGamePlayersByGameId(gameId);
 
-            // Exclude filler players
-            const ratablePlayers = players.filter(p => {
-                const reg = this.eventRegistrationRepository.findRegistration(game.eventId, p.userId);
-                return !reg?.isFillerPlayer;
-            });
+            // Exclude filler players. Checks every event, not just this one:
+            // game-creation paths never write eventRegistration rows, so a
+            // per-event check would rate placeholder seats that a replay drops.
+            const ratablePlayers = players.filter(p => !this.skillRatingRepository.isFillerInAnyEvent(p.userId));
 
             if (ratablePlayers.length < 2) {
                 return;

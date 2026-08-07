@@ -253,15 +253,24 @@ describe('Skill Routes API', () => {
             expect(res.status).toBe(400);
         });
 
-        it('PUT /api/clubs/:clubId/skill/config updates config for OWNER (200)', async () => {
+        it('PATCH /api/clubs/:clubId/skill/config updates both fields for OWNER (200)', async () => {
             const res = await request(app)
-                .put(`/api/clubs/${CLUB_1}/skill/config`)
+                .patch(`/api/clubs/${CLUB_1}/skill/config`)
                 .set('Authorization', ownerAuthHeader)
                 .send({ provisionalGameThreshold: 20, isEnabled: true });
 
             expect(res.status).toBe(200);
             expect(res.body.provisionalGameThreshold).toBe(20);
             expect(res.body.isEnabled).toBe(true);
+        });
+
+        it('PUT /api/clubs/:clubId/skill/config is not routed (404)', async () => {
+            const res = await request(app)
+                .put(`/api/clubs/${CLUB_1}/skill/config`)
+                .set('Authorization', ownerAuthHeader)
+                .send({ provisionalGameThreshold: 20, isEnabled: true });
+
+            expect(res.status).toBe(404);
         });
     });
 
@@ -302,6 +311,15 @@ describe('Skill Routes API', () => {
                 .set('Authorization', ownerAuthHeader);
 
             expect(res.status).toBe(403);
+        });
+
+        it('rejects gameSize without clubId (400)', async () => {
+            // Would otherwise fall through to recomputing every club, ignoring gameSize.
+            const res = await request(app)
+                .post('/api/admin/skill/recompute?gameSize=3')
+                .set('Authorization', adminAuthHeader);
+
+            expect(res.status).toBe(400);
         });
 
         it('allows system admin to recompute all clubs (200)', async () => {

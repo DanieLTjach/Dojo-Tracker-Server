@@ -31,11 +31,14 @@ export const getCustomSkillLeaderboardSchema = z.object({
             .transform(v => v.split(',').map(t => t.trim()).filter(Boolean))
             .pipe(z.array(z.string()))
             .optional(),
-        matchAll: z.coerce.boolean().default(false),
+        // Not z.coerce.boolean(): Boolean('false') is true, so ?matchAll=false
+        // would silently select the AND-tag board.
+        matchAll: z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
         eventType: z.enum(['SEASON', 'TOURNAMENT']).optional(),
         threshold: z.coerce.number()
             .int()
             .min(1)
+            .max(1000)
             .default(DEFAULT_PROVISIONAL_GAME_THRESHOLD),
     }),
 });
@@ -53,7 +56,13 @@ export const recomputeAdminSkillSchema = z.object({
     query: z.object({
         clubId: z.coerce.number().int().optional(),
         gameSize: z.coerce.number().int().optional(),
-    }),
+    })
+        // gameSize alone has no meaning here — it would silently fall through to
+        // recomputing every club. Reject rather than ignore.
+        .refine(q => q.gameSize === undefined || q.clubId !== undefined, {
+            message: 'gameSize requires clubId',
+            path: ['gameSize'],
+        }),
 });
 
 export const getClubSkillConfigSchema = z.object({

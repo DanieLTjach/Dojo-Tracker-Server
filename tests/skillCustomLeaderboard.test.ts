@@ -174,6 +174,31 @@ describe('Custom skill leaderboard', () => {
         expect(allIds).not.toContain(fillerId);
     });
 
+    it('honours matchAll=false as OR, not AND', async () => {
+        // z.coerce.boolean() would make this true (Boolean('false') === true) and
+        // silently return the AND-tag board.
+        const orBoard = await request(app)
+            .get('/api/skill/leaderboard?tags=EMA,LEAGUE&matchAll=false&threshold=1')
+            .set('Authorization', authHeader);
+        const andBoard = await request(app)
+            .get('/api/skill/leaderboard?tags=EMA,LEAGUE&matchAll=true&threshold=1')
+            .set('Authorization', authHeader);
+
+        expect(orBoard.status).toBe(200);
+        expect(orBoard.body.matchAll).toBe(false);
+        expect(andBoard.body.matchAll).toBe(true);
+        // No event carries both tags, so AND matches nothing while OR matches the EMA event.
+        expect(orBoard.body.gamesProcessed).toBeGreaterThan(andBoard.body.gamesProcessed);
+    });
+
+    it('rejects a threshold above the cap with 400', async () => {
+        const res = await request(app)
+            .get('/api/skill/leaderboard?threshold=100000')
+            .set('Authorization', authHeader);
+
+        expect(res.status).toBe(400);
+    });
+
     it('rejects an unknown tag with 400', async () => {
         const res = await request(app)
             .get('/api/skill/leaderboard?tags=NOT_A_TAG')

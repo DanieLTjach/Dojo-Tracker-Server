@@ -219,6 +219,20 @@ export class SkillRatingRepository {
               AND (playedAt > :playedAt OR (playedAt = :playedAt AND gameId > :gameId))`);
     }
 
+    /**
+     * Whether a user is flagged a filler in ANY event.
+     *
+     * The incremental counterpart of the NOT_A_FILLER_PLAYER predicate used by
+     * the replay queries — both paths must agree on who is ratable, or the
+     * stored track silently diverges from what a recompute produces.
+     */
+    isFillerInAnyEvent(userId: number): boolean {
+        const row = dbManager.db.prepare(`
+            SELECT 1 FROM eventRegistration WHERE userId = ? AND isFillerPlayer = 1 LIMIT 1
+        `).get(userId);
+        return row !== undefined;
+    }
+
     isNewestGameInTrack(gameId: number, clubId: number, gameSize: number, playedAt: Date): boolean {
         const res = this.countGamesPlayedAfterStatement().get({
             clubId,
@@ -360,8 +374,7 @@ export class SkillRatingRepository {
                 gr.umaTieBreak,
                 utg.userId,
                 utg.points,
-                utg.startPlace,
-                utg.isSubstitutePlayer
+                utg.startPlace
             FROM game g
             JOIN event e ON g.eventId = e.id
             JOIN gameRules gr ON e.gameRules = gr.id
@@ -465,8 +478,7 @@ export class SkillRatingRepository {
                 gr.umaTieBreak,
                 utg.userId,
                 utg.points,
-                utg.startPlace,
-                utg.isSubstitutePlayer
+                utg.startPlace
             FROM game g
             JOIN event e ON g.eventId = e.id
             JOIN gameRules gr ON e.gameRules = gr.id
@@ -550,7 +562,9 @@ export interface RatableGamePlayerDBEntity {
     userId: number;
     points: number;
     startPlace: string | null;
-    isSubstitutePlayer: number;
+    // Deliberately no isSubstitutePlayer: substitutes ARE rated. They play real
+    // hands, and the substitute uma penalty is a fairness device in the points
+    // economy, not a statement about skill.
 }
 
 function skillRatingFromDBEntity(dbEntity: SkillRatingDBEntity): SkillRating {

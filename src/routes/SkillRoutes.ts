@@ -63,11 +63,8 @@ router.patch(
     withTransaction((req, res) => skillController.updateClubSkillConfig(req, res))
 );
 
-router.put(
-    '/clubs/:clubId/skill/config',
-    requireAuth,
-    requireClubRole('OWNER'),
-    withTransaction((req, res) => skillController.updateClubSkillConfig(req, res))
-);
+// No PUT: the config body is entirely optional fields, so every update is a
+// partial one. A PUT sharing the PATCH handler would advertise replace
+// semantics it does not have.
 
 export default router;
