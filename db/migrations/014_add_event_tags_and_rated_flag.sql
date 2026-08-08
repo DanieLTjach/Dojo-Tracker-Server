@@ -8,7 +8,7 @@ CREATE TABLE eventTag (
 
 INSERT INTO eventTag (tag) VALUES
     ('EMA'),
-    ('CLUB_TOURNAMENT'),
+    ('CLUB'),
     ('LEAGUE'),
     ('ONLINE');
 

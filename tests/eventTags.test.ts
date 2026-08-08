@@ -38,7 +38,7 @@ describe('Event Tag Endpoints', () => {
             .set('Authorization', adminAuthHeader);
 
         expect(response.status).toBe(200);
-        expect(response.body).toEqual(['CLUB_TOURNAMENT', 'EMA', 'LEAGUE', 'ONLINE']);
+        expect(response.body).toEqual(['CLUB', 'EMA', 'LEAGUE', 'ONLINE']);
     });
 
     test('FRIENDLY is not a tag — non-rated events are expressed with isRated', async () => {
@@ -162,13 +162,13 @@ describe('Event Tag Endpoints', () => {
             .send({
                 name: 'Club League 2026',
                 type: 'SEASON',
-                tags: ['LEAGUE', 'CLUB_TOURNAMENT'],
+                tags: ['LEAGUE', 'CLUB'],
                 gameRulesId: 1,
                 clubId: 1,
             });
 
         expect(updateRes.status).toBe(200);
-        expect(updateRes.body.tags).toEqual(['CLUB_TOURNAMENT', 'LEAGUE']);
+        expect(updateRes.body.tags).toEqual(['CLUB', 'LEAGUE']);
     });
 
     test('PUT /api/events/:eventId should preserve tags when the body omits them', async () => {

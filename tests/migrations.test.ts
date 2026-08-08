@@ -795,7 +795,7 @@ describe('Database Migrations', () => {
 
         const tags = db.prepare('SELECT tag FROM eventTag ORDER BY tag').all() as Array<{ tag: string }>;
         expect(tags).toEqual([
-            { tag: 'CLUB_TOURNAMENT' },
+            { tag: 'CLUB' },
             { tag: 'EMA' },
             { tag: 'LEAGUE' },
             { tag: 'ONLINE' },
@@ -959,6 +959,42 @@ describe('Database Migrations', () => {
                 VALUES (1, 0, 4, 25.0, 8.333, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')
             `).run();
         }).not.toThrow();
+
+        const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+        expect(foreignKeyViolations).toEqual([]);
+
+        db.close();
+    });
+
+    test('migration 15 renames CLUB_TOURNAMENT to CLUB and carries its events over', () => {
+        const db = createMigratedDb(14);
+
+        // Reinstate the name 014 originally seeded: this is the production shape, where
+        // 014 ran before the rename existed and so cannot be re-run.
+        db.prepare(`UPDATE eventTag SET tag = 'CLUB_TOURNAMENT' WHERE tag = 'CLUB'`).run();
+        db.prepare(`
+            INSERT INTO event (id, name, type, gameRules, createdAt, modifiedAt, modifiedBy)
+            VALUES (9910, 'Club Cup', 'TOURNAMENT', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
+        `).run();
+        db.prepare(`
+            INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
+            VALUES (9910, 'CLUB_TOURNAMENT', '2026-01-01T00:00:00.000Z', 0)
+        `).run();
+
+        runMigration(db, 15);
+        db.pragma('foreign_keys = ON');
+
+        const tags = db.prepare('SELECT tag FROM eventTag ORDER BY tag').all();
+        expect(tags).toEqual([
+            { tag: 'CLUB' },
+            { tag: 'EMA' },
+            { tag: 'LEAGUE' },
+            { tag: 'ONLINE' },
+        ]);
+
+        // The tagged event follows the rename rather than being orphaned or dropped.
+        const tagged = db.prepare('SELECT eventId, tag FROM eventToTag ORDER BY eventId').all();
+        expect(tagged).toEqual([{ eventId: 9910, tag: 'CLUB' }]);
 
         const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
         expect(foreignKeyViolations).toEqual([]);

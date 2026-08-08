@@ -1,3 +1,8 @@
+-- Rename CLUB_TOURNAMENT to CLUB. 014 already ran in production, so it cannot be
+-- edited in place there. Children first: no ON UPDATE CASCADE under foreign_keys = OFF.
+UPDATE eventToTag SET tag = 'CLUB' WHERE tag = 'CLUB_TOURNAMENT';
+UPDATE eventTag SET tag = 'CLUB' WHERE tag = 'CLUB_TOURNAMENT';
+
 CREATE TABLE skillRating (
     clubId INTEGER NOT NULL REFERENCES club(id) ON DELETE CASCADE,
     userId INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE,
