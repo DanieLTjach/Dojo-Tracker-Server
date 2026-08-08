@@ -31,6 +31,7 @@ import type {
 import { GameStatus } from '../model/GameModels.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
+import { SkillRatingService } from './SkillRatingService.ts';
 import LogService from './LogService.ts';
 import dedent from 'dedent';
 import type { User } from '../model/UserModels.ts';
@@ -59,6 +60,7 @@ export class GameService {
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
+    private skillRatingService: SkillRatingService = new SkillRatingService();
     private clubService: ClubService = new ClubService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private achievementService: AchievementService = new AchievementService();
@@ -106,6 +108,7 @@ export class GameService {
             event.gameRules,
             event.startingRating
         );
+        this.skillRatingService.applyFinishedGame(newGameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
@@ -201,6 +204,7 @@ export class GameService {
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.addPlayersToGame(gameId, playersData, modifiedBy);
 
+        this.skillRatingService.revertFinishedGame(gameId);
         this.ratingService.deleteRatingChangesFromGame(oldGame);
         this.ratingService.addRatingChangesFromGame(
             gameId,
@@ -210,6 +214,7 @@ export class GameService {
             event.gameRules,
             event.startingRating
         );
+        this.skillRatingService.applyFinishedGame(gameId);
 
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
         if (oldEvent.id !== event.id) {
@@ -250,6 +255,7 @@ export class GameService {
 
     private recalculateRatingForFinishedGame(gameId: number, gameTimestamp: Date, event: Event): void {
         const game = this.getGameById(gameId);
+        this.skillRatingService.revertFinishedGame(gameId);
         this.ratingService.deleteRatingChangesFromGame(game);
         this.ratingService.addRatingChangesFromGame(
             gameId,
@@ -259,6 +265,7 @@ export class GameService {
             event.gameRules,
             event.startingRating
         );
+        this.skillRatingService.applyFinishedGame(gameId);
     }
 
     deleteGame(gameId: number, deletedBy: number): void {
@@ -268,6 +275,7 @@ export class GameService {
 
         this.authorizeGameDeletion(game, event, deletedBy, rounds.length);
 
+        this.skillRatingService.revertFinishedGame(gameId);
         this.ratingService.deleteRatingChangesFromGame(game);
 
         this.gameRepository.deleteGameRoundsByGameId(gameId);

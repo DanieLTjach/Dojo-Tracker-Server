@@ -182,3 +182,7 @@ errors:
   userIsNotActive: User with id {{id}} is not active
 
   enumParsingError: "Invalid value '{{value}}' for enum {{enumName}}. Allowed values: {{allowedValues}}"
+
+  skillRatingNotEnabledForClub: OpenSkill rating is not enabled for club {{clubId}}
+  invalidGameSize: "Invalid game size {{gameSize}}. Allowed values: 3, 4"
+  skillTrackRecomputeFailed: "Failed to recompute skill track for club {{clubId}} and gameSize {{gameSize}}: {{reason}}"

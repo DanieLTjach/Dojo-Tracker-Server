@@ -783,12 +783,12 @@ describe('Database Migrations', () => {
         const db = createMigratedDb(13);
 
         db.prepare(`
-            INSERT INTO event (id, name, type, gameRules, createdAt, modifiedAt, modifiedBy)
-            VALUES
-                (9901, 'Нерейтинг 2026', 'SEASON', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
-                (9902, 'Тестовий Турнір', 'TOURNAMENT', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
-                (9903, 'Regular Season', 'SEASON', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
-        `).run();
+                INSERT INTO event (id, name, type, gameRules, createdAt, modifiedAt, modifiedBy)
+                VALUES
+                    (9901, 'Нерейтинг 2026', 'SEASON', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+                    (9902, 'Тестовий Турнір', 'TOURNAMENT', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0),
+                    (9903, 'Regular Season', 'SEASON', 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
+            `).run();
 
         runMigration(db, 14);
         db.pragma('foreign_keys = ON');
@@ -823,11 +823,11 @@ describe('Database Migrations', () => {
 
         // The join table is what makes tags many-to-many: the same event carries two.
         db.prepare(`
-            INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
-            VALUES
-                (9903, 'EMA', '2026-01-01T00:00:00.000Z', 0),
-                (9903, 'ONLINE', '2026-01-01T00:00:00.000Z', 0)
-        `).run();
+                INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
+                VALUES
+                    (9903, 'EMA', '2026-01-01T00:00:00.000Z', 0),
+                    (9903, 'ONLINE', '2026-01-01T00:00:00.000Z', 0)
+            `).run();
 
         const assignedTags = db.prepare('SELECT tag FROM eventToTag WHERE eventId = 9903 ORDER BY tag')
             .all() as Array<{ tag: string }>;
@@ -835,9 +835,9 @@ describe('Database Migrations', () => {
 
         expect(() =>
             db.prepare(`
-                INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
-                VALUES (9903, 'EMA', '2026-01-01T00:00:00.000Z', 0)
-            `).run()
+                    INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
+                    VALUES (9903, 'EMA', '2026-01-01T00:00:00.000Z', 0)
+                `).run()
         ).toThrow();
 
         const tagIndex = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?`)
@@ -857,6 +857,108 @@ describe('Database Migrations', () => {
             isRated: number;
         };
         expect(ratedEvent.isRated).toBe(1);
+
+        const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+        expect(foreignKeyViolations).toEqual([]);
+
+        db.close();
+    });
+
+    test('migration 15 creates skill rating tables and constraints', () => {
+        const db = createMigratedDb(14);
+
+        runMigration(db, 15);
+        db.pragma('foreign_keys = ON');
+
+        // Check skillRating table columns
+        const skillRatingCols = (db.prepare('PRAGMA table_info(skillRating)').all() as Array<{
+            name: string;
+            type: string;
+            notnull: number;
+            pk: number;
+        }>).map(({ name, type, notnull, pk }) => ({ name, type, notnull, pk }));
+
+        expect(skillRatingCols).toEqual([
+            { name: 'clubId', type: 'INTEGER', notnull: 1, pk: 1 },
+            { name: 'userId', type: 'INTEGER', notnull: 1, pk: 2 },
+            { name: 'gameSize', type: 'INTEGER', notnull: 1, pk: 3 },
+            { name: 'mu', type: 'REAL', notnull: 1, pk: 0 },
+            { name: 'sigma', type: 'REAL', notnull: 1, pk: 0 },
+            { name: 'gamesPlayed', type: 'INTEGER', notnull: 1, pk: 0 },
+            { name: 'firstRatedGameAt', type: 'TIMESTAMP', notnull: 1, pk: 0 },
+            { name: 'lastRatedGameAt', type: 'TIMESTAMP', notnull: 1, pk: 0 },
+            { name: 'modifiedAt', type: 'TIMESTAMP', notnull: 1, pk: 0 },
+        ]);
+
+        // Check skillRatingGame table columns
+        const skillRatingGameCols = (db.prepare('PRAGMA table_info(skillRatingGame)').all() as Array<{
+            name: string;
+            type: string;
+            notnull: number;
+            pk: number;
+        }>).map(({ name, type, notnull, pk }) => ({ name, type, notnull, pk }));
+
+        expect(skillRatingGameCols).toEqual([
+            { name: 'gameId', type: 'INTEGER', notnull: 1, pk: 1 },
+            { name: 'userId', type: 'INTEGER', notnull: 1, pk: 2 },
+            { name: 'clubId', type: 'INTEGER', notnull: 1, pk: 0 },
+            { name: 'gameSize', type: 'INTEGER', notnull: 1, pk: 0 },
+            { name: 'rank', type: 'INTEGER', notnull: 1, pk: 0 },
+            { name: 'muBefore', type: 'REAL', notnull: 1, pk: 0 },
+            { name: 'sigmaBefore', type: 'REAL', notnull: 1, pk: 0 },
+            { name: 'muAfter', type: 'REAL', notnull: 1, pk: 0 },
+            { name: 'sigmaAfter', type: 'REAL', notnull: 1, pk: 0 },
+            { name: 'playedAt', type: 'TIMESTAMP', notnull: 1, pk: 0 },
+        ]);
+
+        // Check clubSkillConfig table columns
+        const clubSkillConfigCols = (db.prepare('PRAGMA table_info(clubSkillConfig)').all() as Array<{
+            name: string;
+            type: string;
+            notnull: number;
+            dflt_value: string | null;
+            pk: number;
+        }>).map(({ name, type, notnull, dflt_value, pk }) => ({ name, type, notnull, dflt_value, pk }));
+
+        expect(clubSkillConfigCols).toEqual([
+            { name: 'clubId', type: 'INTEGER', notnull: 0, dflt_value: null, pk: 1 },
+            { name: 'provisionalGameThreshold', type: 'INTEGER', notnull: 1, dflt_value: '30', pk: 0 },
+            { name: 'isEnabled', type: 'BOOL', notnull: 1, dflt_value: 'true', pk: 0 },
+            { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null, pk: 0 },
+            { name: 'modifiedAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null, pk: 0 },
+            { name: 'modifiedBy', type: 'INTEGER', notnull: 1, dflt_value: null, pk: 0 },
+        ]);
+
+        // Check skillTrackDirty table columns
+        const skillTrackDirtyCols = (db.prepare('PRAGMA table_info(skillTrackDirty)').all() as Array<{
+            name: string;
+            type: string;
+            notnull: number;
+            pk: number;
+        }>).map(({ name, type, notnull, pk }) => ({ name, type, notnull, pk }));
+
+        expect(skillTrackDirtyCols).toEqual([
+            { name: 'clubId', type: 'INTEGER', notnull: 1, pk: 1 },
+            { name: 'gameSize', type: 'INTEGER', notnull: 1, pk: 2 },
+            { name: 'markedAt', type: 'TIMESTAMP', notnull: 1, pk: 0 },
+            { name: 'reason', type: 'TEXT', notnull: 1, pk: 0 },
+        ]);
+
+        // Verify CHECK constraint on gameSize rejects invalid gameSize
+        expect(() => {
+            db.prepare(`
+                INSERT INTO skillRating (clubId, userId, gameSize, mu, sigma, gamesPlayed, firstRatedGameAt, lastRatedGameAt, modifiedAt)
+                VALUES (1, 1, 5, 25.0, 8.333, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')
+            `).run();
+        }).toThrow();
+
+        // Verify valid insertion
+        expect(() => {
+            db.prepare(`
+                INSERT INTO skillRating (clubId, userId, gameSize, mu, sigma, gamesPlayed, firstRatedGameAt, lastRatedGameAt, modifiedAt)
+                VALUES (1, 0, 4, 25.0, 8.333, 1, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')
+            `).run();
+        }).not.toThrow();
 
         const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
         expect(foreignKeyViolations).toEqual([]);

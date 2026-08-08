@@ -3,6 +3,7 @@ import { UserController } from '../controller/UserController.ts';
 import { ClubMembershipController } from '../controller/ClubMembershipController.ts';
 import { EventRegistrationController } from '../controller/EventRegistrationController.ts';
 import { AchievementController } from '../controller/AchievementController.ts';
+import { PlacementHistoryController } from '../controller/PlacementHistoryController.ts';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { requireAuth } from '../middleware/AuthMiddleware.ts';
 import profileRoutes from './ProfileRoutes.ts';
@@ -12,6 +13,7 @@ const userController = new UserController();
 const membershipController = new ClubMembershipController();
 const registrationController = new EventRegistrationController();
 const achievementController = new AchievementController();
+const placementHistoryController = new PlacementHistoryController();
 
 // Public - user registration
 router.post('/', withTransaction((req, res) => userController.registerUser(req, res)));
@@ -38,6 +40,12 @@ router.get(
     '/:id/achievements',
     requireAuth,
     withTransaction((req, res) => achievementController.getUserAchievements(req, res))
+);
+// Authenticated - cross-event placements for user profile
+router.get(
+    '/:id/placements',
+    requireAuth,
+    withTransaction((req, res) => placementHistoryController.getUserPlacements(req, res))
 );
 router.get(
     '/by-telegram-id/:telegramId',

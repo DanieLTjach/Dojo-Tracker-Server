@@ -51,6 +51,7 @@ import { GameRepository } from '../repository/GameRepository.ts';
 import { GameRulesRepository } from '../repository/GameRulesRepository.ts';
 import type { EventPatchBody } from '../schema/EventSchemas.ts';
 import LogService from './LogService.ts';
+import { invalidateSkillReplayCache } from './SkillRatingService.ts';
 import {
     DraftNotStartableError,
     NotEnoughApprovedForDraftError,
@@ -248,6 +249,13 @@ export class EventService {
         // Omitting `tags` preserves the existing set; passing [] clears it.
         if (data.tags !== undefined) {
             this.eventRepository.setEventTags(eventId, data.tags, modifiedBy, now);
+        }
+
+        // Tags and isRated decide which games a filtered skill leaderboard sees,
+        // so changing either invalidates cached replays even though no rating
+        // hook ran.
+        if (data.tags !== undefined || newIsRated !== existingEvent.isRated) {
+            invalidateSkillReplayCache();
         }
 
         this.syncTournamentConfig(existingEvent, eventId, data, modifiedBy, now);
