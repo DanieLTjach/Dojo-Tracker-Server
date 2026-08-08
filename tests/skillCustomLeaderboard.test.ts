@@ -5,7 +5,11 @@ import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader } from './testHelpers.ts';
-import { SkillRatingService } from '../src/service/SkillRatingService.ts';
+import {
+    invalidateSkillReplayCache,
+    skillReplayCacheSize,
+    SkillRatingService,
+} from '../src/service/SkillRatingService.ts';
 
 const app = express();
 app.use(express.json());
@@ -197,6 +201,79 @@ describe('Custom skill leaderboard', () => {
             .set('Authorization', authHeader);
 
         expect(res.status).toBe(400);
+    });
+
+    describe('replay cache', () => {
+        it('serves a repeat request from cache', async () => {
+            invalidateSkillReplayCache();
+            expect(skillReplayCacheSize()).toBe(0);
+
+            const first = await request(app)
+                .get('/api/skill/leaderboard?threshold=1')
+                .set('Authorization', authHeader);
+            expect(first.status).toBe(200);
+            expect(skillReplayCacheSize()).toBe(1);
+
+            const second = await request(app)
+                .get('/api/skill/leaderboard?threshold=1')
+                .set('Authorization', authHeader);
+            expect(second.body.entries).toEqual(first.body.entries);
+            expect(skillReplayCacheSize()).toBe(1);
+        });
+
+        it('treats differently ordered tags as the same entry', async () => {
+            invalidateSkillReplayCache();
+
+            await request(app)
+                .get('/api/skill/leaderboard?tags=EMA,LEAGUE&threshold=1')
+                .set('Authorization', authHeader);
+            await request(app)
+                .get('/api/skill/leaderboard?tags=LEAGUE,EMA&threshold=1')
+                .set('Authorization', authHeader);
+
+            expect(skillReplayCacheSize()).toBe(1);
+        });
+
+        it('keeps separate entries per filter', async () => {
+            invalidateSkillReplayCache();
+
+            await request(app).get('/api/skill/leaderboard?threshold=1').set('Authorization', authHeader);
+            await request(app).get('/api/skill/leaderboard?tags=EMA&threshold=1').set('Authorization', authHeader);
+            await request(app).get('/api/skill/leaderboard?gameSize=3&threshold=1').set('Authorization', authHeader);
+
+            expect(skillReplayCacheSize()).toBe(3);
+        });
+
+        it('reflects a newly finished game rather than serving a stale board', async () => {
+            const before = await request(app)
+                .get('/api/skill/leaderboard?threshold=1')
+                .set('Authorization', authHeader);
+            const gamesBefore = before.body.gamesProcessed;
+            expect(skillReplayCacheSize()).toBeGreaterThan(0);
+
+            // A new game must evict the cached replay.
+            const ts = '2026-05-01T12:00:00.000Z';
+            const gameId = 947500;
+            dbManager.db.prepare(`
+                INSERT INTO game (id, eventId, status, createdAt, modifiedAt, modifiedBy)
+                VALUES (?, ?, 'FINISHED', ?, ?, 0)
+            `).run(gameId, EVENT_UNTAGGED, ts, ts);
+            const points = [40000, 30000, 25000, 5000];
+            U.forEach((userId, i) => {
+                dbManager.db.prepare(`
+                    INSERT INTO userToGame (userId, gameId, startPlace, points, chomboCount, isSubstitutePlayer, createdAt, modifiedAt, modifiedBy)
+                    VALUES (?, ?, ?, ?, 0, 0, ?, ?, 0)
+                `).run(userId, gameId, ['EAST', 'SOUTH', 'WEST', 'NORTH'][i], points[i], ts, ts);
+            });
+
+            new SkillRatingService().applyFinishedGame(gameId);
+            expect(skillReplayCacheSize()).toBe(0);
+
+            const after = await request(app)
+                .get('/api/skill/leaderboard?threshold=1')
+                .set('Authorization', authHeader);
+            expect(after.body.gamesProcessed).toBe(gamesBefore + 1);
+        });
     });
 
     it('rejects an unknown tag with 400', async () => {

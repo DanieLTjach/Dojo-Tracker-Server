@@ -32,6 +32,35 @@ import type { Wind } from '../model/GameModels.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
 import LogService from './LogService.ts';
 
+/**
+ * Cached replay results for ad-hoc leaderboards, keyed by filter.
+ *
+ * Module-level on purpose: GameService, TrackedGameService and SkillController
+ * each construct their own SkillRatingService, so a per-instance cache would let
+ * one instance invalidate its copy while another kept serving stale numbers.
+ *
+ * Only the *replay state* is cached — not the formatted response. Sigma
+ * inflation depends on `now` and the ranked/provisional split depends on the
+ * threshold, so both are recomputed per request from the cached mu/sigma.
+ *
+ * Invalidated explicitly by invalidateSkillReplayCache() at the same hook points
+ * that update stored ratings, rather than by a derived key: an edit can change
+ * points without changing game count or max id, and a key that misses that would
+ * serve wrong numbers indefinitely.
+ *
+ * Measured at ~267 KiB for the full global board at current scale (281 entries).
+ */
+const replayCache = new Map<string, { playerState: Map<number, ReplayPlayerState>, gamesProcessed: number }>();
+
+export function invalidateSkillReplayCache(): void {
+    replayCache.clear();
+}
+
+/** Exposed for tests; not part of the service contract. */
+export function skillReplayCacheSize(): number {
+    return replayCache.size;
+}
+
 export class SkillRatingService {
     private skillRatingRepository: SkillRatingRepository;
     private clubRepository: ClubRepository;
@@ -189,6 +218,39 @@ export class SkillRatingService {
     }
 
     /**
+     * Replays a filtered slice, serving from the module cache when possible.
+     *
+     * The cached value is immutable state read by the caller, never mutated in
+     * place — buildResolvedLeaderboardEntries copies mu/sigma into fresh rows.
+     */
+    private replayFiltered(filter: {
+        clubId: number | null;
+        gameSize: number;
+        tags: string[];
+        matchAll: boolean;
+        eventType: string | null;
+    }): { playerState: Map<number, ReplayPlayerState>, gamesProcessed: number } {
+        // Sorted tags so ?tags=EMA,LEAGUE and ?tags=LEAGUE,EMA share an entry.
+        const key = JSON.stringify([
+            filter.clubId,
+            filter.gameSize,
+            [...filter.tags].sort(),
+            filter.matchAll,
+            filter.eventType,
+        ]);
+
+        const cached = replayCache.get(key);
+        if (cached) {
+            return cached;
+        }
+
+        const rows = this.skillRatingRepository.findRatableGamesFiltered(filter);
+        const { playerState, gamesProcessed } = replayGames(rows);
+        replayCache.set(key, { playerState, gamesProcessed });
+        return { playerState, gamesProcessed };
+    }
+
+    /**
      * Builds a leaderboard for an arbitrary slice of games — a club, all clubs,
      * specific tags, an event type — by replaying that slice on demand.
      *
@@ -221,8 +283,7 @@ export class SkillRatingService {
         }
 
         const startTime = Date.now();
-        const rows = this.skillRatingRepository.findRatableGamesFiltered(filter);
-        const { playerState, gamesProcessed } = replayGames(rows);
+        const { playerState, gamesProcessed } = this.replayFiltered(filter);
 
         const users = this.skillRatingRepository.findUserDisplayFields([...playerState.keys()]);
         const userById = new Map(users.map(u => [u.userId, u]));
@@ -501,6 +562,10 @@ export class SkillRatingService {
         let targetClubId: number | undefined;
         let targetGameSize: number | undefined;
 
+        // Unconditional: a call that errors partway may still have written rows,
+        // and an early return can follow a state change in a prior call.
+        invalidateSkillReplayCache();
+
         try {
             const game = this.gameRepository.findGameById(gameId);
             if (!game || game.status !== 'FINISHED') {
@@ -637,6 +702,8 @@ export class SkillRatingService {
         let targetClubId: number | undefined;
         let targetGameSize: number | undefined;
 
+        invalidateSkillReplayCache();
+
         try {
             const outcomeRows = this.skillRatingRepository.findSkillRatingGamesByGameId(gameId);
             if (outcomeRows.length === 0) {
@@ -723,6 +790,8 @@ export class SkillRatingService {
         if (!club) {
             throw new ClubNotFoundError(clubId);
         }
+
+        invalidateSkillReplayCache();
 
         const startTime = Date.now();
         this.skillRatingRepository.deleteTrackData(clubId, gameSize);
