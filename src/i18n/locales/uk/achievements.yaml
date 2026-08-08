@@ -30,3 +30,34 @@ achievements:
     declarations: "{{value}} оголошень"
     chombo: "{{value}} чомбо"
     players: "{{value}} гравців"
+  manual:
+    COMMUNITY_BUILDER:
+      name: Будівничий спільноти
+      description: Допоміг розвинути та зміцнити спільноту клубу.
+    TOURNAMENT_ORGANIZER:
+      name: Організатор турніру
+      description: Організував турнір клубу.
+    MENTOR:
+      name: Наставник
+      description: Навчав та наставляв новачків.
+    FAIR_PLAY:
+      name: Чесна гра
+      description: Відзначений за спортивну поведінку та чесну гру.
+    RULES_EXPERT:
+      name: Знавець правил
+      description: Глибоке знання правил, завжди готовий пояснити спірний момент.
+    CLUB_AMBASSADOR:
+      name: Посол клубу
+      description: Гідно представляв клуб іншим клубам та стороннім особам.
+    EVENT_VOLUNTEER:
+      name: Волонтер заходу
+      description: Витратив свій час, щоб допомогти провести захід клубу.
+    RISING_STAR:
+      name: Зірка, що сходить
+      description: Новий гравець зі стрімким прогресом.
+    IRON_WILL:
+      name: Залізна воля
+      description: Проявив наполегливість у складній серії ігор.
+    HOSPITALITY_HERO:
+      name: Герой гостинності
+      description: Доклав зусиль, щоб інші відчували себе бажаними гостями.

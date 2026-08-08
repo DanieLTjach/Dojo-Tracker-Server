@@ -30,6 +30,7 @@ export interface PlayerStats {
     saki_zero_after_uma_games: number;
     chiitoi_nomi_wins: number;
     points_lost_on_ron: number;
+    ron_deal_in_count: number;
     best_game_points: number;
     yakuman_wins: number;
     best_hand_han_points: number;
@@ -45,6 +46,12 @@ export interface AchievementDefinition {
     criterion: AchievementCriterion;
     /** Shown after the numeric value, e.g. "5 wins". */
     valueUnit: AchievementValueUnit;
+    /**
+     * For `Lowest`: the `PlayerStats` field counting rounds where this metric could
+     * have moved. Players with zero applicable rounds are excluded from the min,
+     * so "never faced the situation" isn't confused with "faced it and won every time".
+     */
+    applicabilityMetric?: AchievementMetric;
 }
 
 export const ACHIEVEMENTS: readonly AchievementDefinition[] = [
@@ -143,6 +150,7 @@ export const ACHIEVEMENTS: readonly AchievementDefinition[] = [
         name: 'Defence award',
         criterion: AchievementCriterion.Lowest,
         valueUnit: 'points',
+        applicabilityMetric: 'ron_deal_in_count',
     },
     {
         metric: 'best_game_points',
@@ -194,6 +202,7 @@ export function newStats(): PlayerStats {
         saki_zero_after_uma_games: 0,
         chiitoi_nomi_wins: 0,
         points_lost_on_ron: 0,
+        ron_deal_in_count: 0,
         best_game_points: 0,
         yakuman_wins: 0,
         best_hand_han_points: 0,

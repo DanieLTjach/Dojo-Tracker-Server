@@ -30,3 +30,34 @@ achievements:
     declarations: "{{value}} declarations"
     chombo: "{{value}} chombo"
     players: "{{value}} players"
+  manual:
+    COMMUNITY_BUILDER:
+      name: Community Builder
+      description: Helped grow and strengthen the club community.
+    TOURNAMENT_ORGANIZER:
+      name: Tournament Organizer
+      description: Organized a club tournament.
+    MENTOR:
+      name: Mentor
+      description: Taught and guided newer players.
+    FAIR_PLAY:
+      name: Fair Play
+      description: Recognized for sportsmanship and fair play.
+    RULES_EXPERT:
+      name: Rules Expert
+      description: Deep knowledge of the rules, always ready to clarify a ruling.
+    CLUB_AMBASSADOR:
+      name: Club Ambassador
+      description: Represented the club well to outsiders and other clubs.
+    EVENT_VOLUNTEER:
+      name: Event Volunteer
+      description: Volunteered time to help run a club event.
+    RISING_STAR:
+      name: Rising Star
+      description: A newer player showing rapid improvement.
+    IRON_WILL:
+      name: Iron Will
+      description: Showed perseverance through a tough run of games.
+    HOSPITALITY_HERO:
+      name: Hospitality Hero
+      description: Went out of their way to make others feel welcome.

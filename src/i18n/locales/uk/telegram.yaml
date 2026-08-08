@@ -328,6 +328,23 @@ telegram:
     removedByLabel: "Видалив:"
     changedByLabel: "Змінив:"
 
+  achievementLog:
+    definitionCreatedTitle: 🏅 Створено нагороду
+    definitionArchivedTitle: 🗄️ Нагороду архівовано
+    definitionUnarchivedTitle: 📤 Нагороду розархівовано
+    awardedTitle: 🏆 Присвоєно нагороду
+    revokedTitle: 🚫 Скасовано нагороду
+    clubLabel: "Клуб:"
+    nameLabel: "Назва:"
+    userLabel: "Користувач:"
+    achievementLabel: "Нагорода:"
+    noteLabel: "Примітка:"
+    createdByLabel: "Створив:"
+    archivedByLabel: "Архівував:"
+    unarchivedByLabel: "Розархівував:"
+    awardedByLabel: "Присвоїв:"
+    revokedByLabel: "Скасував:"
+
   # ── User log posts (UserService) ──
   userLog:
     registeredTitle: 👤 Зареєстровано нового користувача
