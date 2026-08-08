@@ -8,6 +8,8 @@
         "format": "dprint fmt",
         "format:check": "dprint check",
         "start": "node src/index.ts",
+        "skill:recompute": "node src/script/recomputeSkillRatings.ts",
+        "skill:recompute:dev": "dotenv -e .env.development -- node src/script/recomputeSkillRatings.ts",
         "dev": "dotenv -e .env.development -- nodemon --exec node --ext \"js,ts,json\" src/index.ts",
         "debug": "dotenv -e .env.development -- node --inspect=0.0.0.0:9229 src/index.ts",
         "test": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --no-cache --runInBand",
