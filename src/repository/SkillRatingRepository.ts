@@ -233,6 +233,29 @@ export class SkillRatingRepository {
         return row !== undefined;
     }
 
+    findTracksPlayedByUser(userId: number): Array<{ clubId: number, gameSize: number }> {
+        return dbManager.db.prepare(`
+            SELECT DISTINCT e.clubId, gr.numberOfPlayers AS gameSize
+            FROM userToGame utg
+            JOIN game g ON g.id = utg.gameId
+            JOIN event e ON e.id = g.eventId
+            JOIN gameRules gr ON gr.id = e.gameRules
+            WHERE utg.userId = ?
+              AND g.status = 'FINISHED'
+              AND e.isRated = 1
+              AND e.clubId IS NOT NULL
+              AND gr.numberOfPlayers IN (3, 4)
+        `).all(userId) as Array<{ clubId: number, gameSize: number }>;
+    }
+
+    hasFinishedGamesForEvent(eventId: number): boolean {
+        return dbManager.db.prepare(`
+            SELECT 1 FROM game
+            WHERE eventId = ? AND status = 'FINISHED'
+            LIMIT 1
+        `).get(eventId) !== undefined;
+    }
+
     isNewestGameInTrack(gameId: number, clubId: number, gameSize: number, playedAt: Date): boolean {
         const res = this.countGamesPlayedAfterStatement().get({
             clubId,

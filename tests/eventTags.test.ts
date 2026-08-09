@@ -7,7 +7,12 @@ import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
-import { invalidateSkillReplayCache, skillReplayCacheSize } from '../src/service/SkillRatingService.ts';
+import {
+    invalidateSkillReplayCache,
+    skillReplayCacheSize,
+    SkillRatingService,
+} from '../src/service/SkillRatingService.ts';
+import { SkillRatingRepository } from '../src/repository/SkillRatingRepository.ts';
 
 const app = express();
 app.use(express.json());
@@ -291,7 +296,6 @@ describe('Event Tag Endpoints', () => {
         // even though no rating hook ran.
         invalidateSkillReplayCache();
         expect(skillReplayCacheSize()).toBe(0);
-        const { SkillRatingService } = await import('../src/service/SkillRatingService.ts');
         new SkillRatingService().getCustomLeaderboard({
             clubId: null,
             gameSize: 4,
@@ -308,6 +312,45 @@ describe('Event Tag Endpoints', () => {
             .send({ tags: ['LEAGUE'] });
         expect(patchRes.status).toBe(200);
         expect(skillReplayCacheSize()).toBe(0);
+    });
+
+    test('moving an event invalidates replay cache and marks its stored track dirty', async () => {
+        const createRes = await request(app)
+            .post('/api/events')
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Moved Rating Event',
+                type: 'SEASON',
+                gameRulesId: 1,
+                clubId: 1,
+            });
+        expect(createRes.status).toBe(201);
+
+        const now = new Date().toISOString();
+        dbManager.db.prepare(`
+            INSERT INTO game (eventId, status, createdAt, modifiedAt, modifiedBy)
+            VALUES (?, 'FINISHED', ?, ?, 0)
+        `).run(createRes.body.id, now, now);
+
+        invalidateSkillReplayCache();
+        new SkillRatingService().getCustomLeaderboard({
+            clubId: null,
+            gameSize: 4,
+            tags: [],
+            matchAll: false,
+            eventType: null,
+            provisionalGameThreshold: 30,
+        });
+        expect(skillReplayCacheSize()).toBe(1);
+
+        const patchRes = await request(app)
+            .patch(`/api/events/${createRes.body.id}`)
+            .set('Authorization', adminAuthHeader)
+            .send({ clubId: null });
+
+        expect(patchRes.status).toBe(200);
+        expect(skillReplayCacheSize()).toBe(0);
+        expect(new SkillRatingRepository().isTrackDirty(1, 4)).toBe(true);
     });
 
     test('POST /api/events should reject non-moderator/non-owner with 403', async () => {

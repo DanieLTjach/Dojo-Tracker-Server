@@ -28,6 +28,7 @@ import { UnknownEventTagError } from '../error/EventErrors.ts';
 import { UserNotFoundById } from '../error/UserErrors.ts';
 import { inflateSigma, rateGame, toDisplaySkill, toOrdinal } from '../util/SkillMathUtil.ts';
 import { calculatePlacements } from '../util/GamePlacementUtil.ts';
+import type { Event } from '../model/EventModels.ts';
 import type { Wind } from '../model/GameModels.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
 import LogService from './LogService.ts';
@@ -144,6 +145,59 @@ export class SkillRatingService {
         }
 
         return updated;
+    }
+
+    handleEventRatingInputsChanged(previous: Event, current: Event, tagsChanged: boolean): void {
+        const clubChanged = previous.clubId !== current.clubId;
+        const ratedChanged = previous.isRated !== current.isRated;
+        const gameSizeChanged = previous.gameRules.numberOfPlayers !== current.gameRules.numberOfPlayers;
+        const tieBreakChanged = previous.gameRules.umaTieBreak !== current.gameRules.umaTieBreak;
+
+        if (
+            tagsChanged || previous.type !== current.type || clubChanged || ratedChanged || gameSizeChanged ||
+            tieBreakChanged
+        ) {
+            invalidateSkillReplayCache();
+        }
+
+        if (
+            (!clubChanged && !ratedChanged && !gameSizeChanged && !tieBreakChanged) ||
+            !this.skillRatingRepository.hasFinishedGamesForEvent(current.id)
+        ) {
+            return;
+        }
+
+        const affectedTracks = new Map<string, { clubId: number, gameSize: number }>();
+        for (const event of [previous, current]) {
+            const gameSize = event.gameRules.numberOfPlayers;
+            if (!event.isRated || event.clubId === null || (gameSize !== 3 && gameSize !== 4)) {
+                continue;
+            }
+            affectedTracks.set(`${event.clubId}:${gameSize}`, { clubId: event.clubId, gameSize });
+        }
+
+        const markedAt = new Date();
+        for (const { clubId, gameSize } of affectedTracks.values()) {
+            this.skillRatingRepository.markTrackDirty(
+                clubId,
+                gameSize,
+                `event ${current.id} changed a skill rating input`,
+                markedAt
+            );
+        }
+    }
+
+    handleFillerClassificationChanged(userId: number): void {
+        invalidateSkillReplayCache();
+        const markedAt = new Date();
+        for (const { clubId, gameSize } of this.skillRatingRepository.findTracksPlayedByUser(userId)) {
+            this.skillRatingRepository.markTrackDirty(
+                clubId,
+                gameSize,
+                `filler classification changed for user ${userId}`,
+                markedAt
+            );
+        }
     }
 
     /**

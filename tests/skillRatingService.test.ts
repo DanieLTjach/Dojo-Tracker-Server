@@ -383,6 +383,25 @@ describe('SkillRatingService', () => {
             expect(r1).toBeDefined();
             expect(r1!.gamesPlayed).toBe(1);
         });
+
+        it('marks affected tracks dirty when filler classification changes', () => {
+            const gameId = gameRepo.createGame(
+                EVENT_ID,
+                0,
+                new Date('2025-01-10T12:00:00.000Z'),
+                null,
+                null
+            );
+            gameRepo.addGamePlayer(gameId, USER_1, 40000, 'EAST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_2, 30000, 'SOUTH', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_3, 20000, 'WEST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_4, 10000, 'NORTH', 0, false, 0);
+            service.applyFinishedGame(gameId);
+
+            service.handleFillerClassificationChanged(USER_1);
+
+            expect(skillRepo.isTrackDirty(CLUB_ID, 4)).toBe(true);
+        });
     });
 
     describe('getClubLeaderboard', () => {

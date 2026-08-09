@@ -11,6 +11,11 @@ import {
     MissingProfileNamesForTournamentRegistrationError,
 } from '../src/error/EventRegistrationErrors.ts';
 import { BadRequestError } from '../src/error/BaseErrors.ts';
+import {
+    invalidateSkillReplayCache,
+    skillReplayCacheSize,
+    SkillRatingService,
+} from '../src/service/SkillRatingService.ts';
 
 const SYSTEM_USER_ID = 0;
 
@@ -176,6 +181,7 @@ describe('EventRegistrationService', () => {
     });
 
     afterEach(() => {
+        invalidateSkillReplayCache();
         // Wipe registrations between tests for isolation
         dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?, ?, ?)').run(
             TOURNAMENT_EVENT_ID,
@@ -411,8 +417,19 @@ describe('EventRegistrationService', () => {
         });
 
         it('sets isFillerPlayer to true', () => {
+            new SkillRatingService().getCustomLeaderboard({
+                clubId: null,
+                gameSize: 4,
+                tags: [],
+                matchAll: false,
+                eventType: null,
+                provisionalGameThreshold: 30,
+            });
+            expect(skillReplayCacheSize()).toBe(1);
+
             const result = service.setFillerPlayer(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID, true, OWNER_USER_ID);
             expect(result.isFillerPlayer).toBe(true);
+            expect(skillReplayCacheSize()).toBe(0);
             const stored = registrationRepo.findRegistration(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID);
             expect(stored?.isFillerPlayer).toBe(true);
         });
