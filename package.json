@@ -3,6 +3,9 @@
     "version": "0.1.0",
     "main": "src/index.js",
     "type": "module",
+    "engines": {
+        "node": "24.x"
+    },
     "scripts": {
         "typecheck": "npx tsc",
         "format": "dprint fmt",
