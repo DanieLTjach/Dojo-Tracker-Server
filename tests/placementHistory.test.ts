@@ -200,4 +200,61 @@ describe('PlacementHistory API (/api/users/:id/placements)', () => {
         expect(season.minimumGamesPlayed).toBe(false);
         expect(season.place).toBeNull();
     });
+
+    it('excludes unrated events from placement history', async () => {
+        const UNRATED_EVENT_ID = 2003;
+
+        // Two seasons the user played in, identical apart from the isRated flag,
+        // so the assertion can only be explained by that flag.
+        createCustomEvent(
+            SEASON_EVENT_ID,
+            'Rated Season',
+            '2025-02-01T00:00:00.000Z',
+            '2025-04-30T23:59:59.000Z',
+            1,
+            CLUB_1,
+            'SEASON'
+        );
+        createCustomEvent(
+            UNRATED_EVENT_ID,
+            'Unrated Season',
+            '2025-02-01T00:00:00.000Z',
+            '2025-04-30T23:59:59.000Z',
+            1,
+            CLUB_1,
+            'SEASON'
+        );
+        dbManager.db.prepare('UPDATE event SET isRated = 0 WHERE id = ?').run(UNRATED_EVENT_ID);
+
+        const gameRules = gameRulesRepo.findGameRulesById(1)!;
+        const playedAt = new Date('2025-02-10T12:00:00.000Z');
+
+        for (const eventId of [SEASON_EVENT_ID, UNRATED_EVENT_ID]) {
+            const gameId = gameRepo.createGame(eventId, 0, playedAt, null, null);
+            gameRepo.addGamePlayer(gameId, USER_1, 40000, 'EAST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_2, 30000, 'SOUTH', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_3, 20000, 'WEST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_4, 10000, 'NORTH', 0, false, 0);
+            ratingService.addRatingChangesFromGame(
+                gameId,
+                playedAt,
+                [
+                    { userId: USER_1, points: 40000 },
+                    { userId: USER_2, points: 30000 },
+                    { userId: USER_3, points: 20000 },
+                    { userId: USER_4, points: 10000 },
+                ],
+                eventId,
+                gameRules,
+                0
+            );
+        }
+
+        const response = await request(app)
+            .get(`/api/users/${USER_1}/placements`)
+            .set('Authorization', userAuthHeader);
+
+        expect(response.status).toBe(200);
+        expect(response.body.seasons.map((s: { eventId: number }) => s.eventId)).toEqual([SEASON_EVENT_ID]);
+    });
 });

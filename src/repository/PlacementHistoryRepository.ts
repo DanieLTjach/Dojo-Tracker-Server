@@ -58,6 +58,7 @@ export class PlacementHistoryRepository {
             JOIN userToGame utg ON g.id = utg.gameId
             WHERE utg.userId = :userId
               AND g.status = 'FINISHED'
+              AND e.isRated = 1
               AND NOT EXISTS (
                   SELECT 1 FROM eventRegistration er
                   WHERE er.eventId = e.id
