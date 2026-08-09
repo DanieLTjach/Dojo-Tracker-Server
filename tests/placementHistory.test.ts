@@ -118,7 +118,7 @@ describe('PlacementHistory API (/api/users/:id/placements)', () => {
             SEASON_EVENT_ID,
             'Spring League 2025',
             '2025-02-01T00:00:00.000Z',
-            '2025-04-30T23:59:59.000Z',
+            undefined,
             1, // gameRulesId
             CLUB_2,
             'SEASON'
@@ -187,6 +187,9 @@ describe('PlacementHistory API (/api/users/:id/placements)', () => {
         expect(tourn.minimumGamesPlayed).toBe(true);
         expect(tourn.place).toBe(1);
         expect(tourn.totalRankedPlayers).toBe(4);
+        const expectedRating = ratingService.getAllUsersCurrentRating(TOURNAMENT_EVENT_ID)
+            .find(r => r.user.id === USER_1)!.rating;
+        expect(tourn.rating).toBe(expectedRating);
 
         // Seasons check (Alice only played 1 game out of 2 min)
         expect(response.body.seasons).toHaveLength(1);
@@ -199,6 +202,8 @@ describe('PlacementHistory API (/api/users/:id/placements)', () => {
         expect(season.gamesPlayed).toBe(1);
         expect(season.minimumGamesPlayed).toBe(false);
         expect(season.place).toBeNull();
+        expect(season.dateFrom).toBe('2025-02-01T00:00:00.000Z');
+        expect(season.dateTo).toBe(season.dateFrom);
     });
 
     it('excludes unrated events from placement history', async () => {

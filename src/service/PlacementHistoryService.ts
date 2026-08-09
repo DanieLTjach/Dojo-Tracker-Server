@@ -3,6 +3,7 @@ import { PlacementHistoryRepository } from '../repository/PlacementHistoryReposi
 import { UserRepository } from '../repository/UserRepository.ts';
 import { UserNotFoundById } from '../error/UserErrors.ts';
 import { RatingService } from './RatingService.ts';
+import { RATING_TO_POINTS_COEFFICIENT } from '../model/RatingModels.ts';
 
 export class PlacementHistoryService {
     private placementHistoryRepository: PlacementHistoryRepository;
@@ -43,11 +44,11 @@ export class PlacementHistoryService {
                 clubId: event.clubId,
                 clubName: event.clubName,
                 dateFrom: event.dateFrom ?? event.createdAt,
-                dateTo: event.dateTo ?? event.createdAt,
+                dateTo: event.dateTo ?? event.dateFrom ?? event.createdAt,
                 place,
                 totalRankedPlayers: standingsMap.size,
                 gamesPlayed: event.gamesPlayed,
-                rating: event.rating,
+                rating: event.rating / RATING_TO_POINTS_COEFFICIENT,
                 minimumGamesPlayed: meetsMinGames,
             };
 
