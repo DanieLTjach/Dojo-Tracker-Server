@@ -7,20 +7,8 @@ import type {
     SkillRatingGame,
 } from '../model/SkillModels.ts';
 
-/**
- * Excludes placeholder "filler" seats from rating.
- *
- * Deliberately checks whether the user is flagged a filler in ANY event, not
- * just the one being rated. `isFillerPlayer` is only ever set when someone
- * explicitly registers a filler for a tournament — no game-creation path
- * (GameService.addGame, ImportService, the one-off SQL importers) creates
- * registrations at all. So a per-event check silently rates the placeholder as
- * a real player whenever the registration is missing, which is what happened to
- * the imported 2023-2024 tournaments.
- *
- * These accounts are permanently not people, so "filler once, filler always" is
- * the correct reading and is robust to the missing rows.
- */
+// Filler accounts are permanent placeholders. Checking every event also handles
+// imported games whose event has no registration row for the filler.
 const NOT_A_FILLER_PLAYER = `NOT EXISTS (
     SELECT 1 FROM eventRegistration er
     WHERE er.userId = utg.userId AND er.isFillerPlayer = 1
@@ -99,26 +87,23 @@ export class SkillRatingRepository {
 
     private findClubSkillRatingsWithUsersStatement(): Statement<
         { clubId: number, gameSize: number },
-        SkillRatingWithUserDBEntity
+        SkillLeaderboardRow
     > {
         return dbManager.db.prepare(`
             SELECT
-                sr.clubId,
                 sr.userId,
                 sr.gameSize,
                 sr.mu,
                 sr.sigma,
                 sr.gamesPlayed,
-                sr.firstRatedGameAt,
                 sr.lastRatedGameAt,
-                sr.modifiedAt,
                 u.name as userName
             FROM skillRating sr
             JOIN user u ON sr.userId = u.id
             WHERE sr.clubId = :clubId AND sr.gameSize = :gameSize`);
     }
 
-    findClubSkillRatingsWithUsers(clubId: number, gameSize: number): SkillRatingWithUserDBEntity[] {
+    findClubSkillRatingsWithUsers(clubId: number, gameSize: number): SkillLeaderboardRow[] {
         return this.findClubSkillRatingsWithUsersStatement().all({ clubId, gameSize });
     }
 
@@ -451,15 +436,7 @@ export class SkillRatingRepository {
         `).all(userIds) as SkillUserDBEntity[];
     }
 
-    /**
-     * Games matching an ad-hoc filter, for the on-demand custom leaderboard.
-     *
-     * Not cached and not stored — the caller replays these to build a ranking
-     * that exists only for the duration of the request.
-     *
-     * `clubId` null spans every club. `tags` empty means no tag restriction;
-     * otherwise `matchAll` picks between "has every tag" and "has any tag".
-     */
+    // `clubId` null spans all clubs; `matchAll` selects AND versus OR tag matching.
     findRatableGamesFiltered(filter: {
         clubId: number | null;
         gameSize: number;
@@ -560,7 +537,13 @@ export interface SkillUserDBEntity {
     userName: string;
 }
 
-export interface SkillRatingWithUserDBEntity extends SkillRatingDBEntity {
+export interface SkillLeaderboardRow {
+    userId: number;
+    gameSize: number;
+    mu: number;
+    sigma: number;
+    gamesPlayed: number;
+    lastRatedGameAt: string;
     userName: string;
 }
 

@@ -1,21 +1,4 @@
-/**
- * One-shot skill rating recompute, for running after a deploy.
- *
- * Migration 015 creates the skill tables empty — it does no backfill, because the
- * placement logic that decides finishing order lives in TypeScript, not SQL. Until
- * something populates them the leaderboards render "No data to display", so this
- * needs to run once after the migration lands.
- *
- *   npm run skill:recompute              all clubs, both game sizes
- *   npm run skill:recompute -- --club 1  one club, both game sizes
- *
- * Equivalent to POST /api/admin/skill/recompute, minus the admin token. Prefer this
- * on a server where minting a JWT by hand is the awkward part.
- *
- * Deliberately imports dbInit and the service rather than src/index.ts: importing the
- * app would start the Telegram bot, the poll scheduler and an HTTP listener, none of
- * which a one-shot wants.
- */
+/** Post-migration backfill. Usage: `npm run skill:recompute -- [--club ID]`. */
 import 'dotenv/config';
 import { dbManager } from '../db/dbInit.ts';
 import LogService from '../service/LogService.ts';
@@ -44,8 +27,7 @@ function main(): void {
     const scope = clubId === null ? 'all clubs' : `club ${clubId}`;
     console.log(`Recomputing skill ratings for ${scope}...`);
 
-    // A single transaction, matching how the routes call recompute: a partial rebuild
-    // would leave tracks holding ratings replayed from an incomplete game set.
+    // Avoid committing a partial rebuild.
     const results = dbManager.db.transaction((): SkillRecomputeResult[] =>
         clubId === null
             ? skillRatingService.recomputeAll()
@@ -78,7 +60,6 @@ try {
     process.exitCode = 1;
 } finally {
     dbManager.closeDB();
-    // LogService polls its queue on a timer that never settles, so without this the
-    // process hangs after the work is done. shutdown() also flushes pending messages.
+    // Stops LogService's queue timer and flushes pending messages.
     await LogService.shutdown();
 }

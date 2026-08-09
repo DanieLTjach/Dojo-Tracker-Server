@@ -19,10 +19,10 @@ import { GameRepository } from '../repository/GameRepository.ts';
 import {
     SkillRatingRepository,
     type RatableGamePlayerDBEntity,
-    type SkillRatingWithUserDBEntity,
+    type SkillLeaderboardRow,
 } from '../repository/SkillRatingRepository.ts';
 import { UserRepository } from '../repository/UserRepository.ts';
-import { InvalidGameSize, SkillRatingNotEnabledForClub } from '../error/SkillErrors.ts';
+import { InvalidGameSizeError, SkillRatingNotEnabledForClubError } from '../error/SkillErrors.ts';
 import { ClubNotFoundError } from '../error/ClubErrors.ts';
 import { UnknownEventTagError } from '../error/EventErrors.ts';
 import { UserNotFoundById } from '../error/UserErrors.ts';
@@ -33,24 +33,8 @@ import type { Wind } from '../model/GameModels.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
 import LogService from './LogService.ts';
 
-/**
- * Cached replay results for ad-hoc leaderboards, keyed by filter.
- *
- * Module-level on purpose: GameService, TrackedGameService and SkillController
- * each construct their own SkillRatingService, so a per-instance cache would let
- * one instance invalidate its copy while another kept serving stale numbers.
- *
- * Only the *replay state* is cached — not the formatted response. Sigma
- * inflation depends on `now` and the ranked/provisional split depends on the
- * threshold, so both are recomputed per request from the cached mu/sigma.
- *
- * Invalidated explicitly by invalidateSkillReplayCache() at the same hook points
- * that update stored ratings, rather than by a derived key: an edit can change
- * points without changing game count or max id, and a key that misses that would
- * serve wrong numbers indefinitely.
- *
- * Measured at ~267 KiB for the full global board at current scale (281 entries).
- */
+// Module-level because several service instances share the cache. Cache replay
+// state only: read-time sigma inflation and threshold splits must stay dynamic.
 const replayCache = new Map<string, { playerState: Map<number, ReplayPlayerState>, gamesProcessed: number }>();
 
 export function invalidateSkillReplayCache(): void {
@@ -200,9 +184,6 @@ export class SkillRatingService {
         }
     }
 
-    /**
-     * Single read path: formats and resolves effective sigma, display skill, and provisional status.
-     */
     private resolve(
         row: {
             gameSize: number;
@@ -247,12 +228,12 @@ export class SkillRatingService {
         now: Date = new Date()
     ): SkillLeaderboardResponse {
         if (gameSize !== 3 && gameSize !== 4) {
-            throw new InvalidGameSize(gameSize);
+            throw new InvalidGameSizeError(gameSize);
         }
 
         const config = this.getOrCreateConfig(clubId);
         if (!config.isEnabled) {
-            throw new SkillRatingNotEnabledForClub(clubId);
+            throw new SkillRatingNotEnabledForClubError(clubId);
         }
 
         const isStale = this.skillRatingRepository.isTrackDirty(clubId, gameSize);
@@ -275,12 +256,6 @@ export class SkillRatingService {
         };
     }
 
-    /**
-     * Replays a filtered slice, serving from the module cache when possible.
-     *
-     * The cached value is immutable state read by the caller, never mutated in
-     * place — buildResolvedLeaderboardEntries copies mu/sigma into fresh rows.
-     */
     private replayFiltered(filter: {
         clubId: number | null;
         gameSize: number;
@@ -308,17 +283,8 @@ export class SkillRatingService {
         return { playerState, gamesProcessed };
     }
 
-    /**
-     * Builds a leaderboard for an arbitrary slice of games — a club, all clubs,
-     * specific tags, an event type — by replaying that slice on demand.
-     *
-     * Nothing is stored. The stored `skillRating` table always holds the
-     * all-games rating for a club; this exists so custom cuts can be explored
-     * without a second persisted rating to keep in sync.
-     *
-     * Each call is an independent replay from scratch, so scores from different
-     * filters are NOT comparable: a smaller pool leaves players less converged.
-     */
+    // Custom scores are replayed and never stored. Scores from different filters
+    // are not comparable because each player pool converges independently.
     getCustomLeaderboard(
         filter: {
             clubId: number | null;
@@ -331,11 +297,11 @@ export class SkillRatingService {
         now: Date = new Date()
     ): CustomSkillLeaderboardResponse {
         if (filter.gameSize !== 3 && filter.gameSize !== 4) {
-            throw new InvalidGameSize(filter.gameSize);
+            throw new InvalidGameSizeError(filter.gameSize);
         }
 
         if (filter.clubId !== null && !this.getOrCreateConfig(filter.clubId).isEnabled) {
-            throw new SkillRatingNotEnabledForClub(filter.clubId);
+            throw new SkillRatingNotEnabledForClubError(filter.clubId);
         }
 
         const normalizedFilter = { ...filter, tags: [...new Set(filter.tags)] };
@@ -351,9 +317,7 @@ export class SkillRatingService {
         const users = this.skillRatingRepository.findUserNames([...playerState.keys()]);
         const userById = new Map(users.map(u => [u.userId, u]));
 
-        // Reuse the stored leaderboard's resolve/sort path so an ad-hoc board
-        // formats and orders identically to the persisted one.
-        const asRows: SkillRatingWithUserDBEntity[] = [];
+        const asRows: SkillLeaderboardRow[] = [];
         for (const [userId, state] of playerState.entries()) {
             const user = userById.get(userId);
             if (!user) {
@@ -367,7 +331,7 @@ export class SkillRatingService {
                 gamesPlayed: state.gamesPlayed,
                 lastRatedGameAt: state.lastRatedGameAt.toISOString(),
                 userName: user.userName,
-            } as SkillRatingWithUserDBEntity);
+            });
         }
 
         const { ranked, provisional } = this.buildResolvedLeaderboardEntries(
@@ -388,7 +352,7 @@ export class SkillRatingService {
     }
 
     private buildResolvedLeaderboardEntries(
-        rows: SkillRatingWithUserDBEntity[],
+        rows: SkillLeaderboardRow[],
         threshold: number,
         isStale: boolean,
         now: Date
@@ -418,14 +382,12 @@ export class SkillRatingService {
         const ranked = resolvedList.filter(e => !e.isProvisional);
         const provisional = resolvedList.filter(e => e.isProvisional);
 
-        // Sort ranked: skill desc -> gamesPlayed desc -> userName asc
         ranked.sort((a, b) => {
             if (b.skill !== a.skill) return b.skill - a.skill;
             if (b.gamesPlayed !== a.gamesPlayed) return b.gamesPlayed - a.gamesPlayed;
             return a.userName.localeCompare(b.userName);
         });
 
-        // Assign competition ranking (1, 2, 2, 4) on ties
         let currentPlace = 1;
         let prevEntry: SkillLeaderboardEntry | null = null;
         for (let i = 0; i < ranked.length; i++) {
@@ -440,7 +402,6 @@ export class SkillRatingService {
             prevEntry = entry;
         }
 
-        // Sort provisional: gamesPlayed desc -> skill desc -> userName asc
         provisional.sort((a, b) => {
             if (b.gamesPlayed !== a.gamesPlayed) return b.gamesPlayed - a.gamesPlayed;
             if (b.skill !== a.skill) return b.skill - a.skill;
@@ -487,7 +448,6 @@ export class SkillRatingService {
             };
         }
 
-        // Group rows by clubId
         const clubMap = new Map<number, SkillRating[]>();
         for (const row of rows) {
             const list = clubMap.get(row.clubId) ?? [];
@@ -540,7 +500,6 @@ export class SkillRatingService {
                 tracks,
             });
 
-            // Primary club selection: most rated games, ties -> lowest clubId
             if (
                 clubTotalGames > maxGames ||
                 (clubTotalGames === maxGames && (primaryClubId === null || clubId < primaryClubId))
@@ -560,20 +519,10 @@ export class SkillRatingService {
         };
     }
 
-    /**
-     * The player's cross-club standing, one entry per game size they have played.
-     *
-     * Computed by replaying every rated game (~70ms for the full history) rather
-     * than stored — see getCustomLeaderboard. Returns [] for a player with no
-     * rated games. Uses the default threshold, since no single club's config
-     * governs a global board.
-     */
+    // Global standings use the default threshold because no club config owns them.
     private getUserGlobalSkill(userId: number, now: Date): UserGlobalSkillRating[] {
         const result: UserGlobalSkillRating[] = [];
 
-        // Only replay sizes this player has actually played — a full replay per
-        // size is the dominant cost of a profile view, and most players have
-        // never played sanma.
         const playedSizes = this.skillRatingRepository.findGameSizesPlayedByUser(userId);
 
         for (const gameSize of playedSizes) {
@@ -595,8 +544,6 @@ export class SkillRatingService {
                 continue;
             }
 
-            // `place` is already set for ranked entries by the leaderboard sort;
-            // provisional players have no rank by definition.
             const {
                 userId: _u,
                 userName: _n,
@@ -612,8 +559,7 @@ export class SkillRatingService {
         let targetClubId: number | undefined;
         let targetGameSize: number | undefined;
 
-        // Unconditional: a call that errors partway may still have written rows,
-        // and an early return can follow a state change in a prior call.
+        // A failed call may have written rows before it was caught.
         invalidateSkillReplayCache();
 
         try {
@@ -627,8 +573,6 @@ export class SkillRatingService {
                 return;
             }
 
-            // Must mirror the `e.isRated = 1` filter in the replay queries: rating
-            // a non-rated game here would diverge from every later recompute.
             if (!event.isRated) {
                 return;
             }
@@ -647,7 +591,6 @@ export class SkillRatingService {
             }
             targetGameSize = gameSize;
 
-            // Idempotency: if outcome rows exist for this game, revert first
             const existingOutcomes = this.skillRatingRepository.findSkillRatingGamesByGameId(gameId);
             if (existingOutcomes.length > 0) {
                 this.revertFinishedGame(gameId);
@@ -665,9 +608,7 @@ export class SkillRatingService {
 
             const players = this.gameRepository.findGamePlayersByGameId(gameId);
 
-            // Exclude filler players. Checks every event, not just this one:
-            // game-creation paths never write eventRegistration rows, so a
-            // per-event check would rate placeholder seats that a replay drops.
+            // Filler accounts are global placeholders, not event-local players.
             const ratablePlayers = players.filter(p => !this.skillRatingRepository.isFillerInAnyEvent(p.userId));
 
             if (ratablePlayers.length < 2) {
@@ -731,7 +672,6 @@ export class SkillRatingService {
                 'SkillRatingService.applyFinishedGame failed',
                 error instanceof Error ? error : new Error(String(error))
             );
-            // Mark track dirty if clubId and valid gameSize were resolved
             if (targetClubId !== undefined && targetGameSize !== undefined) {
                 try {
                     this.skillRatingRepository.markTrackDirty(
@@ -773,7 +713,6 @@ export class SkillRatingService {
                 playedAt
             );
 
-            // Delete outcome rows first
             this.skillRatingRepository.deleteSkillRatingGamesByGameId(gameId);
 
             if (isNewest) {
@@ -785,7 +724,6 @@ export class SkillRatingService {
                     if (newGamesPlayed <= 0) {
                         this.skillRatingRepository.deleteSkillRatingForUser(clubId, row.userId, gameSize);
                     } else {
-                        // Restore muBefore, sigmaBefore and find latest lastRatedGameAt
                         const lastGame = this.skillRatingRepository.findLastSkillRatingGame(
                             clubId,
                             row.userId,
@@ -807,7 +745,6 @@ export class SkillRatingService {
                     }
                 }
             } else {
-                // Non-head revert: recompute the entire track to restore consistent state
                 this.recomputeTrack(clubId, gameSize, gameId);
             }
         } catch (error) {
@@ -833,7 +770,7 @@ export class SkillRatingService {
 
     recomputeTrack(clubId: number, gameSize: number, excludeGameId?: number): SkillRecomputeResult {
         if (gameSize !== 3 && gameSize !== 4) {
-            throw new InvalidGameSize(gameSize);
+            throw new InvalidGameSizeError(gameSize);
         }
 
         const club = this.clubRepository.findClubById(clubId);
@@ -853,7 +790,6 @@ export class SkillRatingService {
             this.skillRatingRepository.insertSkillRatingGame({ ...outcome, clubId, gameSize });
         }
 
-        // Flush playerState to DB
         const now = new Date();
         for (const [userId, state] of playerState.entries()) {
             this.skillRatingRepository.upsertSkillRating({
