@@ -182,3 +182,5 @@ errors:
   userIsNotActive: Користувач з id {{id}} не активний
 
   enumParsingError: "Неприпустиме значення '{{value}}' для enum {{enumName}}. Дозволені значення: {{allowedValues}}"
+
+  invalidGameSize: "Неприпустимий розмір гри {{gameSize}}. Дозволені значення: 3, 4"

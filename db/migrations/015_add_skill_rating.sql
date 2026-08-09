@@ -1,0 +1,52 @@
+-- Rename CLUB_TOURNAMENT to CLUB. 014 already ran in production, so it cannot be
+-- edited in place there. Children first: no ON UPDATE CASCADE under foreign_keys = OFF.
+UPDATE eventToTag SET tag = 'CLUB' WHERE tag = 'CLUB_TOURNAMENT';
+UPDATE eventTag SET tag = 'CLUB' WHERE tag = 'CLUB_TOURNAMENT';
+
+CREATE TABLE skillRating (
+    clubId INTEGER NOT NULL REFERENCES club(id) ON DELETE CASCADE,
+    userId INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    gameSize INTEGER NOT NULL CHECK (gameSize IN (3, 4)),
+    mu REAL NOT NULL,
+    sigma REAL NOT NULL,
+    gamesPlayed INTEGER NOT NULL,
+    firstRatedGameAt TIMESTAMP NOT NULL,
+    lastRatedGameAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
+    PRIMARY KEY (clubId, userId, gameSize)
+);
+
+CREATE INDEX idx_skillRating_clubId_gameSize ON skillRating(clubId, gameSize);
+CREATE INDEX idx_skillRating_userId ON skillRating(userId);
+
+CREATE TABLE skillRatingGame (
+    gameId INTEGER NOT NULL REFERENCES game(id) ON DELETE CASCADE,
+    userId INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    clubId INTEGER NOT NULL REFERENCES club(id) ON DELETE CASCADE,
+    gameSize INTEGER NOT NULL CHECK (gameSize IN (3, 4)),
+    rank INTEGER NOT NULL,
+    muBefore REAL NOT NULL,
+    sigmaBefore REAL NOT NULL,
+    muAfter REAL NOT NULL,
+    sigmaAfter REAL NOT NULL,
+    playedAt TIMESTAMP NOT NULL,
+    PRIMARY KEY (gameId, userId)
+);
+
+CREATE INDEX idx_skillRatingGame_club_size_played ON skillRatingGame(clubId, gameSize, playedAt);
+
+CREATE TABLE clubSkillConfig (
+    clubId INTEGER PRIMARY KEY REFERENCES club(id) ON DELETE CASCADE,
+    provisionalGameThreshold INTEGER NOT NULL DEFAULT 30,
+    createdAt TIMESTAMP NOT NULL,
+    modifiedAt TIMESTAMP NOT NULL,
+    modifiedBy INTEGER NOT NULL REFERENCES user(id)
+);
+
+CREATE TABLE skillTrackDirty (
+    clubId INTEGER NOT NULL REFERENCES club(id) ON DELETE CASCADE,
+    gameSize INTEGER NOT NULL CHECK (gameSize IN (3, 4)),
+    markedAt TIMESTAMP NOT NULL,
+    reason TEXT NOT NULL,
+    PRIMARY KEY (clubId, gameSize)
+);

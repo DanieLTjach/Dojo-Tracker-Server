@@ -51,6 +51,7 @@ import { GameRepository } from '../repository/GameRepository.ts';
 import { GameRulesRepository } from '../repository/GameRulesRepository.ts';
 import type { EventPatchBody } from '../schema/EventSchemas.ts';
 import LogService from './LogService.ts';
+import { SkillRatingService } from './SkillRatingService.ts';
 import {
     DraftNotStartableError,
     NotEnoughApprovedForDraftError,
@@ -68,6 +69,7 @@ export class EventService {
     private gameRulesRepository: GameRulesRepository = new GameRulesRepository();
     private teamRepository: TeamRepository = new TeamRepository();
     private userService: UserService = new UserService();
+    private skillRatingService: SkillRatingService = new SkillRatingService();
 
     getAllEvents(clubId?: number): Event[] {
         if (clubId !== undefined) {
@@ -252,7 +254,13 @@ export class EventService {
 
         this.syncTournamentConfig(existingEvent, eventId, data, modifiedBy, now);
 
-        return this.getEventById(eventId);
+        const updatedEvent = this.getEventById(eventId);
+        this.skillRatingService.handleEventRatingInputsChanged(
+            existingEvent,
+            updatedEvent,
+            data.tags !== undefined
+        );
+        return updatedEvent;
     }
 
     /**

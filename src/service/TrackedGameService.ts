@@ -40,6 +40,7 @@ import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { GameService } from './GameService.ts';
 import { RatingService } from './RatingService.ts';
+import { SkillRatingService } from './SkillRatingService.ts';
 import { UserService } from './UserService.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
 
@@ -66,6 +67,7 @@ export class TrackedGameService {
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
+    private skillRatingService: SkillRatingService = new SkillRatingService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private achievementService: AchievementService = new AchievementService();
 
@@ -156,6 +158,7 @@ export class TrackedGameService {
             event.gameRules,
             event.startingRating
         );
+        this.skillRatingService.applyFinishedGame(gameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
 
         const finishedGame = this.gameService.getDetailedGameById(gameId);
@@ -256,6 +259,7 @@ export class TrackedGameService {
             event.gameRules,
             event.startingRating
         );
+        this.skillRatingService.applyFinishedGame(gameId);
 
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
 
@@ -297,6 +301,7 @@ export class TrackedGameService {
         this.gameService.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
         this.validateCanUndoGameFinish(game);
 
+        this.skillRatingService.revertFinishedGame(gameId);
         this.ratingService.deleteRatingChangesFromGame(game);
         this.gameRepository.undoFinishGame(gameId, modifiedBy);
         this.undoFinishPointChanges(game, event.gameRules, modifiedBy);

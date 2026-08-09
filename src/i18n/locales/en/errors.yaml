@@ -182,3 +182,5 @@ errors:
   userIsNotActive: User with id {{id}} is not active
 
   enumParsingError: "Invalid value '{{value}}' for enum {{enumName}}. Allowed values: {{allowedValues}}"
+
+  invalidGameSize: "Invalid game size {{gameSize}}. Allowed values: 3, 4"
