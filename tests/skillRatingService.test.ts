@@ -439,6 +439,28 @@ describe('SkillRatingService', () => {
             expect(profile.clubs[0]!.tracks).toHaveLength(1);
             expect(profile.clubs[0]!.tracks[0]!.gameSize).toBe(4);
         });
+
+        it('excludes disabled clubs from club and global profile ratings', () => {
+            const gameId = gameRepo.createGame(
+                EVENT_ID,
+                0,
+                new Date('2025-01-10T12:00:00.000Z'),
+                null,
+                null
+            );
+            gameRepo.addGamePlayer(gameId, USER_1, 40000, 'EAST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_2, 30000, 'SOUTH', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_3, 20000, 'WEST', 0, false, 0);
+            gameRepo.addGamePlayer(gameId, USER_4, 10000, 'NORTH', 0, false, 0);
+            service.applyFinishedGame(gameId);
+            service.updateConfig(CLUB_ID, undefined, false, 0);
+
+            const profile = service.getUserSkillAcrossClubs(USER_1);
+
+            expect(profile.primaryClubId).toBeNull();
+            expect(profile.clubs).toEqual([]);
+            expect(profile.global).toEqual([]);
+        });
     });
 
     describe('Tie handling under DIVIDE vs WIND', () => {

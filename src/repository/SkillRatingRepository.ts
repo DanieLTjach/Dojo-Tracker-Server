@@ -26,6 +26,11 @@ const NOT_A_FILLER_PLAYER = `NOT EXISTS (
     WHERE er.userId = utg.userId AND er.isFillerPlayer = 1
 )`;
 
+const SKILL_RATING_ENABLED = `NOT EXISTS (
+    SELECT 1 FROM clubSkillConfig csc
+    WHERE csc.clubId = e.clubId AND csc.isEnabled = 0
+)`;
+
 export class SkillRatingRepository {
     private upsertSkillRatingStatement(): Statement<{
         clubId: number;
@@ -402,6 +407,7 @@ export class SkillRatingRepository {
               AND e.isRated = 1
               AND e.clubId IS NOT NULL
               AND gr.numberOfPlayers IN (3, 4)
+              AND ${SKILL_RATING_ENABLED}
             ORDER BY gr.numberOfPlayers DESC
         `).all(userId) as { gameSize: number }[];
         return rows.map(r => r.gameSize);
@@ -443,6 +449,7 @@ export class SkillRatingRepository {
             `e.isRated = 1`,
             `e.clubId IS NOT NULL`,
             `gr.numberOfPlayers = :gameSize`,
+            SKILL_RATING_ENABLED,
             NOT_A_FILLER_PLAYER,
         ];
 

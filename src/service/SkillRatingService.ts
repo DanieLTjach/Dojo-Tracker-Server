@@ -124,6 +124,10 @@ export class SkillRatingService {
 
         this.skillRatingRepository.upsertClubSkillConfig(updated);
 
+        if (isEnabled !== undefined && isEnabled !== current.isEnabled) {
+            invalidateSkillReplayCache();
+        }
+
         // Games that finished while rating was off never reached the stored
         // track, so on re-enable it is missing them permanently. Flag both
         // tracks so the staleness is visible and a recompute repairs it.
@@ -274,6 +278,10 @@ export class SkillRatingService {
     ): CustomSkillLeaderboardResponse {
         if (filter.gameSize !== 3 && filter.gameSize !== 4) {
             throw new InvalidGameSize(filter.gameSize);
+        }
+
+        if (filter.clubId !== null && !this.getOrCreateConfig(filter.clubId).isEnabled) {
+            throw new SkillRatingNotEnabledForClub(filter.clubId);
         }
 
         for (const tag of filter.tags) {
@@ -440,6 +448,9 @@ export class SkillRatingService {
             const club = this.clubRepository.findClubById(clubId);
             const clubName = club?.name ?? `Club ${clubId}`;
             const config = this.getOrCreateConfig(clubId);
+            if (!config.isEnabled) {
+                continue;
+            }
 
             let clubTotalGames = 0;
             const tracks: ResolvedSkillRating[] = [];
