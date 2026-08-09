@@ -338,14 +338,15 @@ export class SkillRatingService {
             throw new SkillRatingNotEnabledForClub(filter.clubId);
         }
 
-        for (const tag of filter.tags) {
+        const normalizedFilter = { ...filter, tags: [...new Set(filter.tags)] };
+        for (const tag of normalizedFilter.tags) {
             if (!this.eventRepository.tagExists(tag)) {
                 throw new UnknownEventTagError(tag);
             }
         }
 
         const startTime = Date.now();
-        const { playerState, gamesProcessed } = this.replayFiltered(filter);
+        const { playerState, gamesProcessed } = this.replayFiltered(normalizedFilter);
 
         const users = this.skillRatingRepository.findUserNames([...playerState.keys()]);
         const userById = new Map(users.map(u => [u.userId, u]));

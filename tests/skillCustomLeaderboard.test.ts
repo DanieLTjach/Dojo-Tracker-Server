@@ -194,6 +194,19 @@ describe('Custom skill leaderboard', () => {
         expect(orBoard.body).not.toHaveProperty('matchAll');
     });
 
+    it('deduplicates tags before applying matchAll', async () => {
+        const single = await request(app)
+            .get('/api/skill/leaderboard?tags=EMA&matchAll=true&threshold=1')
+            .set('Authorization', authHeader);
+        const duplicate = await request(app)
+            .get('/api/skill/leaderboard?tags=EMA,EMA&matchAll=true&threshold=1')
+            .set('Authorization', authHeader);
+
+        expect(duplicate.status).toBe(200);
+        expect(duplicate.body.gamesProcessed).toBe(single.body.gamesProcessed);
+        expect(duplicate.body.entries).toEqual(single.body.entries);
+    });
+
     it('rejects a threshold above the cap with 400', async () => {
         const res = await request(app)
             .get('/api/skill/leaderboard?threshold=100000')
