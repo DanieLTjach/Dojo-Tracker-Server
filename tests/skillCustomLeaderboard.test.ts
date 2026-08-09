@@ -91,8 +91,8 @@ describe('Custom skill leaderboard', () => {
             .set('Authorization', authHeader);
 
         expect(res.status).toBe(200);
-        expect(res.body.clubId).toBeNull();
         expect(res.body.gamesProcessed).toBeGreaterThanOrEqual(10);
+        expect(res.body).not.toHaveProperty('clubId');
 
         const names = res.body.entries.map((e: { userId: number }) => e.userId);
         // The consistent winner must outrank the consistent last place.
@@ -108,8 +108,8 @@ describe('Custom skill leaderboard', () => {
             .set('Authorization', authHeader);
 
         expect(tagged.status).toBe(200);
-        expect(tagged.body.tags).toEqual(['EMA']);
         expect(tagged.body.gamesProcessed).toBeLessThan(all.body.gamesProcessed);
+        expect(tagged.body).not.toHaveProperty('tags');
     });
 
     it('splits ranked and provisional on the threshold', async () => {
@@ -189,10 +189,9 @@ describe('Custom skill leaderboard', () => {
             .set('Authorization', authHeader);
 
         expect(orBoard.status).toBe(200);
-        expect(orBoard.body.matchAll).toBe(false);
-        expect(andBoard.body.matchAll).toBe(true);
         // No event carries both tags, so AND matches nothing while OR matches the EMA event.
         expect(orBoard.body.gamesProcessed).toBeGreaterThan(andBoard.body.gamesProcessed);
+        expect(orBoard.body).not.toHaveProperty('matchAll');
     });
 
     it('rejects a threshold above the cap with 400', async () => {

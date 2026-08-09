@@ -180,7 +180,7 @@ describe('PlacementHistory API (/api/users/:id/placements)', () => {
         const tourn = response.body.tournaments[0];
         expect(tourn.eventId).toBe(TOURNAMENT_EVENT_ID);
         expect(tourn.eventName).toBe('Winter Championship');
-        expect(tourn.eventType).toBe('TOURNAMENT');
+        expect(tourn).not.toHaveProperty('eventType');
         expect(tourn.clubId).toBe(CLUB_1);
         expect(tourn.clubName).toBe('Japan Dojo');
         expect(tourn.gamesPlayed).toBe(1);
@@ -193,7 +193,7 @@ describe('PlacementHistory API (/api/users/:id/placements)', () => {
         const season = response.body.seasons[0];
         expect(season.eventId).toBe(SEASON_EVENT_ID);
         expect(season.eventName).toBe('Spring League 2025');
-        expect(season.eventType).toBe('SEASON');
+        expect(season).not.toHaveProperty('eventType');
         expect(season.clubId).toBe(CLUB_2);
         expect(season.clubName).toBe('Club Two');
         expect(season.gamesPlayed).toBe(1);

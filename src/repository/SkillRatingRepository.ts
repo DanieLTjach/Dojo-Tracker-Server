@@ -107,14 +107,9 @@ export class SkillRatingRepository {
                 sr.firstRatedGameAt,
                 sr.lastRatedGameAt,
                 sr.modifiedAt,
-                u.name as userName,
-                u.telegramUsername,
-                p.firstName as profileFirstName,
-                p.lastName as profileLastName,
-                p.hideProfile as profileHidden
+                u.name as userName
             FROM skillRating sr
             JOIN user u ON sr.userId = u.id
-            LEFT JOIN profile p ON sr.userId = p.userId
             WHERE sr.clubId = :clubId AND sr.gameSize = :gameSize`);
     }
 
@@ -412,8 +407,8 @@ export class SkillRatingRepository {
         return rows.map(r => r.gameSize);
     }
 
-    /** Display fields for the users produced by an ad-hoc replay. */
-    findUserDisplayFields(userIds: number[]): SkillUserDisplayDBEntity[] {
+    /** Names for the users produced by an ad-hoc replay. */
+    findUserNames(userIds: number[]): SkillUserDBEntity[] {
         if (userIds.length === 0) {
             return [];
         }
@@ -421,15 +416,10 @@ export class SkillRatingRepository {
         return dbManager.db.prepare(`
             SELECT
                 u.id as userId,
-                u.name as userName,
-                u.telegramUsername,
-                p.firstName as profileFirstName,
-                p.lastName as profileLastName,
-                p.hideProfile as profileHidden
+                u.name as userName
             FROM user u
-            LEFT JOIN profile p ON u.id = p.userId
             WHERE u.id IN (${placeholders})
-        `).all(userIds) as SkillUserDisplayDBEntity[];
+        `).all(userIds) as SkillUserDBEntity[];
     }
 
     /**
@@ -535,21 +525,13 @@ export interface SkillRatingDBEntity {
     modifiedAt: string;
 }
 
-export interface SkillUserDisplayDBEntity {
+export interface SkillUserDBEntity {
     userId: number;
     userName: string;
-    telegramUsername: string | null;
-    profileFirstName: string | null;
-    profileLastName: string | null;
-    profileHidden: number | null;
 }
 
 export interface SkillRatingWithUserDBEntity extends SkillRatingDBEntity {
     userName: string;
-    telegramUsername: string | null;
-    profileFirstName: string | null;
-    profileLastName: string | null;
-    profileHidden: number | null;
 }
 
 export interface SkillRatingGameDBEntity {

@@ -9,17 +9,8 @@ export const INACTIVITY_SIGMA_RATE = 0.0015;
 export const MAX_SIGMA = DEFAULT_SIGMA;
 export const DEFAULT_PROVISIONAL_GAME_THRESHOLD = 30;
 
-/**
- * Response for the on-demand custom leaderboard. Unlike SkillLeaderboardResponse
- * this reflects nothing stored — it is computed per request and discarded, so it
- * carries the filter back so callers can label what they are looking at.
- */
+/** Response for the on-demand custom leaderboard, computed per request. */
 export interface CustomSkillLeaderboardResponse {
-    clubId: number | null;
-    gameSize: number;
-    tags: string[];
-    matchAll: boolean;
-    eventType: string | null;
     provisionalGameThreshold: number;
     gamesProcessed: number;
     playersTotal: number;
@@ -110,9 +101,6 @@ export interface UserSkillProfileResponse {
 export interface SkillLeaderboardEntry extends ResolvedSkillRating {
     userId: number;
     userName: string;
-    telegramUsername: string | null;
-    profileFirstName: string | null;
-    profileLastName: string | null;
 }
 
 export interface SkillLeaderboardResponse {

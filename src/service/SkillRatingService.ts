@@ -285,7 +285,7 @@ export class SkillRatingService {
         const startTime = Date.now();
         const { playerState, gamesProcessed } = this.replayFiltered(filter);
 
-        const users = this.skillRatingRepository.findUserDisplayFields([...playerState.keys()]);
+        const users = this.skillRatingRepository.findUserNames([...playerState.keys()]);
         const userById = new Map(users.map(u => [u.userId, u]));
 
         // Reuse the stored leaderboard's resolve/sort path so an ad-hoc board
@@ -304,10 +304,6 @@ export class SkillRatingService {
                 gamesPlayed: state.gamesPlayed,
                 lastRatedGameAt: state.lastRatedGameAt.toISOString(),
                 userName: user.userName,
-                telegramUsername: user.telegramUsername,
-                profileFirstName: user.profileFirstName,
-                profileLastName: user.profileLastName,
-                profileHidden: user.profileHidden,
             } as SkillRatingWithUserDBEntity);
         }
 
@@ -319,11 +315,6 @@ export class SkillRatingService {
         );
 
         return {
-            clubId: filter.clubId,
-            gameSize: filter.gameSize,
-            tags: filter.tags,
-            matchAll: filter.matchAll,
-            eventType: filter.eventType,
             provisionalGameThreshold: filter.provisionalGameThreshold,
             gamesProcessed,
             playersTotal: playerState.size,
@@ -354,14 +345,10 @@ export class SkillRatingService {
                 now
             );
 
-            const isHidden = Boolean(r.profileHidden);
             return {
                 ...resolved,
                 userId: r.userId,
                 userName: r.userName,
-                telegramUsername: r.telegramUsername,
-                profileFirstName: isHidden ? null : r.profileFirstName,
-                profileLastName: isHidden ? null : r.profileLastName,
             };
         });
 
@@ -547,9 +534,6 @@ export class SkillRatingService {
             const {
                 userId: _u,
                 userName: _n,
-                telegramUsername: _t,
-                profileFirstName: _f,
-                profileLastName: _l,
                 ...resolved
             } = entry;
             result.push({ ...resolved, rankedPlayers: board.entries.length });

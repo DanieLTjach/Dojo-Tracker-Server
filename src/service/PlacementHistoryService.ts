@@ -40,7 +40,6 @@ export class PlacementHistoryService {
             const entry: UserPlacementEntry = {
                 eventId: event.eventId,
                 eventName: event.eventName,
-                eventType: event.eventType,
                 clubId: event.clubId,
                 clubName: event.clubName,
                 dateFrom: event.dateFrom ?? event.createdAt,

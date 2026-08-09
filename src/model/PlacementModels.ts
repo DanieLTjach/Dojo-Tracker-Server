@@ -1,9 +1,6 @@
-import type { EventType } from './EventModels.ts';
-
 export interface UserPlacementEntry {
     eventId: number;
     eventName: string;
-    eventType: EventType;
     clubId: number;
     clubName: string;
     dateFrom: Date;
