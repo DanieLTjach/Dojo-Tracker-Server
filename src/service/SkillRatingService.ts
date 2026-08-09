@@ -22,7 +22,7 @@ import {
     type SkillLeaderboardRow,
 } from '../repository/SkillRatingRepository.ts';
 import { UserRepository } from '../repository/UserRepository.ts';
-import { InvalidGameSizeError, SkillRatingNotEnabledForClubError } from '../error/SkillErrors.ts';
+import { InvalidGameSizeError } from '../error/SkillErrors.ts';
 import { ClubNotFoundError } from '../error/ClubErrors.ts';
 import { UnknownEventTagError } from '../error/EventErrors.ts';
 import { UserNotFoundById } from '../error/UserErrors.ts';
@@ -82,7 +82,6 @@ export class SkillRatingService {
         const defaultConfig: ClubSkillConfig = {
             clubId,
             provisionalGameThreshold: DEFAULT_PROVISIONAL_GAME_THRESHOLD,
-            isEnabled: true,
             createdAt: now,
             modifiedAt: now,
             modifiedBy,
@@ -95,38 +94,17 @@ export class SkillRatingService {
     updateConfig(
         clubId: number,
         provisionalGameThreshold: number | undefined,
-        isEnabled: boolean | undefined,
         modifiedBy: number
     ): ClubSkillConfig {
         const current = this.getOrCreateConfig(clubId, modifiedBy);
         const updated: ClubSkillConfig = {
             ...current,
             provisionalGameThreshold: provisionalGameThreshold ?? current.provisionalGameThreshold,
-            isEnabled: isEnabled ?? current.isEnabled,
             modifiedAt: new Date(),
             modifiedBy,
         };
 
         this.skillRatingRepository.upsertClubSkillConfig(updated);
-
-        if (isEnabled !== undefined && isEnabled !== current.isEnabled) {
-            invalidateSkillReplayCache();
-        }
-
-        // Games that finished while rating was off never reached the stored
-        // track, so on re-enable it is missing them permanently. Flag both
-        // tracks so the staleness is visible and a recompute repairs it.
-        if (isEnabled === true && !current.isEnabled) {
-            const markedAt = new Date();
-            for (const gameSize of [3, 4]) {
-                this.skillRatingRepository.markTrackDirty(
-                    clubId,
-                    gameSize,
-                    'skill rating re-enabled; games finished while disabled are missing',
-                    markedAt
-                );
-            }
-        }
 
         return updated;
     }
@@ -232,10 +210,6 @@ export class SkillRatingService {
         }
 
         const config = this.getOrCreateConfig(clubId);
-        if (!config.isEnabled) {
-            throw new SkillRatingNotEnabledForClubError(clubId);
-        }
-
         const isStale = this.skillRatingRepository.isTrackDirty(clubId, gameSize);
         const rows = this.skillRatingRepository.findClubSkillRatingsWithUsers(clubId, gameSize);
 
@@ -300,8 +274,8 @@ export class SkillRatingService {
             throw new InvalidGameSizeError(filter.gameSize);
         }
 
-        if (filter.clubId !== null && !this.getOrCreateConfig(filter.clubId).isEnabled) {
-            throw new SkillRatingNotEnabledForClubError(filter.clubId);
+        if (filter.clubId !== null && !this.clubRepository.findClubById(filter.clubId)) {
+            throw new ClubNotFoundError(filter.clubId);
         }
 
         const normalizedFilter = { ...filter, tags: [...new Set(filter.tags)] };
@@ -463,9 +437,6 @@ export class SkillRatingService {
             const club = this.clubRepository.findClubById(clubId);
             const clubName = club?.name ?? `Club ${clubId}`;
             const config = this.getOrCreateConfig(clubId);
-            if (!config.isEnabled) {
-                continue;
-            }
 
             let clubTotalGames = 0;
             const tracks: ResolvedSkillRating[] = [];
@@ -579,11 +550,6 @@ export class SkillRatingService {
 
             const clubId = event.clubId;
             targetClubId = clubId;
-
-            const config = this.getOrCreateConfig(clubId);
-            if (!config.isEnabled) {
-                return;
-            }
 
             const gameSize = event.gameRules.numberOfPlayers;
             if (gameSize !== 3 && gameSize !== 4) {

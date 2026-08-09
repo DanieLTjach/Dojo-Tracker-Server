@@ -75,12 +75,11 @@ export const updateClubSkillConfigSchema = z.object({
     params: z.object({
         clubId: clubIdParamSchema,
     }),
-    body: z.object({
+    body: z.strictObject({
         provisionalGameThreshold: z.number()
             .int()
             .min(PROVISIONAL_GAME_THRESHOLD_STEP)
             .multipleOf(PROVISIONAL_GAME_THRESHOLD_STEP)
             .optional(),
-        isEnabled: z.boolean().optional(),
     }),
 });

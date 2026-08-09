@@ -6,7 +6,7 @@ import { SkillRatingService } from '../src/service/SkillRatingService.ts';
 import { SkillRatingRepository } from '../src/repository/SkillRatingRepository.ts';
 import { GameRepository } from '../src/repository/GameRepository.ts';
 import { EventRegistrationRepository } from '../src/repository/EventRegistrationRepository.ts';
-import { InvalidGameSizeError, SkillRatingNotEnabledForClubError } from '../src/error/SkillErrors.ts';
+import { InvalidGameSizeError } from '../src/error/SkillErrors.ts';
 
 describe('SkillRatingService', () => {
     let service: SkillRatingService;
@@ -260,21 +260,6 @@ describe('SkillRatingService', () => {
             expect(skillRepo.findSkillRatingGamesByGameId(newer)).toHaveLength(4);
             expect(skillRepo.findSkillRating(CLUB_ID, USER_1, 4)!.gamesPlayed).toBe(2);
         });
-
-        it('marks tracks dirty when skill rating is re-enabled', () => {
-            service.updateConfig(CLUB_ID, undefined, false, 0);
-
-            const gameId = playGame(EVENT_ID, '2025-01-10T12:00:00.000Z');
-            service.applyFinishedGame(gameId);
-            expect(skillRepo.findSkillRatingGamesByGameId(gameId)).toHaveLength(0);
-
-            service.updateConfig(CLUB_ID, undefined, true, 0);
-
-            // The game finished while disabled is missing forever, so the track
-            // must advertise that it is stale.
-            expect(skillRepo.isTrackDirty(CLUB_ID, 4)).toBe(true);
-            expect(skillRepo.isTrackDirty(CLUB_ID, 3)).toBe(true);
-        });
     });
 
     describe('revertFinishedGame', () => {
@@ -407,7 +392,7 @@ describe('SkillRatingService', () => {
     describe('getClubLeaderboard', () => {
         it('should separate ranked and provisional players and compute places', () => {
             // Set threshold to 2
-            service.updateConfig(CLUB_ID, 2, true, 0);
+            service.updateConfig(CLUB_ID, 2, 0);
 
             // Game 1: Alice 1st, Bob 2nd, Charlie 3rd, David 4th
             const g1 = gameRepo.createGame(EVENT_ID, 0, new Date('2025-01-10T12:00:00.000Z'), null, null);
@@ -432,11 +417,6 @@ describe('SkillRatingService', () => {
             expect(lb.entries[0]!.place).toBe(1);
         });
 
-        it('should throw if skill rating is disabled for club', () => {
-            service.updateConfig(CLUB_ID, 30, false, 0);
-            expect(() => service.getClubLeaderboard(CLUB_ID, 4)).toThrow(SkillRatingNotEnabledForClubError);
-        });
-
         it('should throw on invalid gameSize', () => {
             expect(() => service.getClubLeaderboard(CLUB_ID, 5)).toThrow(InvalidGameSizeError);
         });
@@ -457,28 +437,6 @@ describe('SkillRatingService', () => {
             expect(profile.clubs).toHaveLength(1);
             expect(profile.clubs[0]!.tracks).toHaveLength(1);
             expect(profile.clubs[0]!.tracks[0]!.gameSize).toBe(4);
-        });
-
-        it('excludes disabled clubs from club and global profile ratings', () => {
-            const gameId = gameRepo.createGame(
-                EVENT_ID,
-                0,
-                new Date('2025-01-10T12:00:00.000Z'),
-                null,
-                null
-            );
-            gameRepo.addGamePlayer(gameId, USER_1, 40000, 'EAST', 0, false, 0);
-            gameRepo.addGamePlayer(gameId, USER_2, 30000, 'SOUTH', 0, false, 0);
-            gameRepo.addGamePlayer(gameId, USER_3, 20000, 'WEST', 0, false, 0);
-            gameRepo.addGamePlayer(gameId, USER_4, 10000, 'NORTH', 0, false, 0);
-            service.applyFinishedGame(gameId);
-            service.updateConfig(CLUB_ID, undefined, false, 0);
-
-            const profile = service.getUserSkillAcrossClubs(USER_1);
-
-            expect(profile.primaryClubId).toBeNull();
-            expect(profile.clubs).toEqual([]);
-            expect(profile.global).toEqual([]);
         });
     });
 
@@ -668,7 +626,7 @@ describe('SkillRatingService', () => {
             expect(lbDefault.provisionalEntries[0]!.gamesUntilRanked).toBe(29);
 
             // Update threshold to 1 -> player is now ranked
-            service.updateConfig(CLUB_ID, 1, true, 0);
+            service.updateConfig(CLUB_ID, 1, 0);
             const lbUpdated = service.getClubLeaderboard(CLUB_ID, 4);
             expect(lbUpdated.entries).toHaveLength(4);
             expect(lbUpdated.provisionalEntries).toHaveLength(0);

@@ -38,7 +38,6 @@ CREATE INDEX idx_skillRatingGame_club_size_played ON skillRatingGame(clubId, gam
 CREATE TABLE clubSkillConfig (
     clubId INTEGER PRIMARY KEY REFERENCES club(id) ON DELETE CASCADE,
     provisionalGameThreshold INTEGER NOT NULL DEFAULT 30,
-    isEnabled BOOL NOT NULL DEFAULT true,
     createdAt TIMESTAMP NOT NULL,
     modifiedAt TIMESTAMP NOT NULL,
     modifiedBy INTEGER NOT NULL REFERENCES user(id)

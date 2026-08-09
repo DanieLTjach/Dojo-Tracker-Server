@@ -183,5 +183,4 @@ errors:
 
   enumParsingError: "Invalid value '{{value}}' for enum {{enumName}}. Allowed values: {{allowedValues}}"
 
-  skillRatingNotEnabledForClub: OpenSkill rating is not enabled for club {{clubId}}
   invalidGameSize: "Invalid game size {{gameSize}}. Allowed values: 3, 4"

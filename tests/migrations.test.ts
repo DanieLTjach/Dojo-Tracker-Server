@@ -923,7 +923,6 @@ describe('Database Migrations', () => {
         expect(clubSkillConfigCols).toEqual([
             { name: 'clubId', type: 'INTEGER', notnull: 0, dflt_value: null, pk: 1 },
             { name: 'provisionalGameThreshold', type: 'INTEGER', notnull: 1, dflt_value: '30', pk: 0 },
-            { name: 'isEnabled', type: 'BOOL', notnull: 1, dflt_value: 'true', pk: 0 },
             { name: 'createdAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null, pk: 0 },
             { name: 'modifiedAt', type: 'TIMESTAMP', notnull: 1, dflt_value: null, pk: 0 },
             { name: 'modifiedBy', type: 'INTEGER', notnull: 1, dflt_value: null, pk: 0 },
