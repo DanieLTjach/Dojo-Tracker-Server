@@ -19,7 +19,7 @@ router.get(
     withTransaction((req, res) => skillController.getClubSkillLeaderboard(req, res))
 );
 
-// Ad-hoc, read-only replay; omitting clubId spans all enabled clubs.
+// Ad-hoc, read-only replay; omitting clubId spans every club whose rating is enabled.
 router.get(
     '/skill/leaderboard',
     requireAuth,

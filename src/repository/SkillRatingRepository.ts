@@ -1,5 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import { dbManager } from '../db/dbInit.ts';
+import { booleanToInteger } from '../db/dbUtils.ts';
 import type {
     ClubSkillConfig,
     SkillRating,
@@ -11,6 +12,14 @@ import type {
 const NOT_A_FILLER_PLAYER = `NOT EXISTS (
     SELECT 1 FROM eventRegistration er
     WHERE er.userId = utg.userId AND er.isFillerPlayer = 1
+)`;
+
+// A club with the rating switched off contributes no games to any track. The
+// absence of a config row means "enabled" — rows are created lazily, so a club
+// that has never opened the setting must not be filtered out.
+const SKILL_RATING_ENABLED = `NOT EXISTS (
+    SELECT 1 FROM clubSkillConfig csc
+    WHERE csc.clubId = e.clubId AND csc.isEnabled = 0
 )`;
 
 export class SkillRatingRepository {
@@ -259,18 +268,20 @@ export class SkillRatingRepository {
     private upsertClubSkillConfigStatement(): Statement<{
         clubId: number;
         provisionalGameThreshold: number;
+        isEnabled: number;
         createdAt: string;
         modifiedAt: string;
         modifiedBy: number;
     }, void> {
         return dbManager.db.prepare(`
             INSERT INTO clubSkillConfig (
-                clubId, provisionalGameThreshold, createdAt, modifiedAt, modifiedBy
+                clubId, provisionalGameThreshold, isEnabled, createdAt, modifiedAt, modifiedBy
             ) VALUES (
-                :clubId, :provisionalGameThreshold, :createdAt, :modifiedAt, :modifiedBy
+                :clubId, :provisionalGameThreshold, :isEnabled, :createdAt, :modifiedAt, :modifiedBy
             )
             ON CONFLICT (clubId) DO UPDATE SET
                 provisionalGameThreshold = excluded.provisionalGameThreshold,
+                isEnabled = excluded.isEnabled,
                 modifiedAt = excluded.modifiedAt,
                 modifiedBy = excluded.modifiedBy`);
     }
@@ -279,6 +290,7 @@ export class SkillRatingRepository {
         this.upsertClubSkillConfigStatement().run({
             clubId: config.clubId,
             provisionalGameThreshold: config.provisionalGameThreshold,
+            isEnabled: booleanToInteger(config.isEnabled),
             createdAt: config.createdAt.toISOString(),
             modifiedAt: config.modifiedAt.toISOString(),
             modifiedBy: config.modifiedBy,
@@ -406,6 +418,7 @@ export class SkillRatingRepository {
               AND e.isRated = 1
               AND e.clubId IS NOT NULL
               AND gr.numberOfPlayers IN (3, 4)
+              AND ${SKILL_RATING_ENABLED}
             ORDER BY gr.numberOfPlayers DESC
         `).all(userId) as { gameSize: number }[];
         return rows.map(r => r.gameSize);
@@ -439,6 +452,7 @@ export class SkillRatingRepository {
             `e.isRated = 1`,
             `e.clubId IS NOT NULL`,
             `gr.numberOfPlayers = :gameSize`,
+            SKILL_RATING_ENABLED,
             NOT_A_FILLER_PLAYER,
         ];
 
@@ -552,6 +566,7 @@ export interface SkillRatingGameDBEntity {
 export interface ClubSkillConfigDBEntity {
     clubId: number;
     provisionalGameThreshold: number;
+    isEnabled: number;
     createdAt: string;
     modifiedAt: string;
     modifiedBy: number;
@@ -604,6 +619,7 @@ function clubSkillConfigFromDBEntity(dbEntity: ClubSkillConfigDBEntity): ClubSki
     return {
         clubId: dbEntity.clubId,
         provisionalGameThreshold: dbEntity.provisionalGameThreshold,
+        isEnabled: Boolean(dbEntity.isEnabled),
         createdAt: new Date(dbEntity.createdAt),
         modifiedAt: new Date(dbEntity.modifiedAt),
         modifiedBy: dbEntity.modifiedBy,

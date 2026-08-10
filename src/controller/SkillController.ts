@@ -88,13 +88,14 @@ export class SkillController {
     updateClubSkillConfig(req: Request, res: Response) {
         const {
             params: { clubId },
-            body: { provisionalGameThreshold },
+            body: { provisionalGameThreshold, isEnabled },
         } = updateClubSkillConfigSchema.parse(req);
 
         const currentUserId = req.user?.userId ?? 0;
         const updated = this.skillRatingService.updateConfig(
             clubId,
             provisionalGameThreshold,
+            isEnabled,
             currentUserId
         );
 

@@ -183,4 +183,5 @@ errors:
 
   enumParsingError: "Неприпустиме значення '{{value}}' для enum {{enumName}}. Дозволені значення: {{allowedValues}}"
 
+  skillRatingNotEnabledForClub: Рейтинг OpenSkill не увімкнено для клубу {{clubId}}
   invalidGameSize: "Неприпустимий розмір гри {{gameSize}}. Дозволені значення: 3, 4"
