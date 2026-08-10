@@ -286,6 +286,19 @@ describe('Custom skill leaderboard', () => {
                 .set('Authorization', authHeader);
             expect(after.body.gamesProcessed).toBe(gamesBefore + 1);
         });
+
+        it('invalidates global replays when skill rating is disabled', async () => {
+            await request(app)
+                .get('/api/skill/leaderboard?threshold=1')
+                .set('Authorization', authHeader);
+            expect(skillReplayCacheSize()).toBeGreaterThan(0);
+
+            const service = new SkillRatingService();
+            service.updateConfig(1, undefined, false, SYSTEM_USER_ID);
+            expect(skillReplayCacheSize()).toBe(0);
+
+            service.updateConfig(1, undefined, true, SYSTEM_USER_ID);
+        });
     });
 
     it('rejects an unknown tag with 400', async () => {
@@ -311,6 +324,26 @@ describe('Custom skill leaderboard', () => {
             .set('Authorization', authHeader);
 
         expect(res.status).toBe(404);
+    });
+
+    it('honours disabled clubs in club and global custom boards', async () => {
+        const service = new SkillRatingService();
+        service.updateConfig(1, undefined, false, SYSTEM_USER_ID);
+
+        const club = await request(app)
+            .get('/api/skill/leaderboard?clubId=1&threshold=1')
+            .set('Authorization', authHeader);
+        const global = await request(app)
+            .get('/api/skill/leaderboard?threshold=1')
+            .set('Authorization', authHeader);
+
+        expect(club.status).toBe(400);
+        expect(club.body.errorCode).toBe('skillRatingNotEnabledForClub');
+        expect(global.status).toBe(200);
+        expect(global.body.gamesProcessed).toBe(0);
+        expect(global.body.entries).toHaveLength(0);
+
+        service.updateConfig(1, undefined, true, SYSTEM_USER_ID);
     });
 
     it('stores nothing — a call leaves skillRating untouched', async () => {

@@ -81,5 +81,6 @@ export const updateClubSkillConfigSchema = z.object({
             .min(PROVISIONAL_GAME_THRESHOLD_STEP)
             .multipleOf(PROVISIONAL_GAME_THRESHOLD_STEP)
             .optional(),
+        isEnabled: z.boolean().optional(),
     }),
 });

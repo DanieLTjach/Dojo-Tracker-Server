@@ -1000,4 +1000,35 @@ describe('Database Migrations', () => {
 
         db.close();
     });
+
+    test('migration 16 adds the club skill rating toggle, defaulting existing clubs to enabled', () => {
+        const db = createMigratedDb(15);
+
+        // A club that configured its threshold before the toggle existed.
+        db.prepare(`
+            INSERT INTO clubSkillConfig (clubId, provisionalGameThreshold, createdAt, modifiedAt, modifiedBy)
+            VALUES (1, 20, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 0)
+        `).run();
+
+        runMigration(db, 16);
+        db.pragma('foreign_keys = ON');
+
+        const cols = (db.prepare('PRAGMA table_info(clubSkillConfig)').all() as Array<{
+            name: string;
+            type: string;
+            notnull: number;
+            dflt_value: string | null;
+        }>).find(col => col.name === 'isEnabled');
+
+        expect(cols).toMatchObject({ type: 'BOOL', notnull: 1, dflt_value: 'true' });
+
+        // Backfill must not silently switch an existing club's board off.
+        const existing = db.prepare('SELECT isEnabled FROM clubSkillConfig WHERE clubId = 1').get();
+        expect(existing).toEqual({ isEnabled: 1 });
+
+        const foreignKeyViolations = db.pragma('foreign_key_check') as unknown[];
+        expect(foreignKeyViolations).toEqual([]);
+
+        db.close();
+    });
 });

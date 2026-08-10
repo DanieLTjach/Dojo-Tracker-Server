@@ -49,6 +49,7 @@ export interface SkillRatingGame {
 export interface ClubSkillConfig {
     clubId: number;
     provisionalGameThreshold: number;
+    isEnabled: boolean;
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;

@@ -230,6 +230,7 @@ describe('Skill Routes API', () => {
             expect(res.status).toBe(200);
             expect(res.body.clubId).toBe(CLUB_1);
             expect(res.body.provisionalGameThreshold).toBe(30);
+            expect(res.body.isEnabled).toBe(true);
         });
 
         it('GET /api/clubs/:clubId/skill/config returns 404 for missing club', async () => {
@@ -260,15 +261,18 @@ describe('Skill Routes API', () => {
             const res = await request(app)
                 .patch(`/api/clubs/${CLUB_1}/skill/config`)
                 .set('Authorization', ownerAuthHeader)
-                .send({ provisionalGameThreshold: 10 });
+                .send({ provisionalGameThreshold: 10, isEnabled: false });
 
             expect(res.status).toBe(200);
             expect(res.body.provisionalGameThreshold).toBe(10);
+            expect(res.body.isEnabled).toBe(false);
 
+            // Verify via GET
             const check = await request(app)
                 .get(`/api/clubs/${CLUB_1}/skill/config`)
                 .set('Authorization', regularAuthHeader);
             expect(check.body.provisionalGameThreshold).toBe(10);
+            expect(check.body.isEnabled).toBe(false);
         });
 
         it('PATCH /api/clubs/:clubId/skill/config rejects a threshold not a multiple of 10 (400)', async () => {
@@ -280,20 +284,22 @@ describe('Skill Routes API', () => {
             expect(res.status).toBe(400);
         });
 
-        it('PATCH /api/clubs/:clubId/skill/config rejects the removed isEnabled field (400)', async () => {
+        it('PATCH /api/clubs/:clubId/skill/config updates both fields for OWNER (200)', async () => {
             const res = await request(app)
                 .patch(`/api/clubs/${CLUB_1}/skill/config`)
                 .set('Authorization', ownerAuthHeader)
-                .send({ isEnabled: false });
+                .send({ provisionalGameThreshold: 20, isEnabled: true });
 
-            expect(res.status).toBe(400);
+            expect(res.status).toBe(200);
+            expect(res.body.provisionalGameThreshold).toBe(20);
+            expect(res.body.isEnabled).toBe(true);
         });
 
         it('PUT /api/clubs/:clubId/skill/config is not routed (404)', async () => {
             const res = await request(app)
                 .put(`/api/clubs/${CLUB_1}/skill/config`)
                 .set('Authorization', ownerAuthHeader)
-                .send({ provisionalGameThreshold: 20 });
+                .send({ provisionalGameThreshold: 20, isEnabled: true });
 
             expect(res.status).toBe(404);
         });
