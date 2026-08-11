@@ -52,6 +52,9 @@ export interface GameRules {
     uma: number[] | number[][];
     startingPoints: number;
     umaTieBreak: UmaTieBreak;
+    // Opt-in: uma need not sum to 0, so total rating is not conserved and
+    // activity is rewarded. Only supported for a flat (non-matrix) uma.
+    allowNonZeroSumUma: boolean;
     details: GameRulesDetails | null;
 }
 
@@ -109,8 +112,8 @@ export type PlayerNameDisplay = typeof PlayerNameDisplay[keyof typeof PlayerName
 /**
  * Per-team-tournament sizing. The draft minimum is NOT stored here — it reuses
  * the existing EventConfig.minParticipants. Invariants (validated in EventService):
- * minParticipants === teamSize * teamCount, and teamCount is divisible by 4 (each
- * table seats one player from four distinct teams).
+ * minParticipants === teamSize * teamCount, and teamCount is divisible by the
+ * event's number of players per table.
  */
 export interface TeamTournamentConfig {
     teamSize: number;
@@ -146,6 +149,8 @@ export interface Event {
     format: EventFormat;
     clubId: number | null;
     isCurrentRating: boolean;
+    isRated: boolean;
+    tags: string[];
     gameRules: GameRules;
     startingRating: number;
     minimumGamesForRating: number;

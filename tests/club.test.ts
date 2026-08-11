@@ -4,8 +4,7 @@ import clubRoutes from '../src/routes/ClubRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, resetTestDatabase } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
 import { ClubMembershipService } from '../src/service/ClubMembershipService.ts';
@@ -74,8 +73,7 @@ describe('Club API Endpoints', () => {
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('GET /api/clubs - Get All Clubs', () => {

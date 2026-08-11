@@ -1,12 +1,11 @@
 import { ACHIEVEMENTS, type AchievementDefinition, type AchievementValueUnit } from '../data/achievementsCatalog.ts';
 import type { Event } from '../model/EventModels.ts';
 import { AchievementCriterion, type EventAchievementResult, type UserAchievement } from '../model/AchievementModels.ts';
-import { type DetailedGame, GameStatus } from '../model/GameModels.ts';
+import { GameStatus } from '../model/GameModels.ts';
 import { AchievementRepository, type EventAchievementWinnerRow } from '../repository/AchievementRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
-import { computeAchievements } from '../util/AchievementCalculator.ts';
+import { type AchievementGame, computeAchievements } from '../util/AchievementCalculator.ts';
 import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
-import { TournamentStatus } from '../model/TournamentModels.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
@@ -38,14 +37,9 @@ export class AchievementService {
         }
     }
 
-    /**
-     * Recompute only when the tournament is already finished. Achievements are derived from a
-     * tournament's final results, so there is no point recomputing them on every game action
-     * (creation/update/deletion) while the tournament is still running — only a change to a
-     * finished tournament's games can affect its achievements.
-     */
-    recomputeEventAchievementsIfTournamentFinished(event: Event): void {
-        if (event.tournament?.status !== TournamentStatus.FINISHED) {
+    /** Recompute after game changes only when achievements have already been initialized. */
+    recomputeEventAchievementsIfAlreadyComputed(event: Event): void {
+        if (!this.achievementRepository.areEventAchievementsComputed(event.id)) {
             return;
         }
         this.recomputeEventAchievements(event);
@@ -67,16 +61,22 @@ export class AchievementService {
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 
+    clearEventAchievements(eventId: number): void {
+        const event = this.eventService.getEventById(eventId);
+        if (event.type !== 'TOURNAMENT') {
+            throw new AchievementsOnlyForTournamentsError();
+        }
+        this.achievementRepository.clearEventAchievements(eventId);
+    }
+
     private computeAndPersist(event: Event): void {
         const finishedGames = this.gameRepository
             .findGames({ eventId: event.id })
             .filter(game => game.status === GameStatus.FINISHED);
 
-        const games: DetailedGame[] = finishedGames.map(game => ({
-            ...game,
+        const games: AchievementGame[] = finishedGames.map(game => ({
             players: this.gameRepository.findGamePlayersByGameId(game.id),
             rounds: this.gameRepository.findGameRoundsByGameId(game.id),
-            currentState: null,
         }));
 
         const rules = event.gameRules.details?.rules ?? {};
@@ -94,20 +94,20 @@ export class AchievementService {
         this.achievementRepository.replaceEventAchievements(event.id, rows, new Date());
     }
 
-    /** Achievements for the tournament page. Computes lazily on first read for historical tournaments. */
+    /** Read the stored achievements for the tournament page. */
     getEventAchievements(eventId: number, requestingUserId: number): EventAchievementResult[] {
-        const event = this.eventService.getEventById(eventId);
+        this.eventService.getEventById(eventId);
         const user = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(user);
 
         if (!this.achievementRepository.areEventAchievementsComputed(eventId)) {
-            this.recomputeEventAchievements(event);
+            return [];
         }
 
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 
-    /** Achievements a user has won across all tournaments, for the profile page. */
+    /** Read a user's stored achievements across all tournaments. */
     getUserAchievements(userId: number, requestingUserId: number): UserAchievement[] {
         const requestingUser = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(requestingUser);

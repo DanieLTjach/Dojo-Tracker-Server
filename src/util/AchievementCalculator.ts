@@ -17,8 +17,13 @@ interface WinningHand {
     winType: 'TSUMO' | 'RON';
 }
 
+// Only the players and rounds of a game are needed to compute achievements. Taking a
+// narrow shape rather than the full DetailedGame means callers don't have to fabricate
+// unrelated fields (a round timer, a current state) just to satisfy the type.
+export type AchievementGame = Pick<DetailedGame, 'players' | 'rounds'>;
+
 export function computeAchievements(
-    games: DetailedGame[],
+    games: AchievementGame[],
     rules: GameRulesValues
 ): ComputedAchievement[] {
     const stats = new Map<number, PlayerStats>();

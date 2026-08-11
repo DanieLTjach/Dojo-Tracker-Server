@@ -38,7 +38,13 @@ function collectPlayers(candidate: SeatingCandidate): number[] {
 describe('SeatingGeneratorUtil', () => {
     describe('generateSeatingCandidate - structure', () => {
         it('produces the requested number of rounds and tables of four players each', () => {
-            const candidate = generateSeatingCandidate({ tables: 4, rounds: 4, timeLimitMs: TIME_LIMIT_MS, seed: 1 });
+            const candidate = generateSeatingCandidate({
+                tables: 4,
+                playersPerTable: 4,
+                rounds: 4,
+                timeLimitMs: TIME_LIMIT_MS,
+                seed: 1,
+            });
 
             expect(candidate.rounds).toHaveLength(4);
             for (const round of candidate.rounds) {
@@ -50,7 +56,13 @@ describe('SeatingGeneratorUtil', () => {
         });
 
         it('seats every player exactly once per round', () => {
-            const candidate = generateSeatingCandidate({ tables: 5, rounds: 3, timeLimitMs: TIME_LIMIT_MS, seed: 2 });
+            const candidate = generateSeatingCandidate({
+                tables: 5,
+                playersPerTable: 4,
+                rounds: 3,
+                timeLimitMs: TIME_LIMIT_MS,
+                seed: 2,
+            });
 
             const expectedPlayers = Array.from({ length: 20 }, (_, i) => i);
             for (const round of candidate.rounds) {
@@ -60,22 +72,66 @@ describe('SeatingGeneratorUtil', () => {
         });
 
         it('uses player indices 0..(tables*4 - 1)', () => {
-            const candidate = generateSeatingCandidate({ tables: 3, rounds: 1, timeLimitMs: TIME_LIMIT_MS, seed: 3 });
+            const candidate = generateSeatingCandidate({
+                tables: 3,
+                playersPerTable: 4,
+                rounds: 1,
+                timeLimitMs: TIME_LIMIT_MS,
+                seed: 3,
+            });
             expect(collectPlayers(candidate)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        });
+
+        it('supports three-player tables', () => {
+            const candidate = generateSeatingCandidate({
+                tables: 3,
+                playersPerTable: 3,
+                rounds: 3,
+                timeLimitMs: TIME_LIMIT_MS,
+                seed: 4,
+            });
+
+            const expectedPlayers = Array.from({ length: 9 }, (_, i) => i);
+            for (const round of candidate.rounds) {
+                expect(round).toHaveLength(3);
+                expect(round.flat().sort((a, b) => a - b)).toEqual(expectedPlayers);
+                for (const table of round) {
+                    expect(table).toHaveLength(3);
+                }
+            }
+            expect(candidate.seatBalanceScore).toBe(0);
+            expect(candidate.repeatCounts).not.toHaveProperty('fourPlayers');
         });
     });
 
     describe('generateSeatingCandidate - no repeats if possible', () => {
         it('never repeats a pair at a high feasible round count (4 tables, 5 rounds)', () => {
             // 16 players; 5 rounds is the maximum feasible for 4 tables.
-            const candidate = generateSeatingCandidate({ tables: 4, rounds: 5, timeLimitMs: TIME_LIMIT_MS, seed: 11 });
+            const candidate = generateSeatingCandidate({
+                tables: 4,
+                playersPerTable: 4,
+                rounds: 5,
+                timeLimitMs: TIME_LIMIT_MS,
+                seed: 11,
+            });
             expect(countPairRepeats(candidate)).toBe(0);
+            expect(candidate.repeatCounts).toEqual({
+                twoPlayers: 0,
+                threePlayers: 0,
+                fourPlayers: 0,
+            });
         });
     });
 
     describe('generateSeatingCandidate - seat balance', () => {
         it('gives each player each starting seat exactly once when rounds === 4', () => {
-            const candidate = generateSeatingCandidate({ tables: 4, rounds: 4, timeLimitMs: TIME_LIMIT_MS, seed: 20 });
+            const candidate = generateSeatingCandidate({
+                tables: 4,
+                playersPerTable: 4,
+                rounds: 4,
+                timeLimitMs: TIME_LIMIT_MS,
+                seed: 20,
+            });
 
             // Build per-player seat counts across rounds.
             const seatCounts = new Map<number, number[]>();
@@ -98,9 +154,22 @@ describe('SeatingGeneratorUtil', () => {
     });
 
     describe('generateSeatingCandidate - configurations with repeats', () => {
-        it('should handle configurations where players repeat', () => {
-            expect(generateSeatingCandidate({ tables: 1, rounds: 3, timeLimitMs: TIME_LIMIT_MS, seed: 1 }))
-                .toBeDefined();
+        it('counts every occurrence after the first for pairs, triples, and groups of four', () => {
+            const candidate = generateSeatingCandidate({
+                tables: 1,
+                playersPerTable: 4,
+                rounds: 3,
+                timeLimitMs: TIME_LIMIT_MS,
+                seed: 1,
+            });
+
+            // One unchanged four-player table over three rounds: each of its 6 pairs,
+            // 4 triples, and single group of four has two excess occurrences.
+            expect(candidate.repeatCounts).toEqual({
+                twoPlayers: 12,
+                threePlayers: 8,
+                fourPlayers: 2,
+            });
         });
     });
 
@@ -131,6 +200,7 @@ describe('SeatingGeneratorUtil', () => {
                 for (let seed = 1; seed <= 5; seed++) {
                     const candidate = generateSeatingCandidate({
                         tables,
+                        playersPerTable: 4,
                         rounds,
                         timeLimitMs: SMALL_CLUB_TIME_LIMIT_MS,
                         seed,
@@ -156,6 +226,7 @@ describe('SeatingGeneratorUtil', () => {
             const started = Date.now();
             const candidate = generateSeatingCandidate({
                 tables: 2,
+                playersPerTable: 4,
                 rounds: 2,
                 timeLimitMs: generousBudgetMs,
                 seed: 1,
@@ -172,6 +243,7 @@ describe('SeatingGeneratorUtil', () => {
         it('returns the requested number of candidates', () => {
             const candidates = generateSeatingCandidates({
                 tables: 1,
+                playersPerTable: 4,
                 rounds: 1,
                 timeLimitMs: TIME_LIMIT_MS,
                 seed: 1,
@@ -200,6 +272,7 @@ describe('SeatingGeneratorUtil', () => {
         it('never seats two players of the same team at one table (4 teams x 4, 4 rounds)', () => {
             const candidate = generateSeatingCandidate({
                 tables: 4,
+                playersPerTable: 4,
                 rounds: 4,
                 timeLimitMs: TIME_LIMIT_MS,
                 seed: 7,
@@ -218,6 +291,7 @@ describe('SeatingGeneratorUtil', () => {
             for (let seed = 1; seed <= 5; seed++) {
                 const candidate = generateSeatingCandidate({
                     tables: 4,
+                    playersPerTable: 4,
                     rounds: 4,
                     timeLimitMs: TIME_LIMIT_MS,
                     seed,
@@ -232,6 +306,7 @@ describe('SeatingGeneratorUtil', () => {
             const playerTeams = [0, 0, 0, 0, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1];
             const candidate = generateSeatingCandidate({
                 tables: 4,
+                playersPerTable: 4,
                 rounds: 2,
                 timeLimitMs: TIME_LIMIT_MS,
                 seed: 9,

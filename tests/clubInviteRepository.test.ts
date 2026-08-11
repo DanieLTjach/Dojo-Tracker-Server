@@ -1,7 +1,7 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import { ClubInviteRepository } from '../src/repository/ClubInviteRepository.ts';
 import { ClubRepository } from '../src/repository/ClubRepository.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 
 const SYSTEM_USER_ID = 0;
 const TEST_USER_ID = 93001;
@@ -56,8 +56,7 @@ describe('ClubInviteRepository', () => {
     afterAll(() => {
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(clubId);
         dbManager.db.prepare('DELETE FROM user WHERE id = ?').run(TEST_USER_ID);
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     function createInvite(overrides: Partial<Parameters<ClubInviteRepository['createInvite']>[0]> = {}): number {

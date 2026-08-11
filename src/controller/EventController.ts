@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { EventService } from '../service/EventService.ts';
+import { AchievementService } from '../service/AchievementService.ts';
 import { TournamentSeatingService } from '../service/TournamentSeatingService.ts';
 import {
     eventGetByIdSchema,
@@ -17,12 +18,18 @@ import {
 
 export class EventController {
     private eventService: EventService = new EventService();
+    private achievementService: AchievementService = new AchievementService();
     private tournamentSeatingService: TournamentSeatingService = new TournamentSeatingService();
 
     getAllEvents(req: Request, res: Response) {
         const { query } = eventGetListSchema.parse(req);
         const events = this.eventService.getAllEvents(query?.clubId);
         return res.status(StatusCodes.OK).json(events);
+    }
+
+    getEventTags(_req: Request, res: Response) {
+        const tags = this.eventService.findAllTags();
+        return res.status(StatusCodes.OK).json(tags);
     }
 
     getEventById(req: Request, res: Response) {
@@ -70,6 +77,7 @@ export class EventController {
         const { params: { eventId } } = eventGetByIdSchema.parse(req);
         const userId = req.user!.userId;
         const event = this.eventService.finishTournament(eventId, userId);
+        this.achievementService.recomputeEventAchievements(event);
         return res.status(StatusCodes.OK).json(event);
     }
 

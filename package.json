@@ -3,11 +3,16 @@
     "version": "0.1.0",
     "main": "src/index.js",
     "type": "module",
+    "engines": {
+        "node": "24.x"
+    },
     "scripts": {
         "typecheck": "npx tsc",
         "format": "dprint fmt",
         "format:check": "dprint check",
         "start": "node src/index.ts",
+        "skill:recompute": "node src/script/recomputeSkillRatings.ts",
+        "skill:recompute:dev": "dotenv -e .env.development -- node src/script/recomputeSkillRatings.ts",
         "dev": "dotenv -e .env.development -- nodemon --exec node --ext \"js,ts,json\" src/index.ts",
         "debug": "dotenv -e .env.development -- node --inspect=0.0.0.0:9229 src/index.ts",
         "test": "dotenv -e .env.test -- cross-env NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --no-cache --runInBand",
@@ -32,11 +37,14 @@
         "js-yaml": "^5.1.0",
         "jsonwebtoken": "^9.0.3",
         "node-cron": "^4.2.1",
+        "openskill": "^5.0.1",
         "qrcode": "^1.5.4",
         "telegraf": "^4.16.3",
         "zod": "^4.1.13"
     },
     "devDependencies": {
+        "@swc/core": "^1.15.47",
+        "@swc/jest": "^0.2.39",
         "@types/better-sqlite3": "^7.6.13",
         "@types/cors": "^2.8.19",
         "@types/escape-html": "^1.0.4",
@@ -56,7 +64,6 @@
         "lint-staged": "^17.0.7",
         "nodemon": "^3.1.11",
         "supertest": "^7.1.4",
-        "ts-jest": "^29.4.6",
-        "typescript": "^5.9.3"
+        "typescript": "^7.0.2"
     }
 }

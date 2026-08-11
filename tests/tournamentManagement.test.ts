@@ -1,11 +1,17 @@
 import express from 'express';
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import gameRoutes from '../src/routes/GameRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createCustomEvent } from './testHelpers.ts';
+import {
+    createAuthHeader,
+    createCustomEvent,
+    dateInsideEventWindow,
+    openEventWindow,
+    resetTestDatabase,
+} from './testHelpers.ts';
 import { TournamentRoundImportService } from '../src/service/TournamentRoundImportService.ts';
 
 const SYSTEM_USER_ID = 0;
@@ -42,6 +48,7 @@ function cleanupEvent(eventId: number): void {
     dbManager.db.prepare('DELETE FROM gameRound WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
     dbManager.db.prepare('DELETE FROM userToGame WHERE gameId IN (SELECT id FROM game WHERE eventId = ?)').run(eventId);
     dbManager.db.prepare('DELETE FROM userRatingChange WHERE eventId = ?').run(eventId);
+    dbManager.db.prepare('DELETE FROM eventAchievement WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId = ?').run(eventId);
     dbManager.db.prepare('DELETE FROM tournament WHERE eventId = ?').run(eventId);
@@ -64,6 +71,16 @@ function markRoundFinished(round: number): void {
             endedAt = '2026-06-01T12:00:00.000Z'
         WHERE eventId = ? AND tournamentRound = ?
     `).run(TOURNAMENT_EVENT_ID, round);
+}
+
+function seedStoredAchievements(): void {
+    dbManager.db
+        .prepare('UPDATE event SET achievementsComputedAt = ? WHERE id = ?')
+        .run('2026-06-01T12:00:00.000Z', TOURNAMENT_EVENT_ID);
+    dbManager.db.prepare(
+        `INSERT INTO eventAchievement (eventId, metric, userId, value)
+         VALUES (?, 'best_game_points', ?, 40000)`
+    ).run(TOURNAMENT_EVENT_ID, PLAYER_IDS[0]);
 }
 
 describe('Tournament management', () => {
@@ -97,8 +114,8 @@ describe('Tournament management', () => {
         createCustomEvent(
             TOURNAMENT_EVENT_ID,
             'Managed Tournament',
-            '2026-01-01T00:00:00.000Z',
-            '2030-01-01T00:00:00.000Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             GAME_RULES_ID,
             TEST_CLUB_ID,
             'TOURNAMENT',
@@ -125,8 +142,7 @@ describe('Tournament management', () => {
             OWNER_USER_ID,
             MODERATOR_USER_ID
         );
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     test('starts round 1 even without pre-generated games (seating done outside the app)', async () => {
@@ -162,11 +178,13 @@ describe('Tournament management', () => {
     test('is idempotent: re-posting the current round is a no-op, not a skip', async () => {
         importRound(1);
 
-        await request(app)
+        const firstStart = await request(app)
             .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
             .set('Authorization', adminAuthHeader)
             .send({})
             .expect(200);
+
+        expect(firstStart.body.tournament.currentRoundStartedAt).toEqual(expect.any(String));
 
         const duplicate = await request(app)
             .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
@@ -177,6 +195,7 @@ describe('Tournament management', () => {
         expect(duplicate.body.tournament).toMatchObject({
             status: 'IN_PROGRESS',
             currentRound: 1,
+            currentRoundStartedAt: firstStart.body.tournament.currentRoundStartedAt,
         });
     });
 
@@ -280,6 +299,88 @@ describe('Tournament management', () => {
             status: 'FINISHED',
             currentRound: 2,
         });
+
+        const achievementState = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null };
+        expect(achievementState.achievementsComputedAt).not.toBeNull();
+    });
+
+    test.each([
+        ['admin', adminAuthHeader],
+        ['club owner', ownerAuthHeader],
+        ['club moderator', moderatorAuthHeader],
+    ])('allows a %s to clear stored tournament achievements', async (_role, authHeader) => {
+        seedStoredAchievements();
+
+        await request(app)
+            .delete(`/api/events/${TOURNAMENT_EVENT_ID}/achievements`)
+            .set('Authorization', authHeader)
+            .expect(204);
+
+        const state = dbManager.db
+            .prepare(
+                `SELECT e.achievementsComputedAt,
+                        (SELECT COUNT(*) FROM eventAchievement ea WHERE ea.eventId = e.id) AS achievementCount
+                 FROM event e
+                 WHERE e.id = ?`
+            )
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null, achievementCount: number };
+        expect(state).toEqual({ achievementsComputedAt: null, achievementCount: 0 });
+    });
+
+    test('rejects clearing tournament achievements by a regular club member', async () => {
+        seedStoredAchievements();
+
+        const response = await request(app)
+            .delete(`/api/events/${TOURNAMENT_EVENT_ID}/achievements`)
+            .set('Authorization', playerAuthHeader);
+        expect(response.status).toBe(403);
+        expect(response.body.errorCode).toBe('insufficientEventManagementPermissions');
+
+        const state = dbManager.db
+            .prepare(
+                `SELECT e.achievementsComputedAt,
+                        (SELECT COUNT(*) FROM eventAchievement ea WHERE ea.eventId = e.id) AS achievementCount
+                 FROM event e
+                 WHERE e.id = ?`
+            )
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null, achievementCount: number };
+        expect(state).toEqual({
+            achievementsComputedAt: '2026-06-01T12:00:00.000Z',
+            achievementCount: 1,
+        });
+    });
+
+    test.each([
+        ['admin', adminAuthHeader],
+        ['club owner', ownerAuthHeader],
+        ['club moderator', moderatorAuthHeader],
+    ])('allows a %s to recompute tournament achievements', async (_role, authHeader) => {
+        await request(app)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/achievements/recompute`)
+            .set('Authorization', authHeader)
+            .send({})
+            .expect(200);
+
+        const state = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null };
+        expect(state.achievementsComputedAt).not.toBeNull();
+    });
+
+    test('rejects recomputing tournament achievements by a regular club member', async () => {
+        const response = await request(app)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/achievements/recompute`)
+            .set('Authorization', playerAuthHeader)
+            .send({});
+        expect(response.status).toBe(403);
+        expect(response.body.errorCode).toBe('insufficientEventManagementPermissions');
+
+        const state = dbManager.db
+            .prepare('SELECT achievementsComputedAt FROM event WHERE id = ?')
+            .get(TOURNAMENT_EVENT_ID) as { achievementsComputedAt: string | null };
+        expect(state.achievementsComputedAt).toBeNull();
     });
 
     test('allows club moderator to start a tournament round', async () => {
@@ -330,12 +431,45 @@ describe('Tournament management', () => {
         expect(currentGame.body.status).toBe('IN_PROGRESS');
     });
 
+    test('records a planned result only for a game in the current tournament round', async () => {
+        const round1GameId = importRound(1);
+        const round2GameId = importRound(2);
+        await request(app)
+            .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+            .set('Authorization', adminAuthHeader)
+            .send({})
+            .expect(200);
+
+        const results = PLAYER_IDS.map((userId, index) => ({
+            userId,
+            points: [45000, 32000, 25000, 18000][index],
+        }));
+        const futureRound = await request(app)
+            .post(`/api/games/${round2GameId}/result`)
+            .set('Authorization', adminAuthHeader)
+            .send({ results });
+        expect(futureRound.status).toBe(400);
+        expect(futureRound.body.errorCode).toBe('tournamentGameNotInCurrentRound');
+
+        const currentRound = await request(app)
+            .post(`/api/games/${round1GameId}/result`)
+            .set('Authorization', playerAuthHeader)
+            .send({ results });
+        expect(currentRound.status).toBe(200);
+        expect(currentRound.body).toMatchObject({
+            id: round1GameId,
+            status: 'FINISHED',
+            tournamentRound: 1,
+            rounds: [],
+        });
+    });
+
     test('keeps CREATED non-tournament tracked game start behavior unchanged', async () => {
         createCustomEvent(
             SEASON_EVENT_ID,
             'Tracked Season Event',
-            '2026-01-01T00:00:00.000Z',
-            '2030-01-01T00:00:00.000Z',
+            openEventWindow().dateFrom,
+            openEventWindow().dateTo,
             GAME_RULES_ID,
             TEST_CLUB_ID,
             'SEASON'
@@ -361,6 +495,96 @@ describe('Tournament management', () => {
 
         expect(startResponse.status).toBe(200);
         expect(startResponse.body.status).toBe('IN_PROGRESS');
+        expect(startResponse.body.timer).toMatchObject({
+            status: 'STOPPED',
+            durationSec: 0,
+            remainingSec: 0,
+        });
+        expect(startResponse.body.timer.serverNow).toEqual(expect.any(String));
+    });
+
+    test('returns the synchronized round timer when getting and starting a tracked game', async () => {
+        const roundStartedAt = new Date(dateInsideEventWindow(1, 12));
+        jest.useFakeTimers();
+        try {
+            jest.setSystemTime(roundStartedAt);
+            dbManager.db.prepare('UPDATE tournament SET roundDurationSec = ? WHERE eventId = ?')
+                .run(3600, TOURNAMENT_EVENT_ID);
+            const gameId = importRound(1);
+
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            const serverNow = new Date(roundStartedAt.getTime() + 15 * 60 * 1000);
+            jest.setSystemTime(serverNow);
+            const fetched = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', playerAuthHeader);
+
+            expect(fetched.status).toBe(200);
+            expect(fetched.body.timer).toEqual({
+                status: 'RUNNING',
+                durationSec: 3600,
+                remainingSec: 2700,
+                serverNow: serverNow.toISOString(),
+            });
+
+            const started = await request(app)
+                .post(`/api/games/${gameId}/start`)
+                .set('Authorization', playerAuthHeader)
+                .send({});
+
+            expect(started.status).toBe(200);
+            expect(started.body.timer).toEqual(fetched.body.timer);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    test('a repeated round start is idempotent and does not restart the timer', async () => {
+        const roundStartedAt = new Date(dateInsideEventWindow(1, 12));
+        jest.useFakeTimers();
+        try {
+            jest.setSystemTime(roundStartedAt);
+            dbManager.db.prepare('UPDATE tournament SET roundDurationSec = ? WHERE eventId = ?')
+                .run(3600, TOURNAMENT_EVENT_ID);
+            const gameId = importRound(1);
+
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            // Ten minutes later, a retry (double tap, network retry) must not re-arm the
+            // clock — the round is still the same round, so the countdown keeps running.
+            jest.setSystemTime(new Date(roundStartedAt.getTime() + 10 * 60 * 1000));
+            await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/tournament/rounds/1/start`)
+                .set('Authorization', adminAuthHeader)
+                .send({})
+                .expect(200);
+
+            const serverNow = new Date(roundStartedAt.getTime() + 15 * 60 * 1000);
+            jest.setSystemTime(serverNow);
+            const fetched = await request(app)
+                .get(`/api/games/${gameId}`)
+                .set('Authorization', playerAuthHeader);
+
+            expect(fetched.status).toBe(200);
+            // 2700, not 3300: elapsed time is measured from the original start.
+            expect(fetched.body.timer).toEqual({
+                status: 'RUNNING',
+                durationSec: 3600,
+                remainingSec: 2700,
+                serverNow: serverNow.toISOString(),
+            });
+        } finally {
+            jest.useRealTimers();
+        }
     });
 
     describe('cancel tournament round', () => {

@@ -23,6 +23,11 @@ const teamConfigSchema = z.strictObject({
 
 const tournamentConfigSchema = z.strictObject({
     totalRounds: z.number().int('totalRounds must be an integer').positive('totalRounds must be positive'),
+    // Rounds only exist for tournaments, so the round timer duration lives here
+    // rather than in the generic event config.
+    roundDurationSec: z.number().int('roundDurationSec must be an integer')
+        .positive('roundDurationSec must be positive')
+        .nullish(),
 });
 
 const playerNameDisplayEnum = z.enum(Object.values(PlayerNameDisplay));
@@ -101,6 +106,11 @@ const eventSchema = z.object({
     type: eventTypeEnum,
     format: eventFormatEnum.default(EventFormat.INDIVIDUAL),
     isCurrentRating: z.boolean().nullish(),
+    // Not `.default(true)`: this schema also backs PUT, where a materialized default
+    // would silently re-rate an event whose body omits the field. Create defaults to
+    // true in EventService instead.
+    isRated: z.boolean().optional(),
+    tags: z.array(z.string().min(1)).optional(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer'),
@@ -188,6 +198,8 @@ export const eventPatchBodySchema = z.strictObject({
     type: eventTypeEnum.optional(),
     format: eventFormatEnum.optional(),
     isCurrentRating: z.boolean().nullish(),
+    isRated: z.boolean().optional(),
+    tags: z.array(z.string().min(1)).optional(),
     dateFrom: dateSchema.nullish(),
     dateTo: dateSchema.nullish(),
     gameRulesId: z.number().int('gameRulesId must be an integer').optional(),
@@ -236,7 +248,8 @@ export const tournamentSeatingGenerateSchema = z.object({
 const seatingApplyRoundsSchema = z.array(
     z.array(
         z.array(z.number().int('Seat user id must be an integer').positive())
-            .length(4, 'Each table must have exactly 4 players')
+            .min(3, 'Each table must have at least 3 players')
+            .max(4, 'Each table must have at most 4 players')
     ).min(1, 'Each round must have at least one table')
 ).min(1, 'At least one round is required');
 
@@ -268,6 +281,12 @@ export const getEventAchievementsSchema = z.object({
 });
 
 export const recomputeEventAchievementsSchema = z.object({
+    params: z.object({
+        eventId: eventIdParamSchema,
+    }),
+});
+
+export const clearEventAchievementsSchema = z.object({
     params: z.object({
         eventId: eventIdParamSchema,
     }),

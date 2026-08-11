@@ -102,6 +102,12 @@ export class RoundAlreadyExistsError extends BadRequestError {
     }
 }
 
+export class GameFinishedByPreviousRoundError extends BadRequestError {
+    constructor() {
+        super('gameFinishedByPreviousRound');
+    }
+}
+
 export class NotAuthorizedToModifyGameError extends ForbiddenError {
     constructor() {
         super('notAuthorizedToModifyGame');
@@ -153,6 +159,18 @@ export class CannotUndoFinishOnNonTrackedGameError extends BadRequestError {
 export class GameNotCreatedWhenStartingError extends BadRequestError {
     constructor() {
         super('gameNotCreatedWhenStarting');
+    }
+}
+
+export class GameNotCreatedWhenRecordingResultError extends BadRequestError {
+    constructor() {
+        super('gameNotCreatedWhenRecordingResult');
+    }
+}
+
+export class PlannedGameResultRosterMismatchError extends BadRequestError {
+    constructor() {
+        super('plannedGameResultRosterMismatch');
     }
 }
 

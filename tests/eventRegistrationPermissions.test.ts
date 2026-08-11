@@ -5,8 +5,7 @@ import eventRoutes from '../src/routes/EventRoutes.ts';
 import userRoutes from '../src/routes/UserRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, resetTestDatabase } from './testHelpers.ts';
 import { ProfileRepository } from '../src/repository/ProfileRepository.ts';
 
 const app = express();
@@ -185,8 +184,7 @@ describe('Event registration permissions matrix', () => {
             PENDING_USER_ID,
             OTHER_CLUB_OWNER_USER_ID
         );
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('apply (self-action) — everyone authenticated can apply on a closed tournament', () => {
@@ -294,6 +292,18 @@ describe('Event registration permissions matrix', () => {
                         .set('Authorization', authHeader).send({})
             );
         }
+
+        test('admin can approve a rejected registration', async () => {
+            seedRegistration(NON_MEMBER_USER_ID, 'REJECTED');
+
+            const response = await request(app)
+                .post(`/api/events/${TOURNAMENT_EVENT_ID}/registrations/${NON_MEMBER_USER_ID}/approve`)
+                .set('Authorization', authHeaders.admin)
+                .send({});
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toBe('APPROVED');
+        });
     });
 
     describe('reject registration — admin/owner/moderator only', () => {

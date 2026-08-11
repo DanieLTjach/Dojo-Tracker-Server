@@ -12,15 +12,25 @@ import {
     gameRoundPreviewSchema,
     gameRoundDeleteSchema,
     gameFinishSchema,
+    plannedGameResultSchema,
     gameUndoFinishSchema,
     gameStartSchema,
     gamePlayerSubstitutePlayerSchema,
+    gameScorePreviewSchema,
 } from '../schema/GameSchemas.ts';
 import { TrackedGameService } from '../service/TrackedGameService.ts';
+import { LocalGameScoringService } from '../service/LocalGameScoringService.ts';
 
 export class GameController {
     private gameService: GameService = new GameService();
     private trackedGameService: TrackedGameService = new TrackedGameService();
+    private localGameScoringService: LocalGameScoringService = new LocalGameScoringService();
+
+    scoreRoundPreview(req: Request, res: Response) {
+        const { body } = gameScorePreviewSchema.parse(req);
+        const result = this.localGameScoringService.scoreRoundPreview(body);
+        return res.status(StatusCodes.OK).json(result);
+    }
 
     addGame(req: Request, res: Response) {
         const { body: { eventId, playersData, createdAt, hideNewGameMessage, tournamentRound, tournamentTable } } =
@@ -98,6 +108,13 @@ export class GameController {
         const { params: { gameId } } = gameFinishSchema.parse(req);
         const modifiedBy = req.user!.userId;
         const game = this.trackedGameService.finishGame(gameId, modifiedBy);
+        return res.status(StatusCodes.OK).json(game);
+    }
+
+    recordPlannedGameResult(req: Request, res: Response) {
+        const { params: { gameId }, body: { results } } = plannedGameResultSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const game = this.trackedGameService.recordPlannedGameResult(gameId, results, modifiedBy);
         return res.status(StatusCodes.OK).json(game);
     }
 

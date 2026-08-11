@@ -3,8 +3,7 @@ import express from 'express';
 import inviteRoutes from '../src/routes/InviteRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createTelegramInitData } from './testHelpers.ts';
+import { createTelegramInitData, resetTestDatabase } from './testHelpers.ts';
 import { ClubInviteService } from '../src/service/ClubInviteService.ts';
 import { ClubMembershipRepository } from '../src/repository/ClubMembershipRepository.ts';
 import { ClubRepository } from '../src/repository/ClubRepository.ts';
@@ -63,8 +62,7 @@ describe('Invite API Endpoints', () => {
 
     afterAll(() => {
         dbManager.db.prepare('DELETE FROM club WHERE id = ?').run(clubId);
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     it('previews an invite', async () => {

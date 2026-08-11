@@ -86,7 +86,8 @@ export class RatingService {
             const gainedPoints = playerData.points - gameRules.startingPoints;
             const ratingChange = gainedPoints +
                 uma[index]! * RATING_TO_POINTS_COEFFICIENT -
-                (getChomboHandling(detailedRules ?? {}) === 'mangan' ? 0 : 20000) * (playerData.chomboCount ?? 0);
+                (getChomboHandling(detailedRules ?? {}) === 'twenty_thousand_after_uma' ? 20000 : 0) *
+                    (playerData.chomboCount ?? 0);
             const newRating = currentRating + ratingChange;
 
             const teamId = playerTeamMap.get(playerData.userId) ?? null;

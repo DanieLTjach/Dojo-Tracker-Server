@@ -3,8 +3,13 @@ import express from 'express';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader, createTestEvent, createCustomEvent, deleteEventById } from './testHelpers.ts';
+import {
+    createAuthHeader,
+    createTestEvent,
+    createCustomEvent,
+    deleteEventById,
+    resetTestDatabase,
+} from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { UserRepository } from '../src/repository/UserRepository.ts';
 import { EventRepository } from '../src/repository/EventRepository.ts';
@@ -34,8 +39,7 @@ describe('Event API Endpoints', () => {
     });
 
     afterAll(() => {
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('GET /api/events - Get All Events', () => {
@@ -436,7 +440,7 @@ describe('Event API Endpoints', () => {
             expect(response.body.resolvedPlayerNameDisplay).toBe('REAL_NAME');
         });
 
-        test('should persist tournament minParticipants in config', async () => {
+        test('should persist tournament settings in config', async () => {
             const response = await request(app)
                 .post('/api/events')
                 .set('Authorization', adminAuthHeader)
@@ -444,7 +448,7 @@ describe('Event API Endpoints', () => {
                     ...createPayload,
                     clubId: 1,
                     type: 'TOURNAMENT',
-                    tournament: { totalRounds: 3 },
+                    tournament: { totalRounds: 3, roundDurationSec: 5400 },
                     config: {
                         minParticipants: 8,
                         maxParticipants: 16,
@@ -460,6 +464,7 @@ describe('Event API Endpoints', () => {
                 maxParticipants: 16,
                 registrationDeadline: '2026-06-01T18:00:00.000Z',
             });
+            expect(response.body.tournament.roundDurationSec).toBe(5400);
             expect(response.body.maxParticipants).toBe(16);
             expect(response.body.registrationDeadline).toBe('2026-06-01T18:00:00.000Z');
 
@@ -470,6 +475,10 @@ describe('Event API Endpoints', () => {
                 maxParticipants: 16,
                 registrationDeadline: '2026-06-01T18:00:00.000Z',
             });
+            const storedTournament = dbManager.db
+                .prepare('SELECT roundDurationSec FROM tournament WHERE eventId = ?')
+                .get(createdEventId) as { roundDurationSec: number | null };
+            expect(storedTournament.roundDurationSec).toBe(5400);
             expect(new EventRepository().findEventById(createdEventId!)?.config?.registrationDeadline)
                 .toEqual(new Date('2026-06-01T18:00:00.000Z'));
         });
@@ -503,6 +512,45 @@ describe('Event API Endpoints', () => {
                 .post('/api/events')
                 .set('Authorization', adminAuthHeader)
                 .send({ ...createPayload, config: { maxParticipants: 16 } });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject roundDurationSec for a season event', async () => {
+            // A season has no rounds, so it has no tournament config to carry a duration.
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...createPayload, tournament: { totalRounds: 3, roundDurationSec: 3600 } });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject roundDurationSec in the generic event config', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...createPayload,
+                    clubId: 1,
+                    type: 'TOURNAMENT',
+                    tournament: { totalRounds: 3 },
+                    config: { roundDurationSec: 3600 },
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        test('should reject a non-positive roundDurationSec', async () => {
+            const response = await request(app)
+                .post('/api/events')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...createPayload,
+                    clubId: 1,
+                    type: 'TOURNAMENT',
+                    tournament: { totalRounds: 3, roundDurationSec: 0 },
+                });
 
             expect(response.status).toBe(400);
         });
@@ -662,7 +710,7 @@ describe('Event API Endpoints', () => {
                     config: { minParticipants: 6, teamConfig: { teamSize: 2, teamCount: 3 } },
                 });
             expect(response.status).toBe(400);
-            expect(response.body.errorCode).toBe('teamCountNotDivisibleByFour');
+            expect(response.body.errorCode).toBe('teamCountNotDivisibleByTableSize');
         });
 
         test('rejects minParticipants that does not equal teamSize * teamCount', async () => {

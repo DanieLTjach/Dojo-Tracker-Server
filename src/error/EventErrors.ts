@@ -1,8 +1,14 @@
-import { NotFoundError, BadRequestError, InternalServerError } from './BaseErrors.ts';
+import { NotFoundError, BadRequestError, ForbiddenError, InternalServerError, ConflictError } from './BaseErrors.ts';
 
 export class EventNotFoundError extends NotFoundError {
     constructor(eventId: number) {
         super('eventNotFound', { eventId });
+    }
+}
+
+export class InsufficientEventManagementPermissionsError extends ForbiddenError {
+    constructor() {
+        super('insufficientEventManagementPermissions');
     }
 }
 
@@ -172,8 +178,8 @@ export class SeatingNotEnoughParticipantsError extends BadRequestError {
 }
 
 export class SeatingParticipantsNotMultipleOfTableSizeError extends BadRequestError {
-    constructor(eventName: string, count: number) {
-        super('seatingParticipantsNotMultipleOfTableSize', { eventName, count });
+    constructor(eventName: string, count: number, tableSize: number) {
+        super('seatingParticipantsNotMultipleOfTableSize', { eventName, count, tableSize });
     }
 }
 
@@ -261,9 +267,9 @@ export class InvalidTeamCountError extends BadRequestError {
     }
 }
 
-export class TeamCountNotDivisibleByFourError extends BadRequestError {
-    constructor() {
-        super('teamCountNotDivisibleByFour');
+export class TeamCountNotDivisibleByTableSizeError extends BadRequestError {
+    constructor(tableSize: number) {
+        super('teamCountNotDivisibleByTableSize', { tableSize });
     }
 }
 
@@ -276,5 +282,17 @@ export class MinParticipantsRequiredForTeamConfigError extends BadRequestError {
 export class MinParticipantsMustMatchTeamConfigError extends BadRequestError {
     constructor(minParticipants: number, expected: number) {
         super('minParticipantsMustMatchTeamConfig', { minParticipants, expected });
+    }
+}
+
+export class UnknownEventTagError extends BadRequestError {
+    constructor(tag: string) {
+        super('unknownEventTag', { tag });
+    }
+}
+
+export class CannotUnrateCurrentSeasonError extends ConflictError {
+    constructor() {
+        super('cannotUnrateCurrentSeason');
     }
 }

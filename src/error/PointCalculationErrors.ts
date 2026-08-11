@@ -7,6 +7,19 @@ export class RulesetShouldContainDetailedRulesError extends InternalServerError 
     }
 }
 
+/**
+ * Same condition as RulesetShouldContainDetailedRulesError, but a 400 rather
+ * than a 500. On the tracked-game path an event's ruleset lacking details is an
+ * internal invariant violation. On the stateless score-preview path the ruleset
+ * id comes straight from the client, so picking a legacy details-less ruleset
+ * is bad input, not a server fault.
+ */
+export class SelectedRulesetHasNoDetailedRulesError extends BadRequestError {
+    constructor() {
+        super('rulesetShouldContainDetailedRules');
+    }
+}
+
 export class YakumanLiabilityRequiresYakumanError extends BadRequestError {
     constructor() {
         super('yakumanLiabilityRequiresYakuman');
@@ -118,5 +131,11 @@ export class NoPlayersInTheGameError extends InternalServerError {
 export class PlayerNotInGameError extends BadRequestError {
     constructor(playerId: number) {
         super('playerNotInGame', { playerId });
+    }
+}
+
+export class InsufficientPointsForRiichiError extends BadRequestError {
+    constructor(playerId: number, requiredPoints: number, actualPoints: number) {
+        super('insufficientPointsForRiichi', { playerId, requiredPoints, actualPoints });
     }
 }

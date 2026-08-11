@@ -23,14 +23,20 @@ export class EventRepository {
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
                 gr.umaTieBreak as gr_umaTieBreak,
+                gr.allowNonZeroSumUma as gr_allowNonZeroSumUma,
                 gr.details as gr_details,
                 t.status as tournament_status,
                 t.currentRound as tournament_currentRound,
+                t.currentRoundStartedAt as tournament_currentRoundStartedAt,
                 t.totalRounds as tournament_totalRounds,
+                t.roundDurationSec as tournament_roundDurationSec,
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
                 t.modifiedBy as tournament_modifiedBy,
-                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount,
+                (SELECT GROUP_CONCAT(t.tag) FROM (
+                    SELECT tag FROM eventToTag WHERE eventId = e.id ORDER BY tag ASC
+                ) t) as tags
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
@@ -55,14 +61,20 @@ export class EventRepository {
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
                 gr.umaTieBreak as gr_umaTieBreak,
+                gr.allowNonZeroSumUma as gr_allowNonZeroSumUma,
                 gr.details as gr_details,
                 t.status as tournament_status,
                 t.currentRound as tournament_currentRound,
+                t.currentRoundStartedAt as tournament_currentRoundStartedAt,
                 t.totalRounds as tournament_totalRounds,
+                t.roundDurationSec as tournament_roundDurationSec,
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
                 t.modifiedBy as tournament_modifiedBy,
-                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount,
+                (SELECT GROUP_CONCAT(t.tag) FROM (
+                    SELECT tag FROM eventToTag WHERE eventId = e.id ORDER BY tag ASC
+                ) t) as tags
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
@@ -88,14 +100,20 @@ export class EventRepository {
                 gr.uma as gr_uma,
                 gr.startingPoints as gr_startingPoints,
                 gr.umaTieBreak as gr_umaTieBreak,
+                gr.allowNonZeroSumUma as gr_allowNonZeroSumUma,
                 gr.details as gr_details,
                 t.status as tournament_status,
                 t.currentRound as tournament_currentRound,
+                t.currentRoundStartedAt as tournament_currentRoundStartedAt,
                 t.totalRounds as tournament_totalRounds,
+                t.roundDurationSec as tournament_roundDurationSec,
                 t.createdAt as tournament_createdAt,
                 t.modifiedAt as tournament_modifiedAt,
                 t.modifiedBy as tournament_modifiedBy,
-                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount
+                (SELECT COUNT(*) FROM game WHERE game.eventId = e.id) as gameCount,
+                (SELECT GROUP_CONCAT(t.tag) FROM (
+                    SELECT tag FROM eventToTag WHERE eventId = e.id ORDER BY tag ASC
+                ) t) as tags
             FROM event e
             JOIN gameRules gr ON e.gameRules = gr.id
             LEFT JOIN club c ON e.clubId = c.id
@@ -113,6 +131,7 @@ export class EventRepository {
         description: string | null;
         type: string;
         format: string;
+        isRated: number;
         gameRules: number;
         clubId: number | null;
         dateFrom: string | null;
@@ -127,8 +146,8 @@ export class EventRepository {
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO event (name, description, type, format, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :description, :type, :format, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO event (name, description, type, format, isRated, gameRules, clubId, dateFrom, dateTo, startingRating, minimumGamesForRating, info, config, blockGameCreation, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :description, :type, :format, :isRated, :gameRules, :clubId, :dateFrom, :dateTo, :startingRating, :minimumGamesForRating, :info, :config, :blockGameCreation, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -136,6 +155,7 @@ export class EventRepository {
     createEvent(params: EventCreateParams): number {
         const result = this.createEventStatement().get({
             ...params,
+            isRated: booleanToInteger(params.isRated ?? true),
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             info: serializeEventInfo(params.info),
@@ -153,6 +173,7 @@ export class EventRepository {
         description: string | null;
         type: string;
         format: string;
+        isRated: number;
         gameRules: number;
         clubId: number | null;
         dateFrom: string | null;
@@ -171,6 +192,7 @@ export class EventRepository {
                 description = :description,
                 type = :type,
                 format = :format,
+                isRated = :isRated,
                 gameRules = :gameRules,
                 clubId = :clubId,
                 dateFrom = :dateFrom,
@@ -189,6 +211,7 @@ export class EventRepository {
     updateEvent(params: EventUpdateParams): void {
         this.updateEventStatement().run({
             ...params,
+            isRated: booleanToInteger(params.isRated),
             dateFrom: params.dateFrom?.toISOString() ?? null,
             dateTo: params.dateTo?.toISOString() ?? null,
             info: serializeEventInfo(params.info),
@@ -246,6 +269,38 @@ export class EventRepository {
     countGamesByGameRulesId(gameRulesId: number): number {
         return this.countGamesByGameRulesIdStatement().get({ gameRulesId })!.count;
     }
+
+    tagExists(tag: string): boolean {
+        const result = dbManager.db.prepare(`SELECT 1 FROM eventTag WHERE tag = ?`).get(tag);
+        return result !== undefined;
+    }
+
+    findAllTags(): string[] {
+        const rows = dbManager.db.prepare(`SELECT tag FROM eventTag ORDER BY tag ASC`).all() as { tag: string }[];
+        return rows.map(row => row.tag);
+    }
+
+    findTagsByEventId(eventId: number): string[] {
+        const rows = dbManager.db.prepare(`SELECT tag FROM eventToTag WHERE eventId = ? ORDER BY tag ASC`)
+            .all(eventId) as { tag: string }[];
+        return rows.map(row => row.tag);
+    }
+
+    /**
+     * Replaces an event's tags wholesale. Runs inside the ambient request transaction,
+     * so the delete and the inserts commit together.
+     */
+    setEventTags(eventId: number, tags: string[], modifiedBy: number, createdAt: Date): void {
+        dbManager.db.prepare(`DELETE FROM eventToTag WHERE eventId = ?`).run(eventId);
+
+        const insert = dbManager.db.prepare(`
+            INSERT INTO eventToTag (eventId, tag, createdAt, modifiedBy)
+            VALUES (:eventId, :tag, :createdAt, :modifiedBy)
+        `);
+        for (const tag of new Set(tags)) {
+            insert.run({ eventId, tag, createdAt: createdAt.toISOString(), modifiedBy });
+        }
+    }
 }
 
 export interface EventCreateParams {
@@ -253,6 +308,7 @@ export interface EventCreateParams {
     description: string | null;
     type: EventType;
     format: EventFormat;
+    isRated?: boolean;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -273,6 +329,7 @@ export interface EventUpdateParams {
     description: string | null;
     type: EventType;
     format: EventFormat;
+    isRated: boolean;
     gameRules: number;
     clubId: number | null;
     dateFrom: Date | null;
@@ -295,6 +352,8 @@ interface EventWithGameRulesDBEntity {
     gameRules: number;
     clubId: number | null;
     isCurrentRating: number;
+    isRated: number;
+    tags: string | null;
     startingRating: number;
     minimumGamesForRating: number;
     dateFrom: string | null;
@@ -312,10 +371,13 @@ interface EventWithGameRulesDBEntity {
     gr_uma: string;
     gr_startingPoints: number;
     gr_umaTieBreak: string;
+    gr_allowNonZeroSumUma: number;
     gr_details: string | null;
     tournament_status: TournamentStatus | null;
     tournament_currentRound: number | null;
+    tournament_currentRoundStartedAt: string | null;
     tournament_totalRounds: number | null;
+    tournament_roundDurationSec: number | null;
     tournament_createdAt: string | null;
     tournament_modifiedAt: string | null;
     tournament_modifiedBy: number | null;
@@ -382,6 +444,8 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
         format: parseEventFormat(dbEntity.format),
         clubId: dbEntity.clubId,
         isCurrentRating: Boolean(dbEntity.isCurrentRating),
+        isRated: Boolean(dbEntity.isRated),
+        tags: dbEntity.tags ? dbEntity.tags.split(',') : [],
         startingRating: dbEntity.startingRating,
         minimumGamesForRating: dbEntity.minimumGamesForRating,
         gameRules: {
@@ -392,7 +456,11 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
             uma: parseUma(dbEntity.gr_uma),
             startingPoints: dbEntity.gr_startingPoints,
             umaTieBreak: parseUmaTieBreak(dbEntity.gr_umaTieBreak),
-            details: parseGameRulesDetailsAndApplyPresets(dbEntity.gr_details),
+            allowNonZeroSumUma: Boolean(dbEntity.gr_allowNonZeroSumUma),
+            details: parseGameRulesDetailsAndApplyPresets(dbEntity.gr_details, {
+                numberOfPlayers: dbEntity.gr_numberOfPlayers,
+                startingPoints: dbEntity.gr_startingPoints,
+            }),
         },
         dateFrom: dbEntity.dateFrom !== null ? new Date(dbEntity.dateFrom) : null,
         dateTo: dbEntity.dateTo !== null ? new Date(dbEntity.dateTo) : null,
@@ -407,7 +475,11 @@ function eventWithGameRulesFromDBEntity(dbEntity: EventWithGameRulesDBEntity): E
                 eventId: dbEntity.id,
                 status: parseTournamentStatus(dbEntity.tournament_status),
                 currentRound: dbEntity.tournament_currentRound,
+                currentRoundStartedAt: dbEntity.tournament_currentRoundStartedAt !== null
+                    ? new Date(dbEntity.tournament_currentRoundStartedAt)
+                    : null,
                 totalRounds: dbEntity.tournament_totalRounds!,
+                roundDurationSec: dbEntity.tournament_roundDurationSec,
                 createdAt: new Date(dbEntity.tournament_createdAt!),
                 modifiedAt: new Date(dbEntity.tournament_modifiedAt!),
                 modifiedBy: dbEntity.tournament_modifiedBy!,

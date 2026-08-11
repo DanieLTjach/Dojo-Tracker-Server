@@ -1,5 +1,4 @@
 export default {
-    preset: 'ts-jest',
     testEnvironment: 'node',
     roots: ['<rootDir>/tests'],
     testMatch: ['**/*.test.ts'],
@@ -13,5 +12,18 @@ export default {
     verbose: false,
     extensionsToTreatAsEsm: ['.ts'],
     moduleNameMapper: { '^(\\.{1,2}/.*)\\.ts$': '$1' },
-    transform: { '^.+\\.ts$': ['ts-jest', { useESM: true }] },
+    transform: {
+        '^.+\\.ts$': [
+            '@swc/jest',
+            {
+                jsc: {
+                    parser: {
+                        syntax: 'typescript',
+                        dynamicImport: true,
+                    },
+                    target: 'es2022',
+                },
+            },
+        ],
+    },
 };

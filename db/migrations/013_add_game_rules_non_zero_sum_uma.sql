@@ -1,0 +1,1 @@
+ALTER TABLE gameRules ADD COLUMN allowNonZeroSumUma BOOL NOT NULL DEFAULT false;

@@ -1,5 +1,19 @@
 errors:
   invalidRequestData: Некоректні дані запиту
+  gameRulesValidationFailed: Виправте виділені поля правил гри
+  gameRulesValidationCoreFieldMismatch: Значення має збігатися з основним налаштуванням набору правил.
+  gameRulesValidationNotenPenaltySplit: Штраф за нотен має ділитися на цілу кількість очок для цієї кількості гравців.
+  gameRulesValidationHonbaPayerCount: Значення хонби має відповідати кількості гравців, що платять, для цього набору правил.
+  gameRulesValidationUmaSumNonZero: Сума ума має дорівнювати 0, або увімкніть ума з ненульовою сумою для цього набору правил.
+  gameRulesValidationUmaNonZeroSumMatrix: Ума з ненульовою сумою підтримується лише для простої ума, а не для матричної.
+  gameRulesValidationInteger: Введіть ціле число.
+  gameRulesValidationMultipleOf: Введіть значення з потрібним кроком.
+  gameRulesValidationInvalidType: Введіть значення очікуваного типу.
+  gameRulesValidationInvalidValue: Виберіть або введіть дозволене значення.
+  gameRulesValidationTooSmall: Введіть значення не менше мінімального.
+  gameRulesValidationTooBig: Введіть значення не більше максимального.
+  gameRulesValidationInvalidFormat: Введіть значення у правильному форматі.
+  gameRulesValidationUnknownField: Це поле не підтримується.
   databaseError: "Помилка бази даних: {{message}}"
   internalServerError: Внутрішня помилка сервера
 
@@ -36,6 +50,7 @@ errors:
   targetNotActiveClubMember: Користувач {{userId}} має бути активним учасником клубу, щоб отримати цю нагороду
 
   eventNotFound: Подію з id {{eventId}} не знайдено
+  insufficientEventManagementPermissions: Недостатньо прав для управління цією подією. Потрібна роль адміна або OWNER/MODERATOR клубу події.
   gameRulesNotFound: Правила гри з id {{gameRulesId}} не знайдено
   cannotDeleteGameRulesInUse: 'Неможливо видалити правила "{{gameRulesName}}" — вони використовуються в {{eventCount}} подіях'
   cannotUpdateGameRulesInUse: 'Неможливо оновити правила "{{gameRulesName}}" — за ними вже зіграно {{gameCount}} ігор'
@@ -51,6 +66,8 @@ errors:
   participantConfigOnlyForTournament: Налаштування кількості учасників і терміну реєстрації можна вказувати лише для турнірів
   tournamentConfigOnlyForTournament: Налаштування турніру можна вказувати лише для турнірів
   eventIsNotTournament: 'Подія "{{eventName}}" не є турніром'
+  unknownEventTag: 'Невідомий тег події: "{{tag}}"'
+  cannotUnrateCurrentSeason: Неможливо скасувати рейтинговий статус для активного рейтингового сезону клубу
   tournamentMisconfigured: Цей турнір був неправильно сконфігурований. Будь ласка, звʼяжіться з підтримкою
   tournamentTotalRoundsLessThanCurrentRound: Кількість раундів ({{totalRounds}}) не може бути меншою за поточний раунд ({{currentRound}})
   tournamentRoundOutOfSequence: 'Не можна розпочати раунд {{requestedRound}} турніру "{{eventName}}": наступний доступний раунд — {{expectedRound}}'
@@ -63,7 +80,7 @@ errors:
   tournamentNotInLastRound: 'Турнір "{{eventName}}" ще не знаходиться в останньому раунді'
   tournamentGameNotInCurrentRound: "Цю гру не можна розпочати зараз. Поточний раунд турніру: {{currentRound}}, раунд гри: {{gameRound}}"
   seatingNotEnoughParticipants: 'Для розсадки турніру "{{eventName}}" потрібно щонайменше {{required}} учасників (зараз {{actual}})'
-  seatingParticipantsNotMultipleOfTableSize: 'Кількість учасників турніру "{{eventName}}" ({{count}}) має ділитися на 4 для розсадки'
+  seatingParticipantsNotMultipleOfTableSize: 'Кількість учасників турніру "{{eventName}}" ({{count}}) має ділитися на {{tableSize}} для розсадки'
   seatingGenerationFailed: 'Не вдалося згенерувати розсадку для турніру "{{eventName}}" за відведений час. Спробуйте ще раз'
   seatingCannotBeModifiedAfterTournamentStarted: 'Розсадку турніру "{{eventName}}" не можна змінювати після початку турніру'
   seatingAlreadyApplied: 'Для турніру "{{eventName}}" вже створено ігри. Очистіть розсадку перед повторною генерацією'
@@ -78,7 +95,7 @@ errors:
   teamConfigRequired: Командний турнір потребує конфіг команд (teamConfig)
   invalidTeamSize: teamSize має бути цілим числом ≥ 1
   invalidTeamCount: teamCount має бути цілим числом ≥ 1
-  teamCountNotDivisibleByFour: teamCount має ділитися на 4
+  teamCountNotDivisibleByTableSize: "Кількість команд у турнірі має ділитися на {{tableSize}}"
   minParticipantsRequiredForTeamConfig: "Вкажіть minParticipants = teamSize * teamCount ({{expected}})"
   minParticipantsMustMatchTeamConfig: "minParticipants ({{minParticipants}}) має дорівнювати teamSize * teamCount ({{expected}})"
 
@@ -96,7 +113,7 @@ errors:
   draftNotStartable: 'Драфт турніру "{{eventName}}" не можна розпочати з поточного стану'
   teamDraftHasUnteamedPlayers: 'У командному турнірі "{{eventName}}" є {{unteamedCount}} схвалених учасників без команди'
   teamDraftUnevenTeams: 'У командному турнірі "{{eventName}}" команди мають різну кількість учасників'
-  teamCountMustBeDivisibleByFour: 'Кількість команд у турнірі "{{eventName}}" ({{teamCount}}) має ділитися на 4'
+  teamCountMustBeDivisibleByTableSize: 'Кількість команд у турнірі "{{eventName}}" ({{teamCount}}) має ділитися на {{tableSize}}'
   teamDraftIncomplete: 'Щоб почати командний турнір "{{eventName}}", сформуйте {{teamCount}} повних команд по {{teamSize}} гравців'
 
   eventRegistrationNotFound: "Реєстрацію користувача з id {{userId}} на подію '{{eventName}}' не знайдено"
@@ -106,8 +123,6 @@ errors:
   missingProfileNamesForTournamentRegistration: Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі
   eventNotTournament: "Реєстрація доступна лише для подій типу TOURNAMENT (поточний тип: {{type}})"
   eventCapacityReached: 'Турнір "{{eventName}}" вже досяг максимальної кількості учасників ({{maxParticipants}})'
-  insufficientEventRegistrationManagementPermissions: Недостатньо прав для управління реєстраціями на цю подію. Потрібна роль адміна або OWNER/MODERATOR клубу події.
-
   gameNotFoundById: Гру з id {{id}} не знайдено
   tooManyGamesFound: Знайдено забагато ігор. Будь ласка, звузьте критерії пошуку.
   incorrectPlayerCount: Для гри потрібно {{requiredPlayers}} гравців
@@ -125,6 +140,7 @@ errors:
   gameNotInProgressWhenFinishing: Можна завершити лише гру, що триває
   invalidRoundId: Очікується раунд {{expectedRoundId}}, отримано {{actualRoundId}}
   roundAlreadyExists: Цей раунд вже завершено
+  gameFinishedByPreviousRound: Новий раунд не можна додати, оскільки попередній раунд завершив гру
   notAuthorizedToModifyGame: Лише гравці, модератори клубу та адміністратори можуть змінювати гру
   gamePlayerNotFound: Гравець з id {{userId}} не знайдений у грі {{gameId}}
   noRoundsToRollback: У цій грі немає раундів для відкату
@@ -134,6 +150,8 @@ errors:
   gameNotFinishedWhenUndoingFinish: Скасувати завершення можна лише для завершеної гри
   cannotUndoFinishOnNonTrackedGame: Скасувати завершення можна лише для відстежуваної гри з раундами
   gameNotCreatedWhenStarting: Можна розпочати лише гру в статусі CREATED
+  gameNotCreatedWhenRecordingResult: Фінальний результат можна внести лише для гри в статусі CREATED
+  plannedGameResultRosterMismatch: Гравці в результаті мають точно відповідати запланованому складу гри
   notGamePlayer: Лише гравці цієї гри можуть виконати цю дію
 
   userNotFoundByUsername: Користувача з Telegram username {{username}} не знайдено
@@ -159,6 +177,7 @@ errors:
   invalidHonbaFormat: Некоректний формат значення хонби в правилах
   noPlayersInTheGame: Гра не має гравців
   playerNotInGame: Гравець {{playerId}} відсутній у грі
+  insufficientPointsForRiichi: Гравцю {{playerId}} потрібно щонайменше {{requiredPoints}} очок для оголошення ріічі (зараз {{actualPoints}})
 
   userRatingChangeInGameNotFound: Зміну рейтингу користувача {{userId}} в грі {{gameId}} не знайдено
   userHasNoRatingDespiteHavingPlayedGames: Користувач {{userId}} не має рейтингу в події {{eventId}} попри те, що має зіграні ігри
@@ -173,3 +192,6 @@ errors:
   userIsNotActive: Користувач з id {{id}} не активний
 
   enumParsingError: "Неприпустиме значення '{{value}}' для enum {{enumName}}. Дозволені значення: {{allowedValues}}"
+
+  skillRatingNotEnabledForClub: Рейтинг OpenSkill не увімкнено для клубу {{clubId}}
+  invalidGameSize: "Неприпустимий розмір гри {{gameSize}}. Дозволені значення: 3, 4"

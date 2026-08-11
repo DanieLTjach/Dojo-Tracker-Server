@@ -26,10 +26,12 @@ import {
     TeamConfigRequiredError,
     InvalidTeamSizeError,
     InvalidTeamCountError,
-    TeamCountNotDivisibleByFourError,
+    TeamCountNotDivisibleByTableSizeError,
     MinParticipantsRequiredForTeamConfigError,
     MinParticipantsMustMatchTeamConfigError,
     TournamentRoundNotStartedError,
+    UnknownEventTagError,
+    CannotUnrateCurrentSeasonError,
 } from '../error/EventErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
@@ -46,11 +48,14 @@ import { TeamRepository } from '../repository/TeamRepository.ts';
 import { UserService } from './UserService.ts';
 import { TournamentRepository } from '../repository/TournamentRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
+import { GameRulesRepository } from '../repository/GameRulesRepository.ts';
 import type { EventPatchBody } from '../schema/EventSchemas.ts';
+import LogService from './LogService.ts';
+import { SkillRatingService } from './SkillRatingService.ts';
 import {
     DraftNotStartableError,
     NotEnoughApprovedForDraftError,
-    TeamCountMustBeDivisibleByFourError,
+    TeamCountMustBeDivisibleByTableSizeError,
     TeamDraftIncompleteError,
 } from '../error/TeamErrors.ts';
 
@@ -61,8 +66,10 @@ export class EventService {
     private eventRegistrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
     private tournamentRepository: TournamentRepository = new TournamentRepository();
     private gameRepository: GameRepository = new GameRepository();
+    private gameRulesRepository: GameRulesRepository = new GameRulesRepository();
     private teamRepository: TeamRepository = new TeamRepository();
     private userService: UserService = new UserService();
+    private skillRatingService: SkillRatingService = new SkillRatingService();
 
     getAllEvents(clubId?: number): Event[] {
         if (clubId !== undefined) {
@@ -103,6 +110,18 @@ export class EventService {
         }
     }
 
+    findAllTags(): string[] {
+        return this.eventRepository.findAllTags();
+    }
+
+    private validateTags(tags: string[]): void {
+        for (const tag of tags) {
+            if (!this.eventRepository.tagExists(tag)) {
+                throw new UnknownEventTagError(tag);
+            }
+        }
+    }
+
     createEvent(data: EventData, modifiedBy: number): Event {
         this.authorizeEventCreation(data.clubId, modifiedBy);
 
@@ -112,6 +131,10 @@ export class EventService {
 
         if (data.clubId !== null && data.clubId !== undefined && !this.clubRepository.clubExists(data.clubId)) {
             throw new ClubNotFoundError(data.clubId!);
+        }
+
+        if (data.tags !== undefined) {
+            this.validateTags(data.tags);
         }
 
         this.validateCurrentRatingEvent(data);
@@ -124,6 +147,7 @@ export class EventService {
             description: data.description ?? null,
             type: data.type,
             format: data.format,
+            isRated: data.isRated ?? true,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
@@ -137,6 +161,10 @@ export class EventService {
             modifiedAt: now,
             modifiedBy,
         });
+
+        if (data.tags !== undefined) {
+            this.eventRepository.setEventTags(eventId, data.tags, modifiedBy, now);
+        }
 
         this.syncTournamentConfig(undefined, eventId, data, modifiedBy, now);
         this.syncCurrentRatingEvent(
@@ -163,6 +191,28 @@ export class EventService {
             throw new ClubNotFoundError(data.clubId!);
         }
 
+        if (data.tags !== undefined) {
+            this.validateTags(data.tags);
+        }
+
+        const newIsRated = data.isRated ?? existingEvent.isRated;
+        if (existingEvent.clubId !== null && existingEvent.isRated && !newIsRated) {
+            const club = this.clubRepository.findClubById(existingEvent.clubId);
+            if (club?.currentRatingEventId === eventId) {
+                throw new CannotUnrateCurrentSeasonError();
+            }
+        }
+
+        if (existingEvent.clubId !== null && newIsRated !== existingEvent.isRated) {
+            const topics = this.clubRepository.getClubTelegramTopics(existingEvent.clubId);
+            if (topics?.clubLogs) {
+                LogService.logInfo(
+                    `Event "${existingEvent.name}" (id ${existingEvent.id}) isRated: ${existingEvent.isRated} → ${newIsRated} by user ${modifiedBy}`,
+                    topics.clubLogs
+                );
+            }
+        }
+
         this.validateCurrentRatingEvent(data);
         this.validateTournamentClub(data);
         this.validateEventDataInvariants(data, existingEvent);
@@ -183,6 +233,7 @@ export class EventService {
             description: data.description ?? null,
             type: data.type,
             format: data.format,
+            isRated: newIsRated,
             gameRules: data.gameRulesId,
             clubId: data.clubId ?? null,
             dateFrom: data.dateFrom ?? null,
@@ -196,9 +247,20 @@ export class EventService {
             modifiedBy,
         });
 
+        // Omitting `tags` preserves the existing set; passing [] clears it.
+        if (data.tags !== undefined) {
+            this.eventRepository.setEventTags(eventId, data.tags, modifiedBy, now);
+        }
+
         this.syncTournamentConfig(existingEvent, eventId, data, modifiedBy, now);
 
-        return this.getEventById(eventId);
+        const updatedEvent = this.getEventById(eventId);
+        this.skillRatingService.handleEventRatingInputsChanged(
+            existingEvent,
+            updatedEvent,
+            data.tags !== undefined
+        );
+        return updatedEvent;
     }
 
     /**
@@ -256,7 +318,8 @@ export class EventService {
             ? TournamentStatus.LAST_ROUND
             : TournamentStatus.IN_PROGRESS;
 
-        this.tournamentRepository.updateTournamentState(eventId, status, nextRound, new Date(), modifiedBy);
+        const startedAt = new Date();
+        this.tournamentRepository.updateTournamentState(eventId, status, nextRound, startedAt, startedAt, modifiedBy);
 
         return this.getEventById(eventId);
     }
@@ -299,7 +362,14 @@ export class EventService {
             : TournamentStatus.DRAFT;
         const newStatus = newCurrentRound === null ? preStartStatus : TournamentStatus.IN_PROGRESS;
 
-        this.tournamentRepository.updateTournamentState(eventId, newStatus, newCurrentRound, new Date(), modifiedBy);
+        this.tournamentRepository.updateTournamentState(
+            eventId,
+            newStatus,
+            newCurrentRound,
+            null,
+            new Date(),
+            modifiedBy
+        );
 
         return this.getEventById(eventId);
     }
@@ -323,6 +393,7 @@ export class EventService {
             eventId,
             TournamentStatus.FINISHED,
             tournament.currentRound,
+            tournament.currentRoundStartedAt,
             new Date(),
             modifiedBy
         );
@@ -465,6 +536,7 @@ export class EventService {
             eventId,
             status,
             event.tournament!.currentRound,
+            event.tournament!.currentRoundStartedAt,
             new Date(),
             modifiedBy
         );
@@ -487,7 +559,7 @@ export class EventService {
         }
     }
 
-    validateTeamTournamentComposition(event: Event, requireTeamCountDivisibleByFour: boolean): void {
+    validateTeamTournamentComposition(event: Event, requireTeamCountDivisibleByTableSize: boolean): void {
         if (event.format !== EventFormat.TEAM) {
             return;
         }
@@ -505,8 +577,15 @@ export class EventService {
             throw new TeamDraftIncompleteError(event.name, teamCount, teamSize);
         }
 
-        if (requireTeamCountDivisibleByFour && teamMemberCounts.length % 4 !== 0) {
-            throw new TeamCountMustBeDivisibleByFourError(event.name, teamMemberCounts.length);
+        if (
+            requireTeamCountDivisibleByTableSize &&
+            teamMemberCounts.length % event.gameRules.numberOfPlayers !== 0
+        ) {
+            throw new TeamCountMustBeDivisibleByTableSizeError(
+                event.name,
+                teamMemberCounts.length,
+                event.gameRules.numberOfPlayers
+            );
         }
     }
 
@@ -586,7 +665,7 @@ export class EventService {
      * teamConfig sizing. v1 supports TEAM only for tournaments (HYBRID is reserved
      * for future team seasons and rejected here). teamConfig is required for TEAM
      * tournaments and forbidden otherwise; it must satisfy:
-     *   teamCount % 4 === 0  (a table seats one player from four distinct teams), and
+     *   teamCount is divisible by the number of players per table, and
      *   minParticipants === teamSize * teamCount  (the draft minimum reuses minParticipants).
      */
     private validateEventFormat(data: EventData): void {
@@ -615,8 +694,9 @@ export class EventService {
         if (!Number.isInteger(teamConfig.teamCount) || teamConfig.teamCount < 1) {
             throw new InvalidTeamCountError();
         }
-        if (teamConfig.teamCount % 4 !== 0) {
-            throw new TeamCountNotDivisibleByFourError();
+        const playersPerTable = this.gameRulesRepository.findGameRulesById(data.gameRulesId)!.numberOfPlayers;
+        if (teamConfig.teamCount % playersPerTable !== 0) {
+            throw new TeamCountNotDivisibleByTableSizeError(playersPerTable);
         }
         const minParticipants = data.config?.minParticipants;
         const expected = teamConfig.teamSize * teamConfig.teamCount;
@@ -683,15 +763,17 @@ export class EventService {
                 this.tournamentRepository.createTournament(
                     eventId,
                     data.tournament!.totalRounds,
+                    data.tournament!.roundDurationSec ?? null,
                     modifiedAt,
                     modifiedBy
                 );
                 return;
             }
 
-            this.tournamentRepository.updateTournamentTotalRounds(
+            this.tournamentRepository.updateTournamentConfig(
                 eventId,
                 data.tournament!.totalRounds,
+                data.tournament!.roundDurationSec ?? null,
                 modifiedAt,
                 modifiedBy
             );
@@ -716,6 +798,8 @@ export function projectEventToData(event: Event): EventData {
         format: event.format,
         clubId: event.clubId,
         isCurrentRating: event.isCurrentRating,
+        isRated: event.isRated,
+        tags: event.tags,
         dateFrom: event.dateFrom,
         dateTo: event.dateTo,
         gameRulesId: event.gameRules.id,
@@ -726,7 +810,10 @@ export function projectEventToData(event: Event): EventData {
         blockGameCreation: event.blockGameCreation,
     };
     if (event.tournament !== null) {
-        base.tournament = { totalRounds: event.tournament.totalRounds };
+        base.tournament = {
+            totalRounds: event.tournament.totalRounds,
+            roundDurationSec: event.tournament.roundDurationSec,
+        };
     }
     return base;
 }
@@ -741,6 +828,8 @@ export function mergeEventData(base: EventData, patch: EventPatchBody): EventDat
     assignIfPresent(merged, patch, 'type');
     assignIfPresent(merged, patch, 'format');
     assignIfPresent(merged, patch, 'isCurrentRating');
+    assignIfPresent(merged, patch, 'isRated');
+    assignIfPresent(merged, patch, 'tags');
     assignIfPresent(merged, patch, 'dateFrom');
     assignIfPresent(merged, patch, 'dateTo');
     assignIfPresent(merged, patch, 'clubId');
@@ -806,6 +895,7 @@ function mergeEventConfig(
 
 export interface TournamentData {
     totalRounds: number;
+    roundDurationSec?: number | null | undefined;
 }
 
 export interface EventData {
@@ -815,6 +905,8 @@ export interface EventData {
     format: EventFormat;
     clubId?: number | null | undefined;
     isCurrentRating?: boolean | null | undefined;
+    isRated?: boolean | undefined;
+    tags?: string[] | undefined;
     dateFrom?: Date | null | undefined;
     dateTo?: Date | null | undefined;
     gameRulesId: number;

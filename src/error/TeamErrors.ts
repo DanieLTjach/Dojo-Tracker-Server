@@ -84,9 +84,9 @@ export class TeamDraftUnevenTeamsError extends BadRequestError {
     }
 }
 
-export class TeamCountMustBeDivisibleByFourError extends BadRequestError {
-    constructor(eventName: string, teamCount: number) {
-        super('teamCountMustBeDivisibleByFour', { eventName, teamCount });
+export class TeamCountMustBeDivisibleByTableSizeError extends BadRequestError {
+    constructor(eventName: string, teamCount: number, tableSize: number) {
+        super('teamCountMustBeDivisibleByTableSize', { eventName, teamCount, tableSize });
     }
 }
 

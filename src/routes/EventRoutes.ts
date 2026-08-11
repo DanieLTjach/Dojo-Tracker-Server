@@ -4,7 +4,7 @@ import { EventController } from '../controller/EventController.ts';
 import { EventRegistrationController } from '../controller/EventRegistrationController.ts';
 import { AchievementController } from '../controller/AchievementController.ts';
 import { TeamController } from '../controller/TeamController.ts';
-import { requireAuth, requireAdmin } from '../middleware/AuthMiddleware.ts';
+import { requireAuth } from '../middleware/AuthMiddleware.ts';
 import {
     requireEventManagementRole,
     requireEventManagementRoleOrApprovedFilter,
@@ -23,6 +23,14 @@ const teamController = new TeamController();
  * Authentication: Required
  */
 router.get('/', requireAuth, withTransaction((req, res) => eventController.getAllEvents(req, res)));
+
+/**
+ * GET /api/events/tags
+ * Get available event tags
+ *
+ * Authentication: Required
+ */
+router.get('/tags', requireAuth, withTransaction((req, res) => eventController.getEventTags(req, res)));
 
 /**
  * GET /api/events/:eventId
@@ -45,15 +53,28 @@ router.get(
 );
 
 /**
+ * DELETE /api/events/:eventId/achievements
+ * Clear stored tournament achievements and reset their computed marker
+ *
+ * Authentication: Required (Admin or event club owner/moderator)
+ */
+router.delete(
+    '/:eventId/achievements',
+    requireAuth,
+    requireEventManagementRole,
+    withTransaction((req, res) => achievementController.clearEventAchievements(req, res))
+);
+
+/**
  * POST /api/events/:eventId/achievements/recompute
  * Force recompute of a tournament's achievements (e.g. after fixing bad data)
  *
- * Authentication: Required (Admin only)
+ * Authentication: Required (Admin or event club owner/moderator)
  */
 router.post(
     '/:eventId/achievements/recompute',
     requireAuth,
-    requireAdmin,
+    requireEventManagementRole,
     withTransaction((req, res) => achievementController.recomputeEventAchievements(req, res))
 );
 

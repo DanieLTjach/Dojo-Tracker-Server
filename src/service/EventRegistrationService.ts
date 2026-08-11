@@ -24,6 +24,7 @@ import LogService from './LogService.ts';
 import { ProfileService } from './ProfileService.ts';
 import TelegramMessageService from './TelegramMessageService.ts';
 import { UserService } from './UserService.ts';
+import { SkillRatingService } from './SkillRatingService.ts';
 import { type SupportedLocale, t, translationRef } from '../i18n/index.ts';
 import { resolveClubLocale, resolveUserLocale } from '../util/LocaleResolver.ts';
 
@@ -35,6 +36,7 @@ export class EventRegistrationService {
     private eventService: EventService = new EventService();
     private profileService: ProfileService = new ProfileService();
     private userService: UserService = new UserService();
+    private skillRatingService: SkillRatingService = new SkillRatingService();
 
     apply(eventId: number, applicantId: number): EventRegistration {
         const event = this.eventService.getEventById(eventId);
@@ -90,6 +92,9 @@ export class EventRegistrationService {
         }
 
         this.registrationRepository.deleteRegistration(eventId, applicantId);
+        if (registration.isFillerPlayer) {
+            this.skillRatingService.handleFillerClassificationChanged(applicantId);
+        }
         const applicant = this.userService.getUserById(applicantId);
         this.logWithdrawn(event, applicant);
     }
@@ -104,12 +109,13 @@ export class EventRegistrationService {
         if (registration === undefined) {
             throw new EventRegistrationNotFoundError(event.name, targetUserId);
         }
-        if (registration.status !== 'PENDING') {
+        if (registration.status !== 'PENDING' && registration.status !== 'REJECTED') {
             throw new InvalidEventRegistrationStateError(
                 translationRef('telegram.actions.approve'),
                 registration.status,
                 [
                     'PENDING',
+                    'REJECTED',
                 ]
             );
         }
@@ -185,6 +191,7 @@ export class EventRegistrationService {
             this.enforceCapacity(event);
         }
 
+        const wasFillerPlayer = existing?.isFillerPlayer ?? false;
         const now = new Date();
         if (existing === undefined) {
             this.registrationRepository.createRegistration({
@@ -215,6 +222,9 @@ export class EventRegistrationService {
         }
 
         const updated = this.getRegistration(eventId, targetUserId);
+        if (updated.isFillerPlayer !== wasFillerPlayer) {
+            this.skillRatingService.handleFillerClassificationChanged(targetUserId);
+        }
         this.notifyTargetUser(target, event, 'telegram.notify.registeredForTournament');
         this.logManualRegistered(event, target, modifier);
         return updated;
@@ -237,6 +247,9 @@ export class EventRegistrationService {
         }
 
         this.registrationRepository.updateRegistrationIsFillerPlayer(eventId, targetUserId, isFillerPlayer, modifierId);
+        if (registration.isFillerPlayer !== isFillerPlayer) {
+            this.skillRatingService.handleFillerClassificationChanged(targetUserId);
+        }
         return this.getRegistration(eventId, targetUserId);
     }
 

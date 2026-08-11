@@ -25,6 +25,14 @@ export function isRiichiDepositReturnedIfOneOfMultipleRon(rules: GameRulesValues
     return rules.riichi_deposit_is_returned_if_one_of_multiple_ron ?? true;
 }
 
+export function getRiichiDepositValue(rules: GameRulesValues): number {
+    return rules.riichi_deposit_value ?? 1000;
+}
+
+export function isRiichiDepositMinimumEnabled(rules: GameRulesValues): boolean {
+    return rules.riichi_1000_points_min ?? false;
+}
+
 export function isNagashiManganEnabled(rules: GameRulesValues): boolean {
     return rules.nagashi_mangan ?? false;
 }
@@ -33,7 +41,7 @@ export function getNotenPenalty(rules: GameRulesValues): number {
     return rules.noten_penalty ?? 1000 * (getNumberOfPlayers(rules) - 1);
 }
 
-export function getChomboHandling(rules: GameRulesValues): 'twenty_thousand_after_uma' | 'mangan' {
+export function getChomboHandling(rules: GameRulesValues): 'twenty_thousand_after_uma' | 'mangan' | 'baiman' {
     return rules.chombo ?? 'twenty_thousand_after_uma';
 }
 
@@ -117,4 +125,8 @@ export function getHonbaValue(rules: GameRulesValues): number {
     }
 
     return value;
+}
+
+export function getYakitoriPaymentStep(rules: GameRulesValues): number {
+    return rules.yakitori_payment_step ?? 0;
 }

@@ -1,5 +1,19 @@
 errors:
   invalidRequestData: Invalid request data
+  gameRulesValidationFailed: Please correct the highlighted game-rules fields
+  gameRulesValidationCoreFieldMismatch: This value must match the main ruleset setting.
+  gameRulesValidationNotenPenaltySplit: The noten penalty must split into whole points for this player count.
+  gameRulesValidationHonbaPayerCount: The honba value must match the number of paying players for this ruleset.
+  gameRulesValidationUmaSumNonZero: Uma must add up to 0, or enable a non-zero-sum uma for this ruleset.
+  gameRulesValidationUmaNonZeroSumMatrix: A non-zero-sum uma is only supported for a simple uma, not a matrix one.
+  gameRulesValidationInteger: Enter a whole number.
+  gameRulesValidationMultipleOf: Enter a value using the required step.
+  gameRulesValidationInvalidType: Enter a value of the expected type.
+  gameRulesValidationInvalidValue: Select or enter an allowed value.
+  gameRulesValidationTooSmall: Enter a value at or above the minimum.
+  gameRulesValidationTooBig: Enter a value at or below the maximum.
+  gameRulesValidationInvalidFormat: Enter a value in the expected format.
+  gameRulesValidationUnknownField: This field is not supported.
   databaseError: "Database error: {{message}}"
   internalServerError: Internal Server Error
 
@@ -36,6 +50,7 @@ errors:
   targetNotActiveClubMember: User {{userId}} must be an active club member to receive this achievement
 
   eventNotFound: Event with id {{eventId}} was not found
+  insufficientEventManagementPermissions: You do not have permission to manage this event. Admin or event club OWNER/MODERATOR role is required.
   gameRulesNotFound: Game rules with id {{gameRulesId}} were not found
   cannotDeleteGameRulesInUse: 'Cannot delete rules "{{gameRulesName}}" because they are used in {{eventCount}} events'
   cannotUpdateGameRulesInUse: 'Cannot update rules "{{gameRulesName}}" because {{gameCount}} games have already been played with them'
@@ -51,6 +66,8 @@ errors:
   participantConfigOnlyForTournament: Participant count and registration deadline settings can only be set for tournaments
   tournamentConfigOnlyForTournament: Tournament settings can only be set for tournaments
   eventIsNotTournament: 'Event "{{eventName}}" is not a tournament'
+  unknownEventTag: 'Unknown event tag: "{{tag}}"'
+  cannotUnrateCurrentSeason: Cannot remove rated status from the club''s active rating season
   tournamentMisconfigured: This tournament is misconfigured. Please contact support
   tournamentTotalRoundsLessThanCurrentRound: Total rounds ({{totalRounds}}) cannot be less than current round ({{currentRound}})
   tournamentRoundOutOfSequence: 'Cannot start round {{requestedRound}} of tournament "{{eventName}}": the next available round is {{expectedRound}}'
@@ -63,7 +80,7 @@ errors:
   tournamentNotInLastRound: 'Tournament "{{eventName}}" is not in the last round yet'
   tournamentGameNotInCurrentRound: "This game cannot be started now. Current tournament round: {{currentRound}}, game round: {{gameRound}}"
   seatingNotEnoughParticipants: 'Tournament "{{eventName}}" needs at least {{required}} participants for seating (currently {{actual}})'
-  seatingParticipantsNotMultipleOfTableSize: 'Participant count for tournament "{{eventName}}" ({{count}}) must be divisible by 4 for seating'
+  seatingParticipantsNotMultipleOfTableSize: 'Participant count for tournament "{{eventName}}" ({{count}}) must be divisible by {{tableSize}} for seating'
   seatingGenerationFailed: 'Could not generate seating for tournament "{{eventName}}" in time. Please try again'
   seatingCannotBeModifiedAfterTournamentStarted: 'Seating for tournament "{{eventName}}" cannot be changed after the tournament starts'
   seatingAlreadyApplied: 'Games already exist for tournament "{{eventName}}". Clear seating before generating it again'
@@ -78,7 +95,7 @@ errors:
   teamConfigRequired: Team tournaments require a team config (teamConfig)
   invalidTeamSize: teamSize must be an integer >= 1
   invalidTeamCount: teamCount must be an integer >= 1
-  teamCountNotDivisibleByFour: teamCount must be divisible by 4
+  teamCountNotDivisibleByTableSize: "teamCount must be divisible by {{tableSize}}"
   minParticipantsRequiredForTeamConfig: "Please set minParticipants = teamSize * teamCount ({{expected}})"
   minParticipantsMustMatchTeamConfig: "minParticipants ({{minParticipants}}) must equal teamSize * teamCount ({{expected}})"
 
@@ -96,7 +113,7 @@ errors:
   draftNotStartable: 'The draft for tournament "{{eventName}}" cannot be started from its current state'
   teamDraftHasUnteamedPlayers: 'Team tournament "{{eventName}}" has {{unteamedCount}} approved participants without a team'
   teamDraftUnevenTeams: 'Teams in team tournament "{{eventName}}" have different numbers of members'
-  teamCountMustBeDivisibleByFour: 'The number of teams in tournament "{{eventName}}" ({{teamCount}}) must be divisible by 4'
+  teamCountMustBeDivisibleByTableSize: 'The number of teams in tournament "{{eventName}}" ({{teamCount}}) must be divisible by {{tableSize}}'
   teamDraftIncomplete: 'To start the team tournament "{{eventName}}", form {{teamCount}} full teams of {{teamSize}} players each'
 
   eventRegistrationNotFound: "Registration for user with id {{userId}} in event '{{eventName}}' was not found"
@@ -106,8 +123,6 @@ errors:
   missingProfileNamesForTournamentRegistration: First and last name must be filled in the profile to apply for a tournament
   eventNotTournament: "Registration is only available for TOURNAMENT events (current type: {{type}})"
   eventCapacityReached: 'Tournament "{{eventName}}" has already reached the participant limit ({{maxParticipants}})'
-  insufficientEventRegistrationManagementPermissions: You do not have permission to manage registrations for this event. Admin or event club OWNER/MODERATOR role is required.
-
   gameNotFoundById: Game with id {{id}} was not found
   tooManyGamesFound: Too many games found. Please narrow your search criteria.
   incorrectPlayerCount: Game requires {{requiredPlayers}} players
@@ -125,6 +140,7 @@ errors:
   gameNotInProgressWhenFinishing: Only a game in progress can be finished
   invalidRoundId: Expected round {{expectedRoundId}}, got {{actualRoundId}}
   roundAlreadyExists: This round is already finished
+  gameFinishedByPreviousRound: A new round cannot be added because the previous round finished the game
   notAuthorizedToModifyGame: Only players in the game, club moderators, and admins can modify the game
   gamePlayerNotFound: Player with id {{userId}} was not found in game {{gameId}}
   noRoundsToRollback: This game has no rounds to roll back
@@ -134,6 +150,8 @@ errors:
   gameNotFinishedWhenUndoingFinish: Finish can only be undone for a finished game
   cannotUndoFinishOnNonTrackedGame: Finish can only be undone for a tracked game with rounds
   gameNotCreatedWhenStarting: Only a game in CREATED status can be started
+  gameNotCreatedWhenRecordingResult: A final result can only be recorded for a game in CREATED status
+  plannedGameResultRosterMismatch: Result players must exactly match the planned game roster
   notGamePlayer: Only players in this game can perform this action
 
   userNotFoundByUsername: User with Telegram username {{username}} was not found
@@ -159,6 +177,7 @@ errors:
   invalidHonbaFormat: Invalid honba value format in rules
   noPlayersInTheGame: Game has no players
   playerNotInGame: Player {{playerId}} is not in the game
+  insufficientPointsForRiichi: Player {{playerId}} needs at least {{requiredPoints}} points to declare riichi (currently {{actualPoints}})
 
   userRatingChangeInGameNotFound: Rating change for user {{userId}} in game {{gameId}} was not found
   userHasNoRatingDespiteHavingPlayedGames: User {{userId}} has no rating in event {{eventId}} despite having played games
@@ -173,3 +192,6 @@ errors:
   userIsNotActive: User with id {{id}} is not active
 
   enumParsingError: "Invalid value '{{value}}' for enum {{enumName}}. Allowed values: {{allowedValues}}"
+
+  skillRatingNotEnabledForClub: OpenSkill rating is not enabled for club {{clubId}}
+  invalidGameSize: "Invalid game size {{gameSize}}. Allowed values: 3, 4"

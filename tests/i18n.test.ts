@@ -63,6 +63,7 @@ describe('error catalog coverage', () => {
         new ClubErrors.NameRequiredForNewUserError(),
         // Event
         new EventErrors.EventNotFoundError(1),
+        new EventErrors.InsufficientEventManagementPermissionsError(),
         new EventErrors.GameRulesNotFoundError(1),
         new EventErrors.CannotDeleteGameRulesInUseError('Rules', 2),
         new EventErrors.CannotUpdateGameRulesInUseError('Rules', 2),
@@ -78,7 +79,6 @@ describe('error catalog coverage', () => {
         new EventRegistrationErrors.InvalidEventRegistrationStateError('act', 'PENDING', ['APPROVED']),
         new EventRegistrationErrors.MissingProfileNamesForTournamentRegistrationError(),
         new EventRegistrationErrors.EventCapacityReachedError('Event', 16),
-        new EventRegistrationErrors.InsufficientEventRegistrationManagementPermissionsError(),
         // Game
         new GameErrors.GameNotFoundById(1),
         new GameErrors.TooManyGamesFoundError(),

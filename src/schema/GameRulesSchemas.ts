@@ -24,6 +24,7 @@ const customRuleValueSchema = z.union([
 
 const customRuleNameSchema = z.string().trim().min(1, 'Custom rule name cannot be empty');
 const customRuleTooltipSchema = z.string().trim().min(1, 'Custom rule tooltip cannot be empty');
+const HONBA_PATTERN = /^[23]x(?:0|[1-9]\d*00)$/;
 
 const customRuleEntrySchema = z.strictObject({
     category: customRuleCategorySchema,
@@ -43,7 +44,9 @@ function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
             schema = z.number().int(`${spec.key} must be an integer`);
             break;
         case 'string':
-            schema = z.string();
+            schema = spec.key === 'honba'
+                ? z.string().regex(HONBA_PATTERN, 'honba must use 2x… or 3x… with a non-negative step-100 value')
+                : z.string();
             break;
         case 'enumString':
             schema = z.string().refine(
@@ -79,39 +82,48 @@ export function notenPenaltyDivisorFor(numberOfPlayers: number): number {
     return numberOfPlayers === 3 ? 2 : 6;
 }
 
-// Resolve number_of_players from explicit rules first, then preset defaults.
-// Missing values are handled by the regular required-field validation.
-function notenPenaltyDividesCleanly(rules: Record<string, unknown>, presetKey?: string): boolean {
+function notenPenaltyDividesCleanly(rules: Record<string, unknown>, numberOfPlayers: number): boolean {
     const notenPenalty = rules['noten_penalty'];
     if (typeof notenPenalty !== 'number') {
-        return true;
-    }
-    const presetPlayers = presetKey
-        ? gameRulesPresetsByKey.get(presetKey)?.rules?.['number_of_players']
-        : undefined;
-    const numberOfPlayers = typeof rules['number_of_players'] === 'number'
-        ? rules['number_of_players'] as number
-        : (typeof presetPlayers === 'number' ? presetPlayers : undefined);
-    if (numberOfPlayers === undefined) {
         return true;
     }
     return notenPenalty % notenPenaltyDivisorFor(numberOfPlayers) === 0;
 }
 
-const NOTEN_PENALTY_DIVISIBILITY_MESSAGE =
+// These custom refine messages are contract-coupled to publicCode() in
+// GameRulesValidationUtil.ts, which maps each exact string to a user-facing
+// validation code. Keep the two in sync — reword here, update the map there.
+export const CORE_FIELD_MISMATCH_MESSAGES = {
+    number_of_players: 'number_of_players must match top-level numberOfPlayers',
+    starting_points: 'starting_points must match top-level startingPoints',
+} as const;
+export const NOTEN_PENALTY_DIVISIBILITY_MESSAGE =
     'noten_penalty must divide evenly among the noten players (a multiple of 6 for yonma, 2 for sanma)';
+export const HONBA_PAYER_COUNT_MESSAGE = 'honba payer count must match top-level numberOfPlayers';
+
+// Sanma only removes manzu 2-8, so the meaningful red-five configs are:
+// none (0), two (one 5p + one 5s), or three (two 5p + one 5s). The yonma-only
+// four (two 5p + two 5s) config is not valid for sanma.
+export const SANMA_RED_FIVES = new Set([
+    'none',
+    'two_red_fives_five_pin_and_five_sou',
+    'three_red_fives_two_pin_and_one_sou',
+]);
+export const SANMA_RED_FIVES_MESSAGE = 'red_fives must represent 0, 2, or 3 red fives for sanma';
+
+// Uma normally nets to zero, which keeps total rating in the system conserved.
+// A ruleset can opt out to reward activity (e.g. +15/+5/0/-5 sums to +15), but
+// only for a flat uma: a MATRIX uma resolves through resolveDynamicUma, whose
+// all-above-starting branch returns an all-zero row and would silently drop the
+// bonus for exactly the games where everyone did well.
+export const UMA_SUM_NON_ZERO_MESSAGE = 'uma must sum to 0 unless the ruleset allows a non-zero-sum uma';
+export const UMA_NON_ZERO_SUM_MATRIX_MESSAGE = 'a non-zero-sum uma is only supported for a flat (non-matrix) uma';
 
 export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRulesDetails> {
     const allOptionalShape = Object.fromEntries(
         catalog.rules.map(spec => [spec.key, ruleSpecToSchema(spec).optional()])
     );
-    const withRequiredShape = Object.fromEntries(
-        catalog.rules.map(
-            spec => [spec.key, spec.required ? ruleSpecToSchema(spec) : ruleSpecToSchema(spec).optional()]
-        )
-    );
     const allOptionalRulesSchema = z.strictObject(allOptionalShape);
-    const withRequiredRulesSchema = z.strictObject(withRequiredShape);
 
     const presetSchema = z.string().trim().min(1, 'Preset cannot be empty').refine(
         key => {
@@ -123,28 +135,91 @@ export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRul
 
     const customRulesSchema = z.array(customRuleEntrySchema);
 
-    return z.union([
-        z.strictObject({
-            preset: presetSchema,
-            rules: allOptionalRulesSchema,
-            links: z.array(gameRulesLinkSchema).optional(),
-            customRules: customRulesSchema.optional(),
-        }).refine(
-            details => notenPenaltyDividesCleanly(details.rules, details.preset),
-            { error: NOTEN_PENALTY_DIVISIBILITY_MESSAGE, path: ['rules', 'noten_penalty'] }
-        ),
-        z.strictObject({
-            rules: withRequiredRulesSchema,
-            links: z.array(gameRulesLinkSchema).optional(),
-            customRules: customRulesSchema.optional(),
-        }).refine(
-            details => notenPenaltyDividesCleanly(details.rules),
-            { error: NOTEN_PENALTY_DIVISIBILITY_MESSAGE, path: ['rules', 'noten_penalty'] }
-        ),
-    ]) as z.ZodType<GameRulesDetails>;
+    return z.strictObject({
+        preset: presetSchema.optional(),
+        rules: allOptionalRulesSchema,
+        links: z.array(gameRulesLinkSchema).optional(),
+        customRules: customRulesSchema.optional(),
+    }) as z.ZodType<GameRulesDetails>;
 }
 
 export const gameRulesDetailsSchema = buildDetailsSchema(gameRulesCatalog);
+
+export interface GameRulesCoreValidationContext {
+    numberOfPlayers: number;
+    startingPoints: number;
+}
+
+export function buildDetailsSchemaForCore(
+    core: GameRulesCoreValidationContext,
+    catalog: GameRulesCatalog = gameRulesCatalog
+): z.ZodType<GameRulesDetails> {
+    return buildDetailsSchema(catalog).superRefine((details, ctx) => {
+        const duplicatePlayers = details.rules['number_of_players'];
+        if (duplicatePlayers !== undefined && duplicatePlayers !== core.numberOfPlayers) {
+            ctx.addIssue({
+                code: 'custom',
+                message: CORE_FIELD_MISMATCH_MESSAGES.number_of_players,
+                path: ['rules', 'number_of_players'],
+            });
+        }
+
+        const duplicateStartingPoints = details.rules['starting_points'];
+        if (duplicateStartingPoints !== undefined && duplicateStartingPoints !== core.startingPoints) {
+            ctx.addIssue({
+                code: 'custom',
+                message: CORE_FIELD_MISMATCH_MESSAGES.starting_points,
+                path: ['rules', 'starting_points'],
+            });
+        }
+
+        if (!notenPenaltyDividesCleanly(details.rules, core.numberOfPlayers)) {
+            ctx.addIssue({
+                code: 'custom',
+                message: NOTEN_PENALTY_DIVISIBILITY_MESSAGE,
+                path: ['rules', 'noten_penalty'],
+            });
+        }
+
+        const honba = details.rules['honba'];
+        if (typeof honba === 'string' && HONBA_PATTERN.test(honba)) {
+            const payerCount = Number(honba.split('x')[0]);
+            if (payerCount !== core.numberOfPlayers - 1) {
+                ctx.addIssue({
+                    code: 'custom',
+                    message: HONBA_PAYER_COUNT_MESSAGE,
+                    path: ['rules', 'honba'],
+                });
+            }
+        }
+
+        const redFives = details.rules['red_fives'];
+        if (
+            core.numberOfPlayers === 3 &&
+            redFives !== undefined &&
+            !SANMA_RED_FIVES.has(redFives as string)
+        ) {
+            ctx.addIssue({
+                code: 'custom',
+                message: SANMA_RED_FIVES_MESSAGE,
+                path: ['rules', 'red_fives'],
+            });
+        }
+    }) as z.ZodType<GameRulesDetails>;
+}
+
+export function parseGameRulesDetailsForCore(
+    details: GameRulesDetails,
+    core: GameRulesCoreValidationContext
+): GameRulesDetails {
+    const result = buildDetailsSchemaForCore(core).safeParse(details);
+    if (result.success) return result.data;
+
+    throw new z.ZodError(result.error.issues.map(issue => ({
+        ...issue,
+        path: ['details', ...issue.path],
+    })));
+}
 
 export const gameRulesGetByIdSchema = z.object({
     params: z.object({
@@ -167,12 +242,18 @@ export const gameRulesDetailsUpdateSchema = z.object({
     }),
 });
 
+function sumOf(values: readonly number[]): number {
+    return values.reduce((total, value) => total + value, 0);
+}
+
 const umaEntrySchema = z.number().int();
 const umaSchema = z.union([
     z.array(umaEntrySchema).min(3).max(4),
     z.array(z.array(umaEntrySchema).min(3).max(4)).min(1),
 ]);
 
+// Kept free of refinements so callers can still .extend() it; the uma-sum rule
+// is applied via withUmaSumRule() once a body shape is final.
 export const gameRulesUpsertBodySchema = z.strictObject({
     name: z.string().trim().min(1, 'Name cannot be empty'),
     numberOfPlayers: z.union([z.literal(3), z.literal(4)]),
@@ -180,15 +261,51 @@ export const gameRulesUpsertBodySchema = z.strictObject({
     startingPoints: z.number().int().min(0),
     umaTieBreak: z.enum(['WIND', 'DIVIDE']),
     clubId: z.number().int().nullable(),
+    allowNonZeroSumUma: z.boolean().optional(),
 });
+
+interface UmaSumRuleBody {
+    uma: number[] | number[][];
+    allowNonZeroSumUma?: boolean | undefined;
+}
+
+function withUmaSumRule<T extends z.ZodType<UmaSumRuleBody>>(schema: T) {
+    return schema.superRefine((body, ctx) => {
+        const isMatrix = Array.isArray(body.uma[0]);
+        if (!body.allowNonZeroSumUma) {
+            const rows = isMatrix ? body.uma as number[][] : [body.uma as number[]];
+            rows.forEach((row, index) => {
+                if (sumOf(row) === 0) return;
+                ctx.addIssue({
+                    code: 'custom',
+                    message: UMA_SUM_NON_ZERO_MESSAGE,
+                    path: isMatrix ? ['uma', index] : ['uma'],
+                });
+            });
+            return;
+        }
+
+        if (isMatrix) {
+            ctx.addIssue({
+                code: 'custom',
+                message: UMA_NON_ZERO_SUM_MATRIX_MESSAGE,
+                path: ['allowNonZeroSumUma'],
+            });
+        }
+    });
+}
+
+const gameRulesCreateBodySchema = withUmaSumRule(gameRulesUpsertBodySchema.extend({
+    details: gameRulesDetailsSchema.optional(),
+}));
 
 export const gameRulesCreateSchema = z.object({
-    body: gameRulesUpsertBodySchema,
+    body: gameRulesCreateBodySchema,
 });
 
-const gameRulesUpdateBodySchema = gameRulesUpsertBodySchema.extend({
+const gameRulesUpdateBodySchema = withUmaSumRule(gameRulesUpsertBodySchema.extend({
     details: gameRulesDetailsSchema.optional(),
-});
+}));
 
 export const gameRulesUpdateSchema = z.object({
     params: z.object({

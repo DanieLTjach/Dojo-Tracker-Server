@@ -8,8 +8,7 @@ import userRoutes from '../src/routes/UserRoutes.ts';
 import gameRulesRoutes from '../src/routes/GameRulesRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
-import { createAuthHeader } from './testHelpers.ts';
+import { createAuthHeader, resetTestDatabase } from './testHelpers.ts';
 
 const app = express();
 app.use(express.json());
@@ -444,8 +443,7 @@ describe('Permissions matrix integration specification', () => {
             PENDING_ACTIVATION_USER_ID
         );
 
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     describe('Create club', () => {

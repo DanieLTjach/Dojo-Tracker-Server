@@ -9,5 +9,6 @@ import:
   rowPointsNotInteger: "Рядок {{row}}: player{{player}}_points повинно бути цілим числом"
   rowInvalidStartPlace: "Рядок {{row}}: player{{player}}_startPlace повинно бути одним з: {{validWinds}}"
   rowChomboNotNonNegativeInteger: "Рядок {{row}}: player{{player}}_chombo повинно бути невідʼємним цілим числом"
+  rowInvalidIsSubstitutePlayer: "Рядок {{row}}: player{{player}}_isSubstitutePlayer повинно бути одним з: 1, true, yes, 0, false, no"
   rowInvalidCreatedAt: "Рядок {{row}}: createdAt не є коректною датою"
   rowTournamentRoundNotPositiveInteger: "Рядок {{row}}: tournamentRound повинно бути додатним цілим числом"

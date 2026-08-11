@@ -7,6 +7,7 @@ import LogService from '../service/LogService.ts';
 import { UserService } from '../service/UserService.ts';
 import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveUserLocale } from '../util/LocaleResolver.ts';
+import { normalizeGameRulesValidationIssues } from '../util/GameRulesValidationUtil.ts';
 
 const userService = new UserService();
 
@@ -34,6 +35,16 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
     }
 
     if (err instanceof ZodError) {
+        const requestPath = req.originalUrl ?? `${req.baseUrl ?? ''}${req.url}`;
+        if (requestPath.startsWith('/api/game-rules')) {
+            res.status(StatusCodes.BAD_REQUEST).json({
+                errorCode: 'gameRulesValidationFailed',
+                message: t('errors.gameRulesValidationFailed', locale),
+                validationErrors: normalizeGameRulesValidationIssues(err.issues, locale),
+            });
+            return;
+        }
+
         res.status(StatusCodes.BAD_REQUEST).json({
             error: 'Invalid request data',
             message: t('errors.invalidRequestData', locale),

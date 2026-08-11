@@ -1,5 +1,5 @@
+import { resetTestDatabase } from './testHelpers.ts';
 import { dbManager } from '../src/db/dbInit.ts';
-import { cleanupTestDatabase } from './setup.ts';
 import { EventRegistrationService } from '../src/service/EventRegistrationService.ts';
 import { EventRegistrationRepository } from '../src/repository/EventRegistrationRepository.ts';
 import { ClubMembershipRepository } from '../src/repository/ClubMembershipRepository.ts';
@@ -11,6 +11,11 @@ import {
     MissingProfileNamesForTournamentRegistrationError,
 } from '../src/error/EventRegistrationErrors.ts';
 import { BadRequestError } from '../src/error/BaseErrors.ts';
+import {
+    invalidateSkillReplayCache,
+    skillReplayCacheSize,
+    SkillRatingService,
+} from '../src/service/SkillRatingService.ts';
 
 const SYSTEM_USER_ID = 0;
 
@@ -172,11 +177,11 @@ describe('EventRegistrationService', () => {
             CAPACITY_USER_B,
             SEASON_USER_ID
         );
-        dbManager.closeDB();
-        cleanupTestDatabase();
+        resetTestDatabase();
     });
 
     afterEach(() => {
+        invalidateSkillReplayCache();
         // Wipe registrations between tests for isolation
         dbManager.db.prepare('DELETE FROM eventRegistration WHERE eventId IN (?, ?, ?, ?)').run(
             TOURNAMENT_EVENT_ID,
@@ -263,6 +268,17 @@ describe('EventRegistrationService', () => {
 
             const after = membershipRepo.findMembership(TEST_CLUB_ID, NON_MEMBER_USER_ID);
             expect(after?.status).toBe('ACTIVE');
+        });
+
+        it('approves REJECTED registration and activates PENDING clubMembership atomically', () => {
+            service.reject(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID, OWNER_USER_ID);
+            expect(registrationRepo.findRegistration(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID)?.status)
+                .toBe('REJECTED');
+            expect(membershipRepo.findMembership(TEST_CLUB_ID, NON_MEMBER_USER_ID)?.status).toBe('PENDING');
+
+            const result = service.approve(TOURNAMENT_EVENT_ID, NON_MEMBER_USER_ID, OWNER_USER_ID);
+            expect(result.status).toBe('APPROVED');
+            expect(membershipRepo.findMembership(TEST_CLUB_ID, NON_MEMBER_USER_ID)?.status).toBe('ACTIVE');
         });
 
         it('throws when registration is already APPROVED', () => {
@@ -401,8 +417,19 @@ describe('EventRegistrationService', () => {
         });
 
         it('sets isFillerPlayer to true', () => {
+            new SkillRatingService().getCustomLeaderboard({
+                clubId: null,
+                gameSize: 4,
+                tags: [],
+                matchAll: false,
+                eventType: null,
+                provisionalGameThreshold: 30,
+            });
+            expect(skillReplayCacheSize()).toBe(1);
+
             const result = service.setFillerPlayer(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID, true, OWNER_USER_ID);
             expect(result.isFillerPlayer).toBe(true);
+            expect(skillReplayCacheSize()).toBe(0);
             const stored = registrationRepo.findRegistration(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID);
             expect(stored?.isFillerPlayer).toBe(true);
         });

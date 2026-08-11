@@ -31,6 +31,7 @@ import type {
 import { GameStatus } from '../model/GameModels.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
 import { RatingService } from './RatingService.ts';
+import { SkillRatingService } from './SkillRatingService.ts';
 import LogService from './LogService.ts';
 import dedent from 'dedent';
 import type { User } from '../model/UserModels.ts';
@@ -52,12 +53,14 @@ import { AchievementService } from './AchievementService.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
+import { computeTournamentGameTimer } from '../util/TournamentTimerUtil.ts';
 
 export class GameService {
     private gameRepository: GameRepository = new GameRepository();
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
+    private skillRatingService: SkillRatingService = new SkillRatingService();
     private clubService: ClubService = new ClubService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private achievementService: AchievementService = new AchievementService();
@@ -105,6 +108,8 @@ export class GameService {
             event.gameRules,
             event.startingRating
         );
+        this.skillRatingService.applyFinishedGame(newGameId);
+        this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
 
@@ -131,11 +136,17 @@ export class GameService {
     getDetailedGameById(gameId: number): DetailedGame {
         const game = this.getGameById(gameId);
         const rounds = this.gameRepository.findGameRoundsByGameId(gameId);
+        // Only a game that belongs to a tournament round can have a running timer, so
+        // score-only and non-tournament games skip the extra event read entirely.
+        const event = game.tournamentRound !== null
+            ? this.eventService.getEventById(game.eventId)
+            : null;
 
         return {
             ...game,
             rounds,
             currentState: this.calculateCurrentGameState(game, rounds),
+            timer: computeTournamentGameTimer(game, event ?? { tournament: null }),
         };
     }
 
@@ -193,6 +204,7 @@ export class GameService {
         this.gameRepository.deleteGamePlayersByGameId(gameId);
         this.addPlayersToGame(gameId, playersData, modifiedBy);
 
+        this.skillRatingService.revertFinishedGame(gameId);
         this.ratingService.deleteRatingChangesFromGame(oldGame);
         this.ratingService.addRatingChangesFromGame(
             gameId,
@@ -202,10 +214,11 @@ export class GameService {
             event.gameRules,
             event.startingRating
         );
+        this.skillRatingService.applyFinishedGame(gameId);
 
-        this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
+        this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
         if (oldEvent.id !== event.id) {
-            this.achievementService.recomputeEventAchievementsIfTournamentFinished(oldEvent);
+            this.achievementService.recomputeEventAchievementsIfAlreadyComputed(oldEvent);
         }
 
         const updatedGame = this.getGameById(gameId);
@@ -233,7 +246,7 @@ export class GameService {
 
         if (game.status === GameStatus.FINISHED) {
             this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
-            this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
+            this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
         }
 
         return this.gameRepository.findGamePlayersByGameId(gameId)
@@ -242,6 +255,7 @@ export class GameService {
 
     private recalculateRatingForFinishedGame(gameId: number, gameTimestamp: Date, event: Event): void {
         const game = this.getGameById(gameId);
+        this.skillRatingService.revertFinishedGame(gameId);
         this.ratingService.deleteRatingChangesFromGame(game);
         this.ratingService.addRatingChangesFromGame(
             gameId,
@@ -251,6 +265,7 @@ export class GameService {
             event.gameRules,
             event.startingRating
         );
+        this.skillRatingService.applyFinishedGame(gameId);
     }
 
     deleteGame(gameId: number, deletedBy: number): void {
@@ -260,6 +275,7 @@ export class GameService {
 
         this.authorizeGameDeletion(game, event, deletedBy, rounds.length);
 
+        this.skillRatingService.revertFinishedGame(gameId);
         this.ratingService.deleteRatingChangesFromGame(game);
 
         this.gameRepository.deleteGameRoundsByGameId(gameId);
@@ -267,7 +283,7 @@ export class GameService {
         this.gameRepository.deleteGameById(gameId);
 
         if (game.status === GameStatus.FINISHED) {
-            this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
+            this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
         }
 
         this.logDeletedGame(game, event, deletedBy);
@@ -375,7 +391,7 @@ export class GameService {
     }
 
     private calculateCurrentGameState(game: GameWithPlayers, rounds: GameRound[]): GameState | null {
-        if (game.status !== GameStatus.IN_PROGRESS) {
+        if (game.status === GameStatus.CREATED) {
             return null;
         }
 
@@ -383,7 +399,17 @@ export class GameService {
             return { wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 };
         }
 
-        return rounds[rounds.length - 1]!.result.nextState ?? null;
+        const lastRound = rounds[rounds.length - 1]!;
+        if (game.status === GameStatus.IN_PROGRESS) {
+            return lastRound.result.nextState ?? null;
+        }
+
+        return {
+            wind: lastRound.wind,
+            dealerNumber: lastRound.dealerNumber,
+            counters: lastRound.counters,
+            riichiSticks: 0,
+        };
     }
 
     private logNewGame(game: GameWithPlayers, event: Event): void {

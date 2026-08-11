@@ -98,6 +98,12 @@ function detailedGame(players: GamePlayer[], rounds: GameRound[]): DetailedGame 
         players,
         rounds,
         currentState: null,
+        timer: {
+            status: 'STOPPED',
+            durationSec: 0,
+            remainingSec: 0,
+            serverNow: ts,
+        },
     };
 }
 

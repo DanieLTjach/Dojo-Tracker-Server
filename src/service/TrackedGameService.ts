@@ -2,8 +2,10 @@ import dedent from 'dedent';
 import { BadRequestError } from '../error/BaseErrors.ts';
 import {
     CannotUndoFinishOnNonTrackedGameError,
+    GameNotCreatedWhenRecordingResultError,
     GameNotCreatedWhenStartingError,
     GameNotFinishedWhenUndoingFinishError,
+    GameFinishedByPreviousRoundError,
     GameNotInProgressWhenAddingNewRoundError,
     GameNotInProgressWhenDeletingRoundError,
     GameNotInProgressWhenFinishingError,
@@ -12,6 +14,7 @@ import {
     LastRoundRollbackAlreadyUsedError,
     NoRoundsCompletedError,
     NoRoundsToRollbackError,
+    PlannedGameResultRosterMismatchError,
     RoundAlreadyExistsError,
 } from '../error/GameErrors.ts';
 import type { Event, GameRules } from '../model/EventModels.ts';
@@ -20,6 +23,7 @@ import type {
     GamePlayer,
     GameRound,
     GameWithPlayers,
+    PlannedGamePlayerResult,
     TrackedGamePlayerData,
 } from '../model/GameModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
@@ -30,11 +34,13 @@ import {
     calculateRemainingRiichiSticksPointChanges,
     mergePlayerPointChanges,
 } from '../util/PointCalculationUtil.ts';
+import { calculateYakitoriPointChanges } from '../util/YakitoriUtil.ts';
 import { AchievementService } from './AchievementService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { GameService } from './GameService.ts';
 import { RatingService } from './RatingService.ts';
+import { SkillRatingService } from './SkillRatingService.ts';
 import { UserService } from './UserService.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
 
@@ -61,6 +67,7 @@ export class TrackedGameService {
     private userService: UserService = new UserService();
     private eventService: EventService = new EventService();
     private ratingService: RatingService = new RatingService();
+    private skillRatingService: SkillRatingService = new SkillRatingService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private achievementService: AchievementService = new AchievementService();
 
@@ -101,6 +108,69 @@ export class TrackedGameService {
         const logAction = status === GameStatus.CREATED ? 'CREATED' : 'STARTED_ON_CREATE';
         this.logTrackedGameAction(newGame, event, logAction, createdBy);
         return newGame;
+    }
+
+    recordPlannedGameResult(
+        gameId: number,
+        results: PlannedGamePlayerResult[],
+        modifiedBy: number
+    ): DetailedGame {
+        const game = this.gameService.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+
+        this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
+        if (game.status !== GameStatus.CREATED) {
+            throw new GameNotCreatedWhenRecordingResultError();
+        }
+        this.eventService.validateTournamentGameCanStart(event, game);
+        this.validatePlannedGameResultRoster(game, results);
+
+        const players = results.map(result => {
+            const plannedPlayer = game.players.find(player => player.userId === result.userId)!;
+            return {
+                ...result,
+                startPlace: plannedPlayer.startPlace,
+                isSubstitutePlayer: plannedPlayer.isSubstitutePlayer,
+            };
+        });
+        this.gameService.validatePlayers(players, event.gameRules);
+
+        const completedAt = new Date();
+        this.gameService.validateGameWithinEventDates(event, completedAt, modifiedBy, GameStatus.FINISHED);
+        const standingsBefore = this.ratingService.calculateStandings(event.id);
+
+        for (const result of players) {
+            this.gameRepository.setPlannedGamePlayerResult(
+                gameId,
+                result.userId,
+                result.points,
+                result.chomboCount,
+                modifiedBy,
+                completedAt
+            );
+        }
+        this.gameRepository.recordPlannedGameResult(gameId, modifiedBy, completedAt);
+        this.ratingService.addRatingChangesFromGame(
+            gameId,
+            completedAt,
+            players,
+            event.id,
+            event.gameRules,
+            event.startingRating
+        );
+        this.skillRatingService.applyFinishedGame(gameId);
+        this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+
+        const finishedGame = this.gameService.getDetailedGameById(gameId);
+        this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
+        this.gameService.logRatingUpdateForGame(
+            finishedGame,
+            event,
+            standingsBefore,
+            this.ratingService.calculateStandings(event.id),
+            modifiedBy
+        );
+        return finishedGame;
     }
 
     addGameRoundResult(
@@ -175,7 +245,7 @@ export class TrackedGameService {
         this.validateGameIsInProgress(game, () => new GameNotInProgressWhenFinishingError());
         this.validateGameHasAtLeastOneRound(game.rounds);
 
-        const players = this.applyRemainingRiichiSticksOnFinish(game, event.gameRules, modifiedBy);
+        const players = this.applyFinishPointChanges(game, event.gameRules, modifiedBy);
 
         const finishedAt = new Date();
         const standingsBefore = this.ratingService.calculateStandings(event.id);
@@ -189,8 +259,9 @@ export class TrackedGameService {
             event.gameRules,
             event.startingRating
         );
+        this.skillRatingService.applyFinishedGame(gameId);
 
-        this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
+        this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
 
         const finishedGame = this.gameService.getDetailedGameById(gameId);
         this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
@@ -230,11 +301,12 @@ export class TrackedGameService {
         this.gameService.authorizeClubScopedAction(event.clubId, modifiedBy, ['OWNER', 'MODERATOR']);
         this.validateCanUndoGameFinish(game);
 
+        this.skillRatingService.revertFinishedGame(gameId);
         this.ratingService.deleteRatingChangesFromGame(game);
         this.gameRepository.undoFinishGame(gameId, modifiedBy);
-        this.undoRemainingRiichiSticksOnFinish(game, event.gameRules, modifiedBy);
+        this.undoFinishPointChanges(game, event.gameRules, modifiedBy);
 
-        this.achievementService.recomputeEventAchievementsIfTournamentFinished(event);
+        this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
 
         const reopenedGame = this.gameService.getDetailedGameById(gameId);
         this.gameService.logGameAction(reopenedGame, event, modifiedBy, '↩️ Game Finish Undone', 'Undone by');
@@ -263,6 +335,21 @@ export class TrackedGameService {
     private validateGameIsCreated(game: GameWithPlayers): void {
         if (game.status !== GameStatus.CREATED) {
             throw new GameNotCreatedWhenStartingError();
+        }
+    }
+
+    private validatePlannedGameResultRoster(
+        game: GameWithPlayers,
+        results: PlannedGamePlayerResult[]
+    ): void {
+        const resultUserIds = results.map(result => result.userId);
+        const plannedUserIds = new Set(game.players.map(player => player.userId));
+        if (
+            resultUserIds.length !== game.players.length ||
+            new Set(resultUserIds).size !== resultUserIds.length ||
+            resultUserIds.some(userId => !plannedUserIds.has(userId))
+        ) {
+            throw new PlannedGameResultRosterMismatchError();
         }
     }
 
@@ -299,7 +386,14 @@ export class TrackedGameService {
     ): void {
         this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
         this.validateGameIsInProgress(game, () => new GameNotInProgressWhenAddingNewRoundError());
+        this.validatePreviousRoundDidNotFinishGame(game.rounds);
         this.validateCurrentRoundIdBeforeAdding(game.rounds, roundId);
+    }
+
+    private validatePreviousRoundDidNotFinishGame(rounds: GameRound[]): void {
+        if (rounds[rounds.length - 1]?.result.gameFinishReason !== undefined) {
+            throw new GameFinishedByPreviousRoundError();
+        }
     }
 
     private validateCurrentRoundIdBeforeAdding(rounds: GameRound[], roundId: number): void {
@@ -362,37 +456,81 @@ export class TrackedGameService {
         }
     }
 
-    private applyRemainingRiichiSticksOnFinish(
+    private applyFinishPointChanges(
         game: DetailedGame,
         gameRules: GameRules,
         modifiedBy: number
     ): GamePlayer[] {
-        const extraPointChanges = this.calculateRemainingRiichiSticksPointChangesForGame(game, gameRules);
-        if (extraPointChanges.length === 0) {
+        const pointChanges = this.calculateFinishPointChangesForGame(game, gameRules);
+        if (pointChanges.length === 0) {
             return game.players;
         }
 
-        this.persistRemainingRiichiSticksPointChanges(game, extraPointChanges, modifiedBy);
+        this.persistFinishAdjustmentPointChanges(game, pointChanges, modifiedBy);
 
         return this.gameRepository.findGamePlayersByGameId(game.id);
     }
 
-    private undoRemainingRiichiSticksOnFinish(
+    private undoFinishPointChanges(
         game: DetailedGame,
         gameRules: GameRules,
         modifiedBy: number
     ): void {
-        const extraPointChanges = this.calculateRemainingRiichiSticksPointChangesForGame(game, gameRules);
-        if (extraPointChanges.length === 0) {
+        const pointChanges = mergePlayerPointChanges(
+            this.calculateYakitoriPointChangesForGame(game, gameRules),
+            this.calculateRemainingRiichiSticksPointChangesForGame(game, gameRules)
+        );
+        if (pointChanges.length === 0) {
             return;
         }
 
-        const reversedPointChanges = extraPointChanges.map(change => ({
+        const reversedPointChanges = pointChanges.map(change => ({
             playerId: change.playerId,
             pointChange: -change.pointChange,
         }));
 
-        this.persistRemainingRiichiSticksPointChanges(game, reversedPointChanges, modifiedBy);
+        this.persistFinishAdjustmentPointChanges(game, reversedPointChanges, modifiedBy);
+    }
+
+    // Ordering is important: applying yakitori can change the winners.
+    // First calculate and apply yakitori, then give bank riichi sticks to the winners.
+    private calculateFinishPointChangesForGame(
+        game: DetailedGame,
+        gameRules: GameRules
+    ): PlayerPointChange[] {
+        const yakitoriPointChanges = this.calculateYakitoriPointChangesForGame(game, gameRules);
+        const gameAfterYakitori = this.applyPlayerPointChangesToGame(game, yakitoriPointChanges);
+        return mergePlayerPointChanges(
+            yakitoriPointChanges,
+            this.calculateRemainingRiichiSticksPointChangesForGame(gameAfterYakitori, gameRules)
+        );
+    }
+
+    private applyPlayerPointChangesToGame(
+        game: DetailedGame,
+        pointChanges: PlayerPointChange[]
+    ): DetailedGame {
+        const pointChangesByPlayerId = new Map(
+            pointChanges.map(change => [change.playerId, change.pointChange])
+        );
+        return {
+            ...game,
+            players: game.players.map(player => ({
+                ...player,
+                points: player.points + (pointChangesByPlayerId.get(player.userId) ?? 0),
+            })),
+        };
+    }
+
+    private calculateYakitoriPointChangesForGame(
+        game: DetailedGame,
+        gameRules: GameRules
+    ): PlayerPointChange[] {
+        return calculateYakitoriPointChanges(
+            game.players,
+            gameRules.details?.rules ?? {},
+            game.rounds
+        );
     }
 
     private calculateRemainingRiichiSticksPointChangesForGame(
@@ -412,7 +550,7 @@ export class TrackedGameService {
         return lastRound?.result.nextState?.riichiSticks ?? 0;
     }
 
-    private persistRemainingRiichiSticksPointChanges(
+    private persistFinishAdjustmentPointChanges(
         game: DetailedGame,
         pointChanges: PlayerPointChange[],
         modifiedBy: number
@@ -423,7 +561,7 @@ export class TrackedGameService {
             playerPointChanges: mergePlayerPointChanges(
                 lastRound.result.playerPointChanges,
                 pointChanges
-            ),
+            ).filter(change => change.pointChange !== 0),
         };
 
         this.gameRepository.updateGameRoundResult(game.id, lastRound.roundNumber, updatedResult);
