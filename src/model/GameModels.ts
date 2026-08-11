@@ -77,6 +77,8 @@ export interface Game {
     startedAt: Date | null;
     endedAt: Date | null;
     lastRoundWasDeleted: boolean;
+    startingDie1?: number | null;
+    startingDie2?: number | null;
 }
 
 export interface GamePlayer {

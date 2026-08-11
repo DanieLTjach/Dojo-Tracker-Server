@@ -206,8 +206,8 @@ export function evaluateAutomaticAchievements(
         if (s.unlockedAt === null) {
             s.progress = evidence.progress ?? def.target;
             s.unlockedAt = evidence.unlockedAt;
-            s.sourceEventId = evidence.sourceEventId ?? null;
-            s.sourceGameId = evidence.sourceGameId ?? null;
+            s.sourceEventId = (evidence.sourceEventId && evidence.sourceEventId > 0) ? evidence.sourceEventId : null;
+            s.sourceGameId = (evidence.sourceGameId && evidence.sourceGameId > 0) ? evidence.sourceGameId : null;
             s.sourceRoundNumber = evidence.sourceRoundNumber ?? null;
             s.value = evidence.value ?? null;
         }

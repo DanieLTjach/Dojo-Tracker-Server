@@ -36,6 +36,7 @@ import {
 } from '../util/PointCalculationUtil.ts';
 import { calculateYakitoriPointChanges } from '../util/YakitoriUtil.ts';
 import { AchievementService } from './AchievementService.ts';
+import { AutomaticAchievementService } from './AutomaticAchievementService.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { GameService } from './GameService.ts';
@@ -70,6 +71,7 @@ export class TrackedGameService {
     private skillRatingService: SkillRatingService = new SkillRatingService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private achievementService: AchievementService = new AchievementService();
+    private automaticAchievementService: AutomaticAchievementService = new AutomaticAchievementService();
 
     createTrackedGame(
         eventId: number,
@@ -78,7 +80,8 @@ export class TrackedGameService {
         status: GameStatus,
         createdAt?: Date,
         tournamentRound?: number,
-        tournamentTable?: string
+        tournamentTable?: string,
+        startingDice?: [number, number] | undefined
     ): DetailedGame {
         const gameTimestamp = createdAt ?? new Date();
 
@@ -100,7 +103,8 @@ export class TrackedGameService {
             gameTimestamp,
             status,
             tournamentRound,
-            tournamentTable
+            tournamentTable,
+            startingDice
         );
         this.addPlayersToTrackedGame(newGameId, players, event.gameRules.startingPoints, createdBy);
 
@@ -260,8 +264,8 @@ export class TrackedGameService {
             event.startingRating
         );
         this.skillRatingService.applyFinishedGame(gameId);
-
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+        this.automaticAchievementService.recomputeAll();
 
         const finishedGame = this.gameService.getDetailedGameById(gameId);
         this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
@@ -307,10 +311,41 @@ export class TrackedGameService {
         this.undoFinishPointChanges(game, event.gameRules, modifiedBy);
 
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+        this.automaticAchievementService.recomputeAll();
 
         const reopenedGame = this.gameService.getDetailedGameById(gameId);
         this.gameService.logGameAction(reopenedGame, event, modifiedBy, '↩️ Game Finish Undone', 'Undone by');
         return reopenedGame;
+    }
+
+    setGameStartingDice(
+        gameId: number,
+        startingDice: [number, number] | null,
+        modifiedBy: number
+    ): DetailedGame {
+        const game = this.gameService.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+
+        this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
+        if (startingDice !== null) {
+            const [d1, d2] = startingDice;
+            if (d1 < 1 || d1 > 6 || d2 < 1 || d2 > 6) {
+                throw new BadRequestError('Dice values must be between 1 and 6');
+            }
+        }
+
+        this.gameRepository.updateStartingDice(
+            gameId,
+            startingDice ? startingDice[0] : null,
+            startingDice ? startingDice[1] : null,
+            modifiedBy
+        );
+
+        if (game.status === GameStatus.FINISHED) {
+            this.automaticAchievementService.recomputeAll();
+        }
+
+        return this.gameService.getDetailedGameById(gameId);
     }
 
     private addPlayersToTrackedGame(

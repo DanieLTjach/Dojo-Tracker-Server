@@ -50,14 +50,14 @@ CREATE UNIQUE INDEX idx_clubUserAchievement_activeCustom
 -- State for lifetime automatic achievements, keyed by user, stable code, and scope.
 CREATE TABLE automaticAchievementState (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    userId INTEGER NOT NULL REFERENCES user(id),
+    userId INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE,
     code TEXT NOT NULL,
     scope TEXT NOT NULL DEFAULT 'GLOBAL',
     progress INTEGER NOT NULL DEFAULT 0,
     target INTEGER NOT NULL,
     unlockedAt TIMESTAMP,
-    sourceEventId INTEGER REFERENCES event(id),
-    sourceGameId INTEGER REFERENCES game(id),
+    sourceEventId INTEGER REFERENCES event(id) ON DELETE CASCADE,
+    sourceGameId INTEGER REFERENCES game(id) ON DELETE CASCADE,
     sourceRoundNumber INTEGER,
     value REAL,
     computedAt TIMESTAMP NOT NULL

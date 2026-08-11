@@ -50,6 +50,7 @@ import { EventService } from './EventService.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { GameCreationBlockedError, TournamentGameNotInCurrentRoundError } from '../error/EventErrors.ts';
 import { AchievementService } from './AchievementService.ts';
+import { AutomaticAchievementService } from './AutomaticAchievementService.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
@@ -64,6 +65,7 @@ export class GameService {
     private clubService: ClubService = new ClubService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private achievementService: AchievementService = new AchievementService();
+    private automaticAchievementService: AutomaticAchievementService = new AutomaticAchievementService();
 
     addGame(
         eventId: number,
@@ -110,6 +112,7 @@ export class GameService {
         );
         this.skillRatingService.applyFinishedGame(newGameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+        this.automaticAchievementService.recomputeAll();
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
 
@@ -220,6 +223,7 @@ export class GameService {
         if (oldEvent.id !== event.id) {
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(oldEvent);
         }
+        this.automaticAchievementService.recomputeAll();
 
         const updatedGame = this.getGameById(gameId);
         this.logEditedGame(oldGame, updatedGame, event, modifiedBy);
@@ -247,6 +251,7 @@ export class GameService {
         if (game.status === GameStatus.FINISHED) {
             this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+            this.automaticAchievementService.recomputeAll();
         }
 
         return this.gameRepository.findGamePlayersByGameId(gameId)
@@ -284,6 +289,7 @@ export class GameService {
 
         if (game.status === GameStatus.FINISHED) {
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+            this.automaticAchievementService.recomputeAll();
         }
 
         this.logDeletedGame(game, event, deletedBy);
