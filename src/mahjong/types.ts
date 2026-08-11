@@ -57,14 +57,14 @@ export type Meld =
     | { type: 'ANKAN', tiles: [TileCode, TileCode, TileCode, TileCode] };
 
 export interface HandContext {
-    doubleRiichi?: boolean;
-    ippatsu?: boolean;
-    haitei?: boolean;
-    houtei?: boolean;
-    rinshanKaihou?: boolean;
-    chankan?: boolean;
-    tenhou?: boolean;
-    chiihou?: boolean;
+    doubleRiichi?: boolean | undefined;
+    ippatsu?: boolean | undefined;
+    haitei?: boolean | undefined;
+    houtei?: boolean | undefined;
+    rinshanKaihou?: boolean | undefined;
+    chankan?: boolean | undefined;
+    tenhou?: boolean | undefined;
+    chiihou?: boolean | undefined;
 }
 
 export interface HandDetail {
@@ -73,7 +73,7 @@ export interface HandDetail {
     winningTile: TileCode;
     doraIndicators: TileCode[];
     uraDoraIndicators: TileCode[];
-    context?: HandContext;
+    context?: HandContext | undefined;
 }
 
 export type YakuCode =
@@ -142,15 +142,15 @@ export interface ScoreHandInput {
     winnerSeat: number; // 0..3 (0 is East at start of round)
     dealerSeat: number; // 0..3
     roundWindSeat: number; // 0: East, 1: South, 2: West, 3: North
-    dealInSeat?: number; // 0..3 (for RON)
-    riichiPlayerSeats?: Set<number>;
-    rules?: Record<string, any>;
+    dealInSeat?: number | undefined; // 0..3 (for RON)
+    riichiPlayerSeats?: Set<number> | undefined;
+    rules?: Record<string, any> | undefined;
 }
 
 export interface DerivedHandScore {
-    han?: number;
-    fu?: number;
+    han?: number | undefined;
+    fu?: number | undefined;
     yakumanCount: number;
     yaku: HandYaku[];
-    paoSeat?: number;
+    paoSeat?: number | undefined;
 }

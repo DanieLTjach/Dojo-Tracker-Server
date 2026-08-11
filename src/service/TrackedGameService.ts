@@ -184,7 +184,12 @@ export class TrackedGameService {
 
         this.validateRoundResultInput(game, event, roundId, modifiedBy);
 
-        const result: GameRoundResult = calculateGameRoundResult(game, event.gameRules, resultInputDTO);
+        const result: GameRoundResult = calculateGameRoundResult(
+            game,
+            event.gameRules,
+            resultInputDTO,
+            event.config?.requireHandDetail ?? false
+        );
 
         this.gameRepository.createGameRound(gameId, roundId, game.currentState!, result);
         this.gameRepository.applyPlayerPointChanges(gameId, result.playerPointChanges, modifiedBy);
@@ -208,7 +213,12 @@ export class TrackedGameService {
 
         this.validateRoundResultInput(game, event, roundId, modifiedBy);
 
-        return calculateGameRoundResult(game, event.gameRules, resultInputDTO);
+        return calculateGameRoundResult(
+            game,
+            event.gameRules,
+            resultInputDTO,
+            event.config?.requireHandDetail ?? false
+        );
     }
 
     deleteGameRoundResult(gameId: number, roundId: number, modifiedBy: number): DetailedGame {

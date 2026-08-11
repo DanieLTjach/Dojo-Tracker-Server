@@ -21,7 +21,11 @@ import {
     NoPlayersInTheGameError,
     AbortiveDrawNotInRulesetError,
     InsufficientPointsForRiichiError,
+    HandDetailRequiredError,
+    HandDetailScoreMismatchError,
 } from '../error/PointCalculationErrors.ts';
+import { scoreHand } from '../mahjong/scoreHand.ts';
+import type { ScoreHandInput } from '../mahjong/types.ts';
 import type { GameRules } from '../model/EventModels.ts';
 import type { GamePlayer, DetailedGame, GameState } from '../model/GameModels.ts';
 import { GameFinishReason, nextWind, Wind, WIND_ORDER } from '../model/GameModels.ts';
@@ -65,10 +69,120 @@ import {
     isAbortiveDrawEnabled,
 } from './RulesUtils.ts';
 
+export function normalizeWinningHandDataWithHandDetail(
+    hand: WinningHandData,
+    winType: 'TSUMO' | 'RON',
+    dealInPlayerId: number | undefined,
+    riichiPlayerIds: number[],
+    players: GamePlayer[],
+    gameState: GameState,
+    detailedRules: GameRulesValues,
+    requireHandDetail: boolean
+): WinningHandData {
+    if (!hand.handDetail) {
+        if (requireHandDetail) {
+            throw new HandDetailRequiredError();
+        }
+        return hand;
+    }
+
+    const winnerIndex = players.findIndex(p => p.userId === hand.winnerPlayerId);
+    if (winnerIndex === -1) {
+        throw new PlayerNotInGameError(hand.winnerPlayerId);
+    }
+    const winnerSeat = winnerIndex;
+
+    const dealerIndex = players.findIndex(p => p.startPlace === Object.values(Wind)[gameState.dealerNumber - 1]);
+    if (dealerIndex === -1) {
+        throw new CannotDetermineDealerError();
+    }
+    const dealerSeat = dealerIndex;
+
+    const roundWindSeat = WIND_ORDER[gameState.wind] - 1;
+
+    let dealInSeat: number | undefined;
+    if (winType === 'RON' && dealInPlayerId !== undefined) {
+        dealInSeat = players.findIndex(p => p.userId === dealInPlayerId);
+        if (dealInSeat === -1) {
+            throw new PlayerNotInGameError(dealInPlayerId);
+        }
+    }
+
+    const riichiPlayerSeats = new Set(
+        riichiPlayerIds.map(id => players.findIndex(p => p.userId === id)).filter(idx => idx !== -1)
+    );
+
+    const scoreInput: ScoreHandInput = {
+        handDetail: hand.handDetail,
+        winType,
+        winnerSeat,
+        dealerSeat,
+        roundWindSeat,
+        ...(dealInSeat !== undefined ? { dealInSeat } : {}),
+        riichiPlayerSeats,
+        rules: detailedRules,
+    };
+
+    const derived = scoreHand(scoreInput);
+
+    if (hand.han !== undefined || hand.fu !== undefined || hand.yakumanCount > 0) {
+        if (derived.yakumanCount > 0 && derived.han === undefined) {
+            if (hand.yakumanCount !== derived.yakumanCount) {
+                throw new HandDetailScoreMismatchError();
+            }
+        } else if (derived.yakumanCount > 0 && derived.han !== undefined) {
+            if (hand.yakumanCount !== 1) {
+                throw new HandDetailScoreMismatchError();
+            }
+            if (hand.han !== undefined && hand.han !== derived.han) {
+                throw new HandDetailScoreMismatchError();
+            }
+            if (hand.fu !== undefined && hand.fu !== derived.fu) {
+                throw new HandDetailScoreMismatchError();
+            }
+        } else {
+            if (hand.yakumanCount !== 0) {
+                throw new HandDetailScoreMismatchError();
+            }
+            if (hand.han !== undefined && hand.han !== derived.han) {
+                throw new HandDetailScoreMismatchError();
+            }
+            if (hand.fu !== undefined && hand.fu !== derived.fu) {
+                throw new HandDetailScoreMismatchError();
+            }
+        }
+    }
+
+    let paoPlayerId: number | undefined;
+    if (derived.paoSeat !== undefined) {
+        paoPlayerId = players[derived.paoSeat]?.userId;
+        if (paoPlayerId === undefined) {
+            throw new HandDetailScoreMismatchError();
+        }
+        if (hand.yakumanLiabilityPlayerId !== undefined && hand.yakumanLiabilityPlayerId !== paoPlayerId) {
+            throw new HandDetailScoreMismatchError();
+        }
+    } else {
+        if (hand.yakumanLiabilityPlayerId !== undefined) {
+            throw new HandDetailScoreMismatchError();
+        }
+    }
+
+    return {
+        ...hand,
+        yakumanCount: derived.yakumanCount,
+        ...(derived.han !== undefined ? { han: derived.han } : {}),
+        ...(derived.fu !== undefined ? { fu: derived.fu } : {}),
+        ...(paoPlayerId !== undefined ? { yakumanLiabilityPlayerId: paoPlayerId } : {}),
+        yaku: derived.yaku,
+    };
+}
+
 export function calculateGameRoundResult(
     game: DetailedGame,
     rules: GameRules,
-    result: GameRoundResultInputDTO
+    result: GameRoundResultInputDTO,
+    requireHandDetail = false
 ): GameRoundResult {
     const currentGameState = game.currentState;
     if (currentGameState === null) {
@@ -82,6 +196,42 @@ export function calculateGameRoundResult(
 
     validateResultPlayersInGame(game.players, result);
     validateRiichiPlayersCanPay(game.players, detailedRules, result);
+
+    if (result.type === 'TSUMO') {
+        const normalizedHand = normalizeWinningHandDataWithHandDetail(
+            result.winningHandData,
+            'TSUMO',
+            undefined,
+            result.riichiPlayerIds,
+            game.players,
+            currentGameState,
+            detailedRules,
+            requireHandDetail
+        );
+        result = {
+            ...result,
+            winningHandData: normalizedHand,
+        };
+    } else if (result.type === 'RON') {
+        const dealInPlayerId = result.dealInPlayerId;
+        const riichiPlayerIds = result.riichiPlayerIds;
+        const normalizedHands = result.winningHandData.map(hand =>
+            normalizeWinningHandDataWithHandDetail(
+                hand,
+                'RON',
+                dealInPlayerId,
+                riichiPlayerIds,
+                game.players,
+                currentGameState,
+                detailedRules,
+                requireHandDetail
+            )
+        );
+        result = {
+            ...result,
+            winningHandData: normalizedHands,
+        };
+    }
 
     const roundPointChanges = calculateRoundPointChanges(currentGameState, game.players, detailedRules, result);
 
