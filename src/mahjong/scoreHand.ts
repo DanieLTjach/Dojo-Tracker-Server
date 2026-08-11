@@ -6,6 +6,7 @@ import {
     HandDetailNotSupportedForSanmaError,
     InvalidHandDetailStructureError,
     NonWinningHandError,
+    UnsupportedScoringContextError,
 } from '../error/PointCalculationErrors.ts';
 import { getBaseTileCode, getRelativeDirectionSymbol, meldToMajiang, tileCodeToMajiang } from './notation.ts';
 import type { DerivedHandScore, HandYaku, ScoreHandInput, TileCode } from './types.ts';
@@ -22,7 +23,7 @@ function mapGameRulesToMajiangRule(rules?: GameRulesValues): Record<string, any>
         merged['クイタンあり'] = Boolean(rules['open_tanyao']);
     }
     if (rules['double_wind_fu'] !== undefined) {
-        merged['連風牌は2符'] = rules['double_wind_fu'] === 'four_fu';
+        merged['連風牌は2符'] = rules['double_wind_fu'] === 'two_fu';
     }
     if (rules['red_fives'] !== undefined) {
         const rf = rules['red_fives'];
@@ -194,6 +195,11 @@ function validateHandStructure(input: ScoreHandInput): void {
 
     // 5. Context flag validation
     const ctx = handDetail.context;
+    const hasOpenMeld = handDetail.melds.some(meld => meld.type !== 'ANKAN');
+    if (winnerInRiichi && hasOpenMeld) {
+        throw new HandDetailContextConflictError();
+    }
+
     if (ctx) {
         if (winType === 'RON') {
             if (ctx.haitei || ctx.rinshanKaihou || ctx.tenhou || ctx.chiihou) {
@@ -215,6 +221,29 @@ function validateHandStructure(input: ScoreHandInput): void {
 
         if ((ctx.doubleRiichi || ctx.ippatsu) && !winnerInRiichi) {
             throw new HandDetailContextConflictError();
+        }
+
+        if (ctx.haitei && ctx.rinshanKaihou || ctx.houtei && ctx.chankan) {
+            throw new HandDetailContextConflictError();
+        }
+
+        if (ctx.ippatsu && (ctx.rinshanKaihou || ctx.chankan)) {
+            throw new HandDetailContextConflictError();
+        }
+
+        if (
+            ctx.rinshanKaihou &&
+            !handDetail.melds.some(meld => meld.type === 'DAIMINKAN' || meld.type === 'KAKAN' || meld.type === 'ANKAN')
+        ) {
+            throw new HandDetailContextConflictError();
+        }
+
+        if (ctx.tenhou || ctx.chiihou) {
+            const hasOtherSpecialContext = winnerInRiichi || ctx.doubleRiichi || ctx.ippatsu || ctx.haitei ||
+                ctx.houtei || ctx.rinshanKaihou || ctx.chankan;
+            if (handDetail.melds.length > 0 || hasOtherSpecialContext) {
+                throw new HandDetailContextConflictError();
+            }
         }
     }
 }
@@ -275,8 +304,9 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
 
     const majiangRule = mapGameRulesToMajiangRule(rules);
 
-    const doraIndicatorsMajiang = handDetail.doraIndicators.map(tileCodeToMajiang);
-    const uraDoraIndicatorsMajiang = isWinnerInRiichi && rules?.['ura_dora'] !== false
+    const doraEnabled = rules?.['dora'] !== false;
+    const doraIndicatorsMajiang = doraEnabled ? handDetail.doraIndicators.map(tileCodeToMajiang) : [];
+    const uraDoraIndicatorsMajiang = doraEnabled && isWinnerInRiichi && rules?.['ura_dora'] !== false
         ? handDetail.uraDoraIndicators.map(tileCodeToMajiang)
         : null;
 
@@ -311,6 +341,7 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
 
     const yaku: HandYaku[] = [];
     let paoSeat: number | undefined;
+    let paoYakumanCount = 0;
 
     const isOrdinaryYakuman = res.damanguan !== undefined && res.damanguan > 0;
 
@@ -330,12 +361,24 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
             else if (h.baojia === '-') offset = 3;
 
             if (offset > 0) {
-                paoSeat = (winnerSeat + offset) % 4;
+                const yakuPaoSeat = (winnerSeat + offset) % 4;
+                if (paoSeat !== undefined && paoSeat !== yakuPaoSeat) {
+                    throw new UnsupportedScoringContextError();
+                }
+                paoSeat = yakuPaoSeat;
+                paoYakumanCount += h.fanshu === '**' ? 2 : 1;
             }
         }
     }
 
     if (isOrdinaryYakuman) {
+        // The legacy point model has one liability player for the entire hand. It
+        // cannot represent a stacked hand where pao applies to only some yakuman,
+        // nor different liability players for different yakuman. Reject those rare
+        // shapes instead of silently charging the wrong amount.
+        if (paoSeat !== undefined && Math.min(paoYakumanCount, res.damanguan) !== res.damanguan) {
+            throw new UnsupportedScoringContextError();
+        }
         return {
             yakumanCount: res.damanguan,
             yaku,

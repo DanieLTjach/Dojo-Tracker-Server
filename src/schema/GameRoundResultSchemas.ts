@@ -68,7 +68,7 @@ export const meldSchema = z.union([
     z.object({
         type: z.literal('KAKAN'),
         tiles: z.tuple([tileCodeSchema, tileCodeSchema, tileCodeSchema, tileCodeSchema]),
-        calledTileIndex: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+        calledTileIndex: z.union([z.literal(0), z.literal(1), z.literal(2)]),
         calledFrom: calledFromSchema,
     }),
     z.object({
@@ -177,7 +177,9 @@ const winningHandDataSchema = z.object({
         { error: 'fu must a multiple of 10 or equal to 25' }
     ),
     handDetail: handDetailSchema.optional(),
-    yaku: z.array(handYakuSchema).optional(),
+    // Yaku is present in responses and persisted results, but is always derived
+    // server-side when hand detail is supplied. Clients must never submit it.
+    yaku: z.never({ error: 'yaku is server-derived' }).optional(),
 }).refine(
     winningHandData => winningHandData.yakumanLiabilityPlayerId !== winningHandData.winnerPlayerId,
     { error: 'Yakuman liability player cannot be the same as winner' }

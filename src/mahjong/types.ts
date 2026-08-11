@@ -51,7 +51,8 @@ export type Meld =
     | {
         type: 'KAKAN';
         tiles: [TileCode, TileCode, TileCode, TileCode];
-        calledTileIndex: 0 | 1 | 2 | 3;
+        // The first three tiles are the original pon; the fourth is the added tile.
+        calledTileIndex: 0 | 1 | 2;
         calledFrom: CalledFrom;
     }
     | { type: 'ANKAN', tiles: [TileCode, TileCode, TileCode, TileCode] };
@@ -69,6 +70,7 @@ export interface HandContext {
 
 export interface HandDetail {
     concealedTiles: TileCode[];
+    // Oldest call first. Call order is required to derive pao liability.
     melds: Meld[];
     winningTile: TileCode;
     doraIndicators: TileCode[];

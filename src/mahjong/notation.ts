@@ -91,21 +91,34 @@ export function meldToMajiang(meld: Meld): string {
     if (meld.type === 'PON') {
         const dirSymbol = calledFromToSymbol(meld.calledFrom);
         const suit = TILE_CODE_TO_MAJIANG[meld.tiles[0]][0];
-        const digits = meld.tiles.map(t => TILE_CODE_TO_MAJIANG[t][1]).join('');
+        const calledTile = meld.tiles[meld.calledTileIndex];
+        const digits = [
+            ...meld.tiles.filter((_, index) => index !== meld.calledTileIndex),
+            calledTile,
+        ].map(t => TILE_CODE_TO_MAJIANG[t][1]).join('');
         return suit + digits + dirSymbol;
     }
 
     if (meld.type === 'DAIMINKAN') {
         const dirSymbol = calledFromToSymbol(meld.calledFrom);
         const suit = TILE_CODE_TO_MAJIANG[meld.tiles[0]][0];
-        const digits = meld.tiles.map(t => TILE_CODE_TO_MAJIANG[t][1]).join('');
+        const calledTile = meld.tiles[meld.calledTileIndex];
+        const digits = [
+            ...meld.tiles.filter((_, index) => index !== meld.calledTileIndex),
+            calledTile,
+        ].map(t => TILE_CODE_TO_MAJIANG[t][1]).join('');
         return suit + digits + dirSymbol;
     }
 
     if (meld.type === 'KAKAN') {
         const dirSymbol = calledFromToSymbol(meld.calledFrom);
         const suit = TILE_CODE_TO_MAJIANG[meld.tiles[0]][0];
-        const d0 = meld.tiles.slice(0, 3).map(t => TILE_CODE_TO_MAJIANG[t][1]).join('');
+        const originalPonTiles = meld.tiles.slice(0, 3);
+        const calledTile = originalPonTiles[meld.calledTileIndex]!;
+        const d0 = [
+            ...originalPonTiles.filter((_, index) => index !== meld.calledTileIndex),
+            calledTile,
+        ].map(t => TILE_CODE_TO_MAJIANG[t][1]).join('');
         const d1 = TILE_CODE_TO_MAJIANG[meld.tiles[3]][1];
         return suit + d0 + dirSymbol + d1;
     }

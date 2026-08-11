@@ -5,10 +5,15 @@ import {
     InvalidHandDetailStructureError,
     NonWinningHandError,
     UnmappedYakuError,
+    UnsupportedScoringContextError,
 } from '../src/error/PointCalculationErrors.ts';
+import { meldToMajiang } from '../src/mahjong/notation.ts';
 import { scoreHand } from '../src/mahjong/scoreHand.ts';
 import type { HandDetail, ScoreHandInput } from '../src/mahjong/types.ts';
 import { mapJapaneseYakuToCode } from '../src/mahjong/yakuCodes.ts';
+import type { GamePlayer } from '../src/model/GameModels.ts';
+import { gameRoundResultWithoutPointsSchema } from '../src/schema/GameRoundResultSchemas.ts';
+import { normalizeWinningHandDataWithHandDetail } from '../src/util/PointCalculationUtil.ts';
 
 describe('Mahjong Hand Scoring Engine', () => {
     describe('Regression Guard: Chiitoitsu + Riichi + Tsumo', () => {
@@ -295,7 +300,7 @@ describe('Mahjong Hand Scoring Engine', () => {
     });
 
     describe('Meld Types and Relative Directions', () => {
-        it('handles all 5 meld types (CHII, PON, DAIMINKAN, KAKAN, ANKAN)', () => {
+        it('handles CHII, PON, DAIMINKAN, and ANKAN in a scored hand', () => {
             const handDetail: HandDetail = {
                 concealedTiles: ['man_9'],
                 melds: [
@@ -324,6 +329,172 @@ describe('Mahjong Hand Scoring Engine', () => {
             });
 
             expect(result.han).toBeGreaterThan(0);
+        });
+
+        it('places the called red tile correctly in pon and kakan engine notation', () => {
+            expect(meldToMajiang({
+                type: 'PON',
+                tiles: ['aka_pin_5', 'pin_5', 'pin_5'],
+                calledTileIndex: 0,
+                calledFrom: 'TOIMEN',
+            })).toBe('p550=');
+            expect(meldToMajiang({
+                type: 'KAKAN',
+                tiles: ['aka_pin_5', 'pin_5', 'pin_5', 'pin_5'],
+                calledTileIndex: 0,
+                calledFrom: 'TOIMEN',
+            })).toBe('p550=5');
+        });
+    });
+
+    describe('Rules and authoritative normalization', () => {
+        it('maps the two-fu and four-fu double-wind rules in the correct direction', () => {
+            const handDetail: HandDetail = {
+                concealedTiles: [
+                    'man_4',
+                    'man_5',
+                    'man_7',
+                    'man_8',
+                    'man_9',
+                    'pin_1',
+                    'pin_1',
+                    'pin_1',
+                    'ton',
+                    'ton',
+                ],
+                melds: [{
+                    type: 'CHII',
+                    tiles: ['man_1', 'man_2', 'man_3'],
+                    calledTileIndex: 0,
+                    calledFrom: 'KAMICHA',
+                }],
+                winningTile: 'man_6',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+            };
+            const baseInput = {
+                handDetail,
+                winType: 'RON' as const,
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 2,
+            };
+
+            expect(scoreHand({ ...baseInput, rules: { double_wind_fu: 'two_fu' } }).fu).toBe(30);
+            expect(scoreHand({ ...baseInput, rules: { double_wind_fu: 'four_fu' } }).fu).toBe(40);
+        });
+
+        it('does not award indicator or ura dora when dora is disabled', () => {
+            const handDetail: HandDetail = {
+                concealedTiles: [
+                    'man_1',
+                    'man_1',
+                    'pin_2',
+                    'pin_2',
+                    'sou_3',
+                    'sou_3',
+                    'ton',
+                    'ton',
+                    'nan',
+                    'nan',
+                    'haku',
+                    'haku',
+                    'hatsu',
+                ],
+                melds: [],
+                winningTile: 'hatsu',
+                doraIndicators: ['haku'],
+                uraDoraIndicators: ['haku'],
+            };
+
+            const result = scoreHand({
+                handDetail,
+                winType: 'TSUMO',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                riichiPlayerSeats: new Set([0]),
+                rules: { dora: false },
+            });
+
+            expect(result.yaku.some(yaku => yaku.code === 'dora' || yaku.code === 'ura_dora')).toBe(false);
+            expect(result.han).toBe(4);
+        });
+
+        it('derives seats from start places, independent of repository player order', () => {
+            const makePlayer = (userId: number, startPlace: GamePlayer['startPlace']): GamePlayer => ({
+                gameId: 1,
+                userId,
+                name: `Player ${userId}`,
+                telegramUsername: null,
+                profileFirstName: null,
+                profileLastName: null,
+                profileHidden: false,
+                points: 25_000,
+                ratingChange: 0,
+                startPlace,
+                chomboCount: 0,
+                isSubstitutePlayer: false,
+            });
+            const players = [
+                makePlayer(30, 'WEST'),
+                makePlayer(10, 'EAST'),
+                makePlayer(40, 'NORTH'),
+                makePlayer(20, 'SOUTH'),
+            ];
+            const handDetail: HandDetail = {
+                concealedTiles: [
+                    'ton',
+                    'ton',
+                    'ton',
+                    'nan',
+                    'nan',
+                    'nan',
+                    'man_1',
+                    'man_2',
+                    'man_3',
+                    'pin_1',
+                    'pin_2',
+                    'pin_3',
+                    'haku',
+                ],
+                melds: [],
+                winningTile: 'haku',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+            };
+
+            const normalized = normalizeWinningHandDataWithHandDetail(
+                { winnerPlayerId: 20, yakumanCount: 0, handDetail },
+                'TSUMO',
+                undefined,
+                [],
+                players,
+                { wind: 'EAST', dealerNumber: 1, counters: 0, riichiSticks: 0 },
+                { number_of_players: 4 },
+                false
+            );
+            const yakuCodes = normalized.yaku?.map(yaku => yaku.code);
+
+            expect(yakuCodes).toContain('bakaze_ton');
+            expect(yakuCodes).toContain('jikaze_nan');
+        });
+
+        it('rejects client-supplied server-derived yaku', () => {
+            const parsed = gameRoundResultWithoutPointsSchema.safeParse({
+                type: 'TSUMO',
+                riichiPlayerIds: [],
+                winningHandData: {
+                    winnerPlayerId: 1,
+                    yakumanCount: 0,
+                    han: 1,
+                    fu: 30,
+                    yaku: [{ code: 'riichi', han: 1 }],
+                },
+            });
+
+            expect(parsed.success).toBe(false);
         });
     });
 
@@ -496,6 +667,82 @@ describe('Mahjong Hand Scoring Engine', () => {
                     dealInSeat: 1,
                 })
             ).toThrow(HandDetailContextConflictError);
+        });
+
+        it('rejects riichi on an open hand and rinshan without a kan', () => {
+            const openHand: HandDetail = {
+                concealedTiles: [
+                    'man_4',
+                    'man_5',
+                    'man_6',
+                    'man_7',
+                    'man_8',
+                    'man_9',
+                    'pin_1',
+                    'pin_1',
+                    'pin_1',
+                    'ton',
+                ],
+                melds: [{
+                    type: 'CHII',
+                    tiles: ['man_1', 'man_2', 'man_3'],
+                    calledTileIndex: 0,
+                    calledFrom: 'KAMICHA',
+                }],
+                winningTile: 'ton',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+            };
+            expect(() =>
+                scoreHand({
+                    handDetail: openHand,
+                    winType: 'RON',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 2,
+                    riichiPlayerSeats: new Set([0]),
+                })
+            ).toThrow(HandDetailContextConflictError);
+
+            const rinshanWithoutKan: HandDetail = {
+                ...openHand,
+                context: { rinshanKaihou: true },
+            };
+            expect(() =>
+                scoreHand({
+                    handDetail: rinshanWithoutKan,
+                    winType: 'TSUMO',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                })
+            ).toThrow(HandDetailContextConflictError);
+        });
+
+        it('rejects stacked yakuman when pao covers only part of the hand value', () => {
+            const partialPaoHand: HandDetail = {
+                concealedTiles: ['ton', 'ton', 'ton', 'nan'],
+                melds: [
+                    { type: 'PON', tiles: ['haku', 'haku', 'haku'], calledTileIndex: 0, calledFrom: 'KAMICHA' },
+                    { type: 'PON', tiles: ['hatsu', 'hatsu', 'hatsu'], calledTileIndex: 0, calledFrom: 'TOIMEN' },
+                    { type: 'PON', tiles: ['chun', 'chun', 'chun'], calledTileIndex: 0, calledFrom: 'SHIMOCHA' },
+                ],
+                winningTile: 'nan',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+            };
+
+            expect(() =>
+                scoreHand({
+                    handDetail: partialPaoHand,
+                    winType: 'TSUMO',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    rules: { liability_payment: 'big_dragons_big_winds', yakuman_stacking: true },
+                })
+            ).toThrow(UnsupportedScoringContextError);
         });
 
         it('rejects tenhou claimed by non-dealer', () => {

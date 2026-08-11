@@ -86,31 +86,22 @@ export function normalizeWinningHandDataWithHandDetail(
         return hand;
     }
 
-    const winnerIndex = players.findIndex(p => p.userId === hand.winnerPlayerId);
-    if (winnerIndex === -1) {
-        throw new PlayerNotInGameError(hand.winnerPlayerId);
-    }
-    const winnerSeat = winnerIndex;
+    const winnerSeat = getPlayerSeat(players, hand.winnerPlayerId);
 
-    const dealerIndex = players.findIndex(p => p.startPlace === Object.values(Wind)[gameState.dealerNumber - 1]);
-    if (dealerIndex === -1) {
+    const dealerWind = Object.values(Wind)[gameState.dealerNumber - 1];
+    if (dealerWind === undefined || !players.some(player => player.startPlace === dealerWind)) {
         throw new CannotDetermineDealerError();
     }
-    const dealerSeat = dealerIndex;
+    const dealerSeat = WIND_ORDER[dealerWind];
 
-    const roundWindSeat = WIND_ORDER[gameState.wind] - 1;
+    const roundWindSeat = WIND_ORDER[gameState.wind];
 
     let dealInSeat: number | undefined;
     if (winType === 'RON' && dealInPlayerId !== undefined) {
-        dealInSeat = players.findIndex(p => p.userId === dealInPlayerId);
-        if (dealInSeat === -1) {
-            throw new PlayerNotInGameError(dealInPlayerId);
-        }
+        dealInSeat = getPlayerSeat(players, dealInPlayerId);
     }
 
-    const riichiPlayerSeats = new Set(
-        riichiPlayerIds.map(id => players.findIndex(p => p.userId === id)).filter(idx => idx !== -1)
-    );
+    const riichiPlayerSeats = new Set(riichiPlayerIds.map(id => getPlayerSeat(players, id)));
 
     const scoreInput: ScoreHandInput = {
         handDetail: hand.handDetail,
@@ -127,7 +118,7 @@ export function normalizeWinningHandDataWithHandDetail(
 
     if (hand.han !== undefined || hand.fu !== undefined || hand.yakumanCount > 0) {
         if (derived.yakumanCount > 0 && derived.han === undefined) {
-            if (hand.yakumanCount !== derived.yakumanCount) {
+            if (hand.yakumanCount !== derived.yakumanCount || hand.han !== undefined || hand.fu !== undefined) {
                 throw new HandDetailScoreMismatchError();
             }
         } else if (derived.yakumanCount > 0 && derived.han !== undefined) {
@@ -155,10 +146,15 @@ export function normalizeWinningHandDataWithHandDetail(
 
     let paoPlayerId: number | undefined;
     if (derived.paoSeat !== undefined) {
-        paoPlayerId = players[derived.paoSeat]?.userId;
-        if (paoPlayerId === undefined) {
-            throw new HandDetailScoreMismatchError();
+        const paoWind = Object.values(Wind)[derived.paoSeat];
+        if (paoWind === undefined) {
+            throw new CannotDeterminePlayerPlacementError();
         }
+        const paoPlayer = players.find(player => player.startPlace === paoWind);
+        if (paoPlayer === undefined) {
+            throw new MissingPlayerForWindError(paoWind);
+        }
+        paoPlayerId = paoPlayer.userId;
         if (hand.yakumanLiabilityPlayerId !== undefined && hand.yakumanLiabilityPlayerId !== paoPlayerId) {
             throw new HandDetailScoreMismatchError();
         }
@@ -169,13 +165,25 @@ export function normalizeWinningHandDataWithHandDetail(
     }
 
     return {
-        ...hand,
+        winnerPlayerId: hand.winnerPlayerId,
+        handDetail: hand.handDetail,
         yakumanCount: derived.yakumanCount,
         ...(derived.han !== undefined ? { han: derived.han } : {}),
         ...(derived.fu !== undefined ? { fu: derived.fu } : {}),
         ...(paoPlayerId !== undefined ? { yakumanLiabilityPlayerId: paoPlayerId } : {}),
         yaku: derived.yaku,
     };
+}
+
+function getPlayerSeat(players: GamePlayer[], playerId: number): number {
+    const player = players.find(candidate => candidate.userId === playerId);
+    if (player === undefined) {
+        throw new PlayerNotInGameError(playerId);
+    }
+    if (player.startPlace === null) {
+        throw new CannotDeterminePlayerPlacementError();
+    }
+    return WIND_ORDER[player.startPlace];
 }
 
 export function calculateGameRoundResult(
@@ -193,6 +201,10 @@ export function calculateGameRoundResult(
         throw new RulesetShouldContainDetailedRulesError();
     }
     const detailedRules = rules.details.rules;
+    const scoringRules: GameRulesValues = {
+        ...detailedRules,
+        number_of_players: rules.numberOfPlayers as 3 | 4,
+    };
 
     validateResultPlayersInGame(game.players, result);
     validateRiichiPlayersCanPay(game.players, detailedRules, result);
@@ -205,7 +217,7 @@ export function calculateGameRoundResult(
             result.riichiPlayerIds,
             game.players,
             currentGameState,
-            detailedRules,
+            scoringRules,
             requireHandDetail
         );
         result = {
@@ -223,7 +235,7 @@ export function calculateGameRoundResult(
                 riichiPlayerIds,
                 game.players,
                 currentGameState,
-                detailedRules,
+                scoringRules,
                 requireHandDetail
             )
         );
