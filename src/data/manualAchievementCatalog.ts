@@ -1,6 +1,5 @@
-// Built-in manually-assignable achievements, seeded into every club's catalog.
-// `code` is a stable identifier persisted in clubUserAchievement — do not rename.
-// Display name/description are resolved via i18n (achievements.manual.<code>.*), not stored here.
+import type { SupportedLocale } from '../i18n/index.ts';
+import { t } from '../i18n/index.ts';
 
 export const MANUAL_ACHIEVEMENT_CODES = [
     'COMMUNITY_BUILDER',
@@ -21,4 +20,12 @@ const MANUAL_ACHIEVEMENT_CODE_SET = new Set<string>(MANUAL_ACHIEVEMENT_CODES);
 
 export function isManualAchievementCode(code: string): code is ManualAchievementCode {
     return MANUAL_ACHIEVEMENT_CODE_SET.has(code);
+}
+
+export function getManualCatalog(locale: SupportedLocale) {
+    return MANUAL_ACHIEVEMENT_CODES.map(code => ({
+        code,
+        name: t(`achievements.manual.${code}.name`, locale),
+        description: t(`achievements.manual.${code}.description`, locale),
+    }));
 }

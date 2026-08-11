@@ -89,7 +89,9 @@ describe('Club achievement catalog endpoints', () => {
 
             expect(response.status).toBe(200);
             expect(response.body).toHaveProperty('catalog');
-            expect(Array.isArray(response.body.catalog)).toBe(true);
+            expect(response.body.catalog).toHaveProperty('custom');
+            expect(response.body.catalog).toHaveProperty('manual');
+            expect(response.body.catalog).toHaveProperty('automatic');
         });
 
         test('plain member is forbidden', async () => {

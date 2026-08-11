@@ -113,7 +113,7 @@ describe('Club achievement assignment endpoints', () => {
             const catalogResponse = await request(app)
                 .get(`/api/clubs/${clubId}/achievement-catalog`)
                 .set('Authorization', ownerAuthHeader);
-            expect(catalogResponse.body.catalog.map((d: { name: string }) => d.name)).toContain('Fresh Award');
+            expect(catalogResponse.body.catalog.custom.map((d: { name: string }) => d.name)).toContain('Fresh Award');
         });
 
         test('plain member is forbidden', async () => {

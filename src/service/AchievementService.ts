@@ -1,4 +1,5 @@
 import { ACHIEVEMENTS, type AchievementDefinition, type AchievementValueUnit } from '../data/achievementsCatalog.ts';
+import { getAutomaticCatalog } from '../data/automaticAchievementCatalog.ts';
 import type { Event } from '../model/EventModels.ts';
 import { AchievementCriterion, type EventAchievementResult, type UserAchievement } from '../model/AchievementModels.ts';
 import { GameStatus } from '../model/GameModels.ts';
@@ -107,7 +108,7 @@ export class AchievementService {
         return this.buildEventResults(this.achievementRepository.findWinnersByEventId(eventId), locale);
     }
 
-    /** Read a user's stored achievements across all tournaments. */
+    /** Read a user's stored achievements across all sources. */
     getUserAchievements(userId: number, requestingUserId: number): UserAchievement[] {
         const requestingUser = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(requestingUser);
@@ -116,6 +117,22 @@ export class AchievementService {
             userId,
             locale
         );
+    }
+
+    getUserProfileAchievements(userId: number, requestingUserId: number) {
+        const requestingUser = this.userService.getUserById(requestingUserId);
+        const locale = resolveUserLocale(requestingUser);
+
+        return this.profileAchievementService.getUserProfileAchievementsResponse(
+            userId,
+            locale
+        );
+    }
+
+    getAutomaticCatalog(requestingUserId: number) {
+        const requestingUser = this.userService.getUserById(requestingUserId);
+        const locale = resolveUserLocale(requestingUser);
+        return getAutomaticCatalog(locale);
     }
 
     private buildEventResults(

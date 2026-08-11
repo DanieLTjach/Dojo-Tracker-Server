@@ -51,6 +51,17 @@ export class AutomaticAchievementRepository {
         return rows.map(stateFromDBEntity);
     }
 
+    findProgressStatesByUserId(userId: number): (ComputedAchievementState & { computedAt: Date })[] {
+        const stmt = dbManager.db.prepare(
+            `${this.selectQuery} WHERE userId = :userId AND unlockedAt IS NULL AND progress > 0 ORDER BY code, scope`
+        );
+        const rows = stmt.all({ userId }) as AutomaticAchievementStateDBEntity[];
+        return rows.map(r => ({
+            ...stateFromDBEntity(r),
+            computedAt: new Date(r.computedAt),
+        }));
+    }
+
     deleteStatesForUser(userId: number): void {
         dbManager.db.prepare('DELETE FROM automaticAchievementState WHERE userId = :userId').run({ userId });
     }

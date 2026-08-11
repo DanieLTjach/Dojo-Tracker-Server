@@ -56,9 +56,22 @@ export const ProfileAchievementType = {
     CAREER: 'CAREER',
     HAND: 'HAND',
     MANUAL: 'MANUAL',
+    AUTOMATIC: 'AUTOMATIC',
 } as const;
 
 export type ProfileAchievementType = typeof ProfileAchievementType[keyof typeof ProfileAchievementType];
+
+export interface UserAchievementEvidence {
+    sourceEventId?: number | null;
+    sourceGameId?: number | null;
+    sourceRoundNumber?: number | null;
+}
+
+export interface UserAchievementCoverage {
+    unlockedCount: number;
+    totalCount: number;
+    percentage: number;
+}
 
 /**
  * One achievement a user has won, as shown on their profile page. `type` discriminates
@@ -83,6 +96,11 @@ export interface UserAchievement {
     clubId: number | undefined;
     clubName: string | undefined;
     note: string | undefined;
+    /** Populated for AUTOMATIC achievements. */
+    scope?: string | undefined;
+    progress?: number | undefined;
+    target?: number | undefined;
+    evidence?: UserAchievementEvidence | undefined;
 }
 
 /** A club-scoped, reusable custom achievement a club owner/moderator can assign. */

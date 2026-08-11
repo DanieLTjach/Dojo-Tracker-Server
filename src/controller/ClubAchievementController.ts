@@ -9,12 +9,26 @@ import {
 } from '../schema/ClubAchievementSchemas.ts';
 import { ClubAchievementService } from '../service/ClubAchievementService.ts';
 
+import { UserService } from '../service/UserService.ts';
+import { resolveUserLocale } from '../util/LocaleResolver.ts';
+import type { SupportedLocale } from '../i18n/index.ts';
+
 export class ClubAchievementController {
     private achievementService: ClubAchievementService = new ClubAchievementService();
+    private userService: UserService = new UserService();
 
     getCatalog(req: Request, res: Response) {
         const { params: { clubId } } = clubAchievementCatalogListSchema.parse(req);
-        const catalog = this.achievementService.getCatalog(clubId);
+        let locale: SupportedLocale = 'en';
+        if (req.user?.userId !== undefined) {
+            try {
+                const requestingUser = this.userService.getUserById(req.user.userId);
+                locale = resolveUserLocale(requestingUser);
+            } catch (err) {
+                locale = 'en';
+            }
+        }
+        const catalog = this.achievementService.getFullCatalog(clubId, locale);
         return res.status(StatusCodes.OK).json({ catalog });
     }
 

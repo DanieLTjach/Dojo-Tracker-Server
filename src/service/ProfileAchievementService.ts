@@ -4,12 +4,21 @@ import {
     type AchievementDefinition,
     type AchievementValueUnit,
 } from '../data/achievementsCatalog.ts';
-import { ProfileAchievementType, type UserAchievement } from '../model/AchievementModels.ts';
+import {
+    AUTOMATIC_ACHIEVEMENTS,
+    AUTOMATIC_ACHIEVEMENTS_BY_CODE,
+} from '../data/automaticAchievementCatalog.ts';
+import {
+    ProfileAchievementType,
+    type UserAchievement,
+    type UserAchievementCoverage,
+} from '../model/AchievementModels.ts';
 import { AchievementRepository } from '../repository/AchievementRepository.ts';
 import {
     ClubAchievementRepository,
     type ProfileManualAchievementRow,
 } from '../repository/ClubAchievementRepository.ts';
+import { AutomaticAchievementRepository } from '../repository/AutomaticAchievementRepository.ts';
 import { isManualAchievementCode } from '../data/manualAchievementCatalog.ts';
 import type { SupportedLocale } from '../i18n/index.ts';
 import { t } from '../i18n/index.ts';
@@ -20,13 +29,13 @@ const DEFINITION_BY_METRIC = new Map<AchievementMetric, AchievementDefinition>(
 
 /**
  * Assembles the full achievement list shown on a user's profile page. Combines
- * tournament awards and club-issued manual achievements; future work adds event
- * placements and lifetime career/hand achievements onto this same seam. Results
- * are ordered newest-first by award date.
+ * tournament awards, club-issued manual achievements, and lifetime automatic achievements.
+ * Results are ordered newest-first by award date.
  */
 export class ProfileAchievementService {
     private achievementRepository: AchievementRepository = new AchievementRepository();
     private clubAchievementRepository: ClubAchievementRepository = new ClubAchievementRepository();
+    private automaticAchievementRepository: AutomaticAchievementRepository = new AutomaticAchievementRepository();
 
     getUserAchievements(
         userId: number,
@@ -35,8 +44,124 @@ export class ProfileAchievementService {
         const achievements = [
             ...this.getTournamentAwards(userId, locale),
             ...this.getManualAchievements(userId, locale),
+            ...this.getAutomaticAchievements(userId, locale),
         ];
         return achievements.sort((a, b) => b.awardedAt.getTime() - a.awardedAt.getTime());
+    }
+
+    getUserProfileAchievementsResponse(
+        userId: number,
+        locale: SupportedLocale
+    ): {
+        achievements: UserAchievement[];
+        progress: UserAchievement[];
+        coverage: UserAchievementCoverage;
+    } {
+        const achievements = this.getUserAchievements(userId, locale);
+        const progress = this.getAutomaticProgress(userId, locale);
+        const coverage = this.getAutomaticCoverage(userId);
+
+        return {
+            achievements,
+            progress,
+            coverage,
+        };
+    }
+
+    private getAutomaticAchievements(userId: number, locale: SupportedLocale): UserAchievement[] {
+        const rows = this.automaticAchievementRepository.findUnlockedStatesByUserId(userId);
+        return rows.flatMap(row => {
+            const def = AUTOMATIC_ACHIEVEMENTS_BY_CODE.get(row.code);
+            if (def === undefined) return [];
+
+            const name = t(`achievements.automatic.${row.code}.name`, locale);
+            const description = t(`achievements.automatic.${row.code}.description`, locale);
+            const value = row.value ?? undefined;
+            const valueFormatted = value !== undefined && def.valueUnit !== undefined
+                ? formatValue(value, def.valueUnit, locale)
+                : undefined;
+
+            return [{
+                type: ProfileAchievementType.AUTOMATIC,
+                code: row.code,
+                name,
+                description,
+                icon: def.icon ?? null,
+                awardedAt: new Date(row.unlockedAt!),
+                valueUnit: def.valueUnit,
+                value,
+                valueFormatted,
+                eventId: row.sourceEventId ?? undefined,
+                eventName: undefined,
+                metric: undefined,
+                clubId: undefined,
+                clubName: undefined,
+                note: undefined,
+                scope: row.scope,
+                progress: row.progress,
+                target: row.target,
+                evidence: {
+                    sourceEventId: row.sourceEventId ?? null,
+                    sourceGameId: row.sourceGameId ?? null,
+                    sourceRoundNumber: row.sourceRoundNumber ?? null,
+                },
+            }];
+        });
+    }
+
+    private getAutomaticProgress(userId: number, locale: SupportedLocale): UserAchievement[] {
+        const rows = this.automaticAchievementRepository.findProgressStatesByUserId(userId);
+        return rows.flatMap(row => {
+            const def = AUTOMATIC_ACHIEVEMENTS_BY_CODE.get(row.code);
+            if (def === undefined) return [];
+
+            const name = t(`achievements.automatic.${row.code}.name`, locale);
+            const description = t(`achievements.automatic.${row.code}.description`, locale);
+            const value = row.value ?? undefined;
+            const valueFormatted = value !== undefined && def.valueUnit !== undefined
+                ? formatValue(value, def.valueUnit, locale)
+                : undefined;
+
+            return [{
+                type: ProfileAchievementType.AUTOMATIC,
+                code: row.code,
+                name,
+                description,
+                icon: def.icon ?? null,
+                awardedAt: new Date(row.computedAt),
+                valueUnit: def.valueUnit,
+                value,
+                valueFormatted,
+                eventId: row.sourceEventId ?? undefined,
+                eventName: undefined,
+                metric: undefined,
+                clubId: undefined,
+                clubName: undefined,
+                note: undefined,
+                scope: row.scope,
+                progress: row.progress,
+                target: row.target,
+                evidence: {
+                    sourceEventId: row.sourceEventId ?? null,
+                    sourceGameId: row.sourceGameId ?? null,
+                    sourceRoundNumber: row.sourceRoundNumber ?? null,
+                },
+            }];
+        });
+    }
+
+    private getAutomaticCoverage(userId: number): UserAchievementCoverage {
+        const unlockedStates = this.automaticAchievementRepository.findUnlockedStatesByUserId(userId);
+        const unlockedCodes = new Set(unlockedStates.map(s => s.code));
+        const unlockedCount = unlockedCodes.size;
+        const totalCount = AUTOMATIC_ACHIEVEMENTS.length;
+        const percentage = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 10000) / 100 : 0;
+
+        return {
+            unlockedCount,
+            totalCount,
+            percentage,
+        };
     }
 
     private getTournamentAwards(userId: number, locale: SupportedLocale): UserAchievement[] {

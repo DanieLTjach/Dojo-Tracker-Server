@@ -13,7 +13,8 @@ import {
 } from '../error/ClubAchievementErrors.ts';
 import { ClubAchievementRepository } from '../repository/ClubAchievementRepository.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
-import { isManualAchievementCode } from '../data/manualAchievementCatalog.ts';
+import { getManualCatalog, isManualAchievementCode } from '../data/manualAchievementCatalog.ts';
+import { getAutomaticCatalog } from '../data/automaticAchievementCatalog.ts';
 import { ClubService } from './ClubService.ts';
 import { UserService } from './UserService.ts';
 import LogService from './LogService.ts';
@@ -36,6 +37,15 @@ export class ClubAchievementService {
     getCatalog(clubId: number): ClubAchievementDefinition[] {
         this.clubService.validateClubExists(clubId);
         return this.achievementRepository.findDefinitionsByClubId(clubId);
+    }
+
+    getFullCatalog(clubId: number, locale: SupportedLocale = 'en') {
+        this.clubService.validateClubExists(clubId);
+        return {
+            custom: this.achievementRepository.findDefinitionsByClubId(clubId),
+            manual: getManualCatalog(locale),
+            automatic: getAutomaticCatalog(locale),
+        };
     }
 
     createDefinition(

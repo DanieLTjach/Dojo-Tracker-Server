@@ -1,4 +1,6 @@
 import type { AchievementValueUnit } from './achievementsCatalog.ts';
+import type { SupportedLocale } from '../i18n/index.ts';
+import { t } from '../i18n/index.ts';
 
 export type AchievementCategory = 'CAREER' | 'HAND' | 'SANMA' | 'DICE' | 'OPENSKILL' | 'EVENT';
 
@@ -13,6 +15,7 @@ export interface AutomaticAchievementDefinition {
     repeatable: boolean;
     trackedOnly: boolean;
     gameSize?: 3 | 4;
+    icon?: string | null;
 }
 
 export const AUTOMATIC_ACHIEVEMENTS: readonly AutomaticAchievementDefinition[] = [
@@ -796,10 +799,22 @@ export const AUTOMATIC_ACHIEVEMENTS: readonly AutomaticAchievementDefinition[] =
     },
 ] as const;
 
-const AUTOMATIC_MAP = new Map<string, AutomaticAchievementDefinition>(
+export const AUTOMATIC_ACHIEVEMENTS_BY_CODE = new Map<string, AutomaticAchievementDefinition>(
     AUTOMATIC_ACHIEVEMENTS.map(def => [def.code, def])
 );
 
 export function getAutomaticAchievementDefinition(code: string): AutomaticAchievementDefinition | undefined {
-    return AUTOMATIC_MAP.get(code);
+    return AUTOMATIC_ACHIEVEMENTS_BY_CODE.get(code);
+}
+
+export function getAutomaticCatalog(locale: SupportedLocale) {
+    return AUTOMATIC_ACHIEVEMENTS.map(def => ({
+        code: def.code,
+        category: def.category,
+        name: t(`achievements.automatic.${def.code}.name`, locale),
+        description: t(`achievements.automatic.${def.code}.description`, locale),
+        icon: def.icon ?? null,
+        target: def.target,
+        valueUnit: def.valueUnit,
+    }));
 }
