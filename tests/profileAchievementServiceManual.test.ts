@@ -63,7 +63,7 @@ describe('ProfileAchievementService (manual achievements on the profile page)', 
             SYSTEM_USER_ID
         );
 
-        const achievements = profileAchievementService.getUserAchievements(memberId, 'en', () => {});
+        const achievements = profileAchievementService.getUserAchievements(memberId, 'en');
         const mentor = achievements.find(a => a.code === 'MENTOR');
 
         expect(mentor).toMatchObject({
@@ -92,7 +92,7 @@ describe('ProfileAchievementService (manual achievements on the profile page)', 
             SYSTEM_USER_ID
         );
 
-        const achievements = profileAchievementService.getUserAchievements(memberId, 'en', () => {});
+        const achievements = profileAchievementService.getUserAchievements(memberId, 'en');
         const custom = achievements.find(a => a.code === `custom:${definition.id}`);
 
         expect(custom).toMatchObject({
@@ -113,7 +113,7 @@ describe('ProfileAchievementService (manual achievements on the profile page)', 
         );
         clubAchievementService.revokeAssignment(clubId, memberId, assignment.id, SYSTEM_USER_ID);
 
-        const achievements = profileAchievementService.getUserAchievements(memberId, 'en', () => {});
+        const achievements = profileAchievementService.getUserAchievements(memberId, 'en');
         expect(achievements.find(a => a.code === 'FAIR_PLAY')).toBeUndefined();
     });
 });

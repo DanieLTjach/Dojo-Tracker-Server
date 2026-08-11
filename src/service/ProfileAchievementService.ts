@@ -30,13 +30,8 @@ export class ProfileAchievementService {
 
     getUserAchievements(
         userId: number,
-        locale: SupportedLocale,
-        recomputeStaleEventAchievements: (eventId: number) => void
+        locale: SupportedLocale
     ): UserAchievement[] {
-        for (const eventId of this.achievementRepository.findUncomputedTournamentEventIdsForUser(userId)) {
-            recomputeStaleEventAchievements(eventId);
-        }
-
         const achievements = [
             ...this.getTournamentAwards(userId, locale),
             ...this.getManualAchievements(userId, locale),

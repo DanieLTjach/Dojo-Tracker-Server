@@ -61,6 +61,10 @@ export function computeAchievements(
         }
 
         for (const round of game.rounds) {
+            for (const player of game.players) {
+                getStats(player.userId).tracked_rounds_played += 1;
+            }
+
             const result = round.result;
             const dealerId = getDealerUserId(startPlaceToPlayerId, round.dealerNumber);
 

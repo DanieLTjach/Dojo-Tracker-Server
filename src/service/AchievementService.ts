@@ -114,8 +114,7 @@ export class AchievementService {
 
         return this.profileAchievementService.getUserAchievements(
             userId,
-            locale,
-            eventId => this.recomputeEventAchievements(this.eventService.getEventById(eventId))
+            locale
         );
     }
 

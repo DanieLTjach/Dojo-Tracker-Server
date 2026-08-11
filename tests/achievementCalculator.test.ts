@@ -151,22 +151,23 @@ describe('computeAchievements', () => {
         expect(find(results, 'max_fu_hand')).toMatchObject({ value: 40, winnerUserIds: [3] });
     });
 
-    it('gives the defence award (lowest ron loss) only to players who dealt into a ron', () => {
-        // Players 1 and 2 never dealt into a ron at all, so they are not "0 loss" defenders
-        // and must not win by default; only player 4 (the only ron deal-in) is eligible.
-        expect(find(results, 'points_lost_on_ron')).toMatchObject({ value: 1300, winnerUserIds: [4] });
+    it('gives the defence award (lowest ron loss) to tracked-round participants with zero deal-ins', () => {
+        // Players 1, 2, and 3 participated in tracked rounds and never dealt into a ron (0 points lost).
+        // Player 4 lost 1300 points on ron.
+        // Therefore, players 1, 2, and 3 win with 0 points lost.
+        expect(find(results, 'points_lost_on_ron')).toMatchObject({ value: 0, winnerUserIds: [1, 2, 3] });
     });
 
-    it('excludes the defence award entirely when nobody ever dealt into a ron', () => {
-        const noRonGame = detailedGame(
+    it('excludes the defence award entirely when no tracked rounds exist', () => {
+        const noRoundsGame = detailedGame(
             [
                 player(1, 30000, Wind.EAST),
                 player(2, 30000, Wind.SOUTH),
             ],
-            [gameRound(1, 1, tsumo(1, 3, 30, [], { 1: 3000, 2: -3000 }))]
+            []
         );
-        const noRonResults = computeAchievements([noRonGame], {});
-        const defence = find(noRonResults, 'points_lost_on_ron');
+        const noRoundsResults = computeAchievements([noRoundsGame], {});
+        const defence = find(noRoundsResults, 'points_lost_on_ron');
         expect(defence.value).toBeUndefined();
         expect(defence.winnerUserIds).toEqual([]);
     });

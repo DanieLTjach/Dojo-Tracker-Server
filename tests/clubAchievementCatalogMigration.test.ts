@@ -40,11 +40,11 @@ function createMigratedDb(lastMigrationVersion: number) {
 
 const NOW = '2026-07-19T00:00:00.000Z';
 
-describe('migration 012: club achievement catalog', () => {
+describe('migration 017: club and automatic achievement system', () => {
     let db: BetterSqlite3Database;
 
     beforeEach(() => {
-        db = createMigratedDb(12);
+        db = createMigratedDb(17);
         db.pragma('foreign_keys = ON');
         db.prepare(`
             INSERT INTO user (id, name, telegramUsername, telegramId, createdAt, modifiedAt, modifiedBy, isActive, isAdmin, status)

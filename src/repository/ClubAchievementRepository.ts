@@ -60,6 +60,10 @@ function assignmentFromDBEntity(dbEntity: ClubUserAchievementDBEntity): ClubUser
     };
 }
 
+export function normalizeAchievementName(name: string): string {
+    return name.trim().normalize('NFC').toLowerCase();
+}
+
 export interface CreateDefinitionParams {
     clubId: number;
     name: string;
@@ -154,16 +158,19 @@ export class ClubAchievementRepository {
     }
 
     private findActiveDefinitionByNameStatement(): Statement<
-        { clubId: number, name: string },
+        { clubId: number, normalizedName: string },
         ClubAchievementDefinitionDBEntity
     > {
         return dbManager.db.prepare(
-            `${this.definitionSelect} WHERE clubId = :clubId AND name = :name COLLATE NOCASE AND archivedAt IS NULL`
+            `${this.definitionSelect} WHERE clubId = :clubId AND lower(name) = :normalizedName AND archivedAt IS NULL`
         );
     }
 
     findActiveDefinitionByName(clubId: number, name: string): ClubAchievementDefinition | undefined {
-        const dbEntity = this.findActiveDefinitionByNameStatement().get({ clubId, name });
+        const dbEntity = this.findActiveDefinitionByNameStatement().get({
+            clubId,
+            normalizedName: normalizeAchievementName(name),
+        });
         return dbEntity !== undefined ? definitionFromDBEntity(dbEntity) : undefined;
     }
 

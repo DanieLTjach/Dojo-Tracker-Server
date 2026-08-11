@@ -31,6 +31,7 @@ export interface PlayerStats {
     chiitoi_nomi_wins: number;
     points_lost_on_ron: number;
     ron_deal_in_count: number;
+    tracked_rounds_played: number;
     best_game_points: number;
     yakuman_wins: number;
     best_hand_han_points: number;
@@ -150,7 +151,7 @@ export const ACHIEVEMENTS: readonly AchievementDefinition[] = [
         name: 'Defence award',
         criterion: AchievementCriterion.Lowest,
         valueUnit: 'points',
-        applicabilityMetric: 'ron_deal_in_count',
+        applicabilityMetric: 'tracked_rounds_played',
     },
     {
         metric: 'best_game_points',
@@ -203,6 +204,7 @@ export function newStats(): PlayerStats {
         chiitoi_nomi_wins: 0,
         points_lost_on_ron: 0,
         ron_deal_in_count: 0,
+        tracked_rounds_played: 0,
         best_game_points: 0,
         yakuman_wins: 0,
         best_hand_han_points: 0,

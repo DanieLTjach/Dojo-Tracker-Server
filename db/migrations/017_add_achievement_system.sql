@@ -1,7 +1,5 @@
--- Club-scoped, reusable achievement definitions. Built-in achievements (career,
--- hand, tournament, event-placement) are hardcoded in the application catalog and
--- never get a row here; this table only holds club-defined manual awards
--- (e.g. "Community Builder") plus each club's custom ones.
+-- Club-scoped manual achievements and lifetime automatic achievements system.
+
 CREATE TABLE clubAchievementDefinition (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     clubId INTEGER NOT NULL REFERENCES club(id),
@@ -18,16 +16,12 @@ CREATE TABLE clubAchievementDefinition (
 
 CREATE INDEX idx_clubAchievementDefinition_clubId ON clubAchievementDefinition(clubId);
 
--- Custom names are unique case-insensitively among a club's active (non-archived)
--- definitions. Archiving frees the name for reuse while keeping historical
--- assignments intact.
+-- Custom names are unique case-insensitively among a club's active definitions.
 CREATE UNIQUE INDEX idx_clubAchievementDefinition_activeName
-    ON clubAchievementDefinition(clubId, name COLLATE NOCASE)
+    ON clubAchievementDefinition(clubId, lower(name))
     WHERE archivedAt IS NULL;
 
--- One row per awarded achievement. The definition is either a built-in catalog
--- code (builtInCode) or a club's own custom definition (definitionId) — exactly
--- one of the two is set, enforced below.
+-- One row per awarded manual achievement (builtInCode or custom definitionId).
 CREATE TABLE clubUserAchievement (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     clubId INTEGER NOT NULL REFERENCES club(id),
@@ -45,9 +39,6 @@ CREATE TABLE clubUserAchievement (
 CREATE INDEX idx_clubUserAchievement_userId ON clubUserAchievement(userId);
 CREATE INDEX idx_clubUserAchievement_clubId ON clubUserAchievement(clubId);
 
--- At most one active (non-revoked) assignment per club/user/definition, for each
--- definition source independently (SQLite treats NULLs as distinct, so the two
--- partial indexes below don't collide with each other).
 CREATE UNIQUE INDEX idx_clubUserAchievement_activeBuiltIn
     ON clubUserAchievement(clubId, userId, builtInCode)
     WHERE revokedAt IS NULL AND builtInCode IS NOT NULL;
@@ -55,3 +46,29 @@ CREATE UNIQUE INDEX idx_clubUserAchievement_activeBuiltIn
 CREATE UNIQUE INDEX idx_clubUserAchievement_activeCustom
     ON clubUserAchievement(clubId, userId, definitionId)
     WHERE revokedAt IS NULL AND definitionId IS NOT NULL;
+
+-- State for lifetime automatic achievements, keyed by user, stable code, and scope.
+CREATE TABLE automaticAchievementState (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL REFERENCES user(id),
+    code TEXT NOT NULL,
+    scope TEXT NOT NULL DEFAULT 'GLOBAL',
+    progress INTEGER NOT NULL DEFAULT 0,
+    target INTEGER NOT NULL,
+    unlockedAt TIMESTAMP,
+    sourceEventId INTEGER REFERENCES event(id),
+    sourceGameId INTEGER REFERENCES game(id),
+    sourceRoundNumber INTEGER,
+    value REAL,
+    computedAt TIMESTAMP NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_automaticAchievementState_userCodeScope
+    ON automaticAchievementState(userId, code, scope);
+
+CREATE INDEX idx_automaticAchievementState_userId
+    ON automaticAchievementState(userId);
+
+-- Dice values recorded for starting East player in tracked games.
+ALTER TABLE game ADD COLUMN startingDie1 INTEGER CHECK (startingDie1 IS NULL OR (startingDie1 >= 1 AND startingDie1 <= 6));
+ALTER TABLE game ADD COLUMN startingDie2 INTEGER CHECK (startingDie2 IS NULL OR (startingDie2 >= 1 AND startingDie2 <= 6));
