@@ -11,7 +11,18 @@ export type AchievementValueUnit =
     | 'han'
     | 'declarations'
     | 'chombo'
-    | 'players';
+    | 'players'
+    | 'games'
+    | 'finishes'
+    | 'winds'
+    | 'draws'
+    | 'rounds'
+    | 'events'
+    | 'deal_ins'
+    | 'rolls'
+    | 'rating'
+    | 'championships'
+    | 'podiums';
 
 export interface PlayerStats {
     dealer_wins: number;
