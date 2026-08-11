@@ -168,6 +168,15 @@ errors:
   noPlayersInTheGame: Гра не має гравців
   playerNotInGame: Гравець {{playerId}} відсутній у грі
   insufficientPointsForRiichi: Гравцю {{playerId}} потрібно щонайменше {{requiredPoints}} очок для оголошення ріічі (зараз {{actualPoints}})
+  handDetailRequired: Для цієї події деталі руки є обов'язковими
+  handDetailNotSupportedForSanma: Розрахунок деталей руки не підтримується для ігор на 3 гравців
+  invalidHandDetailStructure: Некоректна структура руки або кількість костей
+  nonWinningHand: Комбінація руки не є виграшною
+  handHasNoYaku: Виграшна рука не має жодного яку
+  handDetailScoreMismatch: Введені бали руки не відповідають розрахованим
+  handDetailContextConflict: Контекст руки суперечить результату раунду
+  unsupportedScoringContext: Контекст руки не підтримується правилами підрахунку
+  unmappedYakuError: "Движок підрахунку повернув невідоме яку: {{yakuName}}"
 
   userRatingChangeInGameNotFound: Зміну рейтингу користувача {{userId}} в грі {{gameId}} не знайдено
   userHasNoRatingDespiteHavingPlayedGames: Користувач {{userId}} не має рейтингу в події {{eventId}} попри те, що має зіграні ігри

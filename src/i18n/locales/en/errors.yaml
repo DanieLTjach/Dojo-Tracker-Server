@@ -168,6 +168,15 @@ errors:
   noPlayersInTheGame: Game has no players
   playerNotInGame: Player {{playerId}} is not in the game
   insufficientPointsForRiichi: Player {{playerId}} needs at least {{requiredPoints}} points to declare riichi (currently {{actualPoints}})
+  handDetailRequired: Hand details are required for this event
+  handDetailNotSupportedForSanma: Hand detail calculation is not supported for 3-player games
+  invalidHandDetailStructure: Invalid hand structure or tile count
+  nonWinningHand: Hand composition is not a winning hand
+  handHasNoYaku: Winning hand has no yaku
+  handDetailScoreMismatch: Entered hand score does not match derived hand score
+  handDetailContextConflict: Hand context conflicts with round result
+  unsupportedScoringContext: Hand context is not supported by scoring rules
+  unmappedYakuError: "Scoring engine produced an unmapped yaku: {{yakuName}}"
 
   userRatingChangeInGameNotFound: Rating change for user {{userId}} in game {{gameId}} was not found
   userHasNoRatingDespiteHavingPlayedGames: User {{userId}} has no rating in event {{eventId}} despite having played games

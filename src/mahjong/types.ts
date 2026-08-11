@@ -1,0 +1,156 @@
+export type TileCode =
+    | 'man_1'
+    | 'man_2'
+    | 'man_3'
+    | 'man_4'
+    | 'man_5'
+    | 'man_6'
+    | 'man_7'
+    | 'man_8'
+    | 'man_9'
+    | 'aka_man_5'
+    | 'pin_1'
+    | 'pin_2'
+    | 'pin_3'
+    | 'pin_4'
+    | 'pin_5'
+    | 'pin_6'
+    | 'pin_7'
+    | 'pin_8'
+    | 'pin_9'
+    | 'aka_pin_5'
+    | 'sou_1'
+    | 'sou_2'
+    | 'sou_3'
+    | 'sou_4'
+    | 'sou_5'
+    | 'sou_6'
+    | 'sou_7'
+    | 'sou_8'
+    | 'sou_9'
+    | 'aka_sou_5'
+    | 'ton'
+    | 'nan'
+    | 'shaa'
+    | 'pei'
+    | 'haku'
+    | 'hatsu'
+    | 'chun';
+
+export type CalledFrom = 'KAMICHA' | 'TOIMEN' | 'SHIMOCHA';
+
+export type Meld =
+    | { type: 'CHII', tiles: [TileCode, TileCode, TileCode], calledTileIndex: 0 | 1 | 2, calledFrom: 'KAMICHA' }
+    | { type: 'PON', tiles: [TileCode, TileCode, TileCode], calledTileIndex: 0 | 1 | 2, calledFrom: CalledFrom }
+    | {
+        type: 'DAIMINKAN';
+        tiles: [TileCode, TileCode, TileCode, TileCode];
+        calledTileIndex: 0 | 1 | 2 | 3;
+        calledFrom: CalledFrom;
+    }
+    | {
+        type: 'KAKAN';
+        tiles: [TileCode, TileCode, TileCode, TileCode];
+        calledTileIndex: 0 | 1 | 2 | 3;
+        calledFrom: CalledFrom;
+    }
+    | { type: 'ANKAN', tiles: [TileCode, TileCode, TileCode, TileCode] };
+
+export interface HandContext {
+    doubleRiichi?: boolean;
+    ippatsu?: boolean;
+    haitei?: boolean;
+    houtei?: boolean;
+    rinshanKaihou?: boolean;
+    chankan?: boolean;
+    tenhou?: boolean;
+    chiihou?: boolean;
+}
+
+export interface HandDetail {
+    concealedTiles: TileCode[];
+    melds: Meld[];
+    winningTile: TileCode;
+    doraIndicators: TileCode[];
+    uraDoraIndicators: TileCode[];
+    context?: HandContext;
+}
+
+export type YakuCode =
+    | 'menzen_tsumo'
+    | 'riichi'
+    | 'ippatsu'
+    | 'chankan'
+    | 'rinshan_kaihou'
+    | 'haitei'
+    | 'houtei'
+    | 'haku'
+    | 'hatsu'
+    | 'chun'
+    | 'bakaze_ton'
+    | 'bakaze_nan'
+    | 'bakaze_shaa'
+    | 'bakaze_pei'
+    | 'jikaze_ton'
+    | 'jikaze_nan'
+    | 'jikaze_shaa'
+    | 'jikaze_pei'
+    | 'tanyao'
+    | 'pinfu'
+    | 'iipeikou'
+    | 'sanshoku_doujun'
+    | 'ittsuu'
+    | 'chanta'
+    | 'chiitoitsu'
+    | 'toitoi'
+    | 'sanankou'
+    | 'sanshoku_doukou'
+    | 'sankantsu'
+    | 'shousangen'
+    | 'honroutou'
+    | 'junchan'
+    | 'ryanpeikou'
+    | 'honitsu'
+    | 'chinitsu'
+    | 'double_riichi'
+    | 'tenhou'
+    | 'chiihou'
+    | 'daisangen'
+    | 'suuankou'
+    | 'suuankou_tanki'
+    | 'tsuisou'
+    | 'ryuisou'
+    | 'chinroutou'
+    | 'chuuren_poutou'
+    | 'junsei_chuuren_poutou'
+    | 'kokushi_musou'
+    | 'kokushi_musou_13'
+    | 'daisuushi'
+    | 'shousuushi'
+    | 'suukantsu'
+    | 'dora'
+    | 'aka_dora'
+    | 'ura_dora';
+
+export type HandYaku =
+    | { code: YakuCode, han: number }
+    | { code: YakuCode, yakumanCount: number };
+
+export interface ScoreHandInput {
+    handDetail: HandDetail;
+    winType: 'TSUMO' | 'RON';
+    winnerSeat: number; // 0..3 (0 is East at start of round)
+    dealerSeat: number; // 0..3
+    roundWindSeat: number; // 0: East, 1: South, 2: West, 3: North
+    dealInSeat?: number; // 0..3 (for RON)
+    riichiPlayerSeats?: Set<number>;
+    rules?: Record<string, any>;
+}
+
+export interface DerivedHandScore {
+    han?: number;
+    fu?: number;
+    yakumanCount: number;
+    yaku: HandYaku[];
+    paoSeat?: number;
+}
