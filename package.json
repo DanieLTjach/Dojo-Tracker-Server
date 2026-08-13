@@ -27,7 +27,7 @@
     "license": "ISC",
     "description": "",
     "dependencies": {
-        "@kobalab/majiang-core": "1.4.1",
+        "majiang-core": "github:shogi-dojo/majiang-core#v1.4.1-sanma.0",
         "better-sqlite3": "^12.5.0",
         "cors": "^2.8.5",
         "dedent": "^1.7.1",

@@ -1,4 +1,4 @@
-import Majiang from '@kobalab/majiang-core';
+import Majiang from 'majiang-core';
 import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
 import {
     HandDetailContextConflictError,
