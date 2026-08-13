@@ -260,52 +260,52 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
 
     const isWinnerInRiichi = Boolean(riichiPlayerSeats?.has(winnerSeat));
 
-    // Convert hand detail into Majiang Shoupai string
+    // Convert hand detail into Majiang Shoupai notation string
     const concealedMajiang = handDetail.concealedTiles.map(tileCodeToMajiang);
-    let paistr = '';
+    let handNotation = '';
     if (winType === 'TSUMO') {
-        paistr = [...concealedMajiang, tileCodeToMajiang(handDetail.winningTile)].join('');
+        handNotation = [...concealedMajiang, tileCodeToMajiang(handDetail.winningTile)].join('');
     } else {
-        paistr = concealedMajiang.join('');
+        handNotation = concealedMajiang.join('');
     }
 
     if (handDetail.melds.length > 0) {
         const meldStrings = handDetail.melds.map(meldToMajiang);
-        paistr += ',' + meldStrings.join(',');
+        handNotation += ',' + meldStrings.join(',');
     }
 
-    let shoupai: any;
+    let hand: any;
     try {
-        shoupai = Majiang.Shoupai.fromString(paistr);
+        hand = Majiang.Shoupai.fromString(handNotation);
     } catch {
         throw new NonWinningHandError();
     }
 
-    let rongpai: string | null = null;
+    let ronTile: string | null = null;
     if (winType === 'RON') {
         if (dealInSeat === undefined) {
             throw new InvalidHandDetailStructureError();
         }
         const relDir = getRelativeDirectionSymbol(winnerSeat, dealInSeat);
-        rongpai = tileCodeToMajiang(handDetail.winningTile) + relDir;
+        ronTile = tileCodeToMajiang(handDetail.winningTile) + relDir;
     }
 
-    const menfeng = (winnerSeat - dealerSeat + 4) % 4; // 0: Ton, 1: Nan, 2: Shaa, 3: Pei
-    const zhuangfeng = roundWindSeat;
+    const seatWind = (winnerSeat - dealerSeat + 4) % 4; // 0: Ton, 1: Nan, 2: Shaa, 3: Pei
+    const roundWind = roundWindSeat;
 
     const ctx = handDetail.context;
-    let lizhiVal = 0;
+    let riichiVal = 0;
     if (isWinnerInRiichi) {
-        lizhiVal = ctx?.doubleRiichi ? 2 : 1;
+        riichiVal = ctx?.doubleRiichi ? 2 : 1;
     }
 
-    let haidiVal = 0;
-    if (ctx?.haitei) haidiVal = 1;
-    if (ctx?.houtei) haidiVal = 2;
+    let haiteiVal = 0;
+    if (ctx?.haitei) haiteiVal = 1;
+    if (ctx?.houtei) haiteiVal = 2;
 
-    let tianhuVal = 0;
-    if (ctx?.tenhou) tianhuVal = 1;
-    if (ctx?.chiihou) tianhuVal = 2;
+    let tenhouVal = 0;
+    if (ctx?.tenhou) tenhouVal = 1;
+    if (ctx?.chiihou) tenhouVal = 2;
 
     const majiangRule = mapGameRulesToMajiangRule(rules);
 
@@ -317,21 +317,21 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
 
     const param = Majiang.Util.hule_param({
         rule: majiangRule,
-        zhuangfeng,
-        menfeng,
-        lizhi: lizhiVal,
+        zhuangfeng: roundWind,
+        menfeng: seatWind,
+        lizhi: riichiVal,
         yifa: Boolean(ctx?.ippatsu),
         qianggang: Boolean(ctx?.chankan),
         lingshang: Boolean(ctx?.rinshanKaihou),
-        haidi: haidiVal,
-        tianhu: tianhuVal,
+        haidi: haiteiVal,
+        tianhu: tenhouVal,
         baopai: doraIndicatorsMajiang,
         fubaopai: uraDoraIndicatorsMajiang,
     });
 
     let res: any;
     try {
-        res = Majiang.Util.hule(shoupai, rongpai, param);
+        res = Majiang.Util.hule(hand, ronTile, param);
     } catch {
         throw new NonWinningHandError();
     }
