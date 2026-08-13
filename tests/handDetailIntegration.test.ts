@@ -299,4 +299,59 @@ describe('Hand Detail Integration Tests', () => {
         expect(createRes.status).toBe(400);
         expect(createRes.body.errorCode).toBe('handDetailNotSupportedForSanma');
     });
+
+    it('round posted with Renhou handDetail derives Mangan points under default rules', async () => {
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const roundPayload = {
+            type: 'RON',
+            dealInPlayerId: player3Id,
+            riichiPlayerIds: [],
+            winningHandData: [{
+                winnerPlayerId: player2Id,
+                yakumanCount: 0,
+                handDetail: {
+                    concealedTiles: [
+                        'man_1',
+                        'man_2',
+                        'man_3',
+                        'pin_2',
+                        'pin_3',
+                        'pin_4',
+                        'sou_3',
+                        'sou_4',
+                        'sou_5',
+                        'man_6',
+                        'man_7',
+                        'ton',
+                        'ton',
+                    ],
+                    melds: [],
+                    winningTile: 'man_8',
+                    doraIndicators: [],
+                    uraDoraIndicators: [],
+                    context: { renhou: true },
+                },
+            }],
+        };
+
+        const postRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send(roundPayload);
+
+        expect(postRes.status).toBe(200);
+
+        const getGameRes = await request(app)
+            .get(`/api/games/${gameId}`)
+            .set('Authorization', player1AuthHeader);
+
+        const savedRound = getGameRes.body.rounds[0];
+        expect(savedRound.result.winningHandData[0].han).toBe(5);
+        expect(savedRound.result.winningHandData[0].yaku).toEqual([{ code: 'renhou', han: 5 }]);
+        // Non-dealer Mangan Ron is 8000 points from deal-in player
+        const changes = savedRound.result.playerPointChanges;
+        expect(changes.find((c: any) => c.playerId === player2Id)?.pointChange).toBe(8000);
+        expect(changes.find((c: any) => c.playerId === player3Id)?.pointChange).toBe(-8000);
+    });
 });

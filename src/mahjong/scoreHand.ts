@@ -12,6 +12,18 @@ import { getBaseTileCode, getRelativeDirectionSymbol, meldToMajiang, tileCodeToM
 import type { DerivedHandScore, HandYaku, ScoreHandInput, TileCode } from './types.ts';
 import { mapJapaneseYakuToCode } from './yakuCodes.ts';
 
+/*
+ * Disposition of gameRulesCatalog keys relative to scoreHand engine:
+ *
+ * | Key | Disposition |
+ * |---|---|
+ * | blessing_of_man | Implemented directly in scoreHand (renhou) |
+ * | two_han_minimum | Enforced in PointCalculationUtil.ts |
+ * | shape_tenpai, nagashi_mangan | Draw/tenpai concerns, handled in game round flow / RulesUtils.ts |
+ * | kan_dora_called_promoted_quad, kan_dora_concealed_quad | Timing rules; client supplies final indicator arrays |
+ * | north_as_yaku, can_call_kita, kita_after_pon, rinshan_from_kita, ron_on_kita, furiten_from_kita | Sanma-specific rules (Phase 4) |
+ */
+
 function mapGameRulesToMajiangRule(rules?: GameRulesValues): Record<string, any> {
     const defaultRule = Majiang.Util.hule_param().rule;
 
@@ -25,31 +37,12 @@ function mapGameRulesToMajiangRule(rules?: GameRulesValues): Record<string, any>
     if (rules['double_wind_fu'] !== undefined) {
         merged['連風牌は2符'] = rules['double_wind_fu'] === 'two_fu';
     }
-    if (rules['red_fives'] !== undefined) {
-        const rf = rules['red_fives'];
-        if (rf === 'none') {
-            merged['赤牌'] = { m: 0, p: 0, s: 0 };
-        } else if (rf === 'three_one_per_suit') {
-            merged['赤牌'] = { m: 1, p: 1, s: 1 };
-        } else if (rf === 'two_red_fives_five_pin_and_five_sou') {
-            merged['赤牌'] = { m: 0, p: 1, s: 1 };
-        } else if (rf === 'three_red_fives_two_pin_and_one_sou') {
-            merged['赤牌'] = { m: 0, p: 2, s: 1 };
-        } else if (rf === 'four_red_fives_two_pin_and_two_sou') {
-            merged['赤牌'] = { m: 0, p: 2, s: 2 };
-        }
-    }
-    if (rules['dora'] === false) {
-        merged['カンドラあり'] = false;
-    } else if (rules['kan_dora'] !== undefined) {
-        merged['カンドラあり'] = Boolean(rules['kan_dora']);
-    }
-    if (rules['ura_dora'] !== undefined) {
-        merged['裏ドラあり'] = Boolean(rules['ura_dora']);
-    }
-    if (rules['kan_ura_dora'] !== undefined) {
-        merged['カン裏あり'] = Boolean(rules['kan_ura_dora']);
-    }
+    // Note: Majiang.Util.hule() only consumes 7 rule flags:
+    // 'クイタンあり', '連風牌は2符', '数え役満あり', 'ダブル役満あり', '役満の複合あり', '役満パオあり', '切り上げ満貫あり'.
+    // Other rules (red_fives, dora, kan_dora, ura_dora, kan_ura_dora) are ignored by hule() boundary and are instead
+    // enforced structurally in scoreHand.ts:
+    // - Red five limits: validateHandStructure() (lines 119-140)
+    // - Dora/Ura-dora indicators: passed dynamically at callsites (lines 307-311)
     if (rules['counted_yakuman'] !== undefined) {
         merged['数え役満あり'] = Boolean(rules['counted_yakuman']);
     }
@@ -238,9 +231,21 @@ function validateHandStructure(input: ScoreHandInput): void {
             throw new HandDetailContextConflictError();
         }
 
+        if (ctx.renhou) {
+            const isDealer = winnerSeat === dealerSeat;
+            if (winType !== 'RON' || isDealer || handDetail.melds.length > 0) {
+                throw new HandDetailContextConflictError();
+            }
+            const hasOtherSpecialContext = winnerInRiichi || ctx.doubleRiichi || ctx.ippatsu || ctx.haitei ||
+                ctx.houtei || ctx.rinshanKaihou || ctx.chankan || ctx.tenhou || ctx.chiihou;
+            if (hasOtherSpecialContext) {
+                throw new HandDetailContextConflictError();
+            }
+        }
+
         if (ctx.tenhou || ctx.chiihou) {
             const hasOtherSpecialContext = winnerInRiichi || ctx.doubleRiichi || ctx.ippatsu || ctx.haitei ||
-                ctx.houtei || ctx.rinshanKaihou || ctx.chankan;
+                ctx.houtei || ctx.rinshanKaihou || ctx.chankan || ctx.renhou;
             if (handDetail.melds.length > 0 || hasOtherSpecialContext) {
                 throw new HandDetailContextConflictError();
             }
@@ -333,6 +338,24 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
 
     if (!res) {
         throw new NonWinningHandError();
+    }
+
+    if (ctx?.renhou) {
+        const blessingOfMan = rules?.['blessing_of_man'] ?? 'none';
+        if (blessingOfMan === 'mangan') {
+            return {
+                han: 5,
+                fu: res.fu ?? 30,
+                yakumanCount: 0,
+                yaku: [{ code: 'renhou', han: 5 }],
+            };
+        }
+        if (blessingOfMan === 'yakuman') {
+            return {
+                yakumanCount: 1,
+                yaku: [{ code: 'renhou', yakumanCount: 1 }],
+            };
+        }
     }
 
     if (res.defen === 0 || !res.hupai || res.hupai.length === 0) {

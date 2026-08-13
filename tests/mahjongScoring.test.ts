@@ -839,4 +839,272 @@ describe('Mahjong Hand Scoring Engine', () => {
             expect(() => mapJapaneseYakuToCode('NonExistentYaku')).toThrow(UnmappedYakuError);
         });
     });
+
+    describe('Renhou (Blessing of Man) and Rule Mappings Safety Net', () => {
+        // A valid non-dealer hand shape with no standard yaku (m123 p234 s345 m678 z11 - non-tanyao, non-pinfu)
+        const renhouHand: HandDetail = {
+            concealedTiles: [
+                'man_1',
+                'man_2',
+                'man_3',
+                'pin_2',
+                'pin_3',
+                'pin_4',
+                'sou_3',
+                'sou_4',
+                'sou_5',
+                'man_6',
+                'man_7',
+                'ton',
+                'ton',
+            ],
+            melds: [],
+            winningTile: 'man_8',
+            doraIndicators: [],
+            uraDoraIndicators: [],
+            context: { renhou: true },
+        };
+
+        it('scores Renhou as Mangan (5 han) under blessing_of_man: mangan', () => {
+            const res = scoreHand({
+                handDetail: renhouHand,
+                winType: 'RON',
+                winnerSeat: 1, // non-dealer
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 2,
+                rules: { blessing_of_man: 'mangan' },
+            });
+            expect(res.han).toBe(5);
+            expect(res.yakumanCount).toBe(0);
+            expect(res.yaku).toEqual([{ code: 'renhou', han: 5 }]);
+        });
+
+        it('scores Renhou as Yakuman under blessing_of_man: yakuman', () => {
+            const res = scoreHand({
+                handDetail: renhouHand,
+                winType: 'RON',
+                winnerSeat: 1, // non-dealer
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 2,
+                rules: { blessing_of_man: 'yakuman' },
+            });
+            expect(res.yakumanCount).toBe(1);
+            expect(res.yaku).toEqual([{ code: 'renhou', yakumanCount: 1 }]);
+        });
+
+        it('throws HandHasNoYakuError for Renhou under blessing_of_man: none', () => {
+            expect(() =>
+                scoreHand({
+                    handDetail: renhouHand,
+                    winType: 'RON',
+                    winnerSeat: 1,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 2,
+                    rules: { blessing_of_man: 'none' },
+                })
+            ).toThrow(HandHasNoYakuError);
+        });
+
+        it('treats unset blessing_of_man as none (throws HandHasNoYakuError if no other yaku)', () => {
+            expect(() =>
+                scoreHand({
+                    handDetail: renhouHand,
+                    winType: 'RON',
+                    winnerSeat: 1,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 2,
+                })
+            ).toThrow(HandHasNoYakuError);
+        });
+
+        it('rejects invalid Renhou combinations', () => {
+            // Renhou on TSUMO
+            expect(() =>
+                scoreHand({
+                    handDetail: renhouHand,
+                    winType: 'TSUMO',
+                    winnerSeat: 1,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    rules: { blessing_of_man: 'mangan' },
+                })
+            ).toThrow(HandDetailContextConflictError);
+
+            // Renhou by dealer
+            expect(() =>
+                scoreHand({
+                    handDetail: renhouHand,
+                    winType: 'RON',
+                    winnerSeat: 0, // dealer
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 1,
+                    rules: { blessing_of_man: 'mangan' },
+                })
+            ).toThrow(HandDetailContextConflictError);
+
+            // Renhou with melds
+            const meldRenhouHand: HandDetail = {
+                ...renhouHand,
+                concealedTiles: ['man_1', 'man_2', 'man_3', 'pin_2', 'pin_3', 'pin_4', 'sou_3', 'sou_4', 'ton', 'ton'],
+                melds: [{
+                    type: 'CHII',
+                    tiles: ['man_6', 'man_7', 'man_8'],
+                    calledTileIndex: 0,
+                    calledFrom: 'KAMICHA',
+                }],
+                winningTile: 'sou_5',
+            };
+            expect(() =>
+                scoreHand({
+                    handDetail: meldRenhouHand,
+                    winType: 'RON',
+                    winnerSeat: 1,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 2,
+                    rules: { blessing_of_man: 'mangan' },
+                })
+            ).toThrow(HandDetailContextConflictError);
+
+            // Renhou with Riichi
+            expect(() =>
+                scoreHand({
+                    handDetail: renhouHand,
+                    winType: 'RON',
+                    winnerSeat: 1,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 2,
+                    riichiPlayerSeats: new Set([1]),
+                    rules: { blessing_of_man: 'mangan' },
+                })
+            ).toThrow(HandDetailContextConflictError);
+        });
+
+        it('keeps Tenhou and Chiihou as Yakuman regardless of blessing_of_man setting', () => {
+            const tenhouHand: HandDetail = {
+                concealedTiles: [
+                    'man_1',
+                    'man_2',
+                    'man_3',
+                    'pin_1',
+                    'pin_2',
+                    'pin_3',
+                    'sou_1',
+                    'sou_2',
+                    'sou_3',
+                    'man_5',
+                    'man_6',
+                    'ton',
+                    'ton',
+                ],
+                melds: [],
+                winningTile: 'man_7',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+                context: { tenhou: true },
+            };
+
+            const res = scoreHand({
+                handDetail: tenhouHand,
+                winType: 'TSUMO',
+                winnerSeat: 0, // dealer
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                rules: { blessing_of_man: 'none' }, // blessing_of_man none does NOT suppress Tenhou!
+            });
+            expect(res.yakumanCount).toBe(1);
+            expect(res.yaku.some(y => y.code === 'tenhou')).toBe(true);
+        });
+
+        it('open_tanyao: false rejects open tanyao hands', () => {
+            const openTanyaoHand: HandDetail = {
+                concealedTiles: [
+                    'man_2',
+                    'man_3',
+                    'man_4',
+                    'pin_3',
+                    'pin_4',
+                    'pin_5',
+                    'sou_4',
+                    'sou_5',
+                    'sou_5',
+                    'sou_5',
+                ],
+                melds: [{
+                    type: 'CHII',
+                    tiles: ['man_6', 'man_7', 'man_8'],
+                    calledTileIndex: 0,
+                    calledFrom: 'KAMICHA',
+                }],
+                winningTile: 'sou_4',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+            };
+
+            expect(() =>
+                scoreHand({
+                    handDetail: openTanyaoHand,
+                    winType: 'RON',
+                    winnerSeat: 1,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 2,
+                    rules: { open_tanyao: false },
+                })
+            ).toThrow(HandHasNoYakuError);
+        });
+
+        it('prune safety net: red fives score aka_dora and are structurally enforced', () => {
+            const akaHand: HandDetail = {
+                concealedTiles: [
+                    'aka_man_5',
+                    'man_6',
+                    'man_7',
+                    'pin_2',
+                    'pin_3',
+                    'pin_4',
+                    'sou_3',
+                    'sou_4',
+                    'sou_5',
+                    'ton',
+                    'ton',
+                    'pin_8',
+                    'pin_8',
+                ],
+                melds: [],
+                winningTile: 'pin_8',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+            };
+
+            // Under three_one_per_suit, aka_man_5 is valid and scores aka_dora
+            const res = scoreHand({
+                handDetail: akaHand,
+                winType: 'TSUMO',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                rules: { red_fives: 'three_one_per_suit' },
+            });
+            expect(res.yaku.some(y => y.code === 'aka_dora')).toBe(true);
+
+            // Under red_fives: 'none', submitting aka_man_5 is rejected structurally
+            expect(() =>
+                scoreHand({
+                    handDetail: akaHand,
+                    winType: 'TSUMO',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    rules: { red_fives: 'none' },
+                })
+            ).toThrow(InvalidHandDetailStructureError);
+        });
+    });
 });

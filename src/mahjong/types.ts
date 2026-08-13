@@ -66,6 +66,7 @@ export interface HandContext {
     chankan?: boolean | undefined;
     tenhou?: boolean | undefined;
     chiihou?: boolean | undefined;
+    renhou?: boolean | undefined;
 }
 
 export interface HandDetail {
@@ -117,6 +118,7 @@ export type YakuCode =
     | 'double_riichi'
     | 'tenhou'
     | 'chiihou'
+    | 'renhou'
     | 'daisangen'
     | 'suuankou'
     | 'suuankou_tanki'

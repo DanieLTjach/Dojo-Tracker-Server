@@ -86,6 +86,7 @@ export const handContextSchema = z.object({
     chankan: z.boolean().optional(),
     tenhou: z.boolean().optional(),
     chiihou: z.boolean().optional(),
+    renhou: z.boolean().optional(),
 });
 
 export const handDetailSchema = z.object({
@@ -136,6 +137,7 @@ const yakuCodeValues = [
     'double_riichi',
     'tenhou',
     'chiihou',
+    'renhou',
     'daisangen',
     'suuankou',
     'suuankou_tanki',
