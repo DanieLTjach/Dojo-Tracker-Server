@@ -33,7 +33,6 @@ import {
     UnknownEventTagError,
     CannotUnrateCurrentSeasonError,
 } from '../error/EventErrors.ts';
-import { HandDetailNotSupportedForSanmaError } from '../error/PointCalculationErrors.ts';
 import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { ClubNotFoundError, InsufficientClubPermissionsError } from '../error/ClubErrors.ts';
 import { InsufficientPermissionsError } from '../error/AuthErrors.ts';
@@ -636,7 +635,6 @@ export class EventService {
     private validateEventDataInvariants(data: EventData, existingEvent?: Event): void {
         this.validateTournamentConfig(data, existingEvent);
         this.validateEventFormat(data);
-        this.validateRequireHandDetail(data);
 
         if (data.dateFrom && data.dateTo && data.dateFrom >= data.dateTo) {
             throw new InvalidEventDateRangeError();
@@ -660,10 +658,6 @@ export class EventService {
         ) {
             throw new MinParticipantsExceedsMaxError();
         }
-    }
-
-    private validateRequireHandDetail(data: EventData): void {
-        // Hand detail is supported for both 4-player and 3-player (sanma) events
     }
 
     /**

@@ -1,7 +1,6 @@
 import {
     HandDetailContextConflictError,
     HandHasNoYakuError,
-    HandDetailNotSupportedForSanmaError,
     InvalidHandDetailStructureError,
     NonWinningHandError,
     UnmappedYakuError,
@@ -964,6 +963,50 @@ describe('Mahjong Hand Scoring Engine', () => {
             expect(res.han).toBe(5);
             expect(res.yakumanCount).toBe(0);
             expect(res.yaku).toEqual([{ code: 'renhou', han: 5 }]);
+        });
+
+        it("stacks Renhou mangan with the hand's other yaku and dora", () => {
+            // Regression: the renhou branch used to return a flat 5 han and drop
+            // every other yaku and all dora. This hand is pinfu + tanyao + 1 dora
+            // (3 han), so with renhou as a 5-han yaku the total must be 8.
+            const res = scoreHand({
+                handDetail: {
+                    concealedTiles: [
+                        'man_2',
+                        'man_3',
+                        'man_4',
+                        'pin_2',
+                        'pin_3',
+                        'pin_4',
+                        'sou_3',
+                        'sou_4',
+                        'sou_5',
+                        'pin_5',
+                        'pin_6',
+                        'sou_2',
+                        'sou_2',
+                    ],
+                    melds: [],
+                    winningTile: 'pin_7',
+                    doraIndicators: ['pin_1'],
+                    uraDoraIndicators: [],
+                    context: { renhou: true },
+                },
+                winType: 'RON',
+                winnerSeat: 1, // non-dealer
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 2,
+                rules: { blessing_of_man: 'mangan' },
+            });
+            expect(res.han).toBe(8);
+            expect(res.yakumanCount).toBe(0);
+            expect(res.yaku).toEqual([
+                { code: 'renhou', han: 5 },
+                { code: 'pinfu', han: 1 },
+                { code: 'tanyao', han: 1 },
+                { code: 'dora', han: 1 },
+            ]);
         });
 
         it('scores Renhou as Yakuman under blessing_of_man: yakuman', () => {

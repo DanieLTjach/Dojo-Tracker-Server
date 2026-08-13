@@ -3,7 +3,6 @@ import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
 import {
     HandDetailContextConflictError,
     HandHasNoYakuError,
-    HandDetailNotSupportedForSanmaError,
     InvalidHandDetailStructureError,
     NonWinningHandError,
     UnsupportedScoringContextError,
@@ -356,25 +355,25 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
         throw new NonWinningHandError();
     }
 
-    if (ctx?.renhou) {
-        const blessingOfMan = rules?.['blessing_of_man'] ?? 'none';
-        if (blessingOfMan === 'mangan') {
-            return {
-                han: 5,
-                fu: res.fu ?? 30,
-                yakumanCount: 0,
-                yaku: [{ code: 'renhou', han: 5 }],
-            };
-        }
-        if (blessingOfMan === 'yakuman') {
-            return {
-                yakumanCount: 1,
-                yaku: [{ code: 'renhou', yakumanCount: 1 }],
-            };
-        }
+    // Renhou is not implemented by the engine, so it is applied here. Under
+    // 'yakuman' it replaces the hand value outright; under 'mangan' it is a
+    // 5-han yaku that stacks with the hand's other yaku and dora, so the hand
+    // can exceed mangan. 'none' (and unset) means renhou scores nothing extra
+    // and the hand must stand on its own yaku.
+    const blessingOfMan = ctx?.renhou ? (rules?.['blessing_of_man'] ?? 'none') : 'none';
+
+    if (ctx?.renhou && blessingOfMan === 'yakuman') {
+        return {
+            yakumanCount: 1,
+            yaku: [{ code: 'renhou', yakumanCount: 1 }],
+        };
     }
 
-    if (res.defen === 0 || !res.hupai || res.hupai.length === 0) {
+    const renhouHan = ctx?.renhou && blessingOfMan === 'mangan' ? 5 : 0;
+
+    // A renhou hand may legitimately have no other yaku; renhou itself is the
+    // yaku in that case. Without renhou the usual yaku-nashi rule applies.
+    if (!renhouHan && (res.defen === 0 || !res.hupai || res.hupai.length === 0)) {
         throw new HandHasNoYakuError();
     }
 
@@ -384,7 +383,11 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
 
     const isOrdinaryYakuman = res.damanguan !== undefined && res.damanguan > 0;
 
-    for (const h of res.hupai) {
+    if (renhouHan && !isOrdinaryYakuman) {
+        yaku.push({ code: 'renhou', han: renhouHan });
+    }
+
+    for (const h of res.hupai ?? []) {
         const code = mapJapaneseYakuToCode(h.name);
         if (isOrdinaryYakuman) {
             const count = h.fanshu === '**' ? 2 : 1;
@@ -425,11 +428,12 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
         };
     }
 
-    const isCountedYakuman = res.fanshu >= 13 && rules?.['counted_yakuman'] !== false;
+    const totalHan = (res.fanshu ?? 0) + renhouHan;
+    const isCountedYakuman = totalHan >= 13 && rules?.['counted_yakuman'] !== false;
 
     return {
-        han: res.fanshu,
-        fu: res.fu,
+        han: totalHan,
+        fu: res.fu ?? 30,
         yakumanCount: isCountedYakuman ? 1 : 0,
         yaku,
         ...(paoSeat !== undefined ? { paoSeat } : {}),
