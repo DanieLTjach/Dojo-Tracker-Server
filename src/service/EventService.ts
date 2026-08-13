@@ -663,12 +663,7 @@ export class EventService {
     }
 
     private validateRequireHandDetail(data: EventData): void {
-        if (data.config?.requireHandDetail === true) {
-            const rules = this.gameRulesRepository.findGameRulesById(data.gameRulesId);
-            if (rules && rules.numberOfPlayers !== 4) {
-                throw new HandDetailNotSupportedForSanmaError();
-            }
-        }
+        // Hand detail is supported for both 4-player and 3-player (sanma) events
     }
 
     /**

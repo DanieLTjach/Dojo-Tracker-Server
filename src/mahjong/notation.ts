@@ -70,7 +70,17 @@ export function calledFromToSymbol(calledFrom: CalledFrom): '-' | '=' | '+' {
     throw new Error(`Unknown calledFrom value: ${calledFrom}`);
 }
 
-export function getRelativeDirectionSymbol(winnerSeat: number, targetSeat: number): '-' | '=' | '+' {
+export function getRelativeDirectionSymbol(
+    winnerSeat: number,
+    targetSeat: number,
+    numberOfPlayers: number = 4
+): '-' | '=' | '+' {
+    if (numberOfPlayers === 3) {
+        const diff = (targetSeat - winnerSeat + 3) % 3;
+        if (diff === 2) return '-';
+        if (diff === 1) return '+';
+        throw new Error(`Invalid target seat relative to winner seat: winner ${winnerSeat}, target ${targetSeat}`);
+    }
     const diff = (targetSeat - winnerSeat + 4) % 4;
     if (diff === 3) return '-';
     if (diff === 2) return '=';

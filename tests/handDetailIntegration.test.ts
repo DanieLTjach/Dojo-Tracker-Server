@@ -259,7 +259,7 @@ describe('Hand Detail Integration Tests', () => {
         expect(rejectRes.body.errorCode).toBe('handDetailRequired');
     });
 
-    it('rejects requireHandDetail: true on 3-player (sanma) ruleset', async () => {
+    it('allows requireHandDetail: true on 3-player (sanma) ruleset', async () => {
         // Create 3-player game rules
         const sanmaRulesRes = await request(app)
             .post('/api/game-rules')
@@ -282,7 +282,7 @@ describe('Hand Detail Integration Tests', () => {
         expect(sanmaRulesRes.status).toBe(201);
         const sanmaRulesId = sanmaRulesRes.body.id;
 
-        // Try creating event with sanma rules and requireHandDetail: true
+        // Creating event with sanma rules and requireHandDetail: true
         const createRes = await request(app)
             .post('/api/events')
             .set('Authorization', adminAuthHeader)
@@ -296,8 +296,73 @@ describe('Hand Detail Integration Tests', () => {
                 },
             });
 
-        expect(createRes.status).toBe(400);
-        expect(createRes.body.errorCode).toBe('handDetailNotSupportedForSanma');
+        expect(createRes.status).toBe(201);
+        expect(createRes.body.config.requireHandDetail).toBe(true);
+
+        const sanmaEventId = createRes.body.id;
+
+        // Create and start tracked 3-player game
+        const gameRes = await request(app)
+            .post('/api/games/tracked')
+            .set('Authorization', adminAuthHeader)
+            .send({
+                eventId: sanmaEventId,
+                players: [
+                    { userId: player1Id, startPlace: 'EAST' },
+                    { userId: player2Id, startPlace: 'SOUTH' },
+                    { userId: player3Id, startPlace: 'WEST' },
+                ],
+                status: 'IN_PROGRESS',
+            });
+        expect(gameRes.status).toBe(201);
+        const gameId = gameRes.body.id;
+
+        // Post a sanma round with kitaCount
+        const roundPayload = {
+            type: 'TSUMO',
+            riichiPlayerIds: [],
+            winningHandData: {
+                winnerPlayerId: player1Id,
+                yakumanCount: 0,
+                handDetail: {
+                    concealedTiles: [
+                        'pin_1',
+                        'pin_2',
+                        'pin_3',
+                        'pin_4',
+                        'pin_5',
+                        'pin_6',
+                        'sou_1',
+                        'sou_2',
+                        'sou_3',
+                        'ton',
+                        'ton',
+                        'nan',
+                        'nan',
+                    ],
+                    melds: [],
+                    winningTile: 'nan',
+                    doraIndicators: [],
+                    uraDoraIndicators: [],
+                    kitaCount: 1,
+                },
+            },
+        };
+
+        const postRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send(roundPayload);
+
+        expect(postRes.status).toBe(200);
+
+        const getGameRes = await request(app)
+            .get(`/api/games/${gameId}`)
+            .set('Authorization', player1AuthHeader);
+
+        const savedRound = getGameRes.body.rounds[0];
+        expect(savedRound.result.winningHandData.handDetail.kitaCount).toBe(1);
+        expect(savedRound.result.winningHandData.yaku.some((y: any) => y.code === 'kita')).toBe(true);
     });
 
     it('round posted with Renhou handDetail derives Mangan points under default rules', async () => {

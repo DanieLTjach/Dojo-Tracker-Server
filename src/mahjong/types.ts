@@ -76,6 +76,7 @@ export interface HandDetail {
     winningTile: TileCode;
     doraIndicators: TileCode[];
     uraDoraIndicators: TileCode[];
+    kitaCount?: number | undefined;
     context?: HandContext | undefined;
 }
 
@@ -119,6 +120,7 @@ export type YakuCode =
     | 'tenhou'
     | 'chiihou'
     | 'renhou'
+    | 'kita'
     | 'daisangen'
     | 'suuankou'
     | 'suuankou_tanki'

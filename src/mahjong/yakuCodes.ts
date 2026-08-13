@@ -56,6 +56,8 @@ const JAPANESE_YAKU_TO_CODE: Record<string, YakuCode> = {
     'ドラ': 'dora',
     '赤ドラ': 'aka_dora',
     '裏ドラ': 'ura_dora',
+    '北ドラ': 'kita',
+    '抜きドラ': 'kita',
 };
 
 export function mapJapaneseYakuToCode(name: string): YakuCode {

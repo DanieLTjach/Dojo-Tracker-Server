@@ -521,17 +521,103 @@ describe('Mahjong Hand Scoring Engine', () => {
             uraDoraIndicators: [],
         };
 
-        it('rejects 3-player game (Sanma)', () => {
+        it('scores 3-player game (Sanma) successfully', () => {
+            const sanmaHand: HandDetail = {
+                concealedTiles: [
+                    'pin_1',
+                    'pin_2',
+                    'pin_3',
+                    'pin_4',
+                    'pin_5',
+                    'pin_6',
+                    'sou_1',
+                    'sou_2',
+                    'sou_3',
+                    'ton',
+                    'ton',
+                    'nan',
+                    'nan',
+                ],
+                melds: [],
+                winningTile: 'nan',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+                kitaCount: 2,
+            };
+
+            const result = scoreHand({
+                handDetail: sanmaHand,
+                winType: 'TSUMO',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                rules: { number_of_players: 3 },
+            });
+
+            expect(result.han).toBeGreaterThanOrEqual(2);
+            expect(result.yaku.some(y => y.code === 'kita')).toBe(true);
+        });
+
+        it('rejects CHII meld in 3-player game (Sanma)', () => {
+            const chiiSanmaHand: HandDetail = {
+                concealedTiles: ['pin_1', 'pin_2', 'pin_3', 'sou_1', 'sou_2', 'sou_3', 'ton', 'ton', 'nan', 'nan'],
+                melds: [{
+                    type: 'CHII',
+                    tiles: ['pin_4', 'pin_5', 'pin_6'],
+                    calledTileIndex: 0,
+                    calledFrom: 'KAMICHA',
+                }],
+                winningTile: 'nan',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+            };
+
             expect(() =>
                 scoreHand({
-                    handDetail: baseHand,
+                    handDetail: chiiSanmaHand,
+                    winType: 'RON',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 1,
+                    rules: { number_of_players: 3 },
+                })
+            ).toThrow(InvalidHandDetailStructureError);
+        });
+
+        it('rejects Manzu 2-8 tiles in 3-player game (Sanma)', () => {
+            const manzuSanmaHand: HandDetail = {
+                concealedTiles: [
+                    'man_2',
+                    'man_3',
+                    'man_4',
+                    'pin_1',
+                    'pin_2',
+                    'pin_3',
+                    'sou_1',
+                    'sou_2',
+                    'sou_3',
+                    'ton',
+                    'ton',
+                    'nan',
+                    'nan',
+                ],
+                melds: [],
+                winningTile: 'nan',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+            };
+
+            expect(() =>
+                scoreHand({
+                    handDetail: manzuSanmaHand,
                     winType: 'TSUMO',
                     winnerSeat: 0,
                     dealerSeat: 0,
                     roundWindSeat: 0,
                     rules: { number_of_players: 3 },
                 })
-            ).toThrow(HandDetailNotSupportedForSanmaError);
+            ).toThrow(InvalidHandDetailStructureError);
         });
 
         it('rejects concealed tile count mismatch', () => {

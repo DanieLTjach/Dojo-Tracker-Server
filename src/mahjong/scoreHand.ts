@@ -31,14 +31,18 @@ function mapGameRulesToMajiangRule(rules?: GameRulesValues): Record<string, any>
 
     const merged = { ...defaultRule };
 
+    if (rules['number_of_players'] === 3) {
+        merged['三人打ち'] = true;
+        merged['人数'] = 3;
+    }
     if (rules['open_tanyao'] !== undefined) {
         merged['クイタンあり'] = Boolean(rules['open_tanyao']);
     }
     if (rules['double_wind_fu'] !== undefined) {
         merged['連風牌は2符'] = rules['double_wind_fu'] === 'two_fu';
     }
-    // Note: Majiang.Util.hule() only consumes 7 rule flags:
-    // 'クイタンあり', '連風牌は2符', '数え役満あり', 'ダブル役満あり', '役満の複合あり', '役満パオあり', '切り上げ満貫あり'.
+    // Note: Majiang.Util.hule() only consumes live rule flags:
+    // '三人打ち', '人数', 'クイタンあり', '連風牌は2符', '数え役満あり', 'ダブル役満あり', '役満の複合あり', '役満パオあり', '切り上げ満貫あり'.
     // Other rules (red_fives, dora, kan_dora, ura_dora, kan_ura_dora) are ignored by hule() boundary and are instead
     // enforced structurally in scoreHand.ts:
     // - Red five limits: validateHandStructure() (lines 119-140)
@@ -65,9 +69,7 @@ function mapGameRulesToMajiangRule(rules?: GameRulesValues): Record<string, any>
 function validateHandStructure(input: ScoreHandInput): void {
     const { handDetail, rules, winType, winnerSeat, dealerSeat, riichiPlayerSeats } = input;
 
-    if (rules?.['number_of_players'] === 3) {
-        throw new HandDetailNotSupportedForSanmaError();
-    }
+    const isSanma = rules?.['number_of_players'] === 3;
 
     // 1. Concealed tiles count: 13 - 3 * melds.length
     const expectedConcealedCount = 13 - 3 * handDetail.melds.length;
@@ -84,6 +86,18 @@ function validateHandStructure(input: ScoreHandInput): void {
         ...handDetail.doraIndicators,
         ...handDetail.uraDoraIndicators,
     ];
+
+    if (isSanma) {
+        const forbiddenSanmaTiles = ['man_2', 'man_3', 'man_4', 'man_5', 'aka_man_5', 'man_6', 'man_7', 'man_8'];
+        for (const tile of allTiles) {
+            if (forbiddenSanmaTiles.includes(tile)) {
+                throw new InvalidHandDetailStructureError();
+            }
+        }
+        if (handDetail.melds.some(m => m.type === 'CHII')) {
+            throw new InvalidHandDetailStructureError();
+        }
+    }
 
     for (const tile of allTiles) {
         const base = getBaseTileCode(tile);
@@ -258,6 +272,7 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
 
     validateHandStructure(input);
 
+    const numPlayers = rules?.['number_of_players'] === 3 ? 3 : 4;
     const isWinnerInRiichi = Boolean(riichiPlayerSeats?.has(winnerSeat));
 
     // Convert hand detail into Majiang Shoupai notation string
@@ -286,11 +301,11 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
         if (dealInSeat === undefined) {
             throw new InvalidHandDetailStructureError();
         }
-        const relDir = getRelativeDirectionSymbol(winnerSeat, dealInSeat);
+        const relDir = getRelativeDirectionSymbol(winnerSeat, dealInSeat, numPlayers);
         ronTile = tileCodeToMajiang(handDetail.winningTile) + relDir;
     }
 
-    const seatWind = (winnerSeat - dealerSeat + 4) % 4; // 0: Ton, 1: Nan, 2: Shaa, 3: Pei
+    const seatWind = (winnerSeat - dealerSeat + numPlayers) % numPlayers; // 0: Ton, 1: Nan, 2: Shaa, (3: Pei)
     const roundWind = roundWindSeat;
 
     const ctx = handDetail.context;
@@ -327,6 +342,7 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
         tianhu: tenhouVal,
         baopai: doraIndicatorsMajiang,
         fubaopai: uraDoraIndicatorsMajiang,
+        kita: handDetail.kitaCount ?? 0,
     });
 
     let res: any;
@@ -384,7 +400,7 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
             else if (h.baojia === '-') offset = 3;
 
             if (offset > 0) {
-                const yakuPaoSeat = (winnerSeat + offset) % 4;
+                const yakuPaoSeat = (winnerSeat + offset) % numPlayers;
                 if (paoSeat !== undefined && paoSeat !== yakuPaoSeat) {
                     throw new UnsupportedScoringContextError();
                 }

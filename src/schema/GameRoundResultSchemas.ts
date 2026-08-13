@@ -95,6 +95,7 @@ export const handDetailSchema = z.object({
     winningTile: tileCodeSchema,
     doraIndicators: z.array(tileCodeSchema),
     uraDoraIndicators: z.array(tileCodeSchema),
+    kitaCount: z.number().int().min(0).max(4).optional(),
     context: handContextSchema.optional(),
 });
 
@@ -138,6 +139,7 @@ const yakuCodeValues = [
     'tenhou',
     'chiihou',
     'renhou',
+    'kita',
     'daisangen',
     'suuankou',
     'suuankou_tanki',
