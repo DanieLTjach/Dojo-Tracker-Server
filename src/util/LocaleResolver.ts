@@ -13,9 +13,11 @@ export function resolveUserLocale(user: User): SupportedLocale {
  * app language applies immediately, without requiring a profile write first.
  */
 export function resolveRequestLocale(req: Request, user?: User): SupportedLocale {
-    const locale = req.acceptsLanguages(...SUPPORTED_LOCALES);
-    if (locale) {
-        return locale as SupportedLocale;
+    if (req.get('Accept-Language')) {
+        const locale = req.acceptsLanguages(...SUPPORTED_LOCALES);
+        if (locale) {
+            return locale as SupportedLocale;
+        }
     }
     return user ? resolveUserLocale(user) : DEFAULT_LOCALE;
 }

@@ -21,6 +21,7 @@ describe('ErrorHandling Middleware', () => {
             url: '/test',
             body: { test: 'data' },
             user: { userId: 123 },
+            get: jest.fn().mockReturnValue(undefined) as any,
             acceptsLanguages: jest.fn().mockReturnValue(false) as any,
         };
         mockRes = {
@@ -108,6 +109,7 @@ describe('ErrorHandling Middleware', () => {
 
     it('should use the Accept-Language header when present', () => {
         mockReq.user = undefined;
+        mockReq.get = jest.fn().mockReturnValue('en') as any;
         mockReq.acceptsLanguages = jest.fn().mockReturnValue('en') as any;
         const customError = new ResponseStatusError(StatusCodes.BAD_REQUEST, 'invalidRequestData');
 
@@ -121,10 +123,15 @@ describe('ErrorHandling Middleware', () => {
 
     it('should prefer the request language over the profile and retain profile fallback', () => {
         const user = { profile: { locale: 'uk' } } as User;
+        mockReq.get = jest.fn().mockReturnValue(undefined) as any;
         mockReq.acceptsLanguages = jest.fn().mockReturnValue('en') as any;
 
+        expect(resolveRequestLocale(mockReq as Request, user)).toBe('uk');
+
+        mockReq.get = jest.fn().mockReturnValue('en') as any;
         expect(resolveRequestLocale(mockReq as Request, user)).toBe('en');
 
+        mockReq.get = jest.fn().mockReturnValue(undefined) as any;
         mockReq.acceptsLanguages = jest.fn().mockReturnValue(false) as any;
         expect(resolveRequestLocale(mockReq as Request, user)).toBe('uk');
         expect(resolveRequestLocale(mockReq as Request)).toBe('uk');
