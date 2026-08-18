@@ -77,6 +77,7 @@ export interface Game {
     startedAt: Date | null;
     endedAt: Date | null;
     lastRoundWasDeleted: boolean;
+    enterHandDetail: boolean;
 }
 
 export interface GamePlayer {

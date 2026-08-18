@@ -141,6 +141,7 @@ export function detailedGame(players: GamePlayer[], currentState: GameState): De
         startedAt: timestamp,
         endedAt: null,
         lastRoundWasDeleted: false,
+        enterHandDetail: true,
         players,
         rounds: [],
         currentState,

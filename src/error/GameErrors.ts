@@ -90,6 +90,18 @@ export class GameNotInProgressWhenFinishingError extends BadRequestError {
     }
 }
 
+export class GameNotInProgressWhenChangingHandDetailError extends BadRequestError {
+    constructor() {
+        super('gameNotInProgressWhenChangingHandDetail');
+    }
+}
+
+export class HandDetailLockedByEventError extends BadRequestError {
+    constructor() {
+        super('handDetailLockedByEvent');
+    }
+}
+
 export class InvalidRoundIdError extends BadRequestError {
     constructor(expectedRoundId: number, actualRoundId: number) {
         super('invalidRoundId', { expectedRoundId, actualRoundId });

@@ -7,8 +7,10 @@ import {
     GameNotFinishedWhenUndoingFinishError,
     GameFinishedByPreviousRoundError,
     GameNotInProgressWhenAddingNewRoundError,
+    GameNotInProgressWhenChangingHandDetailError,
     GameNotInProgressWhenDeletingRoundError,
     GameNotInProgressWhenFinishingError,
+    HandDetailLockedByEventError,
     IncorrectPlayerCountError,
     InvalidRoundIdError,
     LastRoundRollbackAlreadyUsedError,
@@ -188,7 +190,7 @@ export class TrackedGameService {
             game,
             event.gameRules,
             resultInputDTO,
-            event.config?.requireHandDetail ?? false
+            this.resolveRequireHandDetail(game, event)
         );
 
         this.gameRepository.createGameRound(gameId, roundId, game.currentState!, result);
@@ -217,7 +219,7 @@ export class TrackedGameService {
             game,
             event.gameRules,
             resultInputDTO,
-            event.config?.requireHandDetail ?? false
+            this.resolveRequireHandDetail(game, event)
         );
     }
 
@@ -245,6 +247,20 @@ export class TrackedGameService {
         const updatedGame = this.gameService.getDetailedGameById(gameId);
         this.logGameRoundRollback(updatedGame, event, lastRound, modifiedBy);
         return updatedGame;
+    }
+
+    setEnterHandDetail(gameId: number, enterHandDetail: boolean, modifiedBy: number): DetailedGame {
+        const game = this.gameService.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+
+        this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
+        this.validateGameIsInProgress(game, () => new GameNotInProgressWhenChangingHandDetailError());
+        if (event.config?.requireHandDetail) {
+            throw new HandDetailLockedByEventError();
+        }
+
+        this.gameRepository.setEnterHandDetail(gameId, enterHandDetail, modifiedBy);
+        return this.gameService.getDetailedGameById(gameId);
     }
 
     finishGame(gameId: number, modifiedBy: number): DetailedGame {
@@ -361,6 +377,16 @@ export class TrackedGameService {
         ) {
             throw new PlannedGameResultRosterMismatchError();
         }
+    }
+
+    // The event flag forces hand detail and removes the per-game choice;
+    // otherwise the game row decides. One helper so submit and preview cannot
+    // drift.
+    private resolveRequireHandDetail(game: GameWithPlayers, event: Event): boolean {
+        if (event.config?.requireHandDetail) {
+            return true;
+        }
+        return game.enterHandDetail;
     }
 
     private validateGameIsInProgress(game: GameWithPlayers, error: () => BadRequestError): void {

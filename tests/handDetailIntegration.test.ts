@@ -150,6 +150,14 @@ describe('Hand Detail Integration Tests', () => {
     it('round posted without handDetail behaves untouched', async () => {
         const gameId = await createAndStartTrackedGame(eventId);
 
+        // Games default to full hand entry; the operator opts out per game.
+        const patchRes = await request(app)
+            .patch(`/api/games/${gameId}/hand-detail-mode`)
+            .set('Authorization', player1AuthHeader)
+            .send({ enterHandDetail: false });
+        expect(patchRes.status).toBe(200);
+        expect(patchRes.body.enterHandDetail).toBe(false);
+
         const manualPayload = {
             type: 'TSUMO',
             riichiPlayerIds: [player1Id],
@@ -418,5 +426,93 @@ describe('Hand Detail Integration Tests', () => {
         const changes = savedRound.result.playerPointChanges;
         expect(changes.find((c: any) => c.playerId === player2Id)?.pointChange).toBe(8000);
         expect(changes.find((c: any) => c.playerId === player3Id)?.pointChange).toBe(-8000);
+    });
+
+    it('defaults a new game to full hand entry until the operator opts out', async () => {
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const manualPayload = {
+            type: 'TSUMO',
+            riichiPlayerIds: [],
+            winningHandData: {
+                winnerPlayerId: player1Id,
+                yakumanCount: 0,
+                han: 1,
+                fu: 30,
+            },
+        };
+
+        // Default game row: plain han/fu is rejected.
+        const rejectRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send(manualPayload);
+        expect(rejectRes.status).toBe(400);
+        expect(rejectRes.body.errorCode).toBe('handDetailRequired');
+
+        // Opt out per game: the same payload previews and submits.
+        const patchRes = await request(app)
+            .patch(`/api/games/${gameId}/hand-detail-mode`)
+            .set('Authorization', player1AuthHeader)
+            .send({ enterHandDetail: false });
+        expect(patchRes.status).toBe(200);
+        expect(patchRes.body.enterHandDetail).toBe(false);
+
+        const previewRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1/preview`)
+            .set('Authorization', player1AuthHeader)
+            .send(manualPayload);
+        expect(previewRes.status).toBe(200);
+
+        const postRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send(manualPayload);
+        expect(postRes.status).toBe(200);
+    });
+
+    it('locks the per-game switch when the event requires hand detail', async () => {
+        const patchEventRes = await request(app)
+            .patch(`/api/events/${eventId}`)
+            .set('Authorization', adminAuthHeader)
+            .send({ config: { requireHandDetail: true } });
+        expect(patchEventRes.status).toBe(200);
+
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const patchRes = await request(app)
+            .patch(`/api/games/${gameId}/hand-detail-mode`)
+            .set('Authorization', player1AuthHeader)
+            .send({ enterHandDetail: false });
+        expect(patchRes.status).toBe(400);
+        expect(patchRes.body.errorCode).toBe('handDetailLockedByEvent');
+    });
+
+    it('rejects the hand-detail switch for a non-participant', async () => {
+        const outsiderId = createPlayer('Outsider', 555555);
+        const outsiderAuthHeader = createAuthHeader(outsiderId);
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const patchRes = await request(app)
+            .patch(`/api/games/${gameId}/hand-detail-mode`)
+            .set('Authorization', outsiderAuthHeader)
+            .send({ enterHandDetail: false });
+        expect(patchRes.status).toBe(403);
+    });
+
+    it('rejects the hand-detail switch unless the game is in progress', async () => {
+        const gameRes = await request(app)
+            .post('/api/games/tracked')
+            .set('Authorization', adminAuthHeader)
+            .send({ eventId, players: getGamePlayers(), status: 'CREATED' });
+        expect(gameRes.status).toBe(201);
+        const gameId = gameRes.body.id;
+
+        const patchRes = await request(app)
+            .patch(`/api/games/${gameId}/hand-detail-mode`)
+            .set('Authorization', player1AuthHeader)
+            .send({ enterHandDetail: false });
+        expect(patchRes.status).toBe(400);
+        expect(patchRes.body.errorCode).toBe('gameNotInProgressWhenChangingHandDetail');
     });
 });

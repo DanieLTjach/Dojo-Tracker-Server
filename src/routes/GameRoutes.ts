@@ -45,6 +45,11 @@ router.post(
 
 router.put('/:gameId', requireAuth, withTransaction((req, res) => gameController.editGame(req, res)));
 router.patch(
+    '/:gameId/hand-detail-mode',
+    requireAuth,
+    withTransaction((req, res) => gameController.setEnterHandDetail(req, res))
+);
+router.patch(
     '/:gameId/players/:userId/substitute-player',
     requireAuth,
     withTransaction((req, res) => gameController.setSubstitutePlayer(req, res))

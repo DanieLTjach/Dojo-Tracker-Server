@@ -95,6 +95,7 @@ function detailedGame(players: GamePlayer[], rounds: GameRound[]): DetailedGame 
         startedAt: ts,
         endedAt: ts,
         lastRoundWasDeleted: false,
+        enterHandDetail: true,
         players,
         rounds,
         currentState: null,

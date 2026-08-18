@@ -15,6 +15,7 @@ import {
     plannedGameResultSchema,
     gameUndoFinishSchema,
     gameStartSchema,
+    gameEnterHandDetailSchema,
     gamePlayerSubstitutePlayerSchema,
     gameScorePreviewSchema,
 } from '../schema/GameSchemas.ts';
@@ -150,6 +151,16 @@ export class GameController {
 
         this.gameService.deleteGame(gameId, deletedBy);
         return res.status(StatusCodes.NO_CONTENT).send();
+    }
+
+    setEnterHandDetail(req: Request, res: Response) {
+        const {
+            params: { gameId },
+            body: { enterHandDetail },
+        } = gameEnterHandDetailSchema.parse(req);
+        const modifiedBy = req.user!.userId;
+        const game = this.trackedGameService.setEnterHandDetail(gameId, enterHandDetail, modifiedBy);
+        return res.status(StatusCodes.OK).json(game);
     }
 
     setSubstitutePlayer(req: Request, res: Response) {

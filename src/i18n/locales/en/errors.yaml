@@ -128,6 +128,7 @@ errors:
   gameNotInProgress: Round result can only be added to a game in progress
   gameNotInProgressWhenDeletingRound: Round result can only be deleted from a game in progress
   gameNotInProgressWhenFinishing: Only a game in progress can be finished
+  gameNotInProgressWhenChangingHandDetail: Entry mode can only be changed for a game in progress
   invalidRoundId: Expected round {{expectedRoundId}}, got {{actualRoundId}}
   roundAlreadyExists: This round is already finished
   gameFinishedByPreviousRound: A new round cannot be added because the previous round finished the game
@@ -175,6 +176,7 @@ errors:
   handHasNoYaku: Winning hand has no yaku
   handDetailScoreMismatch: Entered hand score does not match derived hand score
   handDetailContextConflict: Hand context conflicts with round result
+  handDetailLockedByEvent: This event requires full hand entry — the switch is unavailable
   unsupportedScoringContext: Hand context is not supported by scoring rules
   unmappedYakuError: "Scoring engine produced an unmapped yaku: {{yakuName}}"
 
