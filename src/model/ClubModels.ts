@@ -26,6 +26,7 @@ export interface Club {
     locale: string;
     description: string | null;
     contactInfo: string | null;
+    logoUrl: string | null;
     isActive: boolean;
     currentRatingEventId: number | null;
     createdAt: Date;
