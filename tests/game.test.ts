@@ -742,12 +742,36 @@ describe('Game API Endpoints', () => {
 
         test('should expose profileFirstName/profileLastName alongside user.name in players[]', async () => {
             const profileRepo = new ProfileRepository();
-            profileRepo.upsertProfile(testUser1Id, null, null, 'Роман', 'Дорошенко', null, false, SYSTEM_USER_ID);
+            profileRepo.upsertProfile(testUser1Id, {
+                firstNameEn: null,
+                lastNameEn: null,
+                firstName: 'Роман',
+                lastName: 'Дорошенко',
+                emaNumber: null,
+                locale: null,
+                hideProfile: false,
+            }, SYSTEM_USER_ID);
             // testUser2Id has no profile row; profile fields should be null
             // testUser3Id has profile but only firstName
-            profileRepo.upsertProfile(testUser3Id, null, null, 'Іван', null, null, false, SYSTEM_USER_ID);
+            profileRepo.upsertProfile(testUser3Id, {
+                firstNameEn: null,
+                lastNameEn: null,
+                firstName: 'Іван',
+                lastName: null,
+                emaNumber: null,
+                locale: null,
+                hideProfile: false,
+            }, SYSTEM_USER_ID);
             // testUser4Id has a profile name but opted to hide it.
-            profileRepo.upsertProfile(testUser4Id, null, null, 'Олександр', 'Прихований', null, true, SYSTEM_USER_ID);
+            profileRepo.upsertProfile(testUser4Id, {
+                firstNameEn: null,
+                lastNameEn: null,
+                firstName: 'Олександр',
+                lastName: 'Прихований',
+                emaNumber: null,
+                locale: null,
+                hideProfile: true,
+            }, SYSTEM_USER_ID);
 
             try {
                 const response = await request(app)

@@ -1,5 +1,5 @@
 import type { Statement } from 'better-sqlite3';
-import type { Profile } from '../model/ProfileModels.ts';
+import type { Profile, ProfileValues } from '../model/ProfileModels.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
 
@@ -13,18 +13,7 @@ export class ProfileRepository {
         return dbEntity !== undefined ? profileFromDBEntity(dbEntity) : undefined;
     }
 
-    private upsertProfileStatement(): Statement<{
-        userId: number;
-        firstNameEn: string | null;
-        lastNameEn: string | null;
-        firstName: string | null;
-        lastName: string | null;
-        emaNumber: string | null;
-        locale: string | null;
-        hideProfile: number;
-        modifiedBy: number;
-        timestamp: string;
-    }, void> {
+    private upsertProfileStatement(): Statement<ProfileUpsertParams, void> {
         return dbManager.db.prepare(`
             INSERT INTO profile (userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, locale, hideProfile, modifiedBy, modifiedAt)
             VALUES (:userId, :firstNameEn, :lastNameEn, :firstName, :lastName, :emaNumber, :locale, :hideProfile, :modifiedBy, :timestamp)
@@ -40,26 +29,16 @@ export class ProfileRepository {
                 modifiedAt = :timestamp`);
     }
 
-    upsertProfile(
-        userId: number,
-        firstNameEn: string | null,
-        lastNameEn: string | null,
-        firstName: string | null,
-        lastName: string | null,
-        emaNumber: string | null,
-        hideProfile: boolean,
-        modifiedBy: number,
-        locale?: string | null
-    ): void {
+    upsertProfile(userId: number, values: ProfileValues, modifiedBy: number): void {
         this.upsertProfileStatement().run({
             userId,
-            firstNameEn,
-            lastNameEn,
-            firstName,
-            lastName,
-            emaNumber,
-            locale: locale ?? null,
-            hideProfile: booleanToInteger(hideProfile),
+            firstNameEn: values.firstNameEn,
+            lastNameEn: values.lastNameEn,
+            firstName: values.firstName,
+            lastName: values.lastName,
+            emaNumber: values.emaNumber,
+            locale: values.locale ?? null,
+            hideProfile: booleanToInteger(values.hideProfile),
             modifiedBy,
             timestamp: new Date().toISOString(),
         });
@@ -96,6 +75,19 @@ export class ProfileRepository {
             timestamp: new Date().toISOString(),
         });
     }
+}
+
+interface ProfileUpsertParams {
+    userId: number;
+    firstNameEn: string | null;
+    lastNameEn: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    emaNumber: string | null;
+    locale: string | null;
+    hideProfile: number;
+    modifiedBy: number;
+    timestamp: string;
 }
 
 interface ProfileDBEntity {

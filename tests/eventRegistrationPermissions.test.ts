@@ -81,7 +81,15 @@ describe('Event registration permissions matrix', () => {
     }
 
     function setProfile(userId: number, firstName: string | null, lastName: string | null): void {
-        profileRepo.upsertProfile(userId, null, null, firstName, lastName, null, false, SYSTEM_USER_ID);
+        profileRepo.upsertProfile(userId, {
+            firstNameEn: null,
+            lastNameEn: null,
+            firstName: firstName,
+            lastName: lastName,
+            emaNumber: null,
+            locale: null,
+            hideProfile: false,
+        }, SYSTEM_USER_ID);
     }
 
     function clearRegistrations(): void {
@@ -458,7 +466,15 @@ describe('Event registration permissions matrix', () => {
 
         it('apply without firstName/lastName → 400 MissingProfileNamesForTournamentRegistrationError', async () => {
             // Strip names from MEMBER user
-            profileRepo.upsertProfile(MEMBER_USER_ID, null, null, null, null, null, false, SYSTEM_USER_ID);
+            profileRepo.upsertProfile(MEMBER_USER_ID, {
+                firstNameEn: null,
+                lastNameEn: null,
+                firstName: null,
+                lastName: null,
+                emaNumber: null,
+                locale: null,
+                hideProfile: false,
+            }, SYSTEM_USER_ID);
             try {
                 const response = await request(app)
                     .post(`/api/events/${TOURNAMENT_EVENT_ID}/register`)

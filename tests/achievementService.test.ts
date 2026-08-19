@@ -66,7 +66,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
 
         // The requesting user's locale drives result formatting; pin u1 to English
         // so the formatted-value assertions below stay stable.
-        profileService.updateProfile(u1, undefined, undefined, undefined, undefined, undefined, undefined, u1, 'en');
+        profileService.updateProfile(u1, { locale: 'en' }, u1);
 
         createCustomEvent(
             EVENT_ID,

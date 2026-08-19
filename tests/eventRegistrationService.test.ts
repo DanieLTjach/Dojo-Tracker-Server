@@ -57,7 +57,15 @@ describe('EventRegistrationService', () => {
     }
 
     function setProfileNames(userId: number, firstName: string | null, lastName: string | null): void {
-        profileRepo.upsertProfile(userId, null, null, firstName, lastName, null, false, SYSTEM_USER_ID);
+        profileRepo.upsertProfile(userId, {
+            firstNameEn: null,
+            lastNameEn: null,
+            firstName: firstName,
+            lastName: lastName,
+            emaNumber: null,
+            locale: null,
+            hideProfile: false,
+        }, SYSTEM_USER_ID);
     }
 
     function insertMembership(
@@ -462,12 +470,15 @@ describe('EventRegistrationService', () => {
             // Set EMA fields on the participant first
             profileRepo.upsertProfile(
                 EXISTING_MEMBER_USER_ID,
-                'EmaFirst',
-                'EmaLast',
-                'First',
-                'Last',
-                '12345',
-                false,
+                {
+                    firstNameEn: 'EmaFirst',
+                    lastNameEn: 'EmaLast',
+                    firstName: 'First',
+                    lastName: 'Last',
+                    emaNumber: '12345',
+                    locale: null,
+                    hideProfile: false,
+                },
                 SYSTEM_USER_ID
             );
 
