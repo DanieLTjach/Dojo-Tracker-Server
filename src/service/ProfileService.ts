@@ -67,6 +67,30 @@ export function updateTouchesAdminOnlyFields(update: ProfileUpdate): boolean {
     return ADMIN_ONLY_FIELDS.some(field => update[field] !== undefined);
 }
 
+/**
+ * Strips the birth year server-side when hideBirthYear is true, unless the requester
+ * is the profile owner or an admin.
+ */
+export function applyBirthYearVisibility(
+    profile: Profile,
+    requestingUserId?: number,
+    isRequesterAdmin?: boolean
+): Profile {
+    if (!profile.hideBirthYear) {
+        return profile;
+    }
+    if (isRequesterAdmin) {
+        return profile;
+    }
+    if (requestingUserId !== undefined && requestingUserId === profile.userId) {
+        return profile;
+    }
+    return {
+        ...profile,
+        birthYear: null,
+    };
+}
+
 export class ProfileService {
     private profileRepository: ProfileRepository = new ProfileRepository();
     private userService: UserService = new UserService();
