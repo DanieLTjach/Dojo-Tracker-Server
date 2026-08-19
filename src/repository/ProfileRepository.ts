@@ -15,8 +15,18 @@ export class ProfileRepository {
 
     private upsertProfileStatement(): Statement<ProfileUpsertParams, void> {
         return dbManager.db.prepare(`
-            INSERT INTO profile (userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, locale, hideProfile, modifiedBy, modifiedAt)
-            VALUES (:userId, :firstNameEn, :lastNameEn, :firstName, :lastName, :emaNumber, :locale, :hideProfile, :modifiedBy, :timestamp)
+            INSERT INTO profile (
+                userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, locale, hideProfile,
+                avatarUrl, statusLine, birthDay, birthMonth, birthYear, hideBirthYear,
+                city, favouriteYaku, favouriteTile, discord, majsoulAccount, tenhouAccount,
+                modifiedBy, modifiedAt
+            )
+            VALUES (
+                :userId, :firstNameEn, :lastNameEn, :firstName, :lastName, :emaNumber, :locale, :hideProfile,
+                :avatarUrl, :statusLine, :birthDay, :birthMonth, :birthYear, :hideBirthYear,
+                :city, :favouriteYaku, :favouriteTile, :discord, :majsoulAccount, :tenhouAccount,
+                :modifiedBy, :timestamp
+            )
             ON CONFLICT(userId) DO UPDATE SET
                 firstNameEn = :firstNameEn,
                 lastNameEn = :lastNameEn,
@@ -25,6 +35,18 @@ export class ProfileRepository {
                 emaNumber = :emaNumber,
                 locale = :locale,
                 hideProfile = :hideProfile,
+                avatarUrl = :avatarUrl,
+                statusLine = :statusLine,
+                birthDay = :birthDay,
+                birthMonth = :birthMonth,
+                birthYear = :birthYear,
+                hideBirthYear = :hideBirthYear,
+                city = :city,
+                favouriteYaku = :favouriteYaku,
+                favouriteTile = :favouriteTile,
+                discord = :discord,
+                majsoulAccount = :majsoulAccount,
+                tenhouAccount = :tenhouAccount,
                 modifiedBy = :modifiedBy,
                 modifiedAt = :timestamp`);
     }
@@ -39,6 +61,18 @@ export class ProfileRepository {
             emaNumber: values.emaNumber,
             locale: values.locale ?? null,
             hideProfile: booleanToInteger(values.hideProfile),
+            avatarUrl: values.avatarUrl,
+            statusLine: values.statusLine,
+            birthDay: values.birthDay,
+            birthMonth: values.birthMonth,
+            birthYear: values.birthYear,
+            hideBirthYear: booleanToInteger(values.hideBirthYear),
+            city: values.city,
+            favouriteYaku: values.favouriteYaku,
+            favouriteTile: values.favouriteTile,
+            discord: values.discord,
+            majsoulAccount: values.majsoulAccount,
+            tenhouAccount: values.tenhouAccount,
             modifiedBy,
             timestamp: new Date().toISOString(),
         });
@@ -86,6 +120,18 @@ interface ProfileUpsertParams {
     emaNumber: string | null;
     locale: string | null;
     hideProfile: number;
+    avatarUrl: string | null;
+    statusLine: string | null;
+    birthDay: number | null;
+    birthMonth: number | null;
+    birthYear: number | null;
+    hideBirthYear: number;
+    city: string | null;
+    favouriteYaku: string | null;
+    favouriteTile: string | null;
+    discord: string | null;
+    majsoulAccount: string | null;
+    tenhouAccount: string | null;
     modifiedBy: number;
     timestamp: string;
 }
@@ -99,18 +145,18 @@ interface ProfileDBEntity {
     emaNumber: string | null;
     locale: string | null;
     hideProfile: number;
-    avatarUrl?: string | null;
-    statusLine?: string | null;
-    birthDay?: number | null;
-    birthMonth?: number | null;
-    birthYear?: number | null;
-    hideBirthYear?: number;
-    city?: string | null;
-    favouriteYaku?: string | null;
-    favouriteTile?: string | null;
-    discord?: string | null;
-    majsoulAccount?: string | null;
-    tenhouAccount?: string | null;
+    avatarUrl: string | null;
+    statusLine: string | null;
+    birthDay: number | null;
+    birthMonth: number | null;
+    birthYear: number | null;
+    hideBirthYear: number;
+    city: string | null;
+    favouriteYaku: string | null;
+    favouriteTile: string | null;
+    discord: string | null;
+    majsoulAccount: string | null;
+    tenhouAccount: string | null;
     modifiedAt: string;
     modifiedBy: number;
 }
@@ -125,17 +171,17 @@ function profileFromDBEntity(dbEntity: ProfileDBEntity): Profile {
         emaNumber: dbEntity.emaNumber,
         locale: dbEntity.locale,
         hideProfile: Boolean(dbEntity.hideProfile),
-        avatarUrl: dbEntity.avatarUrl ?? null,
-        statusLine: dbEntity.statusLine ?? null,
-        birthDay: dbEntity.birthDay ?? null,
-        birthMonth: dbEntity.birthMonth ?? null,
-        birthYear: dbEntity.birthYear ?? null,
+        avatarUrl: dbEntity.avatarUrl,
+        statusLine: dbEntity.statusLine,
+        birthDay: dbEntity.birthDay,
+        birthMonth: dbEntity.birthMonth,
+        birthYear: dbEntity.birthYear,
         hideBirthYear: Boolean(dbEntity.hideBirthYear),
-        city: dbEntity.city ?? null,
-        favouriteYaku: dbEntity.favouriteYaku ?? null,
-        favouriteTile: dbEntity.favouriteTile ?? null,
-        discord: dbEntity.discord ?? null,
-        majsoulAccount: dbEntity.majsoulAccount ?? null,
-        tenhouAccount: dbEntity.tenhouAccount ?? null,
+        city: dbEntity.city,
+        favouriteYaku: dbEntity.favouriteYaku,
+        favouriteTile: dbEntity.favouriteTile,
+        discord: dbEntity.discord,
+        majsoulAccount: dbEntity.majsoulAccount,
+        tenhouAccount: dbEntity.tenhouAccount,
     };
 }
