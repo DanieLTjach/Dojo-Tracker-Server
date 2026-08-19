@@ -18,6 +18,18 @@ const EMPTY_PROFILE_VALUES: ProfileValues = {
     emaNumber: null,
     locale: null,
     hideProfile: false,
+    avatarUrl: null,
+    statusLine: null,
+    birthDay: null,
+    birthMonth: null,
+    birthYear: null,
+    hideBirthYear: false,
+    city: null,
+    favouriteYaku: null,
+    favouriteTile: null,
+    discord: null,
+    majsoulAccount: null,
+    tenhouAccount: null,
 };
 
 /**
@@ -35,6 +47,18 @@ export function mergeProfileValues(existing: Profile | undefined, update: Profil
         emaNumber: update.emaNumber !== undefined ? update.emaNumber : base.emaNumber,
         locale: update.locale !== undefined ? update.locale : base.locale,
         hideProfile: update.hideProfile !== undefined ? update.hideProfile : base.hideProfile,
+        avatarUrl: update.avatarUrl !== undefined ? update.avatarUrl : base.avatarUrl,
+        statusLine: update.statusLine !== undefined ? update.statusLine : base.statusLine,
+        birthDay: update.birthDay !== undefined ? update.birthDay : base.birthDay,
+        birthMonth: update.birthMonth !== undefined ? update.birthMonth : base.birthMonth,
+        birthYear: update.birthYear !== undefined ? update.birthYear : base.birthYear,
+        hideBirthYear: update.hideBirthYear !== undefined ? update.hideBirthYear : base.hideBirthYear,
+        city: update.city !== undefined ? update.city : base.city,
+        favouriteYaku: update.favouriteYaku !== undefined ? update.favouriteYaku : base.favouriteYaku,
+        favouriteTile: update.favouriteTile !== undefined ? update.favouriteTile : base.favouriteTile,
+        discord: update.discord !== undefined ? update.discord : base.discord,
+        majsoulAccount: update.majsoulAccount !== undefined ? update.majsoulAccount : base.majsoulAccount,
+        tenhouAccount: update.tenhouAccount !== undefined ? update.tenhouAccount : base.tenhouAccount,
     };
 }
 

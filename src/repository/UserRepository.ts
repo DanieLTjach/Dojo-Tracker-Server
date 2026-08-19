@@ -254,6 +254,18 @@ interface UserWithProfileDBEntity {
     p_emaNumber: string | null;
     p_locale: string | null;
     p_hideProfile: number | null;
+    p_avatarUrl?: string | null;
+    p_statusLine?: string | null;
+    p_birthDay?: number | null;
+    p_birthMonth?: number | null;
+    p_birthYear?: number | null;
+    p_hideBirthYear?: number | null;
+    p_city?: string | null;
+    p_favouriteYaku?: string | null;
+    p_favouriteTile?: string | null;
+    p_discord?: string | null;
+    p_majsoulAccount?: string | null;
+    p_tenhouAccount?: string | null;
 }
 
 function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
@@ -275,6 +287,18 @@ function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
                 emaNumber: dbEntity.p_emaNumber,
                 locale: dbEntity.p_locale,
                 hideProfile: Boolean(dbEntity.p_hideProfile),
+                avatarUrl: dbEntity.p_avatarUrl ?? null,
+                statusLine: dbEntity.p_statusLine ?? null,
+                birthDay: dbEntity.p_birthDay ?? null,
+                birthMonth: dbEntity.p_birthMonth ?? null,
+                birthYear: dbEntity.p_birthYear ?? null,
+                hideBirthYear: Boolean(dbEntity.p_hideBirthYear),
+                city: dbEntity.p_city ?? null,
+                favouriteYaku: dbEntity.p_favouriteYaku ?? null,
+                favouriteTile: dbEntity.p_favouriteTile ?? null,
+                discord: dbEntity.p_discord ?? null,
+                majsoulAccount: dbEntity.p_majsoulAccount ?? null,
+                tenhouAccount: dbEntity.p_tenhouAccount ?? null,
             }
             : null,
         createdAt: new Date(dbEntity.createdAt),

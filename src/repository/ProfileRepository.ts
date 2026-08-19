@@ -99,6 +99,18 @@ interface ProfileDBEntity {
     emaNumber: string | null;
     locale: string | null;
     hideProfile: number;
+    avatarUrl?: string | null;
+    statusLine?: string | null;
+    birthDay?: number | null;
+    birthMonth?: number | null;
+    birthYear?: number | null;
+    hideBirthYear?: number;
+    city?: string | null;
+    favouriteYaku?: string | null;
+    favouriteTile?: string | null;
+    discord?: string | null;
+    majsoulAccount?: string | null;
+    tenhouAccount?: string | null;
     modifiedAt: string;
     modifiedBy: number;
 }
@@ -113,5 +125,17 @@ function profileFromDBEntity(dbEntity: ProfileDBEntity): Profile {
         emaNumber: dbEntity.emaNumber,
         locale: dbEntity.locale,
         hideProfile: Boolean(dbEntity.hideProfile),
+        avatarUrl: dbEntity.avatarUrl ?? null,
+        statusLine: dbEntity.statusLine ?? null,
+        birthDay: dbEntity.birthDay ?? null,
+        birthMonth: dbEntity.birthMonth ?? null,
+        birthYear: dbEntity.birthYear ?? null,
+        hideBirthYear: Boolean(dbEntity.hideBirthYear),
+        city: dbEntity.city ?? null,
+        favouriteYaku: dbEntity.favouriteYaku ?? null,
+        favouriteTile: dbEntity.favouriteTile ?? null,
+        discord: dbEntity.discord ?? null,
+        majsoulAccount: dbEntity.majsoulAccount ?? null,
+        tenhouAccount: dbEntity.tenhouAccount ?? null,
     };
 }
