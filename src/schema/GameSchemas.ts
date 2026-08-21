@@ -150,6 +150,15 @@ export const gameStartSchema = z.object({
     }),
 });
 
+export const gameEnterHandDetailSchema = z.object({
+    params: z.object({
+        gameId: gameIdParamSchema,
+    }),
+    body: z.object({
+        enterHandDetail: z.boolean(),
+    }),
+});
+
 export const gamePlayerSubstitutePlayerSchema = z.object({
     params: z.object({
         gameId: gameIdParamSchema,

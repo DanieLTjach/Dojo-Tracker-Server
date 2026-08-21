@@ -5,6 +5,8 @@ import { ResponseStatusError } from '../src/error/BaseErrors.ts';
 import { ZodError } from 'zod';
 import { SqliteError } from 'better-sqlite3';
 import { NOTEN_PENALTY_DIVISIBILITY_MESSAGE } from '../src/schema/GameRulesSchemas.ts';
+import { resolveRequestLocale } from '../src/util/LocaleResolver.ts';
+import type { User } from '../src/model/UserModels.ts';
 import { jest } from '@jest/globals';
 
 describe('ErrorHandling Middleware', () => {
@@ -19,6 +21,8 @@ describe('ErrorHandling Middleware', () => {
             url: '/test',
             body: { test: 'data' },
             user: { userId: 123 },
+            get: jest.fn().mockReturnValue(undefined) as any,
+            acceptsLanguages: jest.fn().mockReturnValue(false) as any,
         };
         mockRes = {
             status: jest.fn().mockReturnThis() as any,
@@ -101,6 +105,36 @@ describe('ErrorHandling Middleware', () => {
             errorCode: 'invalidInput',
             message: 'errors.invalidInput',
         });
+    });
+
+    it('should use the Accept-Language header when present', () => {
+        mockReq.user = undefined;
+        mockReq.get = jest.fn().mockReturnValue('en') as any;
+        mockReq.acceptsLanguages = jest.fn().mockReturnValue('en') as any;
+        const customError = new ResponseStatusError(StatusCodes.BAD_REQUEST, 'invalidRequestData');
+
+        handleErrors(customError, mockReq as Request, mockRes as Response, mockNext);
+
+        expect(mockRes.json).toHaveBeenCalledWith({
+            errorCode: 'invalidRequestData',
+            message: 'Invalid request data',
+        });
+    });
+
+    it('should prefer the request language over the profile and retain profile fallback', () => {
+        const user = { profile: { locale: 'uk' } } as User;
+        mockReq.get = jest.fn().mockReturnValue(undefined) as any;
+        mockReq.acceptsLanguages = jest.fn().mockReturnValue('en') as any;
+
+        expect(resolveRequestLocale(mockReq as Request, user)).toBe('uk');
+
+        mockReq.get = jest.fn().mockReturnValue('en') as any;
+        expect(resolveRequestLocale(mockReq as Request, user)).toBe('en');
+
+        mockReq.get = jest.fn().mockReturnValue(undefined) as any;
+        mockReq.acceptsLanguages = jest.fn().mockReturnValue(false) as any;
+        expect(resolveRequestLocale(mockReq as Request, user)).toBe('uk');
+        expect(resolveRequestLocale(mockReq as Request)).toBe('uk');
     });
 
     it('should handle NotFoundError with 404 status', () => {

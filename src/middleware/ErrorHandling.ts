@@ -5,24 +5,25 @@ import { ZodError } from 'zod';
 import { SqliteError } from 'better-sqlite3';
 import LogService from '../service/LogService.ts';
 import { UserService } from '../service/UserService.ts';
-import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
-import { resolveUserLocale } from '../util/LocaleResolver.ts';
+import { type SupportedLocale, t } from '../i18n/index.ts';
+import { resolveRequestLocale } from '../util/LocaleResolver.ts';
 import { normalizeGameRulesValidationIssues } from '../util/GameRulesValidationUtil.ts';
+import type { User } from '../model/UserModels.ts';
 
 const userService = new UserService();
 
 export const handleErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {
-    let locale: SupportedLocale = DEFAULT_LOCALE;
+    let user: User | undefined;
     let userInfo = 'unknown';
     if (req.user?.userId) {
         try {
-            const user = userService.getUserById(req.user.userId);
+            user = userService.getUserById(req.user.userId);
             userInfo = `${user.name} (ID: ${user.id})`;
-            locale = resolveUserLocale(user);
         } catch {
             userInfo = `(ID: ${req.user.userId})`;
         }
     }
+    const locale: SupportedLocale = resolveRequestLocale(req, user);
     LogService.logError(
         `Error while processing request ${req.method} ${req.url} from user ${userInfo} with body ${
             JSON.stringify(req.body)

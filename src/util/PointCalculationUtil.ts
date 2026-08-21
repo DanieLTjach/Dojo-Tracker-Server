@@ -21,7 +21,11 @@ import {
     NoPlayersInTheGameError,
     AbortiveDrawNotInRulesetError,
     InsufficientPointsForRiichiError,
+    HandDetailRequiredError,
+    HandDetailScoreMismatchError,
 } from '../error/PointCalculationErrors.ts';
+import { scoreHand } from '../mahjong/scoreHand.ts';
+import type { ScoreHandInput } from '../mahjong/types.ts';
 import type { GameRules } from '../model/EventModels.ts';
 import type { GamePlayer, DetailedGame, GameState } from '../model/GameModels.ts';
 import { GameFinishReason, nextWind, Wind, WIND_ORDER } from '../model/GameModels.ts';
@@ -65,10 +69,128 @@ import {
     isAbortiveDrawEnabled,
 } from './RulesUtils.ts';
 
+export function normalizeWinningHandDataWithHandDetail(
+    hand: WinningHandData,
+    winType: 'TSUMO' | 'RON',
+    dealInPlayerId: number | undefined,
+    riichiPlayerIds: number[],
+    players: GamePlayer[],
+    gameState: GameState,
+    detailedRules: GameRulesValues,
+    requireHandDetail: boolean
+): WinningHandData {
+    if (!hand.handDetail) {
+        if (requireHandDetail) {
+            throw new HandDetailRequiredError();
+        }
+        return hand;
+    }
+
+    const winnerSeat = getPlayerSeat(players, hand.winnerPlayerId);
+
+    const dealerWind = Object.values(Wind)[gameState.dealerNumber - 1];
+    if (dealerWind === undefined || !players.some(player => player.startPlace === dealerWind)) {
+        throw new CannotDetermineDealerError();
+    }
+    const dealerSeat = WIND_ORDER[dealerWind];
+
+    const roundWindSeat = WIND_ORDER[gameState.wind];
+
+    let dealInSeat: number | undefined;
+    if (winType === 'RON' && dealInPlayerId !== undefined) {
+        dealInSeat = getPlayerSeat(players, dealInPlayerId);
+    }
+
+    const riichiPlayerSeats = new Set(riichiPlayerIds.map(id => getPlayerSeat(players, id)));
+
+    const scoreInput: ScoreHandInput = {
+        handDetail: hand.handDetail,
+        winType,
+        winnerSeat,
+        dealerSeat,
+        roundWindSeat,
+        ...(dealInSeat !== undefined ? { dealInSeat } : {}),
+        riichiPlayerSeats,
+        rules: detailedRules,
+    };
+
+    const derived = scoreHand(scoreInput);
+
+    if (hand.han !== undefined || hand.fu !== undefined || hand.yakumanCount > 0) {
+        if (derived.yakumanCount > 0 && derived.han === undefined) {
+            if (hand.yakumanCount !== derived.yakumanCount || hand.han !== undefined || hand.fu !== undefined) {
+                throw new HandDetailScoreMismatchError();
+            }
+        } else if (derived.yakumanCount > 0 && derived.han !== undefined) {
+            if (hand.yakumanCount !== 1) {
+                throw new HandDetailScoreMismatchError();
+            }
+            if (hand.han !== undefined && hand.han !== derived.han) {
+                throw new HandDetailScoreMismatchError();
+            }
+            if (hand.fu !== undefined && hand.fu !== derived.fu) {
+                throw new HandDetailScoreMismatchError();
+            }
+        } else {
+            if (hand.yakumanCount !== 0) {
+                throw new HandDetailScoreMismatchError();
+            }
+            if (hand.han !== undefined && hand.han !== derived.han) {
+                throw new HandDetailScoreMismatchError();
+            }
+            if (hand.fu !== undefined && hand.fu !== derived.fu) {
+                throw new HandDetailScoreMismatchError();
+            }
+        }
+    }
+
+    let paoPlayerId: number | undefined;
+    if (derived.paoSeat !== undefined) {
+        const paoWind = Object.values(Wind)[derived.paoSeat];
+        if (paoWind === undefined) {
+            throw new CannotDeterminePlayerPlacementError();
+        }
+        const paoPlayer = players.find(player => player.startPlace === paoWind);
+        if (paoPlayer === undefined) {
+            throw new MissingPlayerForWindError(paoWind);
+        }
+        paoPlayerId = paoPlayer.userId;
+        if (hand.yakumanLiabilityPlayerId !== undefined && hand.yakumanLiabilityPlayerId !== paoPlayerId) {
+            throw new HandDetailScoreMismatchError();
+        }
+    } else {
+        if (hand.yakumanLiabilityPlayerId !== undefined) {
+            throw new HandDetailScoreMismatchError();
+        }
+    }
+
+    return {
+        winnerPlayerId: hand.winnerPlayerId,
+        handDetail: hand.handDetail,
+        yakumanCount: derived.yakumanCount,
+        ...(derived.han !== undefined ? { han: derived.han } : {}),
+        ...(derived.fu !== undefined ? { fu: derived.fu } : {}),
+        ...(paoPlayerId !== undefined ? { yakumanLiabilityPlayerId: paoPlayerId } : {}),
+        yaku: derived.yaku,
+    };
+}
+
+function getPlayerSeat(players: GamePlayer[], playerId: number): number {
+    const player = players.find(candidate => candidate.userId === playerId);
+    if (player === undefined) {
+        throw new PlayerNotInGameError(playerId);
+    }
+    if (player.startPlace === null) {
+        throw new CannotDeterminePlayerPlacementError();
+    }
+    return WIND_ORDER[player.startPlace];
+}
+
 export function calculateGameRoundResult(
     game: DetailedGame,
     rules: GameRules,
-    result: GameRoundResultInputDTO
+    result: GameRoundResultInputDTO,
+    requireHandDetail = false
 ): GameRoundResult {
     const currentGameState = game.currentState;
     if (currentGameState === null) {
@@ -79,9 +201,49 @@ export function calculateGameRoundResult(
         throw new RulesetShouldContainDetailedRulesError();
     }
     const detailedRules = rules.details.rules;
+    const scoringRules: GameRulesValues = {
+        ...detailedRules,
+        number_of_players: rules.numberOfPlayers as 3 | 4,
+    };
 
     validateResultPlayersInGame(game.players, result);
     validateRiichiPlayersCanPay(game.players, detailedRules, result);
+
+    if (result.type === 'TSUMO') {
+        const normalizedHand = normalizeWinningHandDataWithHandDetail(
+            result.winningHandData,
+            'TSUMO',
+            undefined,
+            result.riichiPlayerIds,
+            game.players,
+            currentGameState,
+            scoringRules,
+            requireHandDetail
+        );
+        result = {
+            ...result,
+            winningHandData: normalizedHand,
+        };
+    } else if (result.type === 'RON') {
+        const dealInPlayerId = result.dealInPlayerId;
+        const riichiPlayerIds = result.riichiPlayerIds;
+        const normalizedHands = result.winningHandData.map(hand =>
+            normalizeWinningHandDataWithHandDetail(
+                hand,
+                'RON',
+                dealInPlayerId,
+                riichiPlayerIds,
+                game.players,
+                currentGameState,
+                scoringRules,
+                requireHandDetail
+            )
+        );
+        result = {
+            ...result,
+            winningHandData: normalizedHands,
+        };
+    }
 
     const roundPointChanges = calculateRoundPointChanges(currentGameState, game.players, detailedRules, result);
 

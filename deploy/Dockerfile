@@ -6,6 +6,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY .husky/install.mjs ./.husky/install.mjs
 
+# Install git for git dependencies
+RUN apk add --no-cache git
+
 # Install production dependencies only
 RUN npm ci --omit=dev
 
