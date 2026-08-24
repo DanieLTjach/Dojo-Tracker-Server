@@ -22,7 +22,10 @@ export type AchievementValueUnit =
     | 'rolls'
     | 'rating'
     | 'championships'
-    | 'podiums';
+    | 'podiums'
+    | 'kans'
+    | 'dora'
+    | 'clubs';
 
 export interface PlayerStats {
     dealer_wins: number;
