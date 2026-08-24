@@ -164,4 +164,257 @@ describe('AutomaticAchievementEvaluator', () => {
         const debut = results.find(r => r.userId === 101 && r.code === 'EVENT_DEBUT');
         expect(debut?.unlockedAt).not.toBeNull();
     });
+
+    it('evaluates timing, yaku, dora, and kan achievements from persisted hand detail', () => {
+        const g1 = makeGame(1, [
+            { userId: 101, points: 35000 },
+            { userId: 102, points: 25000 },
+            { userId: 103, points: 25000 },
+            { userId: 104, points: 15000 },
+        ], {
+            rounds: [{
+                roundNumber: 1,
+                wind: Wind.EAST,
+                dealerNumber: 1,
+                counters: 0,
+                riichiSticks: 0,
+                result: {
+                    type: 'TSUMO',
+                    winningHandData: {
+                        winnerPlayerId: 101,
+                        han: 8,
+                        fu: 30,
+                        yakumanCount: 0,
+                        handDetail: {
+                            concealedTiles: [],
+                            melds: [{ type: 'ANKAN', tiles: ['ton', 'ton', 'ton', 'ton'] }],
+                            winningTile: 'pin_5',
+                            doraIndicators: ['sou_3'],
+                            uraDoraIndicators: [],
+                        },
+                        yaku: [
+                            { code: 'riichi', han: 1 },
+                            { code: 'ippatsu', han: 1 },
+                            { code: 'pinfu', han: 1 },
+                            { code: 'ankou', han: 2 } as any,
+                            { code: 'dora', han: 5 },
+                        ],
+                    },
+                    playerPointChanges: [],
+                },
+            }],
+        });
+
+        const results = evaluateAutomaticAchievements([g1], [], []);
+
+        expect(results.find(r => r.userId === 101 && r.code === 'FIRST_IPPATSU')?.unlockedAt).not.toBeNull();
+        expect(results.find(r => r.userId === 101 && r.code === 'FIRST_PINFU')?.unlockedAt).not.toBeNull();
+        expect(results.find(r => r.userId === 101 && r.code === 'DORA_5_ONE_HAND')?.unlockedAt).not.toBeNull();
+        expect(results.find(r => r.userId === 101 && r.code === 'NO_DORA_MANGAN')).toBeUndefined();
+
+        const firstKan = results.find(r => r.userId === 101 && r.code === 'FIRST_KAN');
+        expect(firstKan?.unlockedAt).not.toBeNull();
+        expect(results.find(r => r.userId === 101 && r.code === 'FIRST_ANKAN')?.unlockedAt).not.toBeNull();
+
+        // Ankan keeps the hand concealed, so this still counts as menzen progress
+        const menzen = results.find(r => r.userId === 101 && r.code === 'MENZEN_WINS_50');
+        expect(menzen).toBeDefined();
+        expect(menzen?.progress).toBe(1);
+        expect(results.find(r => r.userId === 101 && r.code === 'OPEN_HAND_WIN_10')).toBeUndefined();
+    });
+
+    it('evaluates yakuman-specific firsts and pao liability', () => {
+        const g1 = makeGame(1, [
+            { userId: 101, points: 40000 },
+            { userId: 102, points: 20000 },
+            { userId: 103, points: 20000 },
+            { userId: 104, points: 20000 },
+        ], {
+            rounds: [{
+                roundNumber: 1,
+                wind: Wind.EAST,
+                dealerNumber: 1,
+                counters: 0,
+                riichiSticks: 0,
+                result: {
+                    type: 'RON',
+                    dealInPlayerId: 103,
+                    winningHandData: [{
+                        winnerPlayerId: 101,
+                        yakumanCount: 1,
+                        yakumanLiabilityPlayerId: 102,
+                        yaku: [{ code: 'daisangen', yakumanCount: 1 }],
+                    }],
+                    playerPointChanges: [],
+                },
+            }],
+        });
+
+        const results = evaluateAutomaticAchievements([g1], [], []);
+
+        expect(results.find(r => r.userId === 101 && r.code === 'FIRST_DAISANGEN')?.unlockedAt).not.toBeNull();
+        expect(results.find(r => r.userId === 102 && r.code === 'YAKUMAN_LIABILITY')?.unlockedAt).not.toBeNull();
+
+        const paoProgress = results.find(r => r.userId === 102 && r.code === 'PAID_PAO_3');
+        expect(paoProgress).toBeDefined();
+        expect(paoProgress?.progress).toBe(1);
+    });
+
+    it('evaluates nagashi mangan from exhaustive draws', () => {
+        const g1 = makeGame(1, [
+            { userId: 101, points: 32000 },
+            { userId: 102, points: 26000 },
+            { userId: 103, points: 22000 },
+            { userId: 104, points: 20000 },
+        ], {
+            rounds: [{
+                roundNumber: 1,
+                wind: Wind.EAST,
+                dealerNumber: 1,
+                counters: 0,
+                riichiSticks: 0,
+                result: {
+                    type: 'EXHAUSTIVE_DRAW',
+                    riichiPlayerIds: [],
+                    tenpaiPlayerIds: [101, 102],
+                    nagashiManganPlayerIds: [101],
+                    playerPointChanges: [],
+                },
+            }],
+        });
+
+        const results = evaluateAutomaticAchievements([g1], [], []);
+
+        expect(results.find(r => r.userId === 101 && r.code === 'NAGASHI_MANGAN')?.unlockedAt).not.toBeNull();
+    });
+
+    it('evaluates sanma kita achievements', () => {
+        const g1 = makeGame(1, [
+            { userId: 101, points: 40000 },
+            { userId: 102, points: 25000 },
+            { userId: 103, points: 15000 },
+        ], {
+            gameSize: 3,
+            rounds: [{
+                roundNumber: 1,
+                wind: Wind.EAST,
+                dealerNumber: 1,
+                counters: 0,
+                riichiSticks: 0,
+                result: {
+                    type: 'TSUMO',
+                    winningHandData: {
+                        winnerPlayerId: 101,
+                        han: 5,
+                        fu: 40,
+                        yakumanCount: 0,
+                        handDetail: {
+                            concealedTiles: [],
+                            melds: [],
+                            winningTile: 'pei',
+                            doraIndicators: [],
+                            uraDoraIndicators: [],
+                            kitaCount: 8,
+                        },
+                        yaku: [
+                            { code: 'riichi', han: 1 },
+                            { code: 'kita', han: 8 },
+                        ],
+                    },
+                    playerPointChanges: [],
+                },
+            }],
+        });
+
+        const results = evaluateAutomaticAchievements([g1], [], []);
+
+        expect(results.find(r => r.userId === 101 && r.code === 'SANMA_FIRST_KITA')?.unlockedAt).not.toBeNull();
+        expect(results.find(r => r.userId === 101 && r.code === 'SANMA_KITA_8_ONE_HAND')?.unlockedAt).not.toBeNull();
+    });
+
+    it('evaluates OpenSkill loss, gain streak, and multi-club provisional', () => {
+        const snap = (userId: number, initial: number, final: number, place: number, sigma = 3) => ({
+            userId,
+            initialMu: initial,
+            initialSigma: sigma,
+            initialDisplayRating: initial,
+            finalMu: final,
+            finalSigma: sigma,
+            finalDisplayRating: final,
+            place,
+        });
+        const skillResults = [
+            {
+                clubId: 1,
+                gameSize: 4 as const,
+                gameId: 1,
+                timestamp: new Date('2026-01-01T12:00:00.000Z'),
+                userSnapshots: [snap(101, 1800, 1810, 1), snap(102, 1700, 1690, 2)],
+            },
+            {
+                clubId: 1,
+                gameSize: 4 as const,
+                gameId: 2,
+                timestamp: new Date('2026-01-02T12:00:00.000Z'),
+                userSnapshots: [snap(101, 1810, 1820, 1), snap(102, 1690, 1740, 2)],
+            },
+            {
+                clubId: 1,
+                gameSize: 4 as const,
+                gameId: 3,
+                timestamp: new Date('2026-01-03T12:00:00.000Z'),
+                userSnapshots: [snap(101, 1820, 1830, 1), snap(102, 1740, 1680, 2)],
+            },
+            {
+                clubId: 2,
+                gameSize: 4 as const,
+                gameId: 4,
+                timestamp: new Date('2026-01-04T12:00:00.000Z'),
+                userSnapshots: [snap(101, 1830, 1840, 1), snap(103, 1500, 1510, 2)],
+            },
+        ];
+
+        const results = evaluateAutomaticAchievements([], [], skillResults);
+
+        expect(results.find(r => r.userId === 101 && r.code === 'OPENSKILL_STREAK_GAIN_3')?.unlockedAt).not.toBeNull();
+        expect(results.find(r => r.userId === 102 && r.code === 'OPENSKILL_LOSS_50_ONE_GAME')?.unlockedAt).not
+            .toBeNull();
+        expect(results.find(r => r.userId === 101 && r.code === 'OPENSKILL_MULTI_CLUB_RANKED_2')?.unlockedAt).not
+            .toBeNull();
+        expect(results.find(r => r.userId === 103 && r.code === 'OPENSKILL_MULTI_CLUB_RANKED_2')).toBeUndefined();
+    });
+
+    it('evaluates rank-1 defense when the track leader keeps winning', () => {
+        const snap = (userId: number, initial: number, final: number, place: number) => ({
+            userId,
+            initialMu: initial,
+            initialSigma: 3,
+            initialDisplayRating: initial,
+            finalMu: final,
+            finalSigma: 3,
+            finalDisplayRating: final,
+            place,
+        });
+        const skillResults = [1, 2, 3].map(gameId => ({
+            clubId: 1,
+            gameSize: 4 as const,
+            gameId,
+            timestamp: new Date(`2026-01-0${gameId}T12:00:00.000Z`),
+            // 101 starts as the clear track leader and wins every game
+            userSnapshots: [
+                snap(101, 1800 + gameId * 10 - 10, 1800 + gameId * 10, 1),
+                snap(102, 1400, 1390 + gameId, 2),
+            ],
+        }));
+
+        const results = evaluateAutomaticAchievements([], [], skillResults);
+
+        const defend = results.find(r =>
+            r.userId === 101 && r.code === 'OPENSKILL_RANK1_DEFEND_3' && r.scope === 'SKILL_4P:1'
+        );
+        expect(defend?.unlockedAt).not.toBeNull();
+
+        // 102 never leads the track
+        expect(results.find(r => r.userId === 102 && r.code === 'OPENSKILL_RANK1_DEFEND_3')).toBeUndefined();
+    });
 });

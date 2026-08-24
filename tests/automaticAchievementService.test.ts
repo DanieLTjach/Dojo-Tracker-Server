@@ -111,4 +111,57 @@ describe('AutomaticAchievementService integration', () => {
         const snakeEyes = statesAfter.find(s => s.code === 'DICE_SNAKE_EYES');
         expect(snakeEyes).toBeDefined();
     });
+
+    it('unlocks hand-detail achievements from a scored round', () => {
+        const players = [
+            { userId, startPlace: Wind.EAST },
+            { userId: 102, startPlace: Wind.SOUTH },
+            { userId: 103, startPlace: Wind.WEST },
+            { userId: 104, startPlace: Wind.NORTH },
+        ];
+
+        const game = trackedGameService.createTrackedGame(1, players, SYSTEM_USER_ID, GameStatus.IN_PROGRESS);
+        // enterHandDetail defaults to true, so rounds must carry a full hand
+
+        trackedGameService.addGameRoundResult(game.id, 1, {
+            type: 'TSUMO',
+            winningHandData: {
+                winnerPlayerId: userId,
+                yakumanCount: 0,
+                handDetail: {
+                    concealedTiles: [
+                        'man_1',
+                        'man_1',
+                        'pin_2',
+                        'pin_2',
+                        'sou_3',
+                        'sou_3',
+                        'ton',
+                        'ton',
+                        'nan',
+                        'nan',
+                        'haku',
+                        'haku',
+                        'hatsu',
+                    ],
+                    melds: [],
+                    winningTile: 'hatsu',
+                    doraIndicators: [],
+                    uraDoraIndicators: [],
+                    context: { ippatsu: true },
+                },
+            },
+            riichiPlayerIds: [userId],
+        }, SYSTEM_USER_ID);
+
+        trackedGameService.finishGame(game.id, SYSTEM_USER_ID);
+
+        const unlocked = achievementRepository.findUnlockedStatesByUserId(userId);
+        expect(unlocked.find(s => s.code === 'FIRST_IPPATSU')).toBeDefined();
+
+        const progress = achievementRepository.findProgressStatesByUserId(userId);
+        const chiitoitsu = progress.find(s => s.code === 'CHIITOITSU_10');
+        expect(chiitoitsu?.progress).toBe(1);
+        expect(progress.find(s => s.code === 'MENZEN_WINS_50')?.progress).toBe(1);
+    });
 });

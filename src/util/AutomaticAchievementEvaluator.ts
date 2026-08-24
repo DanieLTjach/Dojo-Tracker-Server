@@ -543,9 +543,10 @@ export function evaluateAutomaticAchievements(
                         checkThreshold(winnerId, 'KANS_10', 10, wt.kansCount, game, round.roundNumber);
                     }
 
-                    // Menzen / open win styles
+                    // Menzen / open win styles (ankan keeps the hand concealed)
                     if (hand.handDetail !== undefined) {
-                        if (melds.length === 0) {
+                        const openMelds = melds.filter(m => m.type !== 'ANKAN');
+                        if (openMelds.length === 0) {
                             wt.menzenWinsCount += 1;
                             checkThreshold(winnerId, 'MENZEN_WINS_50', 50, wt.menzenWinsCount, game, round.roundNumber);
                         } else {
@@ -558,7 +559,7 @@ export function evaluateAutomaticAchievements(
                                 game,
                                 round.roundNumber
                             );
-                            if (melds.length >= 4) {
+                            if (openMelds.length >= 4) {
                                 unlockCode(winnerId, 'FULLY_OPEN_WIN', game, round.roundNumber);
                             }
                         }
