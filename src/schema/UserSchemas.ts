@@ -7,6 +7,12 @@ export const telegramUsernameSchema = z.string()
     .startsWith('@', "Telegram username must start with '@'")
     .min(2, 'Telegram username cannot be empty');
 
+// Editing a user: an empty string or null clears the username, undefined leaves it unchanged
+export const editableTelegramUsernameSchema = z.preprocess(
+    value => (value === '' ? null : value),
+    telegramUsernameSchema.nullish()
+);
+
 export const telegramIdParamSchema = z.coerce.number().int('Telegram ID must be an integer');
 export const userIdSchema = z.number().int('User ID must be an integer');
 export const userIdParamSchema = z.coerce.number().int('User ID must be an integer');
@@ -48,9 +54,9 @@ export const userEditSchema = z.object({
     }),
     body: z.object({
         name: userNameSchema.nullish(),
-        telegramUsername: telegramUsernameSchema.nullish(),
+        telegramUsername: editableTelegramUsernameSchema,
     }),
-}).refine(data => data.body.name || data.body.telegramUsername, {
+}).refine(data => data.body.name || data.body.telegramUsername !== undefined, {
     error: "At least one of 'name' or 'telegramUsername' must be provided",
 });
 
