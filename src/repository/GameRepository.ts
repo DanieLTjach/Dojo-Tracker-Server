@@ -375,6 +375,27 @@ export class GameRepository {
         });
     }
 
+    private setEnterHandDetailStatement(): Statement<{
+        id: number;
+        enterHandDetail: number;
+        modifiedBy: number;
+        modifiedAt: string;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE game
+            SET enterHandDetail = :enterHandDetail, modifiedBy = :modifiedBy, modifiedAt = :modifiedAt
+            WHERE id = :id`);
+    }
+
+    setEnterHandDetail(gameId: number, value: boolean, modifiedBy: number): void {
+        this.setEnterHandDetailStatement().run({
+            id: gameId,
+            enterHandDetail: booleanToInteger(value),
+            modifiedBy,
+            modifiedAt: new Date().toISOString(),
+        });
+    }
+
     private finishGameStatement(): Statement<{
         id: number;
         modifiedBy: number;
@@ -725,6 +746,7 @@ interface GameDBEntity {
     lastRoundWasDeleted: number;
     startingDie1: number | null;
     startingDie2: number | null;
+    enterHandDetail: number;
 }
 
 function gameFromDBEntity(dbEntity: GameDBEntity): Game {
@@ -742,6 +764,7 @@ function gameFromDBEntity(dbEntity: GameDBEntity): Game {
         lastRoundWasDeleted: Boolean(dbEntity.lastRoundWasDeleted),
         startingDie1: dbEntity.startingDie1,
         startingDie2: dbEntity.startingDie2,
+        enterHandDetail: Boolean(dbEntity.enterHandDetail),
     };
 }
 

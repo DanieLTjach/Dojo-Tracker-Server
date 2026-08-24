@@ -126,6 +126,7 @@ export interface EventConfig {
     maxParticipants?: number | undefined;
     registrationDeadline?: Date | undefined;
     teamConfig?: TeamTournamentConfig | undefined;
+    requireHandDetail?: boolean | undefined;
 }
 
 /**

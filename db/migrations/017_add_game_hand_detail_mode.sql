@@ -1,0 +1,1 @@
+ALTER TABLE game ADD COLUMN enterHandDetail BOOL NOT NULL DEFAULT true;

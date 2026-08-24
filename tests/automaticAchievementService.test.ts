@@ -54,6 +54,7 @@ describe('AutomaticAchievementService integration', () => {
         ];
 
         const game = trackedGameService.createTrackedGame(1, players, SYSTEM_USER_ID, GameStatus.IN_PROGRESS);
+        trackedGameService.setEnterHandDetail(game.id, false, SYSTEM_USER_ID);
 
         trackedGameService.addGameRoundResult(game.id, 1, {
             type: 'TSUMO',
@@ -89,6 +90,7 @@ describe('AutomaticAchievementService integration', () => {
             undefined,
             [6, 6]
         );
+        trackedGameService.setEnterHandDetail(game.id, false, SYSTEM_USER_ID);
 
         trackedGameService.addGameRoundResult(game.id, 1, {
             type: 'TSUMO',

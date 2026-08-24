@@ -40,6 +40,7 @@ export function buildSyntheticGame(
         startedAt: now,
         endedAt: null,
         lastRoundWasDeleted: false,
+        enterHandDetail: true,
         players: gamePlayers,
         rounds: [],
         currentState,

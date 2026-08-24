@@ -139,3 +139,57 @@ export class InsufficientPointsForRiichiError extends BadRequestError {
         super('insufficientPointsForRiichi', { playerId, requiredPoints, actualPoints });
     }
 }
+
+export class HandDetailRequiredError extends BadRequestError {
+    constructor() {
+        super('handDetailRequired');
+    }
+}
+
+export class HandDetailNotSupportedForSanmaError extends BadRequestError {
+    constructor() {
+        super('handDetailNotSupportedForSanma');
+    }
+}
+
+export class InvalidHandDetailStructureError extends BadRequestError {
+    constructor() {
+        super('invalidHandDetailStructure');
+    }
+}
+
+export class NonWinningHandError extends BadRequestError {
+    constructor() {
+        super('nonWinningHand');
+    }
+}
+
+export class HandHasNoYakuError extends BadRequestError {
+    constructor() {
+        super('handHasNoYaku');
+    }
+}
+
+export class HandDetailScoreMismatchError extends BadRequestError {
+    constructor() {
+        super('handDetailScoreMismatch');
+    }
+}
+
+export class HandDetailContextConflictError extends BadRequestError {
+    constructor() {
+        super('handDetailContextConflict');
+    }
+}
+
+export class UnsupportedScoringContextError extends BadRequestError {
+    constructor() {
+        super('unsupportedScoringContext');
+    }
+}
+
+export class UnmappedYakuError extends InternalServerError {
+    constructor(yakuName: string) {
+        super('unmappedYakuError', { yakuName });
+    }
+}

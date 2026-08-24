@@ -79,6 +79,7 @@ export interface Game {
     lastRoundWasDeleted: boolean;
     startingDie1?: number | null;
     startingDie2?: number | null;
+    enterHandDetail: boolean;
 }
 
 export interface GamePlayer {

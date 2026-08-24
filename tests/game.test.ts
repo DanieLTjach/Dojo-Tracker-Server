@@ -3013,6 +3013,13 @@ describe('Game API Endpoints', () => {
                     });
                 const gameId = createRes.body.id;
 
+                // These suites post plain han/fu rounds; games now default to
+                // full hand entry, so opt out explicitly.
+                await request(app)
+                    .patch(`/api/games/${gameId}/hand-detail-mode`)
+                    .set('Authorization', user1AuthHeader)
+                    .send({ enterHandDetail: false });
+
                 await request(app)
                     .post(`/api/games/${gameId}/start`)
                     .set('Authorization', user1AuthHeader);
@@ -3105,6 +3112,13 @@ describe('Game API Endpoints', () => {
                     });
                 const gameId = createRes.body.id;
 
+                // These suites post plain han/fu rounds; games now default to
+                // full hand entry, so opt out explicitly.
+                await request(app)
+                    .patch(`/api/games/${gameId}/hand-detail-mode`)
+                    .set('Authorization', user1AuthHeader)
+                    .send({ enterHandDetail: false });
+
                 await request(app).post(`/api/games/${gameId}/start`).set('Authorization', user1AuthHeader);
                 await request(app).post(`/api/games/${gameId}/rounds/1`).set('Authorization', user1AuthHeader).send({
                     type: 'TSUMO',
@@ -3162,6 +3176,13 @@ describe('Game API Endpoints', () => {
                         ],
                     });
                 const gameId = createRes.body.id;
+
+                // These suites post plain han/fu rounds; games now default to
+                // full hand entry, so opt out explicitly.
+                await request(app)
+                    .patch(`/api/games/${gameId}/hand-detail-mode`)
+                    .set('Authorization', user1AuthHeader)
+                    .send({ enterHandDetail: false });
 
                 await request(app).post(`/api/games/${gameId}/start`).set('Authorization', user1AuthHeader);
                 await request(app).post(`/api/games/${gameId}/rounds/1`).set('Authorization', user1AuthHeader).send({
@@ -3225,6 +3246,13 @@ describe('Game API Endpoints', () => {
                     });
                 const gameId = createRes.body.id;
 
+                // These suites post plain han/fu rounds; games now default to
+                // full hand entry, so opt out explicitly.
+                await request(app)
+                    .patch(`/api/games/${gameId}/hand-detail-mode`)
+                    .set('Authorization', user1AuthHeader)
+                    .send({ enterHandDetail: false });
+
                 await request(app).post(`/api/games/${gameId}/start`).set('Authorization', user1AuthHeader);
                 await request(app).post(`/api/games/${gameId}/rounds/1`).set('Authorization', user1AuthHeader).send({
                     type: 'TSUMO',
@@ -3255,6 +3283,13 @@ describe('Game API Endpoints', () => {
                         ],
                     });
                 const gameId = createRes.body.id;
+
+                // These suites post plain han/fu rounds; games now default to
+                // full hand entry, so opt out explicitly.
+                await request(app)
+                    .patch(`/api/games/${gameId}/hand-detail-mode`)
+                    .set('Authorization', user1AuthHeader)
+                    .send({ enterHandDetail: false });
 
                 await request(app).post(`/api/games/${gameId}/start`).set('Authorization', user1AuthHeader);
                 await request(app).post(`/api/games/${gameId}/rounds/1`).set('Authorization', user1AuthHeader).send({
