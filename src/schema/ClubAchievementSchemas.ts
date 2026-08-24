@@ -31,8 +31,8 @@ export const clubAchievementDescriptionSchema = z.string().trim().min(1, 'Descri
     'Description must be 500 characters or less'
 );
 export const clubAchievementIconSchema = z.string().trim().min(1, 'Icon cannot be empty').max(
-    32,
-    'Icon must be 32 characters or less'
+    2048,
+    'Icon must be 2048 characters or less'
 ).nullish();
 export const clubAchievementNoteSchema = z.string().trim().max(500, 'Note must be 500 characters or less').nullish();
 

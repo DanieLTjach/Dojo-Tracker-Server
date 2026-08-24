@@ -206,3 +206,7 @@ errors:
 
   skillRatingNotEnabledForClub: OpenSkill rating is not enabled for club {{clubId}}
   invalidGameSize: "Invalid game size {{gameSize}}. Allowed values: 3, 4"
+
+  invalidImageFile: Invalid image file. Supported formats are PNG, JPEG, and WebP up to 2 MiB.
+  noImageFileProvided: Please provide an image file to upload.
+  imageUploadFailed: Failed to upload image. Please try again.

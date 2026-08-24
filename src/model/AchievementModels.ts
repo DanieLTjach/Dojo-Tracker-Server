@@ -73,6 +73,8 @@ export interface UserAchievementCoverage {
     percentage: number;
 }
 
+import type { AchievementCategory, AchievementScopeType } from '../data/automaticAchievementCatalog.ts';
+
 /**
  * One achievement a user has won, as shown on their profile page. `type` discriminates
  * the achievement's origin; existing tournament-award fields (eventId, eventName, metric)
@@ -84,7 +86,8 @@ export interface UserAchievement {
     name: string;
     description: string;
     icon: string | null;
-    awardedAt: Date;
+    awardedAt?: Date | undefined;
+    updatedAt?: Date | undefined;
     valueUnit: AchievementValueUnit | undefined;
     value: number | undefined;
     valueFormatted: string | undefined;
@@ -93,14 +96,29 @@ export interface UserAchievement {
     eventName: string | undefined;
     metric: string | undefined;
     /** Populated for MANUAL only. */
+    assignmentId?: number | undefined;
     clubId: number | undefined;
     clubName: string | undefined;
     note: string | undefined;
     /** Populated for AUTOMATIC achievements. */
+    category?: AchievementCategory | undefined;
+    scopeType?: AchievementScopeType | undefined;
     scope?: string | undefined;
     progress?: number | undefined;
     target?: number | undefined;
     evidence?: UserAchievementEvidence | undefined;
+}
+
+export interface GameAchievementUnlockUser {
+    id: number;
+    name: string;
+    profileFirstName: string | null;
+    profileLastName: string | null;
+}
+
+export interface GameAchievementUnlock {
+    user: GameAchievementUnlockUser;
+    achievements: UserAchievement[];
 }
 
 /** A club-scoped, reusable custom achievement a club owner/moderator can assign. */

@@ -32,40 +32,51 @@ export class AutomaticAchievementService {
         }
     }
 
-    recomputeUser(userId: number, computedAt: Date = new Date()): void {
-        const games = this.fetchEvaluatorGames();
-        const eventPlacements = this.fetchEvaluatorEvents();
-        const skillResults = this.fetchEvaluatorSkillResults();
+    recomputeUsers(userIds: number[], computedAt: Date = new Date()): void {
+        const uniqueUserIds = Array.from(new Set(userIds.filter(id => id !== 0)));
+        if (uniqueUserIds.length === 0) return;
 
-        const allStates = evaluateAutomaticAchievements(games, eventPlacements, skillResults);
-        const userStates = allStates.filter(s => s.userId === userId);
-        const sanitized = this.sanitizeStates(userStates);
-        this.achievementRepository.replaceUserStatesTransactionally(userId, sanitized, computedAt);
+        try {
+            const games = this.fetchEvaluatorGames();
+            const eventPlacements = this.fetchEvaluatorEvents();
+            const skillResults = this.fetchEvaluatorSkillResults();
+
+            const allStates = evaluateAutomaticAchievements(games, eventPlacements, skillResults);
+            const sanitizedAll = this.sanitizeStates(allStates);
+
+            dbManager.db.transaction(() => {
+                for (const uid of uniqueUserIds) {
+                    const uStates = sanitizedAll.filter(s => s.userId === uid);
+                    this.achievementRepository.replaceUserStatesTransactionally(uid, uStates, computedAt);
+                }
+            })();
+        } catch (err: any) {
+            LogService.logError(
+                `Failed to recompute automatic achievements for users [${uniqueUserIds.join(', ')}]:`,
+                err
+            );
+        }
+    }
+
+    recomputeUser(userId: number, computedAt: Date = new Date()): void {
+        this.recomputeUsers([userId], computedAt);
     }
 
     recomputeClub(clubId: number, computedAt: Date = new Date()): void {
-        // Club recomputation updates all members of that club
-        const games = this.fetchEvaluatorGames();
-        const eventPlacements = this.fetchEvaluatorEvents(clubId);
-        const skillResults = this.fetchEvaluatorSkillResults(clubId);
-
-        const allStates = evaluateAutomaticAchievements(games, eventPlacements, skillResults);
-        const sanitizedAll = this.sanitizeStates(allStates);
-
-        // Find users participating in that club
-        const clubUserIds = new Set<number>();
-        for (const g of games) {
-            if (g.clubId === clubId) {
-                for (const p of g.players) clubUserIds.add(p.userId);
+        try {
+            const games = this.fetchEvaluatorGames();
+            const clubUserIds = new Set<number>();
+            for (const g of games) {
+                if (g.clubId === clubId) {
+                    for (const p of g.players) {
+                        if (p.userId !== 0) clubUserIds.add(p.userId);
+                    }
+                }
             }
+            this.recomputeUsers(Array.from(clubUserIds), computedAt);
+        } catch (err: any) {
+            LogService.logError(`Failed to recompute automatic achievements for club ${clubId}:`, err);
         }
-
-        dbManager.db.transaction(() => {
-            for (const uid of clubUserIds) {
-                const uStates = sanitizedAll.filter(s => s.userId === uid);
-                this.achievementRepository.replaceUserStatesTransactionally(uid, uStates, computedAt);
-            }
-        })();
     }
 
     private sanitizeStates(states: any[]): any[] {
@@ -216,13 +227,14 @@ export class AutomaticAchievementService {
 
     private fetchEvaluatorEvents(clubFilter?: number): EvaluatorEventPlacement[] {
         let sql = `
-            SELECT id, clubId, type, dateTo
-            FROM event
-            WHERE dateTo IS NOT NULL
+            SELECT e.id, e.clubId, e.type, e.dateTo, t.status AS tournamentStatus
+            FROM event e
+            LEFT JOIN tournament t ON t.eventId = e.id
+            WHERE e.dateTo IS NOT NULL OR (e.type = 'TOURNAMENT' AND t.status = 'FINISHED')
         `;
         const params: any[] = [];
         if (clubFilter !== undefined) {
-            sql += ` AND clubId = ?`;
+            sql += ` AND e.clubId = ?`;
             params.push(clubFilter);
         }
 
@@ -230,7 +242,8 @@ export class AutomaticAchievementService {
             id: number;
             clubId: number | null;
             type: string;
-            dateTo: string;
+            dateTo: string | null;
+            tournamentStatus: string | null;
         }>;
 
         const now = new Date();
@@ -238,13 +251,14 @@ export class AutomaticAchievementService {
 
         for (const e of eventRows) {
             try {
-                const dateTo = new Date(e.dateTo);
-                if (dateTo > now) continue; // dateTo must have passed
+                const dateTo = e.dateTo ? new Date(e.dateTo) : now;
+                const isTournamentFinished = e.type === 'TOURNAMENT' && e.tournamentStatus === 'FINISHED';
+                if (!isTournamentFinished && dateTo > now) continue; // dateTo must have passed unless tournament is finished
 
                 const standings = this.ratingService.calculateStandings(e.id);
                 if (standings.size === 0) continue;
 
-                const sortedStandings = [...standings.entries()].sort((a, b) => b[1] - a[1]);
+                const sortedStandings = [...standings.entries()].sort((a, b) => a[1] - b[1]);
 
                 // Check eligibility per user
                 const registrations = dbManager.db.prepare(`
@@ -255,9 +269,9 @@ export class AutomaticAchievementService {
 
                 const fillerUsers = new Set(registrations.filter(r => r.isFillerPlayer).map(r => r.userId));
 
-                const placements = sortedStandings.map(([userId], idx) => ({
+                const placements = sortedStandings.map(([userId, standing]) => ({
                     userId,
-                    place: idx + 1,
+                    place: standing,
                     isEligible: userId !== 0 && !fillerUsers.has(userId),
                 }));
 

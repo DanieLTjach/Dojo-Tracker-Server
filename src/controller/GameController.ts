@@ -22,6 +22,8 @@ import {
 import { TrackedGameService } from '../service/TrackedGameService.ts';
 import { LocalGameScoringService } from '../service/LocalGameScoringService.ts';
 
+import { resolveRequestLocale } from '../util/LocaleResolver.ts';
+
 export class GameController {
     private gameService: GameService = new GameService();
     private trackedGameService: TrackedGameService = new TrackedGameService();
@@ -37,6 +39,7 @@ export class GameController {
         const { body: { eventId, playersData, createdAt, hideNewGameMessage, tournamentRound, tournamentTable } } =
             gameCreationSchema.parse(req);
         const createdBy = req.user!.userId;
+        const locale = resolveRequestLocale(req);
         const newGame = this.gameService.addGame(
             eventId,
             playersData,
@@ -44,7 +47,8 @@ export class GameController {
             createdAt ?? undefined,
             hideNewGameMessage ?? false,
             tournamentRound ?? null,
-            tournamentTable ?? null
+            tournamentTable ?? null,
+            locale
         );
         return res.status(StatusCodes.CREATED).json(newGame);
     }
@@ -73,14 +77,16 @@ export class GameController {
 
     getGameById(req: Request, res: Response) {
         const { params: { gameId } } = gameGetByIdSchema.parse(req);
-        const game = this.gameService.getDetailedGameById(gameId);
+        const locale = resolveRequestLocale(req);
+        const game = this.gameService.getDetailedGameById(gameId, locale);
         return res.status(StatusCodes.OK).json(game);
     }
 
     postRoundResult(req: Request, res: Response) {
         const { params: { gameId, roundId }, body } = gameRoundPostSchema.parse(req);
         const modifiedBy = req.user!.userId;
-        const game = this.trackedGameService.addGameRoundResult(gameId, roundId, body, modifiedBy);
+        const locale = resolveRequestLocale(req);
+        const game = this.trackedGameService.addGameRoundResult(gameId, roundId, body, modifiedBy, locale);
         return res.status(StatusCodes.OK).json(game);
     }
 
@@ -108,14 +114,16 @@ export class GameController {
     finishGame(req: Request, res: Response) {
         const { params: { gameId } } = gameFinishSchema.parse(req);
         const modifiedBy = req.user!.userId;
-        const game = this.trackedGameService.finishGame(gameId, modifiedBy);
+        const locale = resolveRequestLocale(req);
+        const game = this.trackedGameService.finishGame(gameId, modifiedBy, locale);
         return res.status(StatusCodes.OK).json(game);
     }
 
     recordPlannedGameResult(req: Request, res: Response) {
         const { params: { gameId }, body: { results } } = plannedGameResultSchema.parse(req);
         const modifiedBy = req.user!.userId;
-        const game = this.trackedGameService.recordPlannedGameResult(gameId, results, modifiedBy);
+        const locale = resolveRequestLocale(req);
+        const game = this.trackedGameService.recordPlannedGameResult(gameId, results, modifiedBy, locale);
         return res.status(StatusCodes.OK).json(game);
     }
 

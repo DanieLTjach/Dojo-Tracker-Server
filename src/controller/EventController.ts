@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { EventService } from '../service/EventService.ts';
 import { AchievementService } from '../service/AchievementService.ts';
+import { AutomaticAchievementService } from '../service/AutomaticAchievementService.ts';
 import { TournamentSeatingService } from '../service/TournamentSeatingService.ts';
 import {
     eventGetByIdSchema,
@@ -19,6 +20,7 @@ import {
 export class EventController {
     private eventService: EventService = new EventService();
     private achievementService: AchievementService = new AchievementService();
+    private automaticAchievementService: AutomaticAchievementService = new AutomaticAchievementService();
     private tournamentSeatingService: TournamentSeatingService = new TournamentSeatingService();
 
     getAllEvents(req: Request, res: Response) {
@@ -78,6 +80,7 @@ export class EventController {
         const userId = req.user!.userId;
         const event = this.eventService.finishTournament(eventId, userId);
         this.achievementService.recomputeEventAchievements(event);
+        this.automaticAchievementService.recomputeAll();
         return res.status(StatusCodes.OK).json(event);
     }
 

@@ -54,8 +54,8 @@ describe('ProfileAchievementService (manual achievements on the profile page)', 
         cleanupTestDatabase();
     });
 
-    it('includes a built-in manual achievement with localized name/description', () => {
-        clubAchievementService.assignAchievement(
+    it('includes a built-in manual achievement with localized name/description and assignmentId', () => {
+        const assignment = clubAchievementService.assignAchievement(
             clubId,
             memberId,
             { builtInCode: 'MENTOR', definitionId: undefined, newDefinition: undefined },
@@ -68,15 +68,19 @@ describe('ProfileAchievementService (manual achievements on the profile page)', 
 
         expect(mentor).toMatchObject({
             type: ProfileAchievementType.MANUAL,
+            code: 'MENTOR',
             name: 'Mentor',
             description: 'Taught and guided newer players.',
+            assignmentId: assignment.id,
             clubId,
             clubName: 'Profile Manual Achievement Club',
             note: 'Helped a lot',
         });
+        expect(mentor?.awardedAt).toBeInstanceOf(Date);
+        expect(mentor?.updatedAt).toBeUndefined();
     });
 
-    it('includes a custom achievement with its own text, displayed as entered', () => {
+    it('includes a custom achievement with its own text, displayed as entered, and assignmentId', () => {
         const definition = clubAchievementService.createDefinition(
             clubId,
             'Custom Trophy',
@@ -84,7 +88,7 @@ describe('ProfileAchievementService (manual achievements on the profile page)', 
             'trophy',
             SYSTEM_USER_ID
         );
-        clubAchievementService.assignAchievement(
+        const assignment = clubAchievementService.assignAchievement(
             clubId,
             memberId,
             { builtInCode: undefined, definitionId: definition.id, newDefinition: undefined },
@@ -97,10 +101,14 @@ describe('ProfileAchievementService (manual achievements on the profile page)', 
 
         expect(custom).toMatchObject({
             type: ProfileAchievementType.MANUAL,
+            code: `custom:${definition.id}`,
             name: 'Custom Trophy',
             description: 'A custom description.',
             icon: 'trophy',
+            assignmentId: assignment.id,
         });
+        expect(custom?.awardedAt).toBeInstanceOf(Date);
+        expect(custom?.updatedAt).toBeUndefined();
     });
 
     it('excludes a revoked achievement', () => {
@@ -115,5 +123,39 @@ describe('ProfileAchievementService (manual achievements on the profile page)', 
 
         const achievements = profileAchievementService.getUserAchievements(memberId, 'en');
         expect(achievements.find(a => a.code === 'FAIR_PLAY')).toBeUndefined();
+    });
+
+    it('getUserProfileAchievementsResponse returns assignmentId for manual and updatedAt for progress items', () => {
+        const assignment = clubAchievementService.assignAchievement(
+            clubId,
+            memberId,
+            { builtInCode: 'COMMUNITY_BUILDER', definitionId: undefined, newDefinition: undefined },
+            'Open-source help',
+            SYSTEM_USER_ID
+        );
+
+        // Add a mock progress state in automaticAchievementState
+        const now = new Date('2026-04-10T12:00:00.000Z');
+        dbManager.db.prepare(`
+            INSERT INTO automaticAchievementState (userId, code, scope, progress, target, unlockedAt, computedAt)
+            VALUES (?, 'GAMES_50', 'GLOBAL', 25, 50, NULL, ?)
+        `).run(memberId, now.toISOString());
+
+        const response = profileAchievementService.getUserProfileAchievementsResponse(memberId, 'en');
+
+        const cb = response.achievements.find(a => a.code === 'COMMUNITY_BUILDER');
+        expect(cb).toBeDefined();
+        expect(cb?.assignmentId).toBe(assignment.id);
+        expect(cb?.awardedAt).toBeInstanceOf(Date);
+        expect(cb?.updatedAt).toBeUndefined();
+
+        const games50 = response.progress.find(p => p.code === 'GAMES_50');
+        expect(games50).toBeDefined();
+        expect(games50?.progress).toBe(25);
+        expect(games50?.target).toBe(50);
+        expect(games50?.updatedAt).toBeInstanceOf(Date);
+        expect(games50?.awardedAt).toBeUndefined();
+
+        dbManager.db.prepare('DELETE FROM automaticAchievementState WHERE userId = ?').run(memberId);
     });
 });

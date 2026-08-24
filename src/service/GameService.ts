@@ -52,7 +52,8 @@ import { GameCreationBlockedError, TournamentGameNotInCurrentRoundError } from '
 import { AchievementService } from './AchievementService.ts';
 import { AutomaticAchievementService } from './AutomaticAchievementService.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
-import { type SupportedLocale, t } from '../i18n/index.ts';
+import { ProfileAchievementService } from './ProfileAchievementService.ts';
+import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
 import { computeTournamentGameTimer } from '../util/TournamentTimerUtil.ts';
 
@@ -66,6 +67,7 @@ export class GameService {
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private achievementService: AchievementService = new AchievementService();
     private automaticAchievementService: AutomaticAchievementService = new AutomaticAchievementService();
+    private profileAchievementService: ProfileAchievementService = new ProfileAchievementService();
 
     addGame(
         eventId: number,
@@ -74,8 +76,9 @@ export class GameService {
         createdAt: Date | undefined,
         hideNewGameMessage: boolean,
         tournamentRound: number | null,
-        tournamentTable: string | null
-    ): GameWithPlayers {
+        tournamentTable: string | null,
+        locale: SupportedLocale = DEFAULT_LOCALE
+    ): DetailedGame {
         const gameTimestamp = createdAt ?? new Date();
         if (createdAt !== undefined) {
             this.userService.validateUserIsAdmin(createdBy, () => new YouHaveToBeAdminToCreateGameWithCustomTime());
@@ -112,11 +115,11 @@ export class GameService {
         );
         this.skillRatingService.applyFinishedGame(newGameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
-        this.automaticAchievementService.recomputeAll();
+        this.automaticAchievementService.recomputeUsers(playersData.map(p => p.userId));
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
 
-        const newGame = this.getGameById(newGameId);
+        const newGame = this.getDetailedGameById(newGameId, locale);
         this.logNewGame(newGame, event);
         if (!hideNewGameMessage) {
             this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter, createdBy);
@@ -136,7 +139,7 @@ export class GameService {
         };
     }
 
-    getDetailedGameById(gameId: number): DetailedGame {
+    getDetailedGameById(gameId: number, locale: SupportedLocale = DEFAULT_LOCALE): DetailedGame {
         const game = this.getGameById(gameId);
         const rounds = this.gameRepository.findGameRoundsByGameId(gameId);
         // Only a game that belongs to a tournament round can have a running timer, so
@@ -145,11 +148,18 @@ export class GameService {
             ? this.eventService.getEventById(game.eventId)
             : null;
 
+        const achievementUnlocks = this.profileAchievementService.getGameAchievementUnlocks(
+            gameId,
+            game.players,
+            locale
+        );
+
         return {
             ...game,
             rounds,
             currentState: this.calculateCurrentGameState(game, rounds),
             timer: computeTournamentGameTimer(game, event ?? { tournament: null }),
+            achievementUnlocks,
         };
     }
 

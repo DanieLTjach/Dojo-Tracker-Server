@@ -2,6 +2,7 @@ import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { TrackedGameService } from '../src/service/TrackedGameService.ts';
 import { AutomaticAchievementRepository } from '../src/repository/AutomaticAchievementRepository.ts';
+import { AutomaticAchievementService } from '../src/service/AutomaticAchievementService.ts';
 import { GameStatus, Wind } from '../src/model/GameModels.ts';
 
 const SYSTEM_USER_ID = 0;
@@ -163,5 +164,26 @@ describe('AutomaticAchievementService integration', () => {
         const chiitoitsu = progress.find(s => s.code === 'CHIITOITSU_10');
         expect(chiitoitsu?.progress).toBe(1);
         expect(progress.find(s => s.code === 'MENZEN_WINS_50')?.progress).toBe(1);
+
+        // Source-game query checks
+        const gameUnlocks = achievementRepository.findUnlockedStatesBySourceGameId(game.id);
+        expect(gameUnlocks.some(s => s.code === 'FIRST_IPPATSU' && s.userId === userId)).toBe(true);
+
+        const gameAllStates = achievementRepository.findStatesBySourceGameId(game.id);
+        expect(gameAllStates.length).toBeGreaterThanOrEqual(gameUnlocks.length);
+
+        // Source-event query checks
+        const eventUnlocks = achievementRepository.findUnlockedStatesBySourceEventId(1);
+        expect(eventUnlocks.some(s => s.code === 'FIRST_IPPATSU' && s.userId === userId)).toBe(true);
+    });
+
+    it('recomputes only specified participants via recomputeUsers without altering other users', () => {
+        const autoService = new AutomaticAchievementService();
+        const before102 = achievementRepository.findStatesByUserId(102);
+
+        autoService.recomputeUsers([userId]);
+
+        const after102 = achievementRepository.findStatesByUserId(102);
+        expect(after102).toEqual(before102);
     });
 });

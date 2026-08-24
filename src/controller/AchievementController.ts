@@ -21,15 +21,16 @@ export class AchievementController {
     getEventAchievements(req: Request, res: Response) {
         const { params: { eventId } } = getEventAchievementsSchema.parse(req);
         const userId = req.user!.userId;
-        const achievements = this.achievementService.getEventAchievements(eventId, userId);
-        return res.status(StatusCodes.OK).json({ achievements });
+        const result = this.achievementService.getEventAchievementsWithLifetimeUnlocks(eventId, userId);
+        return res.status(StatusCodes.OK).json(result);
     }
 
     recomputeEventAchievements(req: Request, res: Response) {
         const { params: { eventId } } = recomputeEventAchievementsSchema.parse(req);
         const userId = req.user!.userId;
-        const achievements = this.achievementService.forceRecomputeEventAchievements(eventId, userId);
-        return res.status(StatusCodes.OK).json({ achievements });
+        this.achievementService.forceRecomputeEventAchievements(eventId, userId);
+        const result = this.achievementService.getEventAchievementsWithLifetimeUnlocks(eventId, userId);
+        return res.status(StatusCodes.OK).json(result);
     }
 
     clearEventAchievements(req: Request, res: Response) {

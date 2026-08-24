@@ -62,6 +62,38 @@ export class AutomaticAchievementRepository {
         }));
     }
 
+    findStatesBySourceGameId(sourceGameId: number): ComputedAchievementState[] {
+        const stmt = dbManager.db.prepare(
+            `${this.selectQuery} WHERE sourceGameId = :sourceGameId ORDER BY unlockedAt ASC, id ASC`
+        );
+        const rows = stmt.all({ sourceGameId }) as AutomaticAchievementStateDBEntity[];
+        return rows.map(stateFromDBEntity);
+    }
+
+    findUnlockedStatesBySourceGameId(sourceGameId: number): ComputedAchievementState[] {
+        const stmt = dbManager.db.prepare(
+            `${this.selectQuery} WHERE sourceGameId = :sourceGameId AND unlockedAt IS NOT NULL ORDER BY unlockedAt ASC, id ASC`
+        );
+        const rows = stmt.all({ sourceGameId }) as AutomaticAchievementStateDBEntity[];
+        return rows.map(stateFromDBEntity);
+    }
+
+    findStatesBySourceEventId(sourceEventId: number): ComputedAchievementState[] {
+        const stmt = dbManager.db.prepare(
+            `${this.selectQuery} WHERE sourceEventId = :sourceEventId ORDER BY unlockedAt ASC, id ASC`
+        );
+        const rows = stmt.all({ sourceEventId }) as AutomaticAchievementStateDBEntity[];
+        return rows.map(stateFromDBEntity);
+    }
+
+    findUnlockedStatesBySourceEventId(sourceEventId: number): ComputedAchievementState[] {
+        const stmt = dbManager.db.prepare(
+            `${this.selectQuery} WHERE sourceEventId = :sourceEventId AND unlockedAt IS NOT NULL ORDER BY unlockedAt ASC, id ASC`
+        );
+        const rows = stmt.all({ sourceEventId }) as AutomaticAchievementStateDBEntity[];
+        return rows.map(stateFromDBEntity);
+    }
+
     deleteStatesForUser(userId: number): void {
         dbManager.db.prepare('DELETE FROM automaticAchievementState WHERE userId = :userId').run({ userId });
     }
