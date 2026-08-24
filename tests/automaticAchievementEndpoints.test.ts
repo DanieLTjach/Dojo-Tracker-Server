@@ -94,7 +94,22 @@ describe('Automatic achievement endpoints', () => {
     });
 
     describe('GET /api/users/:id/achievements', () => {
-        test('returns user achievements, progress, and coverage', async () => {
+        test('returns user achievements, progress, and coverage with assignmentId and correct timestamps', async () => {
+            // Assign a manual achievement to ownerId
+            const assignRes = await request(app)
+                .post(`/api/clubs/${clubId}/members/${ownerId}/achievements`)
+                .set('Authorization', ownerAuthHeader)
+                .send({ builtInCode: 'MENTOR', note: 'Best coach' });
+            expect(assignRes.status).toBe(201);
+            const assignmentId = assignRes.body.id;
+
+            // Insert mock progress
+            const now = new Date('2026-04-10T12:00:00.000Z');
+            dbManager.db.prepare(`
+                INSERT INTO automaticAchievementState (userId, code, scope, progress, target, unlockedAt, computedAt)
+                VALUES (?, 'GAMES_50', 'GLOBAL', 10, 50, NULL, ?)
+            `).run(ownerId, now.toISOString());
+
             const response = await request(app)
                 .get(`/api/users/${ownerId}/achievements`)
                 .set('Authorization', ownerAuthHeader);
@@ -108,6 +123,22 @@ describe('Automatic achievement endpoints', () => {
             expect(response.body.coverage).toHaveProperty('unlockedCount');
             expect(response.body.coverage).toHaveProperty('totalCount');
             expect(response.body.coverage).toHaveProperty('percentage');
+
+            const mentor = response.body.achievements.find((a: any) => a.code === 'MENTOR');
+            expect(mentor).toBeDefined();
+            expect(mentor.assignmentId).toBe(assignmentId);
+            expect(mentor.awardedAt).toBeDefined();
+            expect(mentor.updatedAt).toBeUndefined();
+
+            const games50 = response.body.progress.find((p: any) => p.code === 'GAMES_50');
+            expect(games50).toBeDefined();
+            expect(games50.progress).toBe(10);
+            expect(games50.target).toBe(50);
+            expect(games50.updatedAt).toBeDefined();
+            expect(games50.awardedAt).toBeUndefined();
+
+            dbManager.db.prepare('DELETE FROM automaticAchievementState WHERE userId = ?').run(ownerId);
+            dbManager.db.prepare('DELETE FROM clubUserAchievement WHERE id = ?').run(assignmentId);
         });
     });
 
