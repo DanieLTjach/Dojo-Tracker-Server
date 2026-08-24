@@ -140,6 +140,52 @@ describe('Club API Endpoints', () => {
             expect(response.body.locale).toBe('en');
         });
 
+        test('should persist logoUrl on create', async () => {
+            const response = await request(app)
+                .post('/api/clubs')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Integration Club With Logo',
+                    country: 'UA',
+                    locale: 'uk',
+                    logoUrl: 'https://example.com/club-logo.png',
+                });
+
+            createdClubId = response.body.id;
+
+            expect(response.status).toBe(201);
+            expect(response.body.logoUrl).toBe('https://example.com/club-logo.png');
+
+            const getResponse = await request(app)
+                .get(`/api/clubs/${createdClubId}`)
+                .set('Authorization', adminAuthHeader);
+            expect(getResponse.body.logoUrl).toBe('https://example.com/club-logo.png');
+        });
+
+        test('should reject invalid logoUrl on create (http, javascript)', async () => {
+            const httpResponse = await request(app)
+                .post('/api/clubs')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Invalid Logo Club HTTP',
+                    country: 'UA',
+                    locale: 'uk',
+                    logoUrl: 'http://example.com/club-logo.png',
+                });
+            expect(httpResponse.status).toBe(400);
+
+            const jsResponse = await request(app)
+                .post('/api/clubs')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Invalid Logo Club JS',
+                    country: 'UA',
+                    locale: 'uk',
+                    logoUrl: 'javascript:alert(1)',
+                });
+            expect(jsResponse.status).toBe(400);
+        });
+
         test('should reject invalid country and locale values', async () => {
             const invalidCountryResponse = await request(app)
                 .post('/api/clubs')
@@ -384,6 +430,59 @@ describe('Club API Endpoints', () => {
             expect(response.status).toBe(200);
             expect(response.body.name).toBe('Integration Club Updated');
             expect(response.body.city).toBe('Lviv');
+        });
+
+        test('should update logoUrl and clear it when omitted (full-replace)', async () => {
+            // Set logoUrl
+            const responseWithLogo = await request(app)
+                .put(`/api/clubs/${clubId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Integration Club Updated Logo',
+                    country: 'UA',
+                    locale: 'uk',
+                    logoUrl: 'https://example.com/brand-logo.png',
+                });
+
+            expect(responseWithLogo.status).toBe(200);
+            expect(responseWithLogo.body.logoUrl).toBe('https://example.com/brand-logo.png');
+
+            // PUT without logoUrl clears it (full-replace semantics)
+            const responseWithoutLogo = await request(app)
+                .put(`/api/clubs/${clubId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Integration Club Updated Logo',
+                    country: 'UA',
+                    locale: 'uk',
+                });
+
+            expect(responseWithoutLogo.status).toBe(200);
+            expect(responseWithoutLogo.body.logoUrl).toBeNull();
+        });
+
+        test('should reject invalid logoUrl on update (http, javascript)', async () => {
+            const httpResponse = await request(app)
+                .put(`/api/clubs/${clubId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Integration Club Invalid Logo',
+                    country: 'UA',
+                    locale: 'uk',
+                    logoUrl: 'http://example.com/logo.png',
+                });
+            expect(httpResponse.status).toBe(400);
+
+            const jsResponse = await request(app)
+                .put(`/api/clubs/${clubId}`)
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    name: 'Integration Club Invalid Logo JS',
+                    country: 'UA',
+                    locale: 'uk',
+                    logoUrl: 'javascript:alert(1)',
+                });
+            expect(jsResponse.status).toBe(400);
         });
 
         test('should reject when not admin', async () => {

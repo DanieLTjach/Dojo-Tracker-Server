@@ -15,6 +15,7 @@ export class ClubRepository {
                 locale,
                 description,
                 contactInfo,
+                logoUrl,
                 isActive,
                 currentRatingEventId,
                 createdAt,
@@ -39,6 +40,7 @@ export class ClubRepository {
                 locale,
                 description,
                 contactInfo,
+                logoUrl,
                 isActive,
                 currentRatingEventId,
                 createdAt,
@@ -64,6 +66,7 @@ export class ClubRepository {
                 locale,
                 description,
                 contactInfo,
+                logoUrl,
                 isActive,
                 currentRatingEventId,
                 createdAt,
@@ -86,14 +89,15 @@ export class ClubRepository {
         locale: string;
         description: string | null;
         contactInfo: string | null;
+        logoUrl: string | null;
         isActive: number;
         createdAt: string;
         modifiedAt: string;
         modifiedBy: number;
     }, { id: number }> {
         return dbManager.db.prepare(`
-            INSERT INTO club (name, address, city, country, locale, description, contactInfo, isActive, createdAt, modifiedAt, modifiedBy)
-            VALUES (:name, :address, :city, :country, :locale, :description, :contactInfo, :isActive, :createdAt, :modifiedAt, :modifiedBy)
+            INSERT INTO club (name, address, city, country, locale, description, contactInfo, logoUrl, isActive, createdAt, modifiedAt, modifiedBy)
+            VALUES (:name, :address, :city, :country, :locale, :description, :contactInfo, :logoUrl, :isActive, :createdAt, :modifiedAt, :modifiedBy)
             RETURNING id
         `);
     }
@@ -101,6 +105,7 @@ export class ClubRepository {
     createClub(params: ClubCreateParams): number {
         const result = this.createClubStatement().get({
             ...params,
+            logoUrl: params.logoUrl ?? null,
             isActive: booleanToInteger(params.isActive),
             createdAt: params.createdAt.toISOString(),
             modifiedAt: params.createdAt.toISOString(),
@@ -118,6 +123,7 @@ export class ClubRepository {
         locale: string;
         description: string | null;
         contactInfo: string | null;
+        logoUrl: string | null;
         isActive: number;
         modifiedAt: string;
         modifiedBy: number;
@@ -131,6 +137,7 @@ export class ClubRepository {
                 locale = :locale,
                 description = :description,
                 contactInfo = :contactInfo,
+                logoUrl = :logoUrl,
                 isActive = :isActive,
                 modifiedAt = :modifiedAt,
                 modifiedBy = :modifiedBy
@@ -141,6 +148,7 @@ export class ClubRepository {
     updateClub(params: ClubUpdateParams): void {
         this.updateClubStatement().run({
             ...params,
+            logoUrl: params.logoUrl ?? null,
             isActive: booleanToInteger(params.isActive),
             modifiedAt: params.modifiedAt.toISOString(),
         });
@@ -276,6 +284,7 @@ export interface ClubCreateParams {
     locale: string;
     description: string | null;
     contactInfo: string | null;
+    logoUrl?: string | null | undefined;
     isActive: boolean;
     createdAt: Date;
     modifiedBy: number;
@@ -290,6 +299,7 @@ export interface ClubUpdateParams {
     locale: string;
     description: string | null;
     contactInfo: string | null;
+    logoUrl?: string | null | undefined;
     isActive: boolean;
     modifiedAt: Date;
     modifiedBy: number;
@@ -304,6 +314,7 @@ interface ClubDBEntity {
     locale: string;
     description: string | null;
     contactInfo: string | null;
+    logoUrl: string | null;
     isActive: number;
     currentRatingEventId: number | null;
     createdAt: string;
@@ -332,6 +343,7 @@ function clubFromDBEntity(dbEntity: ClubDBEntity): Club {
         locale: dbEntity.locale,
         description: dbEntity.description,
         contactInfo: dbEntity.contactInfo,
+        logoUrl: dbEntity.logoUrl,
         isActive: Boolean(dbEntity.isActive),
         currentRatingEventId: dbEntity.currentRatingEventId,
         createdAt: new Date(dbEntity.createdAt),

@@ -19,6 +19,7 @@ import type { ClubRole } from '../model/ClubModels.ts';
 import { ClubService } from './ClubService.ts';
 import { type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
+import { applyBirthYearVisibility } from './ProfileService.ts';
 
 export class UserService {
     private userRepository: UserRepository = new UserRepository();
@@ -160,17 +161,24 @@ export class UserService {
     }
 
     private applyProfileVisibility(user: User, requestingUserId?: number): User {
-        if (
-            user.profile?.hideProfile &&
-            requestingUserId !== undefined &&
-            requestingUserId !== user.id
-        ) {
-            const requestingUser = this.userRepository.findUserById(requestingUserId);
-            if (!requestingUser?.isAdmin) {
-                return { ...user, profile: null };
-            }
+        if (!user.profile) {
+            return user;
         }
-        return user;
+
+        const isOwner = requestingUserId !== undefined && requestingUserId === user.id;
+        const requestingUser = requestingUserId !== undefined
+            ? this.userRepository.findUserById(requestingUserId)
+            : undefined;
+        const isRequesterAdmin = requestingUser?.isAdmin ?? false;
+
+        if (user.profile.hideProfile && !isOwner && !isRequesterAdmin) {
+            return { ...user, profile: null };
+        }
+
+        return {
+            ...user,
+            profile: applyBirthYearVisibility(user.profile, requestingUserId, isRequesterAdmin),
+        };
     }
 
     private userExistsByName(name: string): boolean {
