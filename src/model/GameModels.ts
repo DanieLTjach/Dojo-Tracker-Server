@@ -101,10 +101,13 @@ export interface GameWithPlayers extends Game {
     players: GamePlayer[];
 }
 
+import type { GameAchievementUnlock } from './AchievementModels.ts';
+
 export interface DetailedGame extends GameWithPlayers {
     rounds: GameRound[];
     currentState: GameState | null;
     timer: GameTimer;
+    achievementUnlocks?: GameAchievementUnlock[];
 }
 
 export interface PlayerData {

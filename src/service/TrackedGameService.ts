@@ -45,7 +45,7 @@ import { GameService } from './GameService.ts';
 import { RatingService } from './RatingService.ts';
 import { SkillRatingService } from './SkillRatingService.ts';
 import { UserService } from './UserService.ts';
-import { type SupportedLocale, t } from '../i18n/index.ts';
+import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
 
 const TRACKED_GAME_LOG_ACTIONS = {
     CREATED: {
@@ -119,9 +119,10 @@ export class TrackedGameService {
     recordPlannedGameResult(
         gameId: number,
         results: PlannedGamePlayerResult[],
-        modifiedBy: number
+        modifiedBy: number,
+        locale: SupportedLocale = DEFAULT_LOCALE
     ): DetailedGame {
-        const game = this.gameService.getDetailedGameById(gameId);
+        const game = this.gameService.getDetailedGameById(gameId, locale);
         const event = this.eventService.getEventById(game.eventId);
 
         this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
@@ -166,8 +167,9 @@ export class TrackedGameService {
         );
         this.skillRatingService.applyFinishedGame(gameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+        this.automaticAchievementService.recomputeUsers(players.map(p => p.userId));
 
-        const finishedGame = this.gameService.getDetailedGameById(gameId);
+        const finishedGame = this.gameService.getDetailedGameById(gameId, locale);
         this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
         this.gameService.logRatingUpdateForGame(
             finishedGame,
@@ -183,9 +185,10 @@ export class TrackedGameService {
         gameId: number,
         roundId: number,
         resultInputDTO: GameRoundResultInputDTO,
-        modifiedBy: number
+        modifiedBy: number,
+        locale: SupportedLocale = DEFAULT_LOCALE
     ): DetailedGame {
-        const game = this.gameService.getDetailedGameById(gameId);
+        const game = this.gameService.getDetailedGameById(gameId, locale);
         const event = this.eventService.getEventById(game.eventId);
 
         this.validateRoundResultInput(game, event, roundId, modifiedBy);
@@ -204,8 +207,8 @@ export class TrackedGameService {
         this.gameRepository.touchGame(gameId, modifiedBy);
 
         return result.gameFinishReason
-            ? this.finishGame(gameId, modifiedBy)
-            : this.gameService.getDetailedGameById(gameId);
+            ? this.finishGame(gameId, modifiedBy, locale)
+            : this.gameService.getDetailedGameById(gameId, locale);
     }
 
     previewGameRoundResult(
@@ -267,8 +270,12 @@ export class TrackedGameService {
         return this.gameService.getDetailedGameById(gameId);
     }
 
-    finishGame(gameId: number, modifiedBy: number): DetailedGame {
-        const game = this.gameService.getDetailedGameById(gameId);
+    finishGame(
+        gameId: number,
+        modifiedBy: number,
+        locale: SupportedLocale = DEFAULT_LOCALE
+    ): DetailedGame {
+        const game = this.gameService.getDetailedGameById(gameId, locale);
         const event = this.eventService.getEventById(game.eventId);
 
         this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
@@ -291,9 +298,9 @@ export class TrackedGameService {
         );
         this.skillRatingService.applyFinishedGame(gameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
-        this.automaticAchievementService.recomputeAll();
+        this.automaticAchievementService.recomputeUsers(players.map(p => p.userId));
 
-        const finishedGame = this.gameService.getDetailedGameById(gameId);
+        const finishedGame = this.gameService.getDetailedGameById(gameId, locale);
         this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
         this.gameService.logRatingUpdateForGame(
             finishedGame,

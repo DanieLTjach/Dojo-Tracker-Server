@@ -227,13 +227,14 @@ export class AutomaticAchievementService {
 
     private fetchEvaluatorEvents(clubFilter?: number): EvaluatorEventPlacement[] {
         let sql = `
-            SELECT id, clubId, type, dateTo
-            FROM event
-            WHERE dateTo IS NOT NULL
+            SELECT e.id, e.clubId, e.type, e.dateTo, t.status AS tournamentStatus
+            FROM event e
+            LEFT JOIN tournament t ON t.eventId = e.id
+            WHERE e.dateTo IS NOT NULL OR (e.type = 'TOURNAMENT' AND t.status = 'FINISHED')
         `;
         const params: any[] = [];
         if (clubFilter !== undefined) {
-            sql += ` AND clubId = ?`;
+            sql += ` AND e.clubId = ?`;
             params.push(clubFilter);
         }
 
@@ -241,7 +242,8 @@ export class AutomaticAchievementService {
             id: number;
             clubId: number | null;
             type: string;
-            dateTo: string;
+            dateTo: string | null;
+            tournamentStatus: string | null;
         }>;
 
         const now = new Date();
@@ -249,13 +251,14 @@ export class AutomaticAchievementService {
 
         for (const e of eventRows) {
             try {
-                const dateTo = new Date(e.dateTo);
-                if (dateTo > now) continue; // dateTo must have passed
+                const dateTo = e.dateTo ? new Date(e.dateTo) : now;
+                const isTournamentFinished = e.type === 'TOURNAMENT' && e.tournamentStatus === 'FINISHED';
+                if (!isTournamentFinished && dateTo > now) continue; // dateTo must have passed unless tournament is finished
 
                 const standings = this.ratingService.calculateStandings(e.id);
                 if (standings.size === 0) continue;
 
-                const sortedStandings = [...standings.entries()].sort((a, b) => b[1] - a[1]);
+                const sortedStandings = [...standings.entries()].sort((a, b) => a[1] - b[1]);
 
                 // Check eligibility per user
                 const registrations = dbManager.db.prepare(`
@@ -266,9 +269,9 @@ export class AutomaticAchievementService {
 
                 const fillerUsers = new Set(registrations.filter(r => r.isFillerPlayer).map(r => r.userId));
 
-                const placements = sortedStandings.map(([userId], idx) => ({
+                const placements = sortedStandings.map(([userId, standing]) => ({
                     userId,
-                    place: idx + 1,
+                    place: standing,
                     isEligible: userId !== 0 && !fillerUsers.has(userId),
                 }));
 
