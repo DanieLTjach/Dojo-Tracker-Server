@@ -1,9 +1,82 @@
 import { Wind } from '../model/GameModels.ts';
 import type { GameRoundResult, WinningHandData } from '../model/GameRoundResultModels.ts';
+import type { HandDetail, YakuCode } from '../mahjong/types.ts';
 import {
-    AUTOMATIC_ACHIEVEMENTS,
+    AUTOMATIC_ACHIEVEMENTS_BY_CODE,
     type AutomaticAchievementDefinition,
 } from '../data/automaticAchievementCatalog.ts';
+
+// Maps a persisted yaku code to the first-win achievement it unlocks.
+const YAKU_FIRST_CODES: ReadonlyArray<readonly [YakuCode, string]> = [
+    ['pinfu', 'FIRST_PINFU'],
+    ['tanyao', 'FIRST_TANYAO'],
+    ['iipeikou', 'FIRST_IIPEIKOU'],
+    ['ryanpeikou', 'FIRST_RYANPEIKOU'],
+    ['sanshoku_doujun', 'FIRST_SANSHOKU_DOUJUN'],
+    ['sanshoku_doukou', 'FIRST_SANSHOKU_DOUKOU'],
+    ['ittsuu', 'FIRST_ITTSUU'],
+    ['chanta', 'FIRST_CHANTA'],
+    ['junchan', 'FIRST_JUNCHAN'],
+    ['toitoi', 'FIRST_TOITOI'],
+    ['sanankou', 'FIRST_SANANKOU'],
+    ['sankantsu', 'FIRST_SANKANTSU'],
+    ['shousangen', 'FIRST_SHOUSANGEN'],
+    ['honroutou', 'FIRST_HONROUTOU'],
+    ['honitsu', 'FIRST_HONITSU'],
+    ['chinitsu', 'FIRST_CHINITSU'],
+];
+
+const YAKUMAN_FIRST_CODES: ReadonlyArray<readonly [YakuCode, string]> = [
+    ['kokushi_musou', 'FIRST_KOKUSHI'],
+    ['kokushi_musou_13', 'FIRST_KOKUSHI_13'],
+    ['suuankou', 'FIRST_SUUANKOU'],
+    ['suuankou_tanki', 'FIRST_SUUANKOU_TANKI'],
+    ['daisangen', 'FIRST_DAISANGEN'],
+    ['daisuushi', 'FIRST_DAISUUSHI'],
+    ['shousuushi', 'FIRST_SHOUSUUSHI'],
+    ['tsuisou', 'FIRST_TSUISOU'],
+    ['ryuisou', 'FIRST_RYUUISOU'],
+    ['chinroutou', 'FIRST_CHINROUTOU'],
+    ['suukantsu', 'FIRST_SUUKANTSU'],
+    ['chuuren_poutou', 'FIRST_CHUUREN'],
+    ['junsei_chuuren_poutou', 'FIRST_JUNSEI_CHUUREN'],
+];
+
+const YAKUHAI_CODES: ReadonlySet<YakuCode> = new Set<YakuCode>([
+    'haku',
+    'hatsu',
+    'chun',
+    'jikaze_ton',
+    'jikaze_nan',
+    'jikaze_shaa',
+    'jikaze_pei',
+    'bakaze_ton',
+    'bakaze_nan',
+    'bakaze_shaa',
+    'bakaze_pei',
+]);
+
+// Career counters keyed by the yaku code they count.
+const YAKU_COUNTER_CODES: ReadonlyArray<readonly [YakuCode, string, number]> = [
+    ['pinfu', 'PINFU_10', 10],
+    ['tanyao', 'TANYAO_25', 25],
+    ['chiitoitsu', 'CHIITOITSU_10', 10],
+    ['honitsu', 'HONITSU_10', 10],
+    ['chinitsu', 'CHINITSU_5', 5],
+];
+
+// Timing achievements detected via a yaku code with a handDetail context-flag fallback.
+const TIMING_FLAGS: ReadonlyArray<readonly [YakuCode, keyof NonNullable<HandDetail['context']>, string]> = [
+    ['ippatsu', 'ippatsu', 'FIRST_IPPATSU'],
+    ['double_riichi', 'doubleRiichi', 'FIRST_DOUBLE_RIICHI'],
+    ['haitei', 'haitei', 'FIRST_HAITEI'],
+    ['houtei', 'houtei', 'FIRST_HOUTEI'],
+    ['rinshan_kaihou', 'rinshanKaihou', 'FIRST_RINSHAN'],
+    ['chankan', 'chankan', 'FIRST_CHANKAN'],
+    ['tenhou', 'tenhou', 'FIRST_TENHOU'],
+    ['chiihou', 'chiihou', 'FIRST_CHIIHOU'],
+    ['renhou', 'renhou', 'FIRST_RENHOU'],
+];
 
 export interface EvaluatorGamePlayer {
     userId: number;
@@ -99,6 +172,16 @@ interface UserTracker {
     lostRiichiSticksCount: number;
     tsumoLossPoints: number;
 
+    // Hand-detail counts (rounds recorded with handDetail)
+    tsumoWinsCount: number;
+    ronWinsCount: number;
+    menzenWinsCount: number;
+    openHandWinsCount: number;
+    ippatsuWinsCount: number;
+    kansCount: number;
+    paoPaidCount: number;
+    yakuWins: Map<YakuCode, number>;
+
     // Sanma counts
     sanmaGamesCount: number;
     sanmaWinsCount: number;
@@ -133,6 +216,14 @@ function newUserTracker(userId: number): UserTracker {
         noDealInStreak: 0,
         lostRiichiSticksCount: 0,
         tsumoLossPoints: 0,
+        tsumoWinsCount: 0,
+        ronWinsCount: 0,
+        menzenWinsCount: 0,
+        openHandWinsCount: 0,
+        ippatsuWinsCount: 0,
+        kansCount: 0,
+        paoPaidCount: 0,
+        yakuWins: new Map<YakuCode, number>(),
         sanmaGamesCount: 0,
         sanmaWinsCount: 0,
         diceRollsCount: 0,
@@ -411,6 +502,148 @@ export function evaluateAutomaticAchievements(
                         if (isSanma) unlockCode(winnerId, 'SANMA_FIRST_TSUMO', game, round.roundNumber);
                     }
 
+                    // Career tsumo/ron win counters (round type is known for all tracked rounds)
+                    const wt = getTracker(winnerId);
+                    if (winType === 'TSUMO') {
+                        wt.tsumoWinsCount += 1;
+                        checkThreshold(winnerId, 'TSUMO_WINS_50', 50, wt.tsumoWinsCount, game, round.roundNumber);
+                    } else {
+                        wt.ronWinsCount += 1;
+                        checkThreshold(winnerId, 'RON_WINS_50', 50, wt.ronWinsCount, game, round.roundNumber);
+                    }
+
+                    // Full pao liability for a yakuman (payer, usually not the winner)
+                    const paoPayerId = hand.yakumanLiabilityPlayerId;
+                    if (paoPayerId !== undefined && paoPayerId !== 0) {
+                        unlockCode(paoPayerId, 'YAKUMAN_LIABILITY', game, round.roundNumber);
+                        const pt = getTracker(paoPayerId);
+                        pt.paoPaidCount += 1;
+                        checkThreshold(paoPayerId, 'PAID_PAO_3', 3, pt.paoPaidCount, game, round.roundNumber);
+                    }
+
+                    // --- Hand-detail derived achievements ---
+                    const melds = hand.handDetail?.melds ?? [];
+
+                    // Kans in the winning hand
+                    const kanMelds = melds.filter(m =>
+                        m.type === 'ANKAN' || m.type === 'DAIMINKAN' || m.type === 'KAKAN'
+                    );
+                    if (kanMelds.length > 0) {
+                        unlockCode(winnerId, 'FIRST_KAN', game, round.roundNumber);
+                        if (kanMelds.some(m => m.type === 'ANKAN')) {
+                            unlockCode(winnerId, 'FIRST_ANKAN', game, round.roundNumber);
+                        }
+                        if (kanMelds.some(m => m.type === 'DAIMINKAN')) {
+                            unlockCode(winnerId, 'FIRST_DAIMINKAN', game, round.roundNumber);
+                        }
+                        if (kanMelds.some(m => m.type === 'KAKAN')) {
+                            unlockCode(winnerId, 'FIRST_KAKAN', game, round.roundNumber);
+                        }
+                        wt.kansCount += kanMelds.length;
+                        checkThreshold(winnerId, 'KANS_10', 10, wt.kansCount, game, round.roundNumber);
+                    }
+
+                    // Menzen / open win styles
+                    if (hand.handDetail !== undefined) {
+                        if (melds.length === 0) {
+                            wt.menzenWinsCount += 1;
+                            checkThreshold(winnerId, 'MENZEN_WINS_50', 50, wt.menzenWinsCount, game, round.roundNumber);
+                        } else {
+                            wt.openHandWinsCount += 1;
+                            checkThreshold(
+                                winnerId,
+                                'OPEN_HAND_WIN_10',
+                                10,
+                                wt.openHandWinsCount,
+                                game,
+                                round.roundNumber
+                            );
+                            if (melds.length >= 4) {
+                                unlockCode(winnerId, 'FULLY_OPEN_WIN', game, round.roundNumber);
+                            }
+                        }
+                    }
+
+                    // Timing wins: yaku code with a context-flag fallback for rounds scored
+                    // before the derived yaku list was persisted
+                    const handContext = hand.handDetail?.context;
+                    for (const [yakuCode, flag, code] of TIMING_FLAGS) {
+                        if (hasYaku(hand, yakuCode) || handContext?.[flag] === true) {
+                            unlockCode(winnerId, code, game, round.roundNumber);
+                            if (code === 'FIRST_IPPATSU') {
+                                wt.ippatsuWinsCount += 1;
+                                checkThreshold(
+                                    winnerId,
+                                    'RIICHI_IPPATSU_10',
+                                    10,
+                                    wt.ippatsuWinsCount,
+                                    game,
+                                    round.roundNumber
+                                );
+                            }
+                        }
+                    }
+
+                    // Standard yaku firsts and career counters
+                    for (const [yakuCode, code] of YAKU_FIRST_CODES) {
+                        if (hasYaku(hand, yakuCode)) {
+                            unlockCode(winnerId, code, game, round.roundNumber);
+                        }
+                    }
+                    if (hand.yaku?.some(y => YAKUHAI_CODES.has(y.code))) {
+                        unlockCode(winnerId, 'FIRST_YAKUHAI', game, round.roundNumber);
+                    }
+                    for (const [yakuCode, code, target] of YAKU_COUNTER_CODES) {
+                        if (hasYaku(hand, yakuCode)) {
+                            const count = (wt.yakuWins.get(yakuCode) ?? 0) + 1;
+                            wt.yakuWins.set(yakuCode, count);
+                            checkThreshold(winnerId, code, target, count, game, round.roundNumber);
+                        }
+                    }
+
+                    // Yakuman-specific firsts (only identifiable when the yaku list is present)
+                    if (hand.yaku !== undefined) {
+                        for (const [yakuCode, code] of YAKUMAN_FIRST_CODES) {
+                            if (hasYaku(hand, yakuCode)) {
+                                unlockCode(winnerId, code, game, round.roundNumber);
+                            }
+                        }
+                    }
+
+                    // Dora-family counts: the han value of dora yaku entries equals the tile count
+                    const uraDoraCount = getYakuHan(hand, 'ura_dora');
+                    const doraTotal = getYakuHan(hand, 'dora') + uraDoraCount + getYakuHan(hand, 'aka_dora');
+                    if (doraTotal >= 5) {
+                        unlockCode(winnerId, 'DORA_5_ONE_HAND', game, round.roundNumber, doraTotal);
+                    }
+                    if (doraTotal >= 8) {
+                        unlockCode(winnerId, 'DORA_8_ONE_HAND', game, round.roundNumber, doraTotal);
+                    }
+                    if (uraDoraCount >= 3) {
+                        unlockCode(winnerId, 'URA_DORA_3', game, round.roundNumber, uraDoraCount);
+                    }
+                    if (getYakuHan(hand, 'aka_dora') >= 1) {
+                        unlockCode(winnerId, 'FIRST_AKA_DORA_WIN', game, round.roundNumber);
+                    }
+                    const plainHan = hand.han || 0;
+                    const plainFu = hand.fu || 0;
+                    const isManganPlus = (hand.yakumanCount || 0) === 0 &&
+                        (plainHan >= 5 || (plainHan === 4 && plainFu >= 40) || (plainHan === 3 && plainFu >= 70));
+                    if (isManganPlus && doraTotal === 0) {
+                        unlockCode(winnerId, 'NO_DORA_MANGAN', game, round.roundNumber);
+                    }
+
+                    // Sanma kita (north dora)
+                    if (isSanma) {
+                        const kitaCount = getYakuHan(hand, 'kita') || hand.handDetail?.kitaCount || 0;
+                        if (kitaCount > 0) {
+                            unlockCode(winnerId, 'SANMA_FIRST_KITA', game, round.roundNumber);
+                            if (kitaCount >= 8) {
+                                unlockCode(winnerId, 'SANMA_KITA_8_ONE_HAND', game, round.roundNumber, kitaCount);
+                            }
+                        }
+                    }
+
                     if (dealerUserId === winnerId) {
                         unlockCode(winnerId, 'FIRST_DEALER_WIN', game, round.roundNumber);
                         if (isSanma) unlockCode(winnerId, 'SANMA_FIRST_DEALER_WIN', game, round.roundNumber);
@@ -463,6 +696,9 @@ export function evaluateAutomaticAchievements(
 
                 // Draws & Special
                 if (res.type === 'EXHAUSTIVE_DRAW') {
+                    for (const pid of res.nagashiManganPlayerIds) {
+                        if (pid !== 0) unlockCode(pid, 'NAGASHI_MANGAN', game, round.roundNumber);
+                    }
                     // check tenpai players if present
                     if ('tenpaiPlayerIds' in res && Array.isArray((res as any).tenpaiPlayerIds)) {
                         for (const pid of (res as any).tenpaiPlayerIds) {
@@ -648,118 +884,279 @@ export function evaluateAutomaticAchievements(
     }
 
     function getDef(code: string): AutomaticAchievementDefinition | undefined {
-        return AUTOMATIC_ACHIEVEMENTS.find(a => a.code === code);
+        return AUTOMATIC_ACHIEVEMENTS_BY_CODE.get(code);
+    }
+
+    function checkScopedThreshold(
+        userId: number,
+        code: string,
+        target: number,
+        current: number,
+        scope: string,
+        sr: EvaluatorSkillGameResult
+    ) {
+        const def = getDef(code);
+        if (def === undefined) return;
+        if (current >= target) {
+            unlock(userId, def, scope, {
+                progress: target,
+                unlockedAt: sr.timestamp,
+                sourceGameId: sr.gameId,
+                value: current,
+            });
+        } else {
+            updateProgress(userId, def, scope, current);
+        }
+    }
+
+    function unlockCodeAt(userId: number, code: string, unlockedAt: Date, gameId: number, value?: number) {
+        const def = getDef(code);
+        if (def === undefined) return;
+        unlock(userId, def, 'GLOBAL', {
+            progress: def.target,
+            unlockedAt,
+            sourceGameId: gameId,
+            value: value ?? 1,
+        });
     }
 
     // 2. PROCESS OPENSKILL RESULTS
     const sortedSkillResults = [...skillResults].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
+    interface SkillTracker {
+        gamesCount: number;
+        gainStreak: number;
+        lossStreak: number;
+        top3Streak: number;
+        rank1DefendCount: number;
+    }
+    const skillTrackers = new Map<string, SkillTracker>();
+    const getSkillTracker = (key: string): SkillTracker => {
+        let st = skillTrackers.get(key);
+        if (st === undefined) {
+            st = { gamesCount: 0, gainStreak: 0, lossStreak: 0, top3Streak: 0, rank1DefendCount: 0 };
+            skillTrackers.set(key, st);
+        }
+        return st;
+    };
+
+    // userId -> clubs where the user has left provisional status
+    const provisionalClubs = new Map<number, Set<number>>();
+
+    // Group by scope so each club/size track can be replayed chronologically
+    const resultsByScope = new Map<string, EvaluatorSkillGameResult[]>();
     for (const sr of sortedSkillResults) {
         const scope = `SKILL_${sr.gameSize}P:${sr.clubId}`;
-        const minRating = Math.min(...sr.userSnapshots.map(u => u.initialDisplayRating));
+        const list = resultsByScope.get(scope);
+        if (list === undefined) {
+            resultsByScope.set(scope, [sr]);
+        } else {
+            list.push(sr);
+        }
+    }
 
-        for (const userSnap of sr.userSnapshots) {
-            if (userSnap.userId === 0) continue;
+    for (const [scope, scopeResults] of resultsByScope) {
+        // Running display rating for every player ever seen in this track
+        const runningRatings = new Map<number, number>();
 
-            const defFirst = getDef('OPENSKILL_FIRST_RATED')!;
-            const defProv = getDef('OPENSKILL_LEAVE_PROVISIONAL')!;
-            const def1600 = getDef('OPENSKILL_PEAK_1600')!;
-            const def1800 = getDef('OPENSKILL_PEAK_1800')!;
-            const def2000 = getDef('OPENSKILL_PEAK_2000')!;
-            const def2200 = getDef('OPENSKILL_PEAK_2200')!;
-            const defUnderdog = getDef('OPENSKILL_UNDERDOG_WIN')!;
-            const defGain50 = getDef('OPENSKILL_GAIN_50_ONE_GAME')!;
-            const defSigmaLow = getDef('OPENSKILL_SIGMA_LOW')!;
+        for (const sr of scopeResults) {
+            const minRating = Math.min(...sr.userSnapshots.map(u => u.initialDisplayRating));
 
-            // First rated
-            unlock(userSnap.userId, defFirst, scope, {
-                progress: 1,
-                unlockedAt: sr.timestamp,
-                sourceGameId: sr.gameId,
-                value: 1,
-            });
-
-            // Sigma low & leave provisional
-            if (userSnap.finalSigma <= 4.0) {
-                unlock(userSnap.userId, defProv, scope, {
-                    progress: 1,
-                    unlockedAt: sr.timestamp,
-                    sourceGameId: sr.gameId,
-                    value: userSnap.finalSigma,
-                });
-                unlock(userSnap.userId, defSigmaLow, scope, {
-                    progress: 1,
-                    unlockedAt: sr.timestamp,
-                    sourceGameId: sr.gameId,
-                    value: userSnap.finalSigma,
-                });
-            }
-
-            // Display rating peaks
-            const rating = userSnap.finalDisplayRating;
-            if (rating >= 1600) {
-                unlock(userSnap.userId, def1600, scope, {
-                    progress: 1600,
-                    unlockedAt: sr.timestamp,
-                    sourceGameId: sr.gameId,
-                    value: rating,
-                });
-            } else updateProgress(userSnap.userId, def1600, scope, rating);
-
-            if (rating >= 1800) {
-                unlock(userSnap.userId, def1800, scope, {
-                    progress: 1800,
-                    unlockedAt: sr.timestamp,
-                    sourceGameId: sr.gameId,
-                    value: rating,
-                });
-            } else updateProgress(userSnap.userId, def1800, scope, rating);
-
-            if (rating >= 2000) {
-                unlock(userSnap.userId, def2000, scope, {
-                    progress: 2000,
-                    unlockedAt: sr.timestamp,
-                    sourceGameId: sr.gameId,
-                    value: rating,
-                });
-            } else updateProgress(userSnap.userId, def2000, scope, rating);
-
-            if (rating >= 2200) {
-                unlock(userSnap.userId, def2200, scope, {
-                    progress: 2200,
-                    unlockedAt: sr.timestamp,
-                    sourceGameId: sr.gameId,
-                    value: rating,
-                });
-            } else updateProgress(userSnap.userId, def2200, scope, rating);
-
-            // Underdog win
-            if (userSnap.place === 1 && userSnap.initialDisplayRating < minRating + 1e-6) {
-                // strictly lowest rated
-                const strictlyLowest = sr.userSnapshots.filter(u =>
-                    u.initialDisplayRating === userSnap.initialDisplayRating
-                ).length === 1;
-                if (strictlyLowest) {
-                    unlock(userSnap.userId, defUnderdog, scope, {
-                        progress: 1,
-                        unlockedAt: sr.timestamp,
-                        sourceGameId: sr.gameId,
-                        value: 1,
-                    });
+            // Seed newcomers with their pre-game rating so the leader is correct
+            for (const userSnap of sr.userSnapshots) {
+                if (!runningRatings.has(userSnap.userId)) {
+                    runningRatings.set(userSnap.userId, userSnap.initialDisplayRating);
                 }
             }
 
-            // Gain 50
-            const gain = userSnap.finalDisplayRating - userSnap.initialDisplayRating;
-            if (gain >= 50) {
-                unlock(userSnap.userId, defGain50, scope, {
-                    progress: 50,
+            // Sole track leader before this game (undefined on ties or an empty track)
+            let leaderId: number | undefined;
+            let maxRating = Number.NEGATIVE_INFINITY;
+            let maxCount = 0;
+            for (const [uid, rating] of runningRatings) {
+                if (rating > maxRating) {
+                    maxRating = rating;
+                    maxCount = 1;
+                    leaderId = uid;
+                } else if (rating === maxRating) {
+                    maxCount += 1;
+                }
+            }
+            if (maxCount !== 1) leaderId = undefined;
+
+            for (const userSnap of sr.userSnapshots) {
+                if (userSnap.userId === 0) continue;
+
+                const defFirst = getDef('OPENSKILL_FIRST_RATED')!;
+                const defProv = getDef('OPENSKILL_LEAVE_PROVISIONAL')!;
+                const def1600 = getDef('OPENSKILL_PEAK_1600')!;
+                const def1800 = getDef('OPENSKILL_PEAK_1800')!;
+                const def2000 = getDef('OPENSKILL_PEAK_2000')!;
+                const def2200 = getDef('OPENSKILL_PEAK_2200')!;
+                const defUnderdog = getDef('OPENSKILL_UNDERDOG_WIN')!;
+                const defGain50 = getDef('OPENSKILL_GAIN_50_ONE_GAME')!;
+                const defSigmaLow = getDef('OPENSKILL_SIGMA_LOW')!;
+
+                // First rated
+                unlock(userSnap.userId, defFirst, scope, {
+                    progress: 1,
                     unlockedAt: sr.timestamp,
                     sourceGameId: sr.gameId,
-                    value: gain,
+                    value: 1,
                 });
-            } else {
-                updateProgress(userSnap.userId, defGain50, scope, Math.max(0, gain));
+
+                // Sigma low & leave provisional
+                if (userSnap.finalSigma <= 4.0) {
+                    unlock(userSnap.userId, defProv, scope, {
+                        progress: 1,
+                        unlockedAt: sr.timestamp,
+                        sourceGameId: sr.gameId,
+                        value: userSnap.finalSigma,
+                    });
+                    unlock(userSnap.userId, defSigmaLow, scope, {
+                        progress: 1,
+                        unlockedAt: sr.timestamp,
+                        sourceGameId: sr.gameId,
+                        value: userSnap.finalSigma,
+                    });
+
+                    const clubs = provisionalClubs.get(userSnap.userId) ?? new Set<number>();
+                    clubs.add(sr.clubId);
+                    provisionalClubs.set(userSnap.userId, clubs);
+                    if (clubs.size >= 2) {
+                        unlockCodeAt(
+                            userSnap.userId,
+                            'OPENSKILL_MULTI_CLUB_RANKED_2',
+                            sr.timestamp,
+                            sr.gameId,
+                            clubs.size
+                        );
+                    }
+                }
+
+                // Display rating peaks
+                const rating = userSnap.finalDisplayRating;
+                if (rating >= 1600) {
+                    unlock(userSnap.userId, def1600, scope, {
+                        progress: 1600,
+                        unlockedAt: sr.timestamp,
+                        sourceGameId: sr.gameId,
+                        value: rating,
+                    });
+                } else updateProgress(userSnap.userId, def1600, scope, rating);
+
+                if (rating >= 1800) {
+                    unlock(userSnap.userId, def1800, scope, {
+                        progress: 1800,
+                        unlockedAt: sr.timestamp,
+                        sourceGameId: sr.gameId,
+                        value: rating,
+                    });
+                } else updateProgress(userSnap.userId, def1800, scope, rating);
+
+                if (rating >= 2000) {
+                    unlock(userSnap.userId, def2000, scope, {
+                        progress: 2000,
+                        unlockedAt: sr.timestamp,
+                        sourceGameId: sr.gameId,
+                        value: rating,
+                    });
+                } else updateProgress(userSnap.userId, def2000, scope, rating);
+
+                if (rating >= 2200) {
+                    unlock(userSnap.userId, def2200, scope, {
+                        progress: 2200,
+                        unlockedAt: sr.timestamp,
+                        sourceGameId: sr.gameId,
+                        value: rating,
+                    });
+                } else updateProgress(userSnap.userId, def2200, scope, rating);
+
+                // Underdog win
+                if (userSnap.place === 1 && userSnap.initialDisplayRating < minRating + 1e-6) {
+                    // strictly lowest rated
+                    const strictlyLowest = sr.userSnapshots.filter(u =>
+                        u.initialDisplayRating === userSnap.initialDisplayRating
+                    ).length === 1;
+                    if (strictlyLowest) {
+                        unlock(userSnap.userId, defUnderdog, scope, {
+                            progress: 1,
+                            unlockedAt: sr.timestamp,
+                            sourceGameId: sr.gameId,
+                            value: 1,
+                        });
+                    }
+                }
+
+                // Gain 50
+                const gain = userSnap.finalDisplayRating - userSnap.initialDisplayRating;
+                if (gain >= 50) {
+                    unlock(userSnap.userId, defGain50, scope, {
+                        progress: 50,
+                        unlockedAt: sr.timestamp,
+                        sourceGameId: sr.gameId,
+                        value: gain,
+                    });
+                } else {
+                    updateProgress(userSnap.userId, defGain50, scope, Math.max(0, gain));
+                }
+
+                // Rated game counts per track
+                const st = getSkillTracker(`${userSnap.userId}:${scope}`);
+                st.gamesCount += 1;
+                checkScopedThreshold(userSnap.userId, 'OPENSKILL_GAMES_50', 50, st.gamesCount, scope, sr);
+                checkScopedThreshold(userSnap.userId, 'OPENSKILL_GAMES_100', 100, st.gamesCount, scope, sr);
+
+                // Single-game loss
+                if (gain <= -50) {
+                    const defLoss = getDef('OPENSKILL_LOSS_50_ONE_GAME')!;
+                    unlock(userSnap.userId, defLoss, scope, {
+                        progress: 50,
+                        unlockedAt: sr.timestamp,
+                        sourceGameId: sr.gameId,
+                        value: -gain,
+                    });
+                }
+
+                // Gain/loss streaks
+                if (gain > 0) {
+                    st.gainStreak += 1;
+                    st.lossStreak = 0;
+                } else if (gain < 0) {
+                    st.lossStreak += 1;
+                    st.gainStreak = 0;
+                } else {
+                    st.gainStreak = 0;
+                    st.lossStreak = 0;
+                }
+                checkScopedThreshold(userSnap.userId, 'OPENSKILL_STREAK_GAIN_3', 3, st.gainStreak, scope, sr);
+                checkScopedThreshold(userSnap.userId, 'OPENSKILL_STREAK_LOSS_3', 3, st.lossStreak, scope, sr);
+
+                // Top-3 streak
+                if (userSnap.place <= 3) {
+                    st.top3Streak += 1;
+                } else {
+                    st.top3Streak = 0;
+                }
+                checkScopedThreshold(userSnap.userId, 'OPENSKILL_TOP3_STREAK_5', 5, st.top3Streak, scope, sr);
+
+                // Won at the table while holding the track's #1 rating
+                if (userSnap.place === 1 && leaderId === userSnap.userId) {
+                    st.rank1DefendCount += 1;
+                    checkScopedThreshold(
+                        userSnap.userId,
+                        'OPENSKILL_RANK1_DEFEND_3',
+                        3,
+                        st.rank1DefendCount,
+                        scope,
+                        sr
+                    );
+                }
+            }
+
+            // Apply post-game ratings
+            for (const userSnap of sr.userSnapshots) {
+                runningRatings.set(userSnap.userId, userSnap.finalDisplayRating);
             }
         }
     }
@@ -868,4 +1265,15 @@ function iterWinningHands(res: GameRoundResult): { hand: WinningHandData, winTyp
         return res.winningHandData.map(h => ({ hand: h, winType: 'RON' as const }));
     }
     return [];
+}
+
+function hasYaku(hand: WinningHandData, code: YakuCode): boolean {
+    return hand.yaku?.some(y => y.code === code) ?? false;
+}
+
+// The han value of dora-family yaku entries equals the number of dora tiles.
+function getYakuHan(hand: WinningHandData, code: YakuCode): number {
+    const entry = hand.yaku?.find(y => y.code === code);
+    if (entry === undefined || !('han' in entry)) return 0;
+    return entry.han;
 }
