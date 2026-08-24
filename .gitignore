@@ -13,3 +13,4 @@ coverage
 
 # ZCode session artifacts (plans etc.)
 .zcode/
+notes/
