@@ -15,8 +15,8 @@ A backend server for tracking mahjong games and user statistics. Built with Node
 
 ### Prerequisites
 
-- Node.js (v18 or higher recommended)
-- npm or yarn
+- Node.js 24.x (see `.nvmrc` — run `nvm use`)
+- npm
 
 ### Installation
 
@@ -32,34 +32,49 @@ A backend server for tracking mahjong games and user statistics. Built with Node
    ```
 
 3. Set up environment variables:
-   Create a `.env` file in the root directory:
-   ```env
-   PORT=3000
-   DB_PATH=./db/data/data.db
-   JWT_SECRET=your-secret-key-here-change-in-production
-   JWT_EXPIRES_IN=24h
-   TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+
+   `npm run dev` loads **`.env.development`** (not `.env`). Copy the template:
+   ```bash
+   cp .env.example .env.development
    ```
+
+   Required in every environment: `NODE_ENV`, `JWT_SECRET`, `BOT_TOKEN`, `BOT_URL`,
+   `FRONTEND_URLS`. `GLOBAL_LOGS_CHAT_ID` is additionally required when
+   `NODE_ENV=production`.
+
+   **You do not need a real Telegram bot token for backend work** — a placeholder
+   works locally. See **[Local Development Setup](docs/local-setup.md)** for the full
+   walkthrough, including how to get an authenticated JWT without a bot.
 
    **Important:** Change `JWT_SECRET` to a strong, random string in production.
 
 ### Running the Server
 
-- **Development mode (with auto-reload):**
+- **Development mode (with auto-reload, uses `.env.development`):**
   ```bash
   npm run dev
   ```
 
-- **Production mode:**
+- **Production mode (uses `.env`):**
   ```bash
   npm start
   ```
+
+The SQLite database is created and migrated automatically on first start — there is
+no separate migrate or seed step.
+
+### Running Tests
+
+```bash
+npm test
+```
 
 ## API Reference
 
 All endpoints are prefixed with `/api`. Most endpoints require JWT authentication.
 
 For detailed API documentation with curl examples, see:
+- **[Local Development Setup](docs/local-setup.md)** - Getting the server running locally, and authenticating without a bot
 - **[Authentication](docs/api/authentication.md)** - JWT authentication with Telegram initData
 - **[Telegram Mini App Auth](docs/telegram-mini-app-auth.md)** - Integration guide for Telegram Mini Apps
 - **[User Endpoints](docs/api/users.md)** - Complete documentation for `/api/users`
@@ -81,10 +96,10 @@ The API uses JWT (JSON Web Token) authentication with Telegram Mini App initData
 
 **Quick Example:**
 ```bash
-# Register a new user (public endpoint)
-curl -X POST http://localhost:3000/api/users \
+# Register a new user (public endpoint; Telegram ID/username come from signed initData)
+curl -X POST "http://localhost:3000/api/users?$INIT_DATA" \
   -H "Content-Type: application/json" \
-  -d '{"name": "John Doe", "telegramUsername": "@johndoe", "telegramId": 123456789}'
+  -d '{"name": "John Doe"}'
 
 # Authenticate with Telegram initData (from Telegram WebApp)
 curl -X POST "http://localhost:3000/api/authenticate?query_id=...&user=%7B%22id%22%3A123456789%7D&auth_date=...&hash=..."

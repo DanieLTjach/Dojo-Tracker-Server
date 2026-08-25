@@ -293,13 +293,15 @@ Required environment variables for authentication:
 ```env
 # JWT Configuration
 JWT_SECRET=your-secret-key-here
-JWT_EXPIRES_IN=24h
+JWT_EXPIRY=7d
 
-# Telegram Bot Token (required for hash validation in production)
-TELEGRAM_BOT_TOKEN=your-bot-token-here
+# Telegram bot token, used to validate the initData hash in every environment.
+# Locally this may be a placeholder — see docs/local-setup.md.
+BOT_TOKEN=your-bot-token-here
 
 # Optional: initData validity period (default: 86400 seconds = 24 hours)
 AUTH_INIT_DATA_VALIDITY_SECONDS=86400
 ```
 
-See the main README for complete environment setup instructions.
+See [Local Development Setup](../local-setup.md) for complete environment setup
+instructions, including how to authenticate locally without a real bot.
