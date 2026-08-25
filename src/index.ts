@@ -68,8 +68,9 @@ if (config.env !== 'test') {
 }
 
 async function shutdown() {
-    await LogService.shutdown();
+    // Drain before LogService shuts down, so a failure during the drain is still logged.
     await AchievementRecomputeQueue.shutdown();
+    await LogService.shutdown();
     dbManager.closeDB();
 }
 
