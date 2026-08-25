@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import multer from 'multer';
 import { withTransaction } from '../db/TransactionManagement.ts';
 import { ClubController } from '../controller/ClubController.ts';
 import { ClubMembershipController } from '../controller/ClubMembershipController.ts';
@@ -11,13 +10,6 @@ const router = Router();
 const clubController = new ClubController();
 const membershipController = new ClubMembershipController();
 export const achievementController = new ClubAchievementController();
-
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 2 * 1024 * 1024,
-    },
-});
 
 router.get('/', withTransaction((req, res) => clubController.getAllClubs(req, res)));
 router.get('/:clubId', withTransaction((req, res) => clubController.getClubById(req, res)));
@@ -102,13 +94,6 @@ router.post(
     requireAuth,
     requireClubRole('OWNER', 'MODERATOR'),
     withTransaction((req, res) => achievementController.revoke(req, res))
-);
-router.post(
-    '/:clubId/achievement-icons',
-    requireAuth,
-    requireClubRole('OWNER', 'MODERATOR'),
-    upload.any(),
-    (req, res, next) => achievementController.uploadIcon(req, res).catch(next)
 );
 
 export default router;

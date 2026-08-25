@@ -52,9 +52,6 @@ export interface EventAchievementResult {
 
 export const ProfileAchievementType = {
     TOURNAMENT_AWARD: 'TOURNAMENT_AWARD',
-    EVENT_PLACEMENT: 'EVENT_PLACEMENT',
-    CAREER: 'CAREER',
-    HAND: 'HAND',
     MANUAL: 'MANUAL',
     AUTOMATIC: 'AUTOMATIC',
 } as const;

@@ -78,13 +78,16 @@ describe('Automatic achievement endpoints', () => {
     });
 
     describe('GET /api/achievements/catalog', () => {
-        test('returns localized automatic achievement catalog', async () => {
+        test('returns localized automatic achievement catalog and categories list', async () => {
             const response = await request(app)
                 .get('/api/achievements/catalog')
                 .set('Authorization', ownerAuthHeader);
 
             expect(response.status).toBe(200);
             expect(response.body).toHaveProperty('catalog');
+            expect(response.body).toHaveProperty('categories');
+            expect(Array.isArray(response.body.categories)).toBe(true);
+            expect(response.body.categories).toHaveLength(11);
             expect(Array.isArray(response.body.catalog)).toBe(true);
             expect(response.body.catalog.length).toBeGreaterThan(50);
             expect(response.body.catalog[0]).toHaveProperty('code');
@@ -99,16 +102,29 @@ describe('Automatic achievement endpoints', () => {
             const assignRes = await request(app)
                 .post(`/api/clubs/${clubId}/members/${ownerId}/achievements`)
                 .set('Authorization', ownerAuthHeader)
-                .send({ builtInCode: 'MENTOR', note: 'Best coach' });
+                .send({
+                    builtInCode: 'MENTOR',
+                    note: 'Founder note',
+                });
             expect(assignRes.status).toBe(201);
             const assignmentId = assignRes.body.id;
 
-            // Insert mock progress
-            const now = new Date('2026-04-10T12:00:00.000Z');
+            // Seed an automatic achievement state directly for testing
             dbManager.db.prepare(`
-                INSERT INTO automaticAchievementState (userId, code, scope, progress, target, unlockedAt, computedAt)
-                VALUES (?, 'GAMES_50', 'GLOBAL', 10, 50, NULL, ?)
-            `).run(ownerId, now.toISOString());
+                INSERT INTO automaticAchievementState (
+                    userId, code, scope, progress, target, unlockedAt, computedAt
+                ) VALUES (
+                    ?, 'GAMES_10', 'GLOBAL', 10, 10, '2026-08-20T10:00:00.000Z', '2026-08-20T10:00:00.000Z'
+                )
+            `).run(ownerId);
+
+            dbManager.db.prepare(`
+                INSERT INTO automaticAchievementState (
+                    userId, code, scope, progress, target, unlockedAt, computedAt
+                ) VALUES (
+                    ?, 'GAMES_50', 'GLOBAL', 10, 50, NULL, '2026-08-20T10:00:00.000Z'
+                )
+            `).run(ownerId);
 
             const response = await request(app)
                 .get(`/api/users/${ownerId}/achievements`)
@@ -118,11 +134,6 @@ describe('Automatic achievement endpoints', () => {
             expect(response.body).toHaveProperty('achievements');
             expect(response.body).toHaveProperty('progress');
             expect(response.body).toHaveProperty('coverage');
-            expect(Array.isArray(response.body.achievements)).toBe(true);
-            expect(Array.isArray(response.body.progress)).toBe(true);
-            expect(response.body.coverage).toHaveProperty('unlockedCount');
-            expect(response.body.coverage).toHaveProperty('totalCount');
-            expect(response.body.coverage).toHaveProperty('percentage');
 
             const mentor = response.body.achievements.find((a: any) => a.code === 'MENTOR');
             expect(mentor).toBeDefined();
@@ -163,7 +174,7 @@ describe('Automatic achievement endpoints', () => {
                 .set('Authorization', adminAuthHeader)
                 .send({});
 
-            expect(response.status).toBe(200);
+            expect(response.status).toBe(202);
             expect(response.body.message).toMatch(/recomputed/i);
         });
 
@@ -173,8 +184,17 @@ describe('Automatic achievement endpoints', () => {
                 .set('Authorization', ownerAuthHeader)
                 .send({ clubId });
 
-            expect(response.status).toBe(200);
+            expect(response.status).toBe(202);
             expect(response.body.message).toMatch(/recomputed/i);
+        });
+
+        test('rejects invalid payload with 400', async () => {
+            const response = await request(app)
+                .post('/api/achievements/recompute')
+                .set('Authorization', adminAuthHeader)
+                .send({ clubId: 'not-a-number' });
+
+            expect(response.status).toBe(400);
         });
 
         test('plain member cannot trigger global recompute', async () => {

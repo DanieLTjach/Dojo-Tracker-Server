@@ -16,6 +16,7 @@ import { parseArgs } from 'node:util';
 import { dbManager } from '../src/db/dbInit.ts';
 import { ImportService, IMPORT_MATCH_BY_VALUES, type ImportMatchBy } from '../src/service/ImportService.ts';
 import LogService from '../src/service/LogService.ts';
+import { AutomaticAchievementService } from '../src/service/AutomaticAchievementService.ts';
 
 const { values } = parseArgs({
     options: {
@@ -75,6 +76,10 @@ if (dryRun) {
     console.log(`Validated CSV (no games written).`);
 } else {
     console.log(`Imported: ${result.imported} games`);
+    if (result.imported > 0) {
+        console.log('Recomputing automatic achievements...');
+        new AutomaticAchievementService().recomputeAll();
+    }
 }
 
 // Drain the LogService queue so admin-channel logs (per-game posts) reach Telegram before exit,

@@ -1,5 +1,5 @@
 import z from 'zod';
-import { clubIdParamSchema } from './CommonSchemas.ts';
+import { clubIdParamSchema, imageUrlSchema } from './CommonSchemas.ts';
 import { userIdParamSchema } from './UserSchemas.ts';
 
 const clubParamsSchema = z.object({
@@ -30,11 +30,15 @@ export const clubAchievementDescriptionSchema = z.string().trim().min(1, 'Descri
     500,
     'Description must be 500 characters or less'
 );
-export const clubAchievementIconSchema = z.string().trim().min(1, 'Icon cannot be empty').max(
-    2048,
-    'Icon must be 2048 characters or less'
-).nullish();
+export const clubAchievementIconSchema = imageUrlSchema.nullish();
 export const clubAchievementNoteSchema = z.string().trim().max(500, 'Note must be 500 characters or less').nullish();
+
+export const recomputeAutomaticAchievementsSchema = z.object({
+    body: z.object({
+        userId: z.coerce.number().int().positive().optional(),
+        clubId: z.coerce.number().int().positive().optional(),
+    }).optional(),
+});
 
 export const clubAchievementCatalogListSchema = z.object({
     params: clubParamsSchema,

@@ -10,7 +10,9 @@ import {
     getEventAchievementsSchema,
     recomputeEventAchievementsSchema,
 } from '../schema/EventSchemas.ts';
+import { recomputeAutomaticAchievementsSchema } from '../schema/ClubAchievementSchemas.ts';
 import { getUserAchievementsSchema } from '../schema/UserSchemas.ts';
+import { ACHIEVEMENT_CATEGORIES } from '../data/automaticAchievementCatalog.ts';
 
 export class AchievementController {
     private achievementService: AchievementService = new AchievementService();
@@ -42,28 +44,27 @@ export class AchievementController {
     getAutomaticCatalog(req: Request, res: Response) {
         const requestingUserId = req.user!.userId;
         const catalog = this.achievementService.getAutomaticCatalog(requestingUserId);
-        return res.status(StatusCodes.OK).json({ catalog });
+        return res.status(StatusCodes.OK).json({ catalog, categories: ACHIEVEMENT_CATEGORIES });
     }
 
     recomputeAutomaticAchievements(req: Request, res: Response) {
+        const { body } = recomputeAutomaticAchievementsSchema.parse(req);
         const requestingUser = this.userService.getUserById(req.user!.userId);
-        const { userId, clubId } = req.body ?? {};
+        const { userId, clubId } = body ?? {};
 
-        if (clubId !== undefined && clubId !== null) {
-            const numClubId = Number(clubId);
+        if (clubId !== undefined) {
             if (!requestingUser.isAdmin) {
-                const role = this.clubMembershipService.getUserClubRole(numClubId, requestingUser.id);
+                const role = this.clubMembershipService.getUserClubRole(clubId, requestingUser.id);
                 if (role !== 'OWNER' && role !== 'MODERATOR') {
                     throw new InsufficientPermissionsError();
                 }
             }
-            this.automaticAchievementService.recomputeClub(numClubId);
-        } else if (userId !== undefined && userId !== null) {
-            const numUserId = Number(userId);
-            if (!requestingUser.isAdmin && requestingUser.id !== numUserId) {
+            this.automaticAchievementService.recomputeClub(clubId);
+        } else if (userId !== undefined) {
+            if (!requestingUser.isAdmin && requestingUser.id !== userId) {
                 throw new InsufficientPermissionsError();
             }
-            this.automaticAchievementService.recomputeUser(numUserId);
+            this.automaticAchievementService.recomputeUser(userId);
         } else {
             if (!requestingUser.isAdmin) {
                 throw new InsufficientPermissionsError();
@@ -71,7 +72,7 @@ export class AchievementController {
             this.automaticAchievementService.recomputeAll();
         }
 
-        return res.status(StatusCodes.OK).json({ message: 'Achievements recomputed successfully' });
+        return res.status(StatusCodes.ACCEPTED).json({ message: 'Achievements recomputed successfully' });
     }
 
     getUserAchievements(req: Request, res: Response) {

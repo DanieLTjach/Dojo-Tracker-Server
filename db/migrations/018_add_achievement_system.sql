@@ -66,8 +66,8 @@ CREATE TABLE automaticAchievementState (
 CREATE UNIQUE INDEX idx_automaticAchievementState_userCodeScope
     ON automaticAchievementState(userId, code, scope);
 
-CREATE INDEX idx_automaticAchievementState_userId
-    ON automaticAchievementState(userId);
+CREATE INDEX idx_automaticAchievementState_sourceGameId ON automaticAchievementState(sourceGameId);
+CREATE INDEX idx_automaticAchievementState_sourceEventId ON automaticAchievementState(sourceEventId);
 
 -- Dice values recorded for starting East player in tracked games.
 ALTER TABLE game ADD COLUMN startingDie1 INTEGER CHECK (startingDie1 IS NULL OR (startingDie1 >= 1 AND startingDie1 <= 6));

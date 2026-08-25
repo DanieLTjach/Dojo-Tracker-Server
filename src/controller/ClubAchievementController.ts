@@ -12,31 +12,10 @@ import { ClubAchievementService } from '../service/ClubAchievementService.ts';
 import { UserService } from '../service/UserService.ts';
 import { resolveUserLocale } from '../util/LocaleResolver.ts';
 import type { SupportedLocale } from '../i18n/index.ts';
-import { AchievementMediaService } from '../service/AchievementMediaService.ts';
 
 export class ClubAchievementController {
     private achievementService: ClubAchievementService = new ClubAchievementService();
-    private achievementMediaService: AchievementMediaService = new AchievementMediaService();
     private userService: UserService = new UserService();
-
-    setMediaService(service: AchievementMediaService) {
-        this.achievementMediaService = service;
-    }
-
-    async uploadIcon(req: Request, res: Response) {
-        const clubId = Number(req.params['clubId']);
-        if (isNaN(clubId) || !Number.isInteger(clubId) || clubId <= 0) {
-            return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid club ID' });
-        }
-        const modifiedBy = req.user!.userId;
-        const file = req.file || (Array.isArray(req.files) ? req.files[0] : undefined);
-        const result = await this.achievementMediaService.uploadClubAchievementIcon(
-            clubId,
-            file?.buffer,
-            modifiedBy
-        );
-        return res.status(StatusCodes.OK).json(result);
-    }
 
     getCatalog(req: Request, res: Response) {
         const { params: { clubId } } = clubAchievementCatalogListSchema.parse(req);

@@ -38,13 +38,14 @@ import {
 } from '../util/PointCalculationUtil.ts';
 import { calculateYakitoriPointChanges } from '../util/YakitoriUtil.ts';
 import { AchievementService } from './AchievementService.ts';
-import { AutomaticAchievementService } from './AutomaticAchievementService.ts';
+import AchievementRecomputeQueue from './AchievementRecomputeQueue.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { GameService } from './GameService.ts';
 import { RatingService } from './RatingService.ts';
 import { SkillRatingService } from './SkillRatingService.ts';
 import { UserService } from './UserService.ts';
+import LogService from './LogService.ts';
 import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
 
 const TRACKED_GAME_LOG_ACTIONS = {
@@ -73,7 +74,6 @@ export class TrackedGameService {
     private skillRatingService: SkillRatingService = new SkillRatingService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private achievementService: AchievementService = new AchievementService();
-    private automaticAchievementService: AutomaticAchievementService = new AutomaticAchievementService();
 
     createTrackedGame(
         eventId: number,
@@ -167,7 +167,11 @@ export class TrackedGameService {
         );
         this.skillRatingService.applyFinishedGame(gameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
-        this.automaticAchievementService.recomputeUsers(players.map(p => p.userId));
+        try {
+            AchievementRecomputeQueue.enqueueUsers(players.map(p => p.userId));
+        } catch (err: any) {
+            LogService.logError('Failed to enqueue achievement recompute in createTrackedGame', err);
+        }
 
         const finishedGame = this.gameService.getDetailedGameById(gameId, locale);
         this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
@@ -298,7 +302,11 @@ export class TrackedGameService {
         );
         this.skillRatingService.applyFinishedGame(gameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
-        this.automaticAchievementService.recomputeUsers(players.map(p => p.userId));
+        try {
+            AchievementRecomputeQueue.enqueueUsers(players.map(p => p.userId));
+        } catch (err: any) {
+            LogService.logError('Failed to enqueue achievement recompute in finishGame', err);
+        }
 
         const finishedGame = this.gameService.getDetailedGameById(gameId, locale);
         this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
@@ -344,7 +352,11 @@ export class TrackedGameService {
         this.undoFinishPointChanges(game, event.gameRules, modifiedBy);
 
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
-        this.automaticAchievementService.recomputeAll();
+        try {
+            AchievementRecomputeQueue.enqueueUsers(game.players.map(p => p.userId));
+        } catch (err: any) {
+            LogService.logError('Failed to enqueue achievement recompute in undoFinishGame', err);
+        }
 
         const reopenedGame = this.gameService.getDetailedGameById(gameId);
         this.gameService.logGameAction(reopenedGame, event, modifiedBy, '↩️ Game Finish Undone', 'Undone by');
@@ -375,7 +387,11 @@ export class TrackedGameService {
         );
 
         if (game.status === GameStatus.FINISHED) {
-            this.automaticAchievementService.recomputeAll();
+            try {
+                AchievementRecomputeQueue.enqueueUsers(game.players.map(p => p.userId));
+            } catch (err: any) {
+                LogService.logError('Failed to enqueue achievement recompute in setGameStartingDice', err);
+            }
         }
 
         return this.gameService.getDetailedGameById(gameId);

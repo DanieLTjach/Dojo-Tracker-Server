@@ -50,7 +50,7 @@ import { EventService } from './EventService.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { GameCreationBlockedError, TournamentGameNotInCurrentRoundError } from '../error/EventErrors.ts';
 import { AchievementService } from './AchievementService.ts';
-import { AutomaticAchievementService } from './AutomaticAchievementService.ts';
+import AchievementRecomputeQueue from './AchievementRecomputeQueue.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
 import { ProfileAchievementService } from './ProfileAchievementService.ts';
 import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
@@ -66,7 +66,6 @@ export class GameService {
     private clubService: ClubService = new ClubService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private achievementService: AchievementService = new AchievementService();
-    private automaticAchievementService: AutomaticAchievementService = new AutomaticAchievementService();
     private profileAchievementService: ProfileAchievementService = new ProfileAchievementService();
 
     addGame(
@@ -115,7 +114,11 @@ export class GameService {
         );
         this.skillRatingService.applyFinishedGame(newGameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
-        this.automaticAchievementService.recomputeUsers(playersData.map(p => p.userId));
+        try {
+            AchievementRecomputeQueue.enqueueUsers(playersData.map(p => p.userId));
+        } catch (err: any) {
+            LogService.logError('Failed to enqueue achievement recompute in addGame', err);
+        }
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
 
@@ -233,7 +236,12 @@ export class GameService {
         if (oldEvent.id !== event.id) {
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(oldEvent);
         }
-        this.automaticAchievementService.recomputeAll();
+        try {
+            const affectedUserIds = [...oldGame.players.map(p => p.userId), ...playersData.map(p => p.userId)];
+            AchievementRecomputeQueue.enqueueUsers(affectedUserIds);
+        } catch (err: any) {
+            LogService.logError('Failed to enqueue achievement recompute in updateGame', err);
+        }
 
         const updatedGame = this.getGameById(gameId);
         this.logEditedGame(oldGame, updatedGame, event, modifiedBy);
@@ -261,7 +269,11 @@ export class GameService {
         if (game.status === GameStatus.FINISHED) {
             this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
-            this.automaticAchievementService.recomputeAll();
+            try {
+                AchievementRecomputeQueue.enqueueUsers(game.players.map(p => p.userId));
+            } catch (err: any) {
+                LogService.logError('Failed to enqueue achievement recompute in setSubstitutePlayer', err);
+            }
         }
 
         return this.gameRepository.findGamePlayersByGameId(gameId)
@@ -299,7 +311,11 @@ export class GameService {
 
         if (game.status === GameStatus.FINISHED) {
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
-            this.automaticAchievementService.recomputeAll();
+            try {
+                AchievementRecomputeQueue.enqueueUsers(game.players.map(p => p.userId));
+            } catch (err: any) {
+                LogService.logError('Failed to enqueue achievement recompute in deleteGame', err);
+            }
         }
 
         this.logDeletedGame(game, event, deletedBy);

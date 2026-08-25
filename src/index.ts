@@ -21,6 +21,8 @@ import LogService from './service/LogService.ts';
 import { dbManager } from './db/dbInit.ts';
 import TelegramCommandService from './service/TelegramCommandService.ts';
 import PollSchedulerService from './service/PollSchedulerService.ts';
+import AchievementSchedulerService from './service/AchievementSchedulerService.ts';
+import AchievementRecomputeQueue from './service/AchievementRecomputeQueue.ts';
 
 const app = express();
 app.use(express.json());
@@ -62,10 +64,12 @@ app.listen(config.port, (error?: Error) => {
 if (config.env !== 'test') {
     TelegramCommandService.init();
     PollSchedulerService.init();
+    AchievementSchedulerService.init();
 }
 
 async function shutdown() {
     await LogService.shutdown();
+    await AchievementRecomputeQueue.shutdown();
     dbManager.closeDB();
 }
 

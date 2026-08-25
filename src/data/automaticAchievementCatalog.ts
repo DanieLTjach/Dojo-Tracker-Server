@@ -2,18 +2,21 @@ import type { AchievementValueUnit } from './achievementsCatalog.ts';
 import type { SupportedLocale } from '../i18n/index.ts';
 import { t } from '../i18n/index.ts';
 
-export type AchievementCategory =
-    | 'CAREER'
-    | 'HAND'
-    | 'SANMA'
-    | 'DICE'
-    | 'OPENSKILL'
-    | 'EVENT'
-    | 'TIMING'
-    | 'YAKU'
-    | 'YAKUMAN'
-    | 'DORA'
-    | 'KAN';
+export const ACHIEVEMENT_CATEGORIES = [
+    'CAREER',
+    'HAND',
+    'SANMA',
+    'DICE',
+    'OPENSKILL',
+    'EVENT',
+    'TIMING',
+    'YAKU',
+    'YAKUMAN',
+    'DORA',
+    'KAN',
+] as const;
+
+export type AchievementCategory = typeof ACHIEVEMENT_CATEGORIES[number];
 
 export type AchievementScopeType = 'GLOBAL' | 'CLUB' | 'SKILL_4P' | 'SKILL_3P' | 'EVENT';
 

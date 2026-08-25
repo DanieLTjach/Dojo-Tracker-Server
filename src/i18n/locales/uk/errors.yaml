@@ -206,7 +206,3 @@ errors:
 
   skillRatingNotEnabledForClub: Рейтинг OpenSkill не увімкнено для клубу {{clubId}}
   invalidGameSize: "Неприпустимий розмір гри {{gameSize}}. Дозволені значення: 3, 4"
-
-  invalidImageFile: Некоректний файл зображення. Підтримуються формати PNG, JPEG та WebP розміром до 2 МіБ.
-  noImageFileProvided: Будь ласка, надайте файл зображення для завантаження.
-  imageUploadFailed: Не вдалося завантажити зображення. Спробуйте ще раз.
