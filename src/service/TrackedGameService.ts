@@ -168,9 +168,11 @@ export class TrackedGameService {
         this.skillRatingService.applyFinishedGame(gameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
         try {
-            AchievementRecomputeQueue.enqueueUsers(players.map(p => p.userId));
+            // Synchronous: the response below returns achievementUnlocks read back
+            // from the recomputed state.
+            AchievementRecomputeQueue.recomputeNow(players.map(p => p.userId));
         } catch (err: any) {
-            LogService.logError('Failed to enqueue achievement recompute in createTrackedGame', err);
+            LogService.logError('Failed to recompute achievements in createTrackedGame', err);
         }
 
         const finishedGame = this.gameService.getDetailedGameById(gameId, locale);
@@ -303,9 +305,11 @@ export class TrackedGameService {
         this.skillRatingService.applyFinishedGame(gameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
         try {
-            AchievementRecomputeQueue.enqueueUsers(players.map(p => p.userId));
+            // Synchronous: the response below returns achievementUnlocks read back
+            // from the recomputed state.
+            AchievementRecomputeQueue.recomputeNow(players.map(p => p.userId));
         } catch (err: any) {
-            LogService.logError('Failed to enqueue achievement recompute in finishGame', err);
+            LogService.logError('Failed to recompute achievements in finishGame', err);
         }
 
         const finishedGame = this.gameService.getDetailedGameById(gameId, locale);
@@ -388,9 +392,11 @@ export class TrackedGameService {
 
         if (game.status === GameStatus.FINISHED) {
             try {
-                AchievementRecomputeQueue.enqueueUsers(game.players.map(p => p.userId));
+                // Synchronous: a dice correction is expected to be reflected the
+                // moment the client re-reads the game.
+                AchievementRecomputeQueue.recomputeNow(game.players.map(p => p.userId));
             } catch (err: any) {
-                LogService.logError('Failed to enqueue achievement recompute in setGameStartingDice', err);
+                LogService.logError('Failed to recompute achievements in setGameStartingDice', err);
             }
         }
 

@@ -90,9 +90,11 @@ export class EventController {
         try {
             this.achievementService.recomputeEventAchievements(event);
             const registrations = this.eventRegistrationRepository.findRegistrationsByEventId(eventId);
-            AchievementRecomputeQueue.enqueueUsers(registrations.map(r => r.userId));
+            // Synchronous: finishing a tournament awards placement achievements the
+            // client reads back immediately.
+            AchievementRecomputeQueue.recomputeNow(registrations.map(r => r.userId));
         } catch (err: any) {
-            LogService.logError('Failed to enqueue achievement recompute in finishTournament', err);
+            LogService.logError('Failed to recompute achievements in finishTournament', err);
         }
         return res.status(StatusCodes.OK).json(event);
     }

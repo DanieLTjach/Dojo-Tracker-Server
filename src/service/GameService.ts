@@ -115,9 +115,11 @@ export class GameService {
         this.skillRatingService.applyFinishedGame(newGameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
         try {
-            AchievementRecomputeQueue.enqueueUsers(playersData.map(p => p.userId));
+            // Synchronous: the response below returns achievementUnlocks read back
+            // from the recomputed state.
+            AchievementRecomputeQueue.recomputeNow(playersData.map(p => p.userId));
         } catch (err: any) {
-            LogService.logError('Failed to enqueue achievement recompute in addGame', err);
+            LogService.logError('Failed to recompute achievements in addGame', err);
         }
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
