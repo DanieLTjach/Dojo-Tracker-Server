@@ -48,6 +48,7 @@ export class ClubService {
             locale: data.locale,
             description: data.description ?? null,
             contactInfo: data.contactInfo ?? null,
+            logoUrl: data.logoUrl ?? null,
             isActive: data.isActive ?? true,
             createdAt: now,
             modifiedBy,
@@ -76,6 +77,7 @@ export class ClubService {
             locale: data.locale,
             description: data.description ?? null,
             contactInfo: data.contactInfo ?? null,
+            logoUrl: data.logoUrl ?? null,
             isActive: data.isActive ?? true,
             modifiedAt: now,
             modifiedBy,
@@ -264,5 +266,6 @@ export interface ClubData {
     locale: string;
     description?: string | null | undefined;
     contactInfo?: string | null | undefined;
+    logoUrl?: string | null | undefined;
     isActive?: boolean | null | undefined;
 }

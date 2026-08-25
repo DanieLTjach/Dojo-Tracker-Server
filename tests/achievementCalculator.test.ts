@@ -152,8 +152,25 @@ describe('computeAchievements', () => {
         expect(find(results, 'max_fu_hand')).toMatchObject({ value: 40, winnerUserIds: [3] });
     });
 
-    it('gives the defence award (lowest ron loss) to players who lost nothing on ron', () => {
+    it('gives the defence award (lowest ron loss) to tracked-round participants with zero deal-ins', () => {
+        // Players 1, 2, and 3 participated in tracked rounds and never dealt into a ron (0 points lost).
+        // Player 4 lost 1300 points on ron.
+        // Therefore, players 1, 2, and 3 win with 0 points lost.
         expect(find(results, 'points_lost_on_ron')).toMatchObject({ value: 0, winnerUserIds: [1, 2, 3] });
+    });
+
+    it('excludes the defence award entirely when no tracked rounds exist', () => {
+        const noRoundsGame = detailedGame(
+            [
+                player(1, 30000, Wind.EAST),
+                player(2, 30000, Wind.SOUTH),
+            ],
+            []
+        );
+        const noRoundsResults = computeAchievements([noRoundsGame], {});
+        const defence = find(noRoundsResults, 'points_lost_on_ron');
+        expect(defence.value).toBeUndefined();
+        expect(defence.winnerUserIds).toEqual([]);
     });
 
     it('counts lost riichi sticks and worst single-hand loss for the deal-in player', () => {

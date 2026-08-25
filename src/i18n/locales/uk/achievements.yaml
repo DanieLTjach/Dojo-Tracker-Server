@@ -30,3 +30,511 @@ achievements:
     declarations: "{{value}} оголошень"
     chombo: "{{value}} чомбо"
     players: "{{value}} гравців"
+    games: "{{value}} ігор"
+    finishes: "{{value}} фінішів"
+    winds: "{{value}} вітрів"
+    draws: "{{value}} нічиїх"
+    rounds: "{{value}} раундів"
+    events: "{{value}} турнірів"
+    deal_ins: "{{value}} накидів"
+    rolls: "{{value}} кидків"
+    rating: "{{value}} рейтинг"
+    championships: "{{value}} чемпіонств"
+    podiums: "{{value}} подіумів"
+    kans: "{{value}} канів"
+    dora: "{{value}} дора"
+    clubs: "{{value}} клубів"
+  manual:
+    COMMUNITY_BUILDER:
+      name: Будівничий спільноти
+      description: Допоміг розвинути та зміцнити спільноту клубу.
+    TOURNAMENT_ORGANIZER:
+      name: Організатор турніру
+      description: Організував турнір клубу.
+    MENTOR:
+      name: Наставник
+      description: Навчав та наставляв новачків.
+    FAIR_PLAY:
+      name: Чесна гра
+      description: Відзначений за спортивну поведінку та чесну гру.
+    RULES_EXPERT:
+      name: Знавець правил
+      description: Глибоке знання правил, завжди готовий пояснити спірний момент.
+    CLUB_AMBASSADOR:
+      name: Посол клубу
+      description: Гідно представляв клуб іншим клубам та стороннім особам.
+    EVENT_VOLUNTEER:
+      name: Волонтер заходу
+      description: Витратив свій час, щоб допомогти провести захід клубу.
+    RISING_STAR:
+      name: Зірка, що сходить
+      description: Новий гравець зі стрімким прогресом.
+    IRON_WILL:
+      name: Залізна воля
+      description: Проявив наполегливість у складній серії ігор.
+    HOSPITALITY_HERO:
+      name: Герой гостинності
+      description: Доклав зусиль, щоб інші відчували себе бажаними гостями.
+  automatic:
+    GAMES_1:
+      name: Перший крок
+      description: Зіграв свою першу гру.
+    GAMES_10:
+      name: Розігрів
+      description: Зіграв 10 ігор.
+    GAMES_50:
+      name: Регулярний гравець
+      description: Зіграв 50 ігор.
+    GAMES_100:
+      name: Центуріон
+      description: Зіграв 100 ігор.
+    GAMES_250:
+      name: Досвідчений ветеран
+      description: Зіграв 250 ігор.
+    GAMES_500:
+      name: Ентузіаст маджонгу
+      description: Зіграв 500 ігор.
+    GAMES_1000:
+      name: Жива легенда
+      description: Зіграв 1 000 ігор.
+    WINS_1:
+      name: Перша перемога
+      description: Здобув свою першу перемогу в грі.
+    WINS_10:
+      name: Смак крові
+      description: Здобув 10 перемог.
+    WINS_50:
+      name: Шлях чемпіона
+      description: Здобув 50 перемог.
+    WINS_100:
+      name: Домінатор
+      description: Здобув 100 перемог.
+    STREAK_WINS_3:
+      name: Хет-трик
+      description: Здобув 3 перемоги поспіль.
+    STREAK_TOP2_5:
+      name: Стабільний результат
+      description: Фінішував у топ-2 у 5 іграх поспіль.
+    WIN_STARTING_EAST:
+      name: Повелитель Сходу
+      description: Переміг у грі, стартувавши з позиції Сходу.
+    FOUR_WIND_COLLECTION:
+      name: Мандрівник чотирьох вітрів
+      description: Здобув перемоги з усіх чотирьох стартових позицій у Йонмі.
+    WIN_BY_MARGIN_1000:
+      name: На межі
+      description: Переміг у грі з перевагою в 1 000 очок або менше.
+    WIN_BY_MARGIN_30000:
+      name: Абсолютний розгром
+      description: Переміг у грі з перевагою у 30 000 очок або більше над другим місцем.
+    FINISH_EXACT_ZERO:
+      name: Баланс на нулі
+      description: Завершив гру рівно з нулем очок.
+    COMEBACK_NEGATIVE_TO_FIRST:
+      name: Відродження фенікса
+      description: Здійснив камбек з мінусу та виборов перше місце.
+    FIRST_RON:
+      name: Рон!
+      description: Зібрав свій перший рон.
+    FIRST_TSUMO:
+      name: Цумо!
+      description: Зібрав свій перший цумо.
+    FIRST_DEALER_WIN:
+      name: Сила Ойя
+      description: Здобув першу перемогу на дилері.
+    FIRST_RIICHI:
+      name: Крок до перемоги
+      description: Оголосив свій перший ріічі.
+    DEALER_WINS_STREAK_3:
+      name: Майстер ренчану
+      description: Виграв 3 раунди поспіль на дилері.
+    DEALER_WINS_STREAK_5:
+      name: Нестримний дилер
+      description: Виграв 5 раундів поспіль на дилері.
+    RIICHI_10:
+      name: Агресивний гравець
+      description: Оголосив ріічі 10 разів.
+    RIICHI_100:
+      name: Фанат ріічі
+      description: Оголосив ріічі 100 разів.
+    RIICHI_NOMI_WIN:
+      name: Чисте ріічі
+      description: Виграв руку, де ріічі було єдиним ханом.
+    ONE_HAN_WIN:
+      name: Дешево та швидко
+      description: Виграв руку в 1 хан.
+    CHIITOITSU_NOMI_WIN:
+      name: Лише сім пар
+      description: Виграв чіітоіцу без інших яку.
+    FU_50:
+      name: Колекціонер фу
+      description: Виграв руку на 50 фу.
+    FU_70:
+      name: Важке фу
+      description: Виграв руку на 70 фу.
+    FU_100:
+      name: Вежа з фу
+      description: Виграв руку на 100 фу.
+    FIRST_MANGAN:
+      name: Великий удар
+      description: Зібрав свій перший манган.
+    FIRST_HANEMAN:
+      name: Потужний сплеск
+      description: Зібрав свій перший ханеман.
+    FIRST_BAIMAN:
+      name: Подвійна сила
+      description: Зібрав свій перший байман.
+    FIRST_SANBAIMAN:
+      name: Потрійний вибух
+      description: Зібрав свій перший санбайман.
+    FIRST_KAZOE:
+      name: Рука тринадцяти
+      description: Зібрав свій перший казое якуман.
+    FIRST_YAKUMAN:
+      name: Божественний дотик
+      description: Зібрав свій перший якуман.
+    FIRST_DOUBLE_YAKUMAN:
+      name: Міфічний володар
+      description: Зібрав свій перший дабл якуман.
+    NAGASHI_MANGAN:
+      name: Тихі річки
+      description: Зібрав нагаші манган.
+    EXHAUSTIVE_DRAW_TENPAI_10:
+      name: Наполегливий темпай
+      description: Втримав темпай у 10 вичерпних нічиїх.
+    EXHAUSTIVE_DRAW_TENPAI_50:
+      name: Спеціаліст нічиїх
+      description: Втримав темпай у 50 вичерпних нічиїх.
+    NO_DEAL_IN_STREAK_50:
+      name: Залізна стіна
+      description: Зіграв 50 відстежуваних раундів поспіль без накидів.
+    DOUBLE_RON_WINNER:
+      name: Синхронний удар
+      description: Виграв у складі дабл рону.
+    YAKUMAN_LIABILITY:
+      name: Секинін барай
+      description: Оплатив повну відповідальність за якуман іншого гравця.
+    DEAL_IN_32000:
+      name: Ядерний накид
+      description: Накинув 32 000 очок або більше за один раз.
+    LOST_RIICHI_STICKS_10:
+      name: Щедрий спонсор
+      description: Втратив 10 паличок ріічі на користь суперників.
+    TSUMO_LOSS_50000:
+      name: Спільний тягар
+      description: Накопичив 50 000 очок втрат від цумо суперників.
+    FIRST_CHOMBO:
+      name: Упс!
+      description: Отримав своє перше чомбо.
+    FOUR_RIICHI_ABORTIVE_DRAW:
+      name: Патова ситуація
+      description: Взяв участь у перерваній нічиї через чотири ріічі.
+    FIRST_IPPATSU:
+      name: Блискавичний удар
+      description: Виграв руку з іппацу (ріічі, виграна наступним же ходом).
+    RIICHI_IPPATSU_10:
+      name: Збирач гроз
+      description: Виграв 10 рук з іппацу.
+    FIRST_DOUBLE_RIICHI:
+      name: Подвійне ріічі
+      description: Виграв руку, оголошену з подвійним ріічі.
+    FIRST_HAITEI:
+      name: Дно океану
+      description: Виграв з хайтей раоюе (останнє взяття плитки).
+    FIRST_HOUTEI:
+      name: Річкове дно
+      description: Виграв з хоутей раоґюі (остання скинута плитка).
+    FIRST_RINSHAN:
+      name: Мертва стіна
+      description: Виграв з ріншан кайхо (виграшне взяття за каном).
+    FIRST_CHANKAN:
+      name: Викрадач кана
+      description: Виграв, забравши чужий кан (чанкан).
+    FIRST_TENHOU:
+      name: Небесна рука
+      description: Виграв дилером з першого взяття (тенхо).
+    FIRST_CHIIHOU:
+      name: Земна рука
+      description: Виграв не дилером з першого взяття (тіхо).
+    FIRST_RENHOU:
+      name: Миттєва перемога
+      description: Виграв із першого безперервного ходу (ренхо).
+    FIRST_PINFU:
+      name: Тиха рука
+      description: Виграв руку з пінфу.
+    FIRST_TANYAO:
+      name: Усі прості
+      description: Виграв руку з таньяо.
+    FIRST_IIPEIKOU:
+      name: Близнюки-послідовності
+      description: Виграв руку з ііпейко.
+    FIRST_RYANPEIKOU:
+      name: Подвійні близнюки
+      description: Виграв руку з рямпейко.
+    FIRST_SANSHOKU_DOUJUN:
+      name: Потрійний прогін
+      description: Виграв руку з сансьоку додзюн.
+    FIRST_SANSHOKU_DOUKOU:
+      name: Потрійні триплети
+      description: Виграв руку з сансьоку доко.
+    FIRST_ITTSUU:
+      name: Повний стріт
+      description: Виграв руку з іццу (прогін 1–9 в одній масті).
+    FIRST_CHANTA:
+      name: Гравець на краях
+      description: Виграв руку з чанта (напів термінально-хонорна).
+    FIRST_JUNCHAN:
+      name: Майстер межі
+      description: Виграв руку з дзюнчан (повністю термінальна).
+    FIRST_TOITOI:
+      name: Усі триплети
+      description: Виграв руку з тойтою.
+    FIRST_SANANKOU:
+      name: Прихована сила
+      description: Виграв руку з сананко (три приховані триплети).
+    FIRST_SANKANTSU:
+      name: Пробивач стін
+      description: Виграв руку з санканцу (три кани).
+    FIRST_SHOUSANGEN:
+      name: Малі дракони
+      description: Виграв руку з шосанген.
+    FIRST_HONROUTOU:
+      name: Термінали та хонори
+      description: Виграв руку з хонрото.
+    FIRST_HONITSU:
+      name: Напівфлеш
+      description: Виграв руку з хоніцу.
+    FIRST_CHINITSU:
+      name: Повний флеш
+      description: Виграв руку з чиніцу.
+    FIRST_YAKUHAI:
+      name: Хранитель драконів
+      description: Виграв руку з триплетом юкухай.
+    PINFU_10:
+      name: Перфекціоніст пінфу
+      description: Виграв 10 рук з пінфу.
+    TANYAO_25:
+      name: Ентузіаст простоти
+      description: Виграв 25 рук з таньяо.
+    CHIITOITSU_10:
+      name: Колекціонер пар
+      description: Виграв 10 рук з чітойцу.
+    HONITSU_10:
+      name: Спеціаліст хоніцу
+      description: Виграв 10 рук з хоніцу.
+    CHINITSU_5:
+      name: Спеціаліст чиніцу
+      description: Виграв 5 рук з чиніцу.
+    TSUMO_WINS_50:
+      name: Автономний гравець
+      description: Виграв 50 рук цумо.
+    RON_WINS_50:
+      name: Спритний мисливець
+      description: Виграв 50 рук роном.
+    MENZEN_WINS_50:
+      name: Пурист
+      description: Виграв 50 повністю закритих рук.
+    OPEN_HAND_WIN_10:
+      name: Швидко й вільно
+      description: Виграв 10 відкритих рук.
+    FULLY_OPEN_WIN:
+      name: Без секретів
+      description: Виграв руку з чотирма викликами.
+    FIRST_KOKUSHI:
+      name: Тринадцять сиріт
+      description: Зібрав кокусі мусо.
+    FIRST_KOKUSHI_13:
+      name: Досконалі сироти
+      description: Зібрав кокусі мусо на 13-сторонньому очікуванні.
+    FIRST_SUUANKOU:
+      name: Чотири стіни
+      description: Зібрав суанко (чотири приховані триплети).
+    FIRST_SUUANKOU_TANKI:
+      name: Самотній захисник
+      description: Зібрав суанко на очікуванні однієї плитки.
+    FIRST_DAISANGEN:
+      name: Великі три дракони
+      description: Зібрав дайсанген.
+    FIRST_DAISUUSHI:
+      name: Великі чотири вітри
+      description: Зібрав дайсуши.
+    FIRST_SHOUSUUSHI:
+      name: Малі чотири вітри
+      description: Зібрав шосуши.
+    FIRST_TSUISOU:
+      name: Усі хонори
+      description: Зібрав цуйсо.
+    FIRST_RYUUISOU:
+      name: Усе зелене
+      description: Зібрав рюїсо.
+    FIRST_CHINROUTOU:
+      name: Усі термінали
+      description: Зібрав чінрото.
+    FIRST_SUUKANTSU:
+      name: Чотири кани
+      description: Зібрав суканцу.
+    FIRST_CHUUREN:
+      name: Дев'ять брам
+      description: Зібрав чюренпото.
+    FIRST_JUNSEI_CHUUREN:
+      name: Чисті дев'ять брам
+      description: Зібрав дзюнсей чюренпото (9-стороннє очікування).
+    PAID_PAO_3:
+      name: Глибокі кишені
+      description: Сплатив повну відповідальність пао за якуман 3 рази.
+    DORA_5_ONE_HAND:
+      name: Пожирач дора
+      description: Виграв руку з 5 або більше дора.
+    DORA_8_ONE_HAND:
+      name: Цунамі дора
+      description: Виграв руку з 8 або більше дора.
+    URA_DORA_3:
+      name: Прихована сила
+      description: Виграв руку ріічі з 3 або більше ура-дора.
+    FIRST_AKA_DORA_WIN:
+      name: Побачивши червоне
+      description: Виграв руку з червоною п'ятіркою.
+    NO_DORA_MANGAN:
+      name: Чиста майстерність
+      description: Зібрав манган або більше зовсім без дора.
+    FIRST_KAN:
+      name: Перший кан
+      description: Виграв руку з каном.
+    FIRST_ANKAN:
+      name: Прихований дракон
+      description: Виграв руку з прихованим каном (анкан).
+    FIRST_DAIMINKAN:
+      name: Відкриті брами
+      description: Виграв руку з відкритим каном зі скиду (даймінкан).
+    FIRST_KAKAN:
+      name: Пізнє доповнення
+      description: Виграв руку з доданим каном (какан).
+    KANS_10:
+      name: Руйнівник стін
+      description: Виграв руки з 10 канами загалом.
+    SANMA_GAMES_1:
+      name: Тріо дебют
+      description: Зіграв свою першу гру на трьох.
+    SANMA_GAMES_10:
+      name: Любитель трьох вітрів
+      description: Зіграв 10 ігор на трьох.
+    SANMA_GAMES_50:
+      name: Санма регуляр
+      description: Зіграв 50 ігор на трьох.
+    SANMA_GAMES_100:
+      name: Майстер санми
+      description: Зіграв 100 ігор на трьох.
+    SANMA_WINS_1:
+      name: Перемога на трьох
+      description: Виграв свою першу гру в санму.
+    SANMA_WINS_10:
+      name: Чемпіон санми
+      description: Виграв 10 ігор у санму.
+    SANMA_FIRST_DEALER_WIN:
+      name: Санма Ойя удар
+      description: Виграв раунд на дилері в санмі.
+    SANMA_FIRST_TSUMO:
+      name: Санма цумо
+      description: Зібрав цумо в санмі.
+    SANMA_FIRST_YAKUMAN:
+      name: Диво на трьох
+      description: Зібрав якуман у санмі.
+    SANMA_FIRST_KITA:
+      name: Північне сяйво
+      description: Виграв руку санма з північною дорою (кіта).
+    SANMA_KITA_8_ONE_HAND:
+      name: Хуртовина
+      description: Виграв руку санма з 8 вилученими кіта.
+    DICE_FIRST_ROLL:
+      name: Кидок кубиків
+      description: Записав свій перший кидок кубиків на Сході.
+    DICE_SNAKE_EYES:
+      name: Зміїні очі
+      description: Викинув дві одиниці (сума 2).
+    DICE_BOXCARS:
+      name: Два шість
+      description: Викинув дві шістки (сума 12).
+    DICE_LUCKY_SEVEN:
+      name: Щаслива сімка
+      description: Викинув у сумі 7.
+    DICE_ANY_DOUBLE:
+      name: Однакові кубики
+      description: Викинув дубль на кубиках.
+    DICE_TEN_DOUBLES:
+      name: Майстер кубиків
+      description: Викинув 10 дублів на стартовому Сході.
+    OPENSKILL_FIRST_RATED:
+      name: Рейтинговий старт
+      description: Зіграв першу рейтингову гру OpenSkill.
+    OPENSKILL_LEAVE_PROVISIONAL:
+      name: Стабільний рейтинг
+      description: Вийшов із попереднього рейтингу (провізіоналу).
+    OPENSKILL_PEAK_1600:
+      name: Претендент (1600)
+      description: Досяг пікового рейтингу 1 600.
+    OPENSKILL_PEAK_1800:
+      name: Експерт-стратег (1800)
+      description: Досяг пікового рейтингу 1 800.
+    OPENSKILL_PEAK_2000:
+      name: Гросмейстер розуму (2000)
+      description: Досяг пікового рейтингу 2 000.
+    OPENSKILL_PEAK_2200:
+      name: Вершина майстерності (2200)
+      description: Досяг пікового рейтингу 2 200.
+    OPENSKILL_UNDERDOG_WIN:
+      name: Давид проти Голіафа
+      description: Виграв гру, маючи найнижчий рейтинг за столом.
+    OPENSKILL_GAIN_50_ONE_GAME:
+      name: Квантовий стрибок
+      description: Здобув 50 або більше рейтингових очок за одну гру.
+    OPENSKILL_SIGMA_LOW:
+      name: Непохитна точність
+      description: Досяг невизначеності рейтингу (сигма) 4.0 або нижче.
+    OPENSKILL_GAMES_50:
+      name: Важка праця
+      description: Зіграв 50 рейтингових ігор OpenSkill на одному треку.
+    OPENSKILL_GAMES_100:
+      name: Ветеран рейтингу
+      description: Зіграв 100 рейтингових ігор OpenSkill на одному треку.
+    OPENSKILL_LOSS_50_ONE_GAME:
+      name: Повернення на землю
+      description: Втратив 50 або більше очок рейтингу за одну гру.
+    OPENSKILL_STREAK_GAIN_3:
+      name: Розігрів
+      description: Набирав рейтинг 3 рейтингові ігри поспіль.
+    OPENSKILL_STREAK_LOSS_3:
+      name: Холодна смуга
+      description: Втрачав рейтинг 3 рейтингові ігри поспіль.
+    OPENSKILL_MULTI_CLUB_RANKED_2:
+      name: Подвійне громадянство
+      description: Вийшов зі статусу новачка у 2 різних клубах.
+    OPENSKILL_TOP3_STREAK_5:
+      name: Постійний претендент
+      description: Фінішував у топ-3 у 5 рейтингових іграх поспіль.
+    OPENSKILL_RANK1_DEFEND_3:
+      name: Володар трону
+      description: Переміг за столом 3 рази, утримуючи найвищий рейтинг клубного треку.
+    EVENT_DEBUT:
+      name: Дебют на арені
+      description: Взяв участь у своєму першому турнірі.
+    EVENT_COUNT_10:
+      name: Ветеран турнірів
+      description: Взяв участь у 10 турнірах.
+    TOURNAMENT_CHAMPION:
+      name: Золото турніру
+      description: Зайняв 1 місце в офіційному турнірі.
+    TOURNAMENT_PODIUM:
+      name: Подіум турніру
+      description: Зайняв призове місце (топ-3) у турнірі.
+    SEASON_CHAMPION:
+      name: Чемпіон сезону
+      description: Зайняв 1 місце в підсумку сезону клубу.
+    SEASON_PODIUM:
+      name: Подіум сезону
+      description: Зайняв призове місце (топ-3) у підсумку сезону клубу.
+    PODIUMS_5:
+      name: Серійний призер
+      description: Здобув 5 подіумів у турнірах та сезонах.
+    CHAMPIONSHIPS_5:
+      name: Зала слави
+      description: Виграв 5 чемпіонств у турнірах та сезонах.

@@ -30,3 +30,511 @@ achievements:
     declarations: "{{value}} declarations"
     chombo: "{{value}} chombo"
     players: "{{value}} players"
+    games: "{{value}} games"
+    finishes: "{{value}} finishes"
+    winds: "{{value}} winds"
+    draws: "{{value}} draws"
+    rounds: "{{value}} rounds"
+    events: "{{value}} events"
+    deal_ins: "{{value}} deal-ins"
+    rolls: "{{value}} rolls"
+    rating: "{{value}} rating"
+    championships: "{{value}} championships"
+    podiums: "{{value}} podiums"
+    kans: "{{value}} kans"
+    dora: "{{value}} dora"
+    clubs: "{{value}} clubs"
+  manual:
+    COMMUNITY_BUILDER:
+      name: Community Builder
+      description: Helped grow and strengthen the club community.
+    TOURNAMENT_ORGANIZER:
+      name: Tournament Organizer
+      description: Organized a club tournament.
+    MENTOR:
+      name: Mentor
+      description: Taught and guided newer players.
+    FAIR_PLAY:
+      name: Fair Play
+      description: Recognized for sportsmanship and fair play.
+    RULES_EXPERT:
+      name: Rules Expert
+      description: Deep knowledge of the rules, always ready to clarify a ruling.
+    CLUB_AMBASSADOR:
+      name: Club Ambassador
+      description: Represented the club well to outsiders and other clubs.
+    EVENT_VOLUNTEER:
+      name: Event Volunteer
+      description: Volunteered time to help run a club event.
+    RISING_STAR:
+      name: Rising Star
+      description: A newer player showing rapid improvement.
+    IRON_WILL:
+      name: Iron Will
+      description: Showed perseverance through a tough run of games.
+    HOSPITALITY_HERO:
+      name: Hospitality Hero
+      description: Went out of their way to make others feel welcome.
+  automatic:
+    GAMES_1:
+      name: First Step
+      description: Completed your first game.
+    GAMES_10:
+      name: Getting Warm
+      description: Completed 10 games.
+    GAMES_50:
+      name: Regular Player
+      description: Completed 50 games.
+    GAMES_100:
+      name: Centurion
+      description: Completed 100 games.
+    GAMES_250:
+      name: Seasoned Veteran
+      description: Completed 250 games.
+    GAMES_500:
+      name: Mahjong Enthusiast
+      description: Completed 500 games.
+    GAMES_1000:
+      name: Living Legend
+      description: Completed 1,000 games.
+    WINS_1:
+      name: First Victory
+      description: Won your first game.
+    WINS_10:
+      name: Taste of Blood
+      description: Won 10 games.
+    WINS_50:
+      name: Champion's Path
+      description: Won 50 games.
+    WINS_100:
+      name: Dominator
+      description: Won 100 games.
+    STREAK_WINS_3:
+      name: Hat Trick
+      description: Won 3 consecutive games.
+    STREAK_TOP2_5:
+      name: Consistent Performer
+      description: Finished in the top 2 for 5 consecutive games.
+    WIN_STARTING_EAST:
+      name: Master of the East
+      description: Won a game starting from East position.
+    FOUR_WIND_COLLECTION:
+      name: Four Winds Voyager
+      description: Won games from all four starting seats in Yonma.
+    WIN_BY_MARGIN_1000:
+      name: Razor Thin Victory
+      description: Won a game by 1,000 points or less.
+    WIN_BY_MARGIN_30000:
+      name: Absolute Crush
+      description: Won a game by 30,000 points or more over second place.
+    FINISH_EXACT_ZERO:
+      name: Balanced on the Edge
+      description: Finished a game on exactly zero points.
+    COMEBACK_NEGATIVE_TO_FIRST:
+      name: Phoenix Rising
+      description: Came back from negative points to win first place.
+    FIRST_RON:
+      name: Ron!
+      description: Scored your first ron win.
+    FIRST_TSUMO:
+      name: Tsumo!
+      description: Scored your first tsumo win.
+    FIRST_DEALER_WIN:
+      name: Oya Power
+      description: Scored your first win as dealer.
+    FIRST_RIICHI:
+      name: Reach for Victory
+      description: Declared your first riichi.
+    DEALER_WINS_STREAK_3:
+      name: Renchan Master
+      description: Won 3 consecutive rounds as dealer.
+    DEALER_WINS_STREAK_5:
+      name: Unstoppable Dealer
+      description: Won 5 consecutive rounds as dealer.
+    RIICHI_10:
+      name: Aggressive Bettor
+      description: Declared riichi 10 times.
+    RIICHI_100:
+      name: Riichi Fiend
+      description: Declared riichi 100 times.
+    RIICHI_NOMI_WIN:
+      name: Pure Riichi
+      description: Won a hand with riichi as the only han.
+    ONE_HAN_WIN:
+      name: Cheap & Quick
+      description: Won a 1-han hand.
+    CHIITOITSU_NOMI_WIN:
+      name: Seven Pairs Only
+      description: Won a chiitoitsu hand with no other yaku.
+    FU_50:
+      name: Fu Collector
+      description: Won a 50-fu hand.
+    FU_70:
+      name: Heavy Fu
+      description: Won a 70-fu hand.
+    FU_100:
+      name: Fu Tower
+      description: Won a 100-fu hand.
+    FIRST_MANGAN:
+      name: Big Strike
+      description: Scored your first Mangan.
+    FIRST_HANEMAN:
+      name: Powerful Surge
+      description: Scored your first Haneman.
+    FIRST_BAIMAN:
+      name: Double Power
+      description: Scored your first Baiman.
+    FIRST_SANBAIMAN:
+      name: Triple Blast
+      description: Scored your first Sanbaiman.
+    FIRST_KAZOE:
+      name: Hand of Thirteen
+      description: Scored your first Kazoe Yakuman.
+    FIRST_YAKUMAN:
+      name: Divine Touch
+      description: Scored your first Yakuman.
+    FIRST_DOUBLE_YAKUMAN:
+      name: Mythical Overlord
+      description: Scored your first Double Yakuman.
+    NAGASHI_MANGAN:
+      name: Silent Streams
+      description: Achieved Nagashi Mangan.
+    EXHAUSTIVE_DRAW_TENPAI_10:
+      name: Persistent Tenpai
+      description: Reached tenpai in 10 exhaustive draws.
+    EXHAUSTIVE_DRAW_TENPAI_50:
+      name: Draw Specialist
+      description: Reached tenpai in 50 exhaustive draws.
+    NO_DEAL_IN_STREAK_50:
+      name: Iron Wall
+      description: Went 50 consecutive tracked rounds without dealing in.
+    DOUBLE_RON_WINNER:
+      name: Synchronized Strike
+      description: Won as part of a double ron.
+    YAKUMAN_LIABILITY:
+      name: Sekinin Barai
+      description: Paid full liability for a player's Yakuman.
+    DEAL_IN_32000:
+      name: Nuclear Impact
+      description: Dealt in for 32,000 points or more in a single hit.
+    LOST_RIICHI_STICKS_10:
+      name: Generous Sponsor
+      description: Lost 10 riichi sticks to opponents' wins.
+    TSUMO_LOSS_50000:
+      name: Shared Burden
+      description: Accumulated 50,000 points lost on opponents' tsumos.
+    FIRST_CHOMBO:
+      name: Opps!
+      description: Committed your first chombo penalty.
+    FOUR_RIICHI_ABORTIVE_DRAW:
+      name: Standoff
+      description: Participated in a four-riichi abortive draw.
+    FIRST_IPPATSU:
+      name: Lightning Strike
+      description: Win a hand with ippatsu (riichi won on the very next turn).
+    RIICHI_IPPATSU_10:
+      name: Storm Collector
+      description: Win 10 hands with ippatsu.
+    FIRST_DOUBLE_RIICHI:
+      name: Double Reach
+      description: Win a hand declared with double riichi.
+    FIRST_HAITEI:
+      name: Ocean Floor
+      description: Win with haitei raoyue (the last tile draw).
+    FIRST_HOUTEI:
+      name: River Bed
+      description: Win with houtei raoyui (the last discard).
+    FIRST_RINSHAN:
+      name: Dead Wall Draw
+      description: Win with rinshan kaihou (a winning kan draw).
+    FIRST_CHANKAN:
+      name: Kan Robber
+      description: Win by robbing a kan (chankan).
+    FIRST_TENHOU:
+      name: Heavenly Hand
+      description: Win as dealer on your first draw (tenhou).
+    FIRST_CHIIHOU:
+      name: Earthly Hand
+      description: Win as non-dealer on your first draw (chiihou).
+    FIRST_RENHOU:
+      name: Instant Victory
+      description: Win on your first uninterrupted turn (renhou).
+    FIRST_PINFU:
+      name: Quiet Hand
+      description: Win a hand with pinfu.
+    FIRST_TANYAO:
+      name: All Simples
+      description: Win a hand with tanyao.
+    FIRST_IIPEIKOU:
+      name: Twin Sequences
+      description: Win a hand with iipeikou.
+    FIRST_RYANPEIKOU:
+      name: Double Twins
+      description: Win a hand with ryanpeikou.
+    FIRST_SANSHOKU_DOUJUN:
+      name: Triple Run
+      description: Win a hand with sanshoku doujun.
+    FIRST_SANSHOKU_DOUKOU:
+      name: Triple Triplets
+      description: Win a hand with sanshoku doukou.
+    FIRST_ITTSUU:
+      name: Full Straight
+      description: Win a hand with ittsuu (a 1-9 run in one suit).
+    FIRST_CHANTA:
+      name: Edge Player
+      description: Win a hand with chanta (half outside hand).
+    FIRST_JUNCHAN:
+      name: Boundary Master
+      description: Win a hand with junchan (fully outside hand).
+    FIRST_TOITOI:
+      name: All Triplets
+      description: Win a hand with toitoi.
+    FIRST_SANANKOU:
+      name: Hidden Strength
+      description: Win a hand with sanankou (three concealed triplets).
+    FIRST_SANKANTSU:
+      name: Wall Puncher
+      description: Win a hand with sankantsu (three kans).
+    FIRST_SHOUSANGEN:
+      name: Little Dragons
+      description: Win a hand with shousangen.
+    FIRST_HONROUTOU:
+      name: Terminals & Honors
+      description: Win a hand with honroutou.
+    FIRST_HONITSU:
+      name: Half Flush
+      description: Win a hand with honitsu.
+    FIRST_CHINITSU:
+      name: Full Flush
+      description: Win a hand with chinitsu.
+    FIRST_YAKUHAI:
+      name: Dragon Keeper
+      description: Win a hand with a yakuhai triplet.
+    PINFU_10:
+      name: Pinfu Perfectionist
+      description: Win 10 hands with pinfu.
+    TANYAO_25:
+      name: Simplicity Enthusiast
+      description: Win 25 hands with tanyao.
+    CHIITOITSU_10:
+      name: Pairs Collector
+      description: Win 10 hands with chiitoitsu.
+    HONITSU_10:
+      name: Honitsu Specialist
+      description: Win 10 hands with honitsu.
+    CHINITSU_5:
+      name: Chinitsu Specialist
+      description: Win 5 hands with chinitsu.
+    TSUMO_WINS_50:
+      name: Self-Sufficient
+      description: Win 50 hands by tsumo.
+    RON_WINS_50:
+      name: Sharp Hunter
+      description: Win 50 hands by ron.
+    MENZEN_WINS_50:
+      name: The Purist
+      description: Win 50 fully concealed hands.
+    OPEN_HAND_WIN_10:
+      name: Fast & Loose
+      description: Win 10 hands with an open hand.
+    FULLY_OPEN_WIN:
+      name: No Secrets
+      description: Win a hand with four melds called.
+    FIRST_KOKUSHI:
+      name: Thirteen Orphans
+      description: Score kokushi musou.
+    FIRST_KOKUSHI_13:
+      name: Perfect Orphans
+      description: Score kokushi musou on the 13-sided wait.
+    FIRST_SUUANKOU:
+      name: Four Walls
+      description: Score suuankou (four concealed triplets).
+    FIRST_SUUANKOU_TANKI:
+      name: Lone Guardian
+      description: Score suuankou on a single-tile wait.
+    FIRST_DAISANGEN:
+      name: Big Three Dragons
+      description: Score daisangen.
+    FIRST_DAISUUSHI:
+      name: Big Four Winds
+      description: Score daisuushi.
+    FIRST_SHOUSUUSHI:
+      name: Little Four Winds
+      description: Score shousuushi.
+    FIRST_TSUISOU:
+      name: All Honors
+      description: Score tsuisou.
+    FIRST_RYUUISOU:
+      name: All Green
+      description: Score ryuiisou.
+    FIRST_CHINROUTOU:
+      name: All Terminals
+      description: Score chinroutou.
+    FIRST_SUUKANTSU:
+      name: Four Kans
+      description: Score suukantsu.
+    FIRST_CHUUREN:
+      name: Nine Gates
+      description: Score chuuren poutou.
+    FIRST_JUNSEI_CHUUREN:
+      name: Pure Nine Gates
+      description: Score junsei chuuren poutou (the 9-sided wait).
+    PAID_PAO_3:
+      name: Deep Pockets
+      description: Pay full pao liability for a yakuman 3 times.
+    DORA_5_ONE_HAND:
+      name: Dora Devourer
+      description: Win a hand with 5 or more dora.
+    DORA_8_ONE_HAND:
+      name: Dora Tsunami
+      description: Win a hand with 8 or more dora.
+    URA_DORA_3:
+      name: Hidden Power
+      description: Win a riichi hand with 3 or more ura-dora.
+    FIRST_AKA_DORA_WIN:
+      name: Seeing Red
+      description: Win a hand containing a red five.
+    NO_DORA_MANGAN:
+      name: Pure Skill
+      description: Score a mangan or better with no dora at all.
+    FIRST_KAN:
+      name: First Kan
+      description: Win a hand containing a kan.
+    FIRST_ANKAN:
+      name: Hidden Dragon
+      description: Win a hand with a concealed kan (ankan).
+    FIRST_DAIMINKAN:
+      name: Open Gates
+      description: Win a hand with an open kan from a discard (daiminkan).
+    FIRST_KAKAN:
+      name: Late Addition
+      description: Win a hand with an added kan (kakan).
+    KANS_10:
+      name: Wall Breaker
+      description: Win hands containing 10 kans in total.
+    SANMA_GAMES_1:
+      name: Trio Debut
+      description: Completed your first 3-player game.
+    SANMA_GAMES_10:
+      name: Three Wind Enthusiast
+      description: Completed 10 3-player games.
+    SANMA_GAMES_50:
+      name: Sanma Regular
+      description: Completed 50 3-player games.
+    SANMA_GAMES_100:
+      name: Sanma Master
+      description: Completed 100 3-player games.
+    SANMA_WINS_1:
+      name: Three-Way Victory
+      description: Won your first 3-player game.
+    SANMA_WINS_10:
+      name: Sanma Champion
+      description: Won 10 3-player games.
+    SANMA_FIRST_DEALER_WIN:
+      name: Sanma Oya Strike
+      description: Won a dealer round in 3-player mahjong.
+    SANMA_FIRST_TSUMO:
+      name: Sanma Tsumo
+      description: Scored a tsumo in 3-player mahjong.
+    SANMA_FIRST_YAKUMAN:
+      name: Trio Miracle
+      description: Scored a Yakuman in 3-player mahjong.
+    SANMA_FIRST_KITA:
+      name: Northern Exposure
+      description: Win a sanma hand using north dora (kita).
+    SANMA_KITA_8_ONE_HAND:
+      name: Blizzard
+      description: Win a sanma hand with 8 kita extracted.
+    DICE_FIRST_ROLL:
+      name: Roll the Dice
+      description: Recorded your first dice roll as East.
+    DICE_SNAKE_EYES:
+      name: Snake Eyes
+      description: Rolled a double 1 (total 2).
+    DICE_BOXCARS:
+      name: Boxcars
+      description: Rolled a double 6 (total 12).
+    DICE_LUCKY_SEVEN:
+      name: Lucky Seven
+      description: Rolled a total of 7.
+    DICE_ANY_DOUBLE:
+      name: Matching Pair
+      description: Rolled any double dice pair.
+    DICE_TEN_DOUBLES:
+      name: Dice Master
+      description: Rolled 10 double pairs as starting East.
+    OPENSKILL_FIRST_RATED:
+      name: Ranked Entry
+      description: Played your first rated OpenSkill game.
+    OPENSKILL_LEAVE_PROVISIONAL:
+      name: Established Rating
+      description: Left provisional status by stabilizing your rating.
+    OPENSKILL_PEAK_1600:
+      name: Rising Contender (1600)
+      description: Reached a peak display skill rating of 1,600.
+    OPENSKILL_PEAK_1800:
+      name: Expert Strategist (1800)
+      description: Reached a peak display skill rating of 1,800.
+    OPENSKILL_PEAK_2000:
+      name: Master Mind (2000)
+      description: Reached a peak display skill rating of 2,000.
+    OPENSKILL_PEAK_2200:
+      name: Grandmaster Apex (2200)
+      description: Reached a peak display skill rating of 2,200.
+    OPENSKILL_UNDERDOG_WIN:
+      name: David vs Goliath
+      description: Won a game while having the lowest rating at the table.
+    OPENSKILL_GAIN_50_ONE_GAME:
+      name: Quantum Leap
+      description: Gained 50 or more display points in a single game.
+    OPENSKILL_SIGMA_LOW:
+      name: Rock Solid
+      description: Reached a rating uncertainty (sigma) of 4.0 or lower.
+    OPENSKILL_GAMES_50:
+      name: Grinder
+      description: Played 50 rated OpenSkill games on a single track.
+    OPENSKILL_GAMES_100:
+      name: Rating Veteran
+      description: Played 100 rated OpenSkill games on a single track.
+    OPENSKILL_LOSS_50_ONE_GAME:
+      name: Reality Check
+      description: Lost 50 or more display rating points in a single game.
+    OPENSKILL_STREAK_GAIN_3:
+      name: Heating Up
+      description: Gained rating in 3 consecutive rated games.
+    OPENSKILL_STREAK_LOSS_3:
+      name: Cold Streak
+      description: Lost rating in 3 consecutive rated games.
+    OPENSKILL_MULTI_CLUB_RANKED_2:
+      name: Dual Citizen
+      description: Left provisional status in 2 different clubs.
+    OPENSKILL_TOP3_STREAK_5:
+      name: Steady Climber
+      description: Finished in the top 3 in 5 consecutive rated games.
+    OPENSKILL_RANK1_DEFEND_3:
+      name: Throne Holder
+      description: Won at the table 3 times while holding your club track's top rating.
+    EVENT_DEBUT:
+      name: Arena Debut
+      description: Participated in your first tournament.
+    EVENT_COUNT_10:
+      name: Tour Veteran
+      description: Participated in 10 tournaments.
+    TOURNAMENT_CHAMPION:
+      name: Tournament Gold
+      description: Won 1st place in an official tournament.
+    TOURNAMENT_PODIUM:
+      name: Tournament Podium
+      description: Finished on the podium (top 3) in a tournament.
+    SEASON_CHAMPION:
+      name: Season Champion
+      description: Finished 1st place overall in a club season.
+    SEASON_PODIUM:
+      name: Season Podium
+      description: Finished on the podium (top 3) in a club season.
+    PODIUMS_5:
+      name: Serial Podiumist
+      description: Earned 5 podium finishes across tournaments and seasons.
+    CHAMPIONSHIPS_5:
+      name: Hall of Fame
+      description: Won 5 championships across tournaments and seasons.

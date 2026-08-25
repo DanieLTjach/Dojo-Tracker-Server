@@ -14,12 +14,15 @@ import userStatsRoutes from './routes/UserStatsRoutes.ts';
 import clubRoutes from './routes/ClubRoutes.ts';
 import inviteRoutes from './routes/InviteRoutes.ts';
 import publicRoutes from './routes/PublicRoutes.ts';
+import achievementRoutes from './routes/AchievementRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
 
 import LogService from './service/LogService.ts';
 import { dbManager } from './db/dbInit.ts';
 import TelegramCommandService from './service/TelegramCommandService.ts';
 import PollSchedulerService from './service/PollSchedulerService.ts';
+import AchievementSchedulerService from './service/AchievementSchedulerService.ts';
+import AchievementRecomputeQueue from './service/AchievementRecomputeQueue.ts';
 
 const app = express();
 app.use(express.json());
@@ -46,6 +49,7 @@ app.use('/api/events', userStatsRoutes);
 app.use('/api/clubs', clubRoutes);
 app.use('/api/invites', inviteRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 app.use(handleErrors);
 
@@ -60,9 +64,12 @@ app.listen(config.port, (error?: Error) => {
 if (config.env !== 'test') {
     TelegramCommandService.init();
     PollSchedulerService.init();
+    AchievementSchedulerService.init();
 }
 
 async function shutdown() {
+    // Drain before LogService shuts down, so a failure during the drain is still logged.
+    await AchievementRecomputeQueue.shutdown();
     await LogService.shutdown();
     dbManager.closeDB();
 }

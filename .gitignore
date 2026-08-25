@@ -10,3 +10,7 @@ coverage
 .env*
 !.env.example
 !.env.test
+
+# ZCode session artifacts (plans etc.)
+.zcode/
+notes/

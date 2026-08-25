@@ -61,6 +61,10 @@ export function computeAchievements(
         }
 
         for (const round of game.rounds) {
+            for (const player of game.players) {
+                getStats(player.userId).tracked_rounds_played += 1;
+            }
+
             const result = round.result;
             const dealerId = getDealerUserId(startPlaceToPlayerId, round.dealerNumber);
 
@@ -162,6 +166,7 @@ export function computeAchievements(
                         ps.points_lost_on_tsumo += loss;
                     } else {
                         ps.points_lost_on_ron += loss;
+                        ps.ron_deal_in_count += 1;
                     }
                 }
             }
@@ -252,8 +257,17 @@ function resolveWinners(stats: Map<number, PlayerStats>, definition: Achievement
             return { metric, value: best, winnerUserIds: values.filter(v => v.value === best).map(v => v.userId) };
         }
         case AchievementCriterion.Lowest: {
-            const best = Math.min(...values.map(v => v.value));
-            return { metric, value: best, winnerUserIds: values.filter(v => v.value === best).map(v => v.userId) };
+            const applicabilityMetric = definition.applicabilityMetric;
+            const candidates = applicabilityMetric === undefined
+                ? values
+                : [...stats.entries()]
+                    .filter(([, s]) => s[applicabilityMetric] > 0)
+                    .map(([userId, s]) => ({ userId, value: s[metric] }));
+            if (candidates.length === 0) {
+                return { metric, value: undefined, winnerUserIds: [] };
+            }
+            const best = Math.min(...candidates.map(v => v.value));
+            return { metric, value: best, winnerUserIds: candidates.filter(v => v.value === best).map(v => v.userId) };
         }
     }
 }

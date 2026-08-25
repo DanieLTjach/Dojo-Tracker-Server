@@ -38,13 +38,15 @@ import {
 } from '../util/PointCalculationUtil.ts';
 import { calculateYakitoriPointChanges } from '../util/YakitoriUtil.ts';
 import { AchievementService } from './AchievementService.ts';
+import AchievementRecomputeQueue from './AchievementRecomputeQueue.ts';
 import { ClubMembershipService } from './ClubMembershipService.ts';
 import { EventService } from './EventService.ts';
 import { GameService } from './GameService.ts';
 import { RatingService } from './RatingService.ts';
 import { SkillRatingService } from './SkillRatingService.ts';
 import { UserService } from './UserService.ts';
-import { type SupportedLocale, t } from '../i18n/index.ts';
+import LogService from './LogService.ts';
+import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
 
 const TRACKED_GAME_LOG_ACTIONS = {
     CREATED: {
@@ -80,7 +82,8 @@ export class TrackedGameService {
         status: GameStatus,
         createdAt?: Date,
         tournamentRound?: number,
-        tournamentTable?: string
+        tournamentTable?: string,
+        startingDice?: [number, number] | undefined
     ): DetailedGame {
         const gameTimestamp = createdAt ?? new Date();
 
@@ -102,7 +105,8 @@ export class TrackedGameService {
             gameTimestamp,
             status,
             tournamentRound,
-            tournamentTable
+            tournamentTable,
+            startingDice
         );
         this.addPlayersToTrackedGame(newGameId, players, event.gameRules.startingPoints, createdBy);
 
@@ -115,9 +119,10 @@ export class TrackedGameService {
     recordPlannedGameResult(
         gameId: number,
         results: PlannedGamePlayerResult[],
-        modifiedBy: number
+        modifiedBy: number,
+        locale: SupportedLocale = DEFAULT_LOCALE
     ): DetailedGame {
-        const game = this.gameService.getDetailedGameById(gameId);
+        const game = this.gameService.getDetailedGameById(gameId, locale);
         const event = this.eventService.getEventById(game.eventId);
 
         this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
@@ -162,8 +167,15 @@ export class TrackedGameService {
         );
         this.skillRatingService.applyFinishedGame(gameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+        try {
+            // Synchronous: the response below returns achievementUnlocks read back
+            // from the recomputed state.
+            AchievementRecomputeQueue.recomputeNow(players.map(p => p.userId));
+        } catch (err: any) {
+            LogService.logError('Failed to recompute achievements in createTrackedGame', err);
+        }
 
-        const finishedGame = this.gameService.getDetailedGameById(gameId);
+        const finishedGame = this.gameService.getDetailedGameById(gameId, locale);
         this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
         this.gameService.logRatingUpdateForGame(
             finishedGame,
@@ -179,9 +191,10 @@ export class TrackedGameService {
         gameId: number,
         roundId: number,
         resultInputDTO: GameRoundResultInputDTO,
-        modifiedBy: number
+        modifiedBy: number,
+        locale: SupportedLocale = DEFAULT_LOCALE
     ): DetailedGame {
-        const game = this.gameService.getDetailedGameById(gameId);
+        const game = this.gameService.getDetailedGameById(gameId, locale);
         const event = this.eventService.getEventById(game.eventId);
 
         this.validateRoundResultInput(game, event, roundId, modifiedBy);
@@ -200,8 +213,8 @@ export class TrackedGameService {
         this.gameRepository.touchGame(gameId, modifiedBy);
 
         return result.gameFinishReason
-            ? this.finishGame(gameId, modifiedBy)
-            : this.gameService.getDetailedGameById(gameId);
+            ? this.finishGame(gameId, modifiedBy, locale)
+            : this.gameService.getDetailedGameById(gameId, locale);
     }
 
     previewGameRoundResult(
@@ -263,8 +276,12 @@ export class TrackedGameService {
         return this.gameService.getDetailedGameById(gameId);
     }
 
-    finishGame(gameId: number, modifiedBy: number): DetailedGame {
-        const game = this.gameService.getDetailedGameById(gameId);
+    finishGame(
+        gameId: number,
+        modifiedBy: number,
+        locale: SupportedLocale = DEFAULT_LOCALE
+    ): DetailedGame {
+        const game = this.gameService.getDetailedGameById(gameId, locale);
         const event = this.eventService.getEventById(game.eventId);
 
         this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
@@ -286,10 +303,16 @@ export class TrackedGameService {
             event.startingRating
         );
         this.skillRatingService.applyFinishedGame(gameId);
-
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+        try {
+            // Synchronous: the response below returns achievementUnlocks read back
+            // from the recomputed state.
+            AchievementRecomputeQueue.recomputeNow(players.map(p => p.userId));
+        } catch (err: any) {
+            LogService.logError('Failed to recompute achievements in finishGame', err);
+        }
 
-        const finishedGame = this.gameService.getDetailedGameById(gameId);
+        const finishedGame = this.gameService.getDetailedGameById(gameId, locale);
         this.gameService.logGameAction(finishedGame, event, modifiedBy, '✅ Game Finished', 'Finished by');
         this.gameService.logRatingUpdateForGame(
             finishedGame,
@@ -333,10 +356,51 @@ export class TrackedGameService {
         this.undoFinishPointChanges(game, event.gameRules, modifiedBy);
 
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+        try {
+            AchievementRecomputeQueue.enqueueUsers(game.players.map(p => p.userId));
+        } catch (err: any) {
+            LogService.logError('Failed to enqueue achievement recompute in undoFinishGame', err);
+        }
 
         const reopenedGame = this.gameService.getDetailedGameById(gameId);
         this.gameService.logGameAction(reopenedGame, event, modifiedBy, '↩️ Game Finish Undone', 'Undone by');
         return reopenedGame;
+    }
+
+    setGameStartingDice(
+        gameId: number,
+        startingDice: [number, number] | null,
+        modifiedBy: number
+    ): DetailedGame {
+        const game = this.gameService.getDetailedGameById(gameId);
+        const event = this.eventService.getEventById(game.eventId);
+
+        this.gameService.authorizeTrackedGameAction(game, event, modifiedBy);
+        if (startingDice !== null) {
+            const [d1, d2] = startingDice;
+            if (d1 < 1 || d1 > 6 || d2 < 1 || d2 > 6) {
+                throw new BadRequestError('Dice values must be between 1 and 6');
+            }
+        }
+
+        this.gameRepository.updateStartingDice(
+            gameId,
+            startingDice ? startingDice[0] : null,
+            startingDice ? startingDice[1] : null,
+            modifiedBy
+        );
+
+        if (game.status === GameStatus.FINISHED) {
+            try {
+                // Synchronous: a dice correction is expected to be reflected the
+                // moment the client re-reads the game.
+                AchievementRecomputeQueue.recomputeNow(game.players.map(p => p.userId));
+            } catch (err: any) {
+                LogService.logError('Failed to recompute achievements in setGameStartingDice', err);
+            }
+        }
+
+        return this.gameService.getDetailedGameById(gameId);
     }
 
     private addPlayersToTrackedGame(

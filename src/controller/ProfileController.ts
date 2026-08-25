@@ -7,23 +7,9 @@ export class ProfileController {
     private profileService: ProfileService = new ProfileService();
 
     updateProfile(req: Request, res: Response) {
-        const {
-            params: { id },
-            body: { firstNameEn, lastNameEn, firstName, lastName, emaNumber, locale, hideProfile },
-        } = profileEditSchema.parse(req);
+        const { params: { id }, body } = profileEditSchema.parse(req);
 
-        const modifiedBy = req.user!.userId;
-        const updatedProfile = this.profileService.updateProfile(
-            id,
-            firstNameEn,
-            lastNameEn,
-            firstName,
-            lastName,
-            emaNumber,
-            hideProfile,
-            modifiedBy,
-            locale
-        );
+        const updatedProfile = this.profileService.updateProfile(id, body, req.user!.userId);
         return res.status(StatusCodes.OK).json(updatedProfile);
     }
 }

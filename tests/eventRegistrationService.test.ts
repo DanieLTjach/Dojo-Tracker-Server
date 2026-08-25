@@ -4,6 +4,7 @@ import { EventRegistrationService } from '../src/service/EventRegistrationServic
 import { EventRegistrationRepository } from '../src/repository/EventRegistrationRepository.ts';
 import { ClubMembershipRepository } from '../src/repository/ClubMembershipRepository.ts';
 import { ProfileRepository } from '../src/repository/ProfileRepository.ts';
+import { mergeProfileValues } from '../src/service/ProfileService.ts';
 import {
     EventCapacityReachedError,
     EventRegistrationNotFoundError,
@@ -57,7 +58,14 @@ describe('EventRegistrationService', () => {
     }
 
     function setProfileNames(userId: number, firstName: string | null, lastName: string | null): void {
-        profileRepo.upsertProfile(userId, null, null, firstName, lastName, null, false, SYSTEM_USER_ID);
+        profileRepo.upsertProfile(
+            userId,
+            mergeProfileValues(undefined, {
+                firstName: firstName,
+                lastName: lastName,
+            }),
+            SYSTEM_USER_ID
+        );
     }
 
     function insertMembership(
@@ -462,12 +470,13 @@ describe('EventRegistrationService', () => {
             // Set EMA fields on the participant first
             profileRepo.upsertProfile(
                 EXISTING_MEMBER_USER_ID,
-                'EmaFirst',
-                'EmaLast',
-                'First',
-                'Last',
-                '12345',
-                false,
+                mergeProfileValues(undefined, {
+                    firstNameEn: 'EmaFirst',
+                    lastNameEn: 'EmaLast',
+                    firstName: 'First',
+                    lastName: 'Last',
+                    emaNumber: '12345',
+                }),
                 SYSTEM_USER_ID
             );
 
