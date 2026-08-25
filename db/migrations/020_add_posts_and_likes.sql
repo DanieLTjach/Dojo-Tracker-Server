@@ -1,0 +1,34 @@
+CREATE TABLE IF NOT EXISTS post (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    authorId INTEGER NOT NULL,
+    clubId INTEGER,
+    gameId INTEGER,
+    text TEXT,
+    createdAt TIMESTAMP NOT NULL,
+    FOREIGN KEY (authorId) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (clubId) REFERENCES club(id) ON DELETE SET NULL,
+    FOREIGN KEY (gameId) REFERENCES game(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS post_image (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    postId INTEGER NOT NULL,
+    url TEXT NOT NULL,
+    width INTEGER,
+    height INTEGER,
+    sortOrder INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (postId) REFERENCES post(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS post_like (
+    postId INTEGER NOT NULL,
+    userId INTEGER NOT NULL,
+    createdAt TIMESTAMP NOT NULL,
+    PRIMARY KEY (postId, userId),
+    FOREIGN KEY (postId) REFERENCES post(id) ON DELETE CASCADE,
+    FOREIGN KEY (userId) REFERENCES user(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_author ON post(authorId);
+CREATE INDEX IF NOT EXISTS idx_post_club ON post(clubId);
+CREATE INDEX IF NOT EXISTS idx_post_image_post ON post_image(postId);

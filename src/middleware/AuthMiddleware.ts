@@ -93,3 +93,34 @@ export const requireAdmin = (req: Request, _res: Response, next: NextFunction): 
         next(error);
     }
 };
+
+export const optionalAuth = (req: Request, _res: Response, next: NextFunction): void => {
+    try {
+        if (config.tournamentMode) {
+            req.user = { userId: config.tournamentUserId! };
+            next();
+            return;
+        }
+
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            next();
+            return;
+        }
+
+        const parts = authHeader.split(' ');
+        if (parts.length === 2 && parts[0] === 'Bearer') {
+            const token = parts[1]!;
+            try {
+                const decodedToken = tokenService.verifyToken(token);
+                req.user = decodedToken;
+            } catch {
+                // Ignore token error for optional auth
+            }
+        }
+
+        next();
+    } catch {
+        next();
+    }
+};

@@ -15,6 +15,7 @@ import clubRoutes from './routes/ClubRoutes.ts';
 import inviteRoutes from './routes/InviteRoutes.ts';
 import publicRoutes from './routes/PublicRoutes.ts';
 import achievementRoutes from './routes/AchievementRoutes.ts';
+import postRoutes from './routes/PostRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
 
 import LogService from './service/LogService.ts';
@@ -50,6 +51,7 @@ app.use('/api/clubs', clubRoutes);
 app.use('/api/invites', inviteRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/achievements', achievementRoutes);
+app.use('/api', postRoutes);
 
 app.use(handleErrors);
 
