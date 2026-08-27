@@ -81,7 +81,7 @@ export class UserService {
     editUser(
         userId: number,
         name: string | undefined,
-        telegramUsername: string | undefined,
+        telegramUsername: string | null | undefined,
         modifiedBy: number
     ): User {
         if (userId !== modifiedBy) {
@@ -95,7 +95,9 @@ export class UserService {
             this.userRepository.updateUserName(userId, name, modifiedBy);
         }
         if (telegramUsername !== undefined) {
-            this.validateTelegramUsernameNotTakenByAnotherUser(telegramUsername, userId);
+            if (telegramUsername !== null) {
+                this.validateTelegramUsernameNotTakenByAnotherUser(telegramUsername, userId);
+            }
             this.userRepository.updateUserTelegramUsername(userId, telegramUsername, modifiedBy);
         }
         const newUser = this.getUserById(userId);

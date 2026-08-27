@@ -192,7 +192,7 @@ export class UserRepository {
     }
 
     private updateUserTelegramUsernameStatement(): Statement<{
-        telegramUsername: string;
+        telegramUsername: string | null;
         modifiedBy: number;
         id: number;
         timestamp: string;
@@ -203,7 +203,7 @@ export class UserRepository {
             WHERE id = :id`);
     }
 
-    updateUserTelegramUsername(userId: number, telegramUsername: string, modifiedBy: number) {
+    updateUserTelegramUsername(userId: number, telegramUsername: string | null, modifiedBy: number) {
         this.updateUserTelegramUsernameStatement().run({
             telegramUsername,
             modifiedBy,
