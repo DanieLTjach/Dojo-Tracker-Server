@@ -43,7 +43,7 @@ errors:
   insufficientEventManagementPermissions: You do not have permission to manage this event. Admin or event club OWNER/MODERATOR role is required.
   gameRulesNotFound: Game rules with id {{gameRulesId}} were not found
   cannotDeleteGameRulesInUse: 'Cannot delete rules "{{gameRulesName}}" because they are used in {{eventCount}} events'
-  cannotUpdateGameRulesInUse: 'Cannot update rules "{{gameRulesName}}" because {{gameCount}} games have already been played with them'
+  cannotUpdateGameRulesInUse: 'Cannot update rules "{{gameRulesName}}" because {{gameCount}} games have already been played with them. Create a new ruleset and point the new season at it (renaming these rules is still allowed).'
   cannotDeleteEventWithGames: 'Cannot delete an event with existing games. Event "{{eventName}}" has {{gameCount}} games'
   cannotDeleteEventWithRegistrations: 'Cannot delete event "{{eventName}}" because {{registrationCount}} registrations exist. Delete registrations before deleting the event.'
   currentRatingEventMustBeClubScoped: Current rating season can only be set to a club-scoped event

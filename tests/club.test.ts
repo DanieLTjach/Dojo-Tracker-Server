@@ -507,6 +507,85 @@ describe('Club API Endpoints', () => {
             });
         });
 
+        describe('POST /api/clubs/:clubId/members/leave - Cancel join request', () => {
+            let clubId: number;
+
+            beforeEach(async () => {
+                clubId = await createClub('Integration Club Cancel Request');
+                await setupOwner(clubId);
+                await request(app).post(`/api/clubs/${clubId}/join`).set('Authorization', memberAuthHeader);
+            });
+
+            afterEach(() => {
+                cleanupClub(clubId);
+            });
+
+            test('should allow pending member to cancel their request to join a club', async () => {
+                const response = await request(app).post(`/api/clubs/${clubId}/leave`).set(
+                    'Authorization',
+                    memberAuthHeader
+                );
+                expect(response.status).toBe(200);
+                expect(response.body.userId).toBe(memberId);
+                expect(response.body.status).toBe('INACTIVE');
+            });
+
+            test('should banish user who cancelled their request to join a club from pending member list ', async () => {
+                const userWhoCancelled = await request(app).post(`/api/clubs/${clubId}/leave`).set(
+                    'Authorization',
+                    memberAuthHeader
+                );
+                const response = await request(app).get(`/api/clubs/${clubId}/members/pending`).set(
+                    'Authorization',
+                    adminAuthHeader
+                );
+
+                expect(response.status).toBe(200);
+                expect(Array.isArray(response.body)).toBe(true);
+
+                expect(
+                    response.body.every((memberId: { userId: number }) =>
+                        memberId.userId !== userWhoCancelled.body.userId
+                    )
+                ).toBe(true);
+            });
+
+            test('should let user who cancelled request to join again', async () => {
+                const userWhoCancelled = await request(app).post(`/api/clubs/${clubId}/leave`).set(
+                    'Authorization',
+                    memberAuthHeader
+                );
+
+                expect(userWhoCancelled.status).toBe(200);
+                expect(userWhoCancelled.body.status).toBe('INACTIVE');
+
+                const response = await request(app).post(`/api/clubs/${clubId}/join`).set(
+                    'Authorization',
+                    memberAuthHeader
+                );
+
+                expect(response.status).toBe(201);
+                expect(response.body.status).toBe('PENDING');
+            });
+
+            test('should make inactive user not being able to cancel again', async () => {
+                const userWhoCancelled = await request(app).post(`/api/clubs/${clubId}/leave`).set(
+                    'Authorization',
+                    memberAuthHeader
+                );
+
+                expect(userWhoCancelled.status).toBe(200);
+                expect(userWhoCancelled.body.status).toBe('INACTIVE');
+
+                const response = await request(app).post(`/api/clubs/${clubId}/leave`).set(
+                    'Authorization',
+                    memberAuthHeader
+                );
+
+                expect(response.status).toBe(400);
+            });
+        });
+
         describe('GET /api/clubs/:clubId/members - Get members list', () => {
             let clubId: number;
 
