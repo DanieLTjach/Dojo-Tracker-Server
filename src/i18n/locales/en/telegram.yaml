@@ -296,6 +296,7 @@ telegram:
 
   membershipLog:
     joinRequestTitle: 🔔 Club Join Request
+    cancelledRequestTitle: ❌ User Cancelled Club Submission
     leftClubTitle: 🚪 Member Left Club
     memberApprovedTitle: ✅ Member Approved
     memberRemovedTitle: ❌ Member Removed
