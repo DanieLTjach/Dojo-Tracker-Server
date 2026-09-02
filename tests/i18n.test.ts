@@ -164,6 +164,27 @@ describe('error catalog coverage', () => {
     );
 });
 
+describe('blocked game-rules update names the way out', () => {
+    // The blocker alone left club owners retrying the same edit; the message has
+    // to point at the remedy (a new ruleset) and at what is still permitted.
+    it.each([['uk', 'нові правила'], ['en', 'new ruleset']] as const)(
+        '%s message tells the user to create a new ruleset',
+        (locale, remedy) => {
+            const message = t('errors.cannotUpdateGameRulesInUse', locale, {
+                gameRulesName: 'Полтава',
+                gameCount: 100,
+            });
+            expect(message).toContain(remedy);
+        }
+    );
+
+    it('still states the blocker with the rules name and game count', () => {
+        const message = new EventErrors.CannotUpdateGameRulesInUseError('Полтава', 100).message;
+        expect(message).toContain('Полтава');
+        expect(message).toContain('100');
+    });
+});
+
 describe('errors.yaml has no orphaned placeholders', () => {
     it('every {{param}} differs across the file is fine — just assert it parses & is flat strings', () => {
         const errorsYaml = join(dirname(fileURLToPath(import.meta.url)), '../src/i18n/locales/uk/errors.yaml');

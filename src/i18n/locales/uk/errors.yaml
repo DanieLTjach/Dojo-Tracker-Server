@@ -43,7 +43,7 @@ errors:
   insufficientEventManagementPermissions: Недостатньо прав для управління цією подією. Потрібна роль адміна або OWNER/MODERATOR клубу події.
   gameRulesNotFound: Правила гри з id {{gameRulesId}} не знайдено
   cannotDeleteGameRulesInUse: 'Неможливо видалити правила "{{gameRulesName}}" — вони використовуються в {{eventCount}} подіях'
-  cannotUpdateGameRulesInUse: 'Неможливо оновити правила "{{gameRulesName}}" — за ними вже зіграно {{gameCount}} ігор'
+  cannotUpdateGameRulesInUse: 'Неможливо оновити правила "{{gameRulesName}}" — за ними вже зіграно {{gameCount}} ігор. Створіть нові правила та вкажіть їх для нового сезону (перейменувати ці правила можна).'
   cannotDeleteEventWithGames: 'Неможливо видалити подію з існуючими іграми. Подія "{{eventName}}" має {{gameCount}} ігор'
   cannotDeleteEventWithRegistrations: 'Неможливо видалити подію "{{eventName}}" — існує {{registrationCount}} реєстрацій. Видаліть реєстрації перед видаленням події.'
   currentRatingEventMustBeClubScoped: Поточний рейтинговий сезон можна встановити лише для клубної події

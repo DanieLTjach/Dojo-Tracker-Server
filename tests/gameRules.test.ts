@@ -785,9 +785,85 @@ describe('Game Rules API Endpoints', () => {
                 const response = await request(app)
                     .put(`/api/game-rules/${ruleId}`)
                     .set('Authorization', adminAuthHeader)
-                    .send({ ...validBody, name: 'Try Update' });
+                    .send({ ...validBody, name: 'PUT Blocked', uma: [10, 5, -5, -10] });
 
                 expect(response.status).toBe(400);
+            } finally {
+                dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);
+                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
+        test('PUT renames a rule that already has games', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'PUT Rename Before' });
+            const ruleId = create.body.id;
+            const eventId = 910920;
+            const gameId = 910921;
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(eventId, 'PUT Rename Event', 'SEASON', ruleId, clubId, 0, 0, 0, timestamp, timestamp);
+            dbManager.db.prepare(
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, startedAt, endedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0, 'FINISHED', timestamp, timestamp);
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({ ...validBody, name: 'PUT Rename After' });
+
+                expect(response.status).toBe(200);
+                expect(response.body.name).toBe('PUT Rename After');
+
+                // The rename must actually reach the database, not just the response.
+                const read = await request(app)
+                    .get(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader);
+                expect(read.body.name).toBe('PUT Rename After');
+                expect(read.body.uma).toEqual(validBody.uma);
+            } finally {
+                dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);
+                dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+                dbManager.db.prepare('DELETE FROM gameRules WHERE id = ?').run(ruleId);
+            }
+        });
+
+        test('PUT blocked when a rename is bundled with a scoring change', async () => {
+            const create = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({ ...validBody, name: 'PUT Rename Plus Scoring' });
+            const ruleId = create.body.id;
+            const eventId = 910922;
+            const gameId = 910923;
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(eventId, 'PUT Rename Plus Event', 'SEASON', ruleId, clubId, 0, 0, 0, timestamp, timestamp);
+            dbManager.db.prepare(
+                `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, startedAt, endedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(gameId, eventId, timestamp, timestamp, 0, 'FINISHED', timestamp, timestamp);
+
+            try {
+                const response = await request(app)
+                    .put(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader)
+                    .send({ ...validBody, name: 'PUT Rename Rejected', startingPoints: 25000 });
+
+                expect(response.status).toBe(400);
+
+                // A rejected update must leave the name untouched too.
+                const read = await request(app)
+                    .get(`/api/game-rules/${ruleId}`)
+                    .set('Authorization', adminAuthHeader);
+                expect(read.body.name).toBe('PUT Rename Plus Scoring');
             } finally {
                 dbManager.db.prepare('DELETE FROM game WHERE id = ?').run(gameId);
                 dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
