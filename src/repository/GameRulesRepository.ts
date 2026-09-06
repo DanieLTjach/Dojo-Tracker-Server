@@ -6,6 +6,16 @@ import { parseUma } from '../util/UmaUtil.ts';
 import { parseUmaTieBreak } from '../util/EnumUtil.ts';
 import { parseGameRulesDetailsAndApplyPresets } from '../util/GameRulesDetailsUtil.ts';
 
+// Games played under a ruleset, counted per row so the list endpoint stays a
+// single query. Non-zero locks the scoring fields for updates, which the editor
+// uses to present those inputs as read-only instead of failing at save time.
+const GAME_COUNT_SUBQUERY = `(
+                    SELECT COUNT(*)
+                    FROM game g
+                    JOIN event e ON g.eventId = e.id
+                    WHERE e.gameRules = gameRules.id
+                ) AS gameCount`;
+
 export class GameRulesRepository {
     private findAllGameRulesStatement(): Statement<[], GameRulesDBEntity> {
         return dbManager.db.prepare(`
@@ -18,7 +28,8 @@ export class GameRulesRepository {
                 startingPoints,
                 umaTieBreak,
                 allowNonZeroSumUma,
-                details
+                details,
+                ${GAME_COUNT_SUBQUERY}
             FROM gameRules
             ORDER BY id ASC`);
     }
@@ -38,7 +49,8 @@ export class GameRulesRepository {
                 startingPoints,
                 umaTieBreak,
                 allowNonZeroSumUma,
-                details
+                details,
+                ${GAME_COUNT_SUBQUERY}
             FROM gameRules
             WHERE clubId = :clubId OR clubId IS NULL
             ORDER BY id ASC`);
@@ -59,7 +71,8 @@ export class GameRulesRepository {
                 startingPoints,
                 umaTieBreak,
                 allowNonZeroSumUma,
-                details
+                details,
+                ${GAME_COUNT_SUBQUERY}
             FROM gameRules
             WHERE id = :id`);
     }
@@ -154,6 +167,7 @@ interface GameRulesDBEntity {
     umaTieBreak: string;
     allowNonZeroSumUma: number;
     details: string | null;
+    gameCount: number;
 }
 
 function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
@@ -166,6 +180,7 @@ function gameRulesFromDBEntity(dbEntity: GameRulesDBEntity): GameRules {
         startingPoints: dbEntity.startingPoints,
         umaTieBreak: parseUmaTieBreak(dbEntity.umaTieBreak),
         allowNonZeroSumUma: Boolean(dbEntity.allowNonZeroSumUma),
+        gameCount: dbEntity.gameCount,
         details: parseGameRulesDetailsAndApplyPresets(dbEntity.details, {
             numberOfPlayers: dbEntity.numberOfPlayers,
             startingPoints: dbEntity.startingPoints,
