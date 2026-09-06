@@ -178,6 +178,44 @@ describe('Game Rules CRUD', () => {
             expect(result.startingPoints).toBe(35000);
         });
 
+        test('gameCount reports games played under the ruleset on read', () => {
+            const ruleId = repo.insertGameRules({ ...baseParams, name: 'Game Count Rule' });
+            const eventId = 8009;
+
+            // A freshly created ruleset has no games, so its fields stay editable.
+            expect(repo.findGameRulesById(ruleId)!.gameCount).toBe(0);
+
+            dbManager.db.prepare(
+                `INSERT INTO event (id, name, type, gameRules, clubId, startingRating, minimumGamesForRating, modifiedBy, createdAt, modifiedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).run(eventId, 'Game Count Event', 'SEASON', ruleId, TEST_CLUB_ID, 0, 0, 0, timestamp, timestamp);
+
+            // An event alone is not a played game — deletion is blocked by events,
+            // but the scoring-field lock keys off games specifically.
+            expect(repo.findGameRulesById(ruleId)!.gameCount).toBe(0);
+
+            // game has UNIQUE (eventId, createdAt), so each game needs its own stamp.
+            [
+                [80009, '2026-01-01T01:00:00.000Z'],
+                [80010, '2026-01-01T02:00:00.000Z'],
+            ].forEach(([gameId, createdAt]) => {
+                dbManager.db.prepare(
+                    `INSERT INTO game (id, eventId, createdAt, modifiedAt, modifiedBy, status, startedAt, endedAt)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+                ).run(gameId, eventId, createdAt, createdAt, 0, 'FINISHED', createdAt, createdAt);
+            });
+
+            expect(repo.findGameRulesById(ruleId)!.gameCount).toBe(2);
+
+            // The list endpoints derive it per row too, so the admin list can mark
+            // locked rulesets without a follow-up request per rule.
+            const fromList = repo.findAllGameRulesByClubId(TEST_CLUB_ID).find(rules => rules.id === ruleId);
+            expect(fromList!.gameCount).toBe(2);
+
+            dbManager.db.prepare('DELETE FROM game WHERE eventId = ?').run(eventId);
+            dbManager.db.prepare('DELETE FROM event WHERE id = ?').run(eventId);
+        });
+
         test('updateGameRules throws CannotUpdateGameRulesInUseError when games exist for the rule', () => {
             const ruleId = repo.insertGameRules({ ...baseParams, name: 'Referenced Update Rule' });
             const eventId = 8003;
