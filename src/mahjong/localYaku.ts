@@ -52,8 +52,7 @@ const LOCAL_YAKU_SPECS: readonly LocalYakuSpec[] = [
             input.dealInSeat !== undefined &&
             input.dealInSeat !== input.winnerSeat &&
             Boolean(input.riichiPlayerSeats?.has(input.dealInSeat)),
-        // Conflicts with other situational winning declarations/conditions.
-        // Deliberately not conflicting: ippatsu, houtei, winner's riichi, open melds.
+        // Not conflicting, deliberately: ippatsu, houtei, winner's riichi, open melds.
         conflictingContextFlags: ['chankan', 'haitei', 'rinshanKaihou', 'tenhou', 'chiihou', 'renhou'],
     },
     { id: 'oopun_riichi', code: 'oopun_riichi', han: 2, isApplicable: () => true },
