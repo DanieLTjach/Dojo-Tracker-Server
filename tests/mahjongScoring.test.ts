@@ -1025,7 +1025,7 @@ describe('Mahjong Hand Scoring Engine', () => {
             expect(res.yaku).toEqual([{ code: 'renhou', yakumanCount: 1 }]);
         });
 
-        it('throws HandHasNoYakuError for Renhou under blessing_of_man: none', () => {
+        it('rejects the renhou flag under blessing_of_man: none', () => {
             expect(() =>
                 scoreHand({
                     handDetail: renhouHand,
@@ -1036,10 +1036,10 @@ describe('Mahjong Hand Scoring Engine', () => {
                     dealInSeat: 2,
                     rules: { blessing_of_man: 'none' },
                 })
-            ).toThrow(HandHasNoYakuError);
+            ).toThrow(HandDetailContextConflictError);
         });
 
-        it('treats unset blessing_of_man as none (throws HandHasNoYakuError if no other yaku)', () => {
+        it('treats unset blessing_of_man as none and rejects the flag', () => {
             expect(() =>
                 scoreHand({
                     handDetail: renhouHand,
@@ -1049,7 +1049,45 @@ describe('Mahjong Hand Scoring Engine', () => {
                     roundWindSeat: 0,
                     dealInSeat: 2,
                 })
-            ).toThrow(HandHasNoYakuError);
+            ).toThrow(HandDetailContextConflictError);
+        });
+
+        it('rejects the renhou flag under none even when the hand has other yaku', () => {
+            // Regression guard: this hand stands on pinfu + tanyao, so before the
+            // blessing_of_man gate the flag was accepted and silently scored nothing.
+            const scoringHand: HandDetail = {
+                concealedTiles: [
+                    'man_2',
+                    'man_3',
+                    'man_4',
+                    'pin_3',
+                    'pin_4',
+                    'pin_5',
+                    'sou_6',
+                    'sou_7',
+                    'sou_8',
+                    'man_6',
+                    'man_7',
+                    'pin_2',
+                    'pin_2',
+                ],
+                melds: [],
+                winningTile: 'man_8',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+                context: { renhou: true },
+            };
+            expect(() =>
+                scoreHand({
+                    handDetail: scoringHand,
+                    winType: 'RON',
+                    winnerSeat: 1,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 2,
+                    rules: { blessing_of_man: 'none' },
+                })
+            ).toThrow(HandDetailContextConflictError);
         });
 
         it('rejects invalid Renhou combinations', () => {

@@ -249,6 +249,11 @@ function validateHandStructure(input: ScoreHandInput): void {
         }
 
         if (ctx.renhou) {
+            // A ruleset that does not award renhou must not accept the flag: it would
+            // score nothing, leaving the operator no way to tell the tick had no effect.
+            if ((rules?.['blessing_of_man'] ?? 'none') === 'none') {
+                throw new HandDetailContextConflictError();
+            }
             const isDealer = winnerSeat === dealerSeat;
             if (winType !== 'RON' || isDealer || handDetail.melds.length > 0) {
                 throw new HandDetailContextConflictError();
