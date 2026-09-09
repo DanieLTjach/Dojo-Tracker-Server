@@ -515,4 +515,118 @@ describe('Hand Detail Integration Tests', () => {
         expect(patchRes.status).toBe(400);
         expect(patchRes.body.errorCode).toBe('gameNotInProgressWhenChangingHandDetail');
     });
+
+    it('scores tsubame_gaeshi over HTTP and includes it in the returned yaku array', async () => {
+        const rulesRes = await request(app)
+            .post('/api/game-rules')
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Local Yaku Rules',
+                numberOfPlayers: 4,
+                startingPoints: 25000,
+                uma: [15, 5, -5, -15],
+                umaTieBreak: 'WIND',
+                clubId: 1,
+                allowNonZeroSumUma: false,
+                details: {
+                    rules: {
+                        number_of_players: 4,
+                        starting_points: 25000,
+                    },
+                    customRules: [
+                        {
+                            category: 'yaku',
+                            value: 1,
+                            presetId: 'tsubame_gaeshi',
+                            name: 'Tsubame gaeshi',
+                        },
+                    ],
+                },
+            });
+        expect(rulesRes.status).toBe(201);
+        const customRulesId = rulesRes.body.id;
+
+        const customEventRes = await request(app)
+            .post('/api/events')
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Local Yaku Event',
+                type: 'SEASON',
+                clubId: 1,
+                gameRulesId: customRulesId,
+            });
+        expect(customEventRes.status).toBe(201);
+        const customEventId = customEventRes.body.id;
+
+        const gameId = await createAndStartTrackedGame(customEventId);
+
+        // Player 2 is in riichi, player 1 rons off player 2 with tsubame_gaeshi
+        const roundPayload = {
+            type: 'RON',
+            dealInPlayerId: player2Id,
+            riichiPlayerIds: [player2Id],
+            winningHandData: [{
+                winnerPlayerId: player1Id,
+                yakumanCount: 0,
+                handDetail: {
+                    concealedTiles: [
+                        'man_2',
+                        'man_3',
+                        'man_4',
+                        'pin_2',
+                        'pin_3',
+                        'pin_4',
+                        'sou_2',
+                        'sou_3',
+                        'sou_4',
+                        'pin_5',
+                        'pin_6',
+                        'sou_7',
+                        'sou_7',
+                    ],
+                    melds: [],
+                    winningTile: 'pin_7',
+                    doraIndicators: [],
+                    uraDoraIndicators: [],
+                    context: { localYaku: ['tsubame_gaeshi'] },
+                },
+            }],
+        };
+
+        const previewRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1/preview`)
+            .set('Authorization', player1AuthHeader)
+            .send(roundPayload);
+
+        expect(previewRes.status).toBe(200);
+        const winningHandPreview = previewRes.body.winningHandData[0];
+        expect(winningHandPreview.han).toBe(5); // tanyao (1) + pinfu (1) + sanshoku (2) + tsubame_gaeshi (1)
+        expect(winningHandPreview.yaku).toEqual(
+            expect.arrayContaining([
+                { code: 'tsubame_gaeshi', han: 1 },
+                { code: 'tanyao', han: 1 },
+            ])
+        );
+
+        const postRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send(roundPayload);
+
+        expect(postRes.status).toBe(200);
+
+        const getGameRes = await request(app)
+            .get(`/api/games/${gameId}`)
+            .set('Authorization', player1AuthHeader);
+
+        const savedRound = getGameRes.body.rounds[0];
+        const savedWinningHand = savedRound.result.winningHandData[0];
+        expect(savedWinningHand.han).toBe(5);
+        expect(savedWinningHand.yaku).toEqual(
+            expect.arrayContaining([
+                { code: 'tsubame_gaeshi', han: 1 },
+                { code: 'tanyao', han: 1 },
+            ])
+        );
+    });
 });

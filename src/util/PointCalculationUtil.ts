@@ -26,7 +26,7 @@ import {
 } from '../error/PointCalculationErrors.ts';
 import { scoreHand } from '../mahjong/scoreHand.ts';
 import type { ScoreHandInput } from '../mahjong/types.ts';
-import type { GameRules } from '../model/EventModels.ts';
+import type { CustomRuleEntry, GameRules } from '../model/EventModels.ts';
 import type { GamePlayer, DetailedGame, GameState } from '../model/GameModels.ts';
 import { GameFinishReason, nextWind, Wind, WIND_ORDER } from '../model/GameModels.ts';
 import type {
@@ -77,7 +77,8 @@ export function normalizeWinningHandDataWithHandDetail(
     players: GamePlayer[],
     gameState: GameState,
     detailedRules: GameRulesValues,
-    requireHandDetail: boolean
+    requireHandDetail: boolean,
+    customRules?: readonly CustomRuleEntry[] | undefined
 ): WinningHandData {
     if (!hand.handDetail) {
         if (requireHandDetail) {
@@ -112,6 +113,7 @@ export function normalizeWinningHandDataWithHandDetail(
         ...(dealInSeat !== undefined ? { dealInSeat } : {}),
         riichiPlayerSeats,
         rules: detailedRules,
+        customRules,
     };
 
     const derived = scoreHand(scoreInput);
@@ -209,6 +211,8 @@ export function calculateGameRoundResult(
     validateResultPlayersInGame(game.players, result);
     validateRiichiPlayersCanPay(game.players, detailedRules, result);
 
+    const customRules = rules.details.customRules;
+
     if (result.type === 'TSUMO') {
         const normalizedHand = normalizeWinningHandDataWithHandDetail(
             result.winningHandData,
@@ -218,7 +222,8 @@ export function calculateGameRoundResult(
             game.players,
             currentGameState,
             scoringRules,
-            requireHandDetail
+            requireHandDetail,
+            customRules
         );
         result = {
             ...result,
@@ -236,7 +241,8 @@ export function calculateGameRoundResult(
                 game.players,
                 currentGameState,
                 scoringRules,
-                requireHandDetail
+                requireHandDetail,
+                customRules
             )
         );
         result = {
