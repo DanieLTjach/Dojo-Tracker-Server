@@ -69,6 +69,58 @@ describe('gameRulesDetailsSchema compact format', () => {
         expect(result.success).toBe(true);
     });
 
+    test('accepts customRules entries with valid presetId or without presetId', () => {
+        const result = gameRulesDetailsSchema.safeParse({
+            rules: {
+                number_of_players: 4,
+                starting_points: 30000,
+            },
+            customRules: [
+                {
+                    category: 'yaku',
+                    value: 1,
+                    name: 'Розворот ластівки',
+                    presetId: 'tsubame_gaeshi',
+                },
+                {
+                    category: 'yaku',
+                    value: 2,
+                    name: 'Домашнє яку',
+                },
+            ],
+        });
+
+        expect(result.success).toBe(true);
+    });
+
+    test('rejects customRules entries with invalid presetId format or type', () => {
+        const emptyPresetId = gameRulesDetailsSchema.safeParse({
+            rules: { number_of_players: 4, starting_points: 30000 },
+            customRules: [{ category: 'yaku', value: 1, name: 'Test', presetId: '' }],
+        });
+        expect(emptyPresetId.success).toBe(false);
+
+        const uppercaseSpacesPresetId = gameRulesDetailsSchema.safeParse({
+            rules: { number_of_players: 4, starting_points: 30000 },
+            customRules: [{ category: 'yaku', value: 1, name: 'Test', presetId: 'Tsubame Gaeshi' }],
+        });
+        expect(uppercaseSpacesPresetId.success).toBe(false);
+
+        const nonStringPresetId = gameRulesDetailsSchema.safeParse({
+            rules: { number_of_players: 4, starting_points: 30000 },
+            customRules: [{ category: 'yaku', value: 1, name: 'Test', presetId: 123 as any }],
+        });
+        expect(nonStringPresetId.success).toBe(false);
+    });
+
+    test('rejects unknown properties on customRules entries', () => {
+        const unknownProp = gameRulesDetailsSchema.safeParse({
+            rules: { number_of_players: 4, starting_points: 30000 },
+            customRules: [{ category: 'yaku', value: 1, name: 'Test', extraProp: true } as any],
+        });
+        expect(unknownProp.success).toBe(false);
+    });
+
     test('accepts links with plain string labels', () => {
         const result = gameRulesDetailsSchema.safeParse({
             rules: {

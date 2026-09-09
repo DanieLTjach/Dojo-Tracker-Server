@@ -31,6 +31,7 @@ const customRuleEntrySchema = z.strictObject({
     value: customRuleValueSchema,
     name: customRuleNameSchema,
     tooltip: customRuleTooltipSchema.optional(),
+    presetId: z.string().trim().min(1).max(64).regex(/^[a-z0-9_]+$/).optional(),
 });
 
 function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
