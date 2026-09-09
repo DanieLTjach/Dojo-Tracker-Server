@@ -9,7 +9,7 @@ import {
     UnsupportedLocalYakuError,
     UnsupportedScoringContextError,
 } from '../error/PointCalculationErrors.ts';
-import { declaredLocalYakuIds, LOCAL_YAKU_REGISTRY } from './localYaku.ts';
+import { declaredLocalYakuIds, hasLocalYaku, LOCAL_YAKU_REGISTRY } from './localYaku.ts';
 import { getBaseTileCode, getRelativeDirectionSymbol, meldToMajiang, tileCodeToMajiang } from './notation.ts';
 import type { DerivedHandScore, HandYaku, ScoreHandInput, TileCode } from './types.ts';
 import { mapJapaneseYakuToCode } from './yakuCodes.ts';
@@ -255,7 +255,7 @@ function validateHandStructure(input: ScoreHandInput): void {
             }
             const hasOtherSpecialContext = winnerInRiichi || ctx.doubleRiichi || ctx.ippatsu || ctx.haitei ||
                 ctx.houtei || ctx.rinshanKaihou || ctx.chankan || ctx.tenhou || ctx.chiihou ||
-                Boolean(ctx.localYaku && ctx.localYaku.length > 0);
+                hasLocalYaku(ctx);
             if (hasOtherSpecialContext) {
                 throw new HandDetailContextConflictError();
             }
@@ -264,13 +264,13 @@ function validateHandStructure(input: ScoreHandInput): void {
         if (ctx.tenhou || ctx.chiihou) {
             const hasOtherSpecialContext = winnerInRiichi || ctx.doubleRiichi || ctx.ippatsu || ctx.haitei ||
                 ctx.houtei || ctx.rinshanKaihou || ctx.chankan || ctx.renhou ||
-                Boolean(ctx.localYaku && ctx.localYaku.length > 0);
+                hasLocalYaku(ctx);
             if (handDetail.melds.length > 0 || hasOtherSpecialContext) {
                 throw new HandDetailContextConflictError();
             }
         }
 
-        if (ctx.localYaku && ctx.localYaku.length > 0) {
+        if (hasLocalYaku(ctx)) {
             const declaredIds = declaredLocalYakuIds(input.customRules);
             for (const id of ctx.localYaku) {
                 const spec = LOCAL_YAKU_REGISTRY.get(id);
@@ -404,7 +404,7 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
     let localYakumanCount = 0;
     const localYakus: HandYaku[] = [];
 
-    if (ctx?.localYaku && ctx.localYaku.length > 0) {
+    if (hasLocalYaku(ctx)) {
         for (const id of ctx.localYaku) {
             const spec = LOCAL_YAKU_REGISTRY.get(id);
             if (!spec) continue;

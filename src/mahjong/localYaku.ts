@@ -22,6 +22,13 @@ export function isLocalYakuEnabled(entry: CustomRuleLike): boolean {
     return entry.value !== false && entry.value !== 0;
 }
 
+// A type predicate rather than a plain boolean so callers keep narrowing on ctx.localYaku.
+export function hasLocalYaku<T extends Pick<HandContext, 'localYaku'>>(
+    ctx?: T | null | undefined,
+): ctx is T & { localYaku: string[] } {
+    return Boolean(ctx?.localYaku && ctx.localYaku.length > 0);
+}
+
 export function declaredLocalYakuIds(customRules?: readonly CustomRuleLike[] | null | undefined): Set<string> {
     const ids = new Set<string>();
     if (!customRules) return ids;
