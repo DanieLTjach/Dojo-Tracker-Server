@@ -178,6 +178,8 @@ errors:
   handDetailContextConflict: Контекст руки суперечить результату раунду
   handDetailLockedByEvent: Ця подія вимагає повний запис руки — перемикач недоступний
   unsupportedScoringContext: Контекст руки не підтримується правилами підрахунку
+  unsupportedLocalYaku: "Локальне яку не підтримується: {{localYakuId}}"
+  localYakuNotInRuleset: "Локальне яку не увімкнене в цьому наборі правил: {{localYakuId}}"
   unmappedYakuError: "Движок підрахунку повернув невідоме яку: {{yakuName}}"
 
   userRatingChangeInGameNotFound: Зміну рейтингу користувача {{userId}} в грі {{gameId}} не знайдено
