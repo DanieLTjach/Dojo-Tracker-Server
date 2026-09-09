@@ -154,8 +154,7 @@ export type YakuCode =
     | 'daisharin'
     | 'daichikurin'
     | 'daisuurin'
-    | 'beni_kujaku'
-    | 'suuankou_tanki_double';
+    | 'beni_kujaku';
 
 export type HandYaku =
     | { code: YakuCode, han: number }

@@ -22,10 +22,9 @@ describe('LOCAL_YAKU_REGISTRY', () => {
             daichikurin: { yakumanCount: 1 },
             daisuurin: { yakumanCount: 1 },
             beni_kujaku: { yakumanCount: 1 },
-            suuankou_tanki_double: { yakumanCount: 2 },
         };
 
-        expect(LOCAL_YAKU_REGISTRY.size).toBe(18);
+        expect(LOCAL_YAKU_REGISTRY.size).toBe(17);
 
         for (const [id, expected] of Object.entries(expectedValues)) {
             const spec = LOCAL_YAKU_REGISTRY.get(id);

@@ -179,7 +179,6 @@ const yakuCodeValues = [
     'daichikurin',
     'daisuurin',
     'beni_kujaku',
-    'suuankou_tanki_double',
 ] as const;
 
 export const yakuCodeSchema = z.enum(yakuCodeValues);

@@ -56,7 +56,7 @@ describe('gameRulesDetailsSchema compact format', () => {
                     category: 'yaku',
                     value: 1,
                     name: 'Танукі',
-                    tooltip: 'Домашнє яку',
+                    tooltip: 'Локальне яку',
                 },
                 {
                     category: 'rule',
@@ -85,7 +85,7 @@ describe('gameRulesDetailsSchema compact format', () => {
                 {
                     category: 'yaku',
                     value: 2,
-                    name: 'Домашнє яку',
+                    name: 'Локальне яку',
                 },
             ],
         });

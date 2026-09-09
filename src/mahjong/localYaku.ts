@@ -73,7 +73,6 @@ const LOCAL_YAKU_SPECS: readonly LocalYakuSpec[] = [
     { id: 'daichikurin', code: 'daichikurin', yakumanCount: 1, isApplicable: () => true },
     { id: 'daisuurin', code: 'daisuurin', yakumanCount: 1, isApplicable: () => true },
     { id: 'beni_kujaku', code: 'beni_kujaku', yakumanCount: 1, isApplicable: () => true },
-    { id: 'suuankou_tanki_double', code: 'suuankou_tanki_double', yakumanCount: 2, isApplicable: () => true },
 ];
 
 export const LOCAL_YAKU_REGISTRY: ReadonlyMap<string, LocalYakuSpec> = new Map(
