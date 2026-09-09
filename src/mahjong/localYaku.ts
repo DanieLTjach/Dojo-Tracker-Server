@@ -24,7 +24,7 @@ export function isLocalYakuEnabled(entry: CustomRuleLike): boolean {
 
 // A type predicate rather than a plain boolean so callers keep narrowing on ctx.localYaku.
 export function hasLocalYaku<T extends Pick<HandContext, 'localYaku'>>(
-    ctx?: T | null | undefined,
+    ctx?: T | null | undefined
 ): ctx is T & { localYaku: string[] } {
     return Boolean(ctx?.localYaku && ctx.localYaku.length > 0);
 }
