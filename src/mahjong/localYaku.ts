@@ -41,8 +41,11 @@ export function declaredLocalYakuIds(customRules?: readonly CustomRuleLike[] | n
     return ids;
 }
 
-// renhou is deliberately absent: it predates this registry and keeps its own
-// `blessing_of_man` catalog key and scoring branch in scoreHand.ts.
+// renhou is deliberately absent and keeps its own `blessing_of_man` catalog key and
+// scoring branch in scoreHand.ts: its value is per-ruleset (none/mangan/yakuman),
+// whereas every value here is a fixed constant a club only enables or disables.
+// 'none' is also not the same as disabled — renhou stays declarable and simply scores
+// nothing extra, a state this registry cannot express.
 const LOCAL_YAKU_SPECS: readonly LocalYakuSpec[] = [
     {
         id: 'tsubame_gaeshi',
