@@ -67,6 +67,7 @@ export interface HandContext {
     tenhou?: boolean | undefined;
     chiihou?: boolean | undefined;
     renhou?: boolean | undefined;
+    localYaku?: string[] | undefined;
 }
 
 export interface HandDetail {
@@ -136,7 +137,25 @@ export type YakuCode =
     | 'suukantsu'
     | 'dora'
     | 'aka_dora'
-    | 'ura_dora';
+    | 'ura_dora'
+    | 'tsubame_gaeshi'
+    | 'oopun_riichi'
+    | 'sanrenkou'
+    | 'suurenkou'
+    | 'iishoku_sanjun'
+    | 'iishoku_yonjun'
+    | 'reversible_tiles'
+    | 'uumensai'
+    | 'shousharin'
+    | 'paarenchan'
+    | 'shiisan_puutaa'
+    | 'shiisuu_puutaa'
+    | 'daichisei'
+    | 'daisharin'
+    | 'daichikurin'
+    | 'daisuurin'
+    | 'beni_kujaku'
+    | 'suuankou_tanki_double';
 
 export type HandYaku =
     | { code: YakuCode, han: number }

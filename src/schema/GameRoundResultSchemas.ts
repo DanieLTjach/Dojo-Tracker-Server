@@ -87,6 +87,12 @@ export const handContextSchema = z.object({
     tenhou: z.boolean().optional(),
     chiihou: z.boolean().optional(),
     renhou: z.boolean().optional(),
+    localYaku: z.array(z.string().trim().min(1).max(64).regex(/^[a-z0-9_]+$/))
+        .max(8)
+        .refine(ids => new Set(ids).size === ids.length, {
+            error: 'localYaku entries must be unique',
+        })
+        .optional(),
 });
 
 export const handDetailSchema = z.object({
@@ -156,6 +162,24 @@ const yakuCodeValues = [
     'dora',
     'aka_dora',
     'ura_dora',
+    'tsubame_gaeshi',
+    'oopun_riichi',
+    'sanrenkou',
+    'suurenkou',
+    'iishoku_sanjun',
+    'iishoku_yonjun',
+    'reversible_tiles',
+    'uumensai',
+    'shousharin',
+    'paarenchan',
+    'shiisan_puutaa',
+    'shiisuu_puutaa',
+    'daichisei',
+    'daisharin',
+    'daichikurin',
+    'daisuurin',
+    'beni_kujaku',
+    'suuankou_tanki_double',
 ] as const;
 
 export const yakuCodeSchema = z.enum(yakuCodeValues);
