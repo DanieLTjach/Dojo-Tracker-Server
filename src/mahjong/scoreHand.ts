@@ -402,18 +402,21 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
 
     let localYakuHan = 0;
     let localYakumanCount = 0;
-    const localYakus: HandYaku[] = [];
+    // Han-valued and yakuman-valued local yaku feed two mutually exclusive return
+    // shapes, so keep them apart rather than re-splitting one mixed list later.
+    const localYakumanYaku: HandYaku[] = [];
+    const localHanYaku: HandYaku[] = [];
 
     if (hasLocalYaku(ctx)) {
         for (const id of ctx.localYaku) {
             const spec = LOCAL_YAKU_REGISTRY.get(id);
             if (!spec) continue;
-            if (spec.yakumanCount !== undefined && spec.yakumanCount > 0) {
+            if (spec.yakumanCount) {
                 localYakumanCount += spec.yakumanCount;
-                localYakus.push({ code: spec.code, yakumanCount: spec.yakumanCount });
-            } else if (spec.han !== undefined && spec.han > 0) {
+                localYakumanYaku.push({ code: spec.code, yakumanCount: spec.yakumanCount });
+            } else if (spec.han) {
                 localYakuHan += spec.han;
-                localYakus.push({ code: spec.code, han: spec.han });
+                localHanYaku.push({ code: spec.code, han: spec.han });
             }
         }
     }
@@ -431,7 +434,7 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
     if (localYakumanCount > 0 && !isOrdinaryYakuman) {
         return {
             yakumanCount: localYakumanCount,
-            yaku: localYakus.filter(y => 'yakumanCount' in y),
+            yaku: localYakumanYaku,
         };
     }
 
@@ -444,11 +447,7 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
     }
 
     if (localYakuHan > 0 && !isOrdinaryYakuman) {
-        for (const ly of localYakus) {
-            if ('han' in ly) {
-                yaku.push(ly);
-            }
-        }
+        yaku.push(...localHanYaku);
     }
 
     for (const h of res.hupai ?? []) {
