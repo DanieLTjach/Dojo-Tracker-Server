@@ -4,9 +4,12 @@ import {
     HandDetailContextConflictError,
     HandHasNoYakuError,
     InvalidHandDetailStructureError,
+    LocalYakuNotInRulesetError,
     NonWinningHandError,
+    UnsupportedLocalYakuError,
     UnsupportedScoringContextError,
 } from '../error/PointCalculationErrors.ts';
+import { declaredLocalYakuIds, LOCAL_YAKU_REGISTRY } from './localYaku.ts';
 import { getBaseTileCode, getRelativeDirectionSymbol, meldToMajiang, tileCodeToMajiang } from './notation.ts';
 import type { DerivedHandScore, HandYaku, ScoreHandInput, TileCode } from './types.ts';
 import { mapJapaneseYakuToCode } from './yakuCodes.ts';
@@ -21,6 +24,7 @@ import { mapJapaneseYakuToCode } from './yakuCodes.ts';
  * | shape_tenpai, nagashi_mangan | Draw/tenpai concerns, handled in game round flow / RulesUtils.ts |
  * | kan_dora_called_promoted_quad, kan_dora_concealed_quad | Timing rules; client supplies final indicator arrays |
  * | north_as_yaku, can_call_kita, kita_after_pon, rinshan_from_kita, ron_on_kita, furiten_from_kita | Sanma-specific rules (Phase 4) |
+ * | customRules | Local yaku registry evaluated directly in scoreHand |
  */
 
 function mapGameRulesToMajiangRule(rules?: GameRulesValues): Record<string, any> {
@@ -250,7 +254,8 @@ function validateHandStructure(input: ScoreHandInput): void {
                 throw new HandDetailContextConflictError();
             }
             const hasOtherSpecialContext = winnerInRiichi || ctx.doubleRiichi || ctx.ippatsu || ctx.haitei ||
-                ctx.houtei || ctx.rinshanKaihou || ctx.chankan || ctx.tenhou || ctx.chiihou;
+                ctx.houtei || ctx.rinshanKaihou || ctx.chankan || ctx.tenhou || ctx.chiihou ||
+                Boolean(ctx.localYaku && ctx.localYaku.length > 0);
             if (hasOtherSpecialContext) {
                 throw new HandDetailContextConflictError();
             }
@@ -258,9 +263,33 @@ function validateHandStructure(input: ScoreHandInput): void {
 
         if (ctx.tenhou || ctx.chiihou) {
             const hasOtherSpecialContext = winnerInRiichi || ctx.doubleRiichi || ctx.ippatsu || ctx.haitei ||
-                ctx.houtei || ctx.rinshanKaihou || ctx.chankan || ctx.renhou;
+                ctx.houtei || ctx.rinshanKaihou || ctx.chankan || ctx.renhou ||
+                Boolean(ctx.localYaku && ctx.localYaku.length > 0);
             if (handDetail.melds.length > 0 || hasOtherSpecialContext) {
                 throw new HandDetailContextConflictError();
+            }
+        }
+
+        if (ctx.localYaku && ctx.localYaku.length > 0) {
+            const declaredIds = declaredLocalYakuIds(input.customRules);
+            for (const id of ctx.localYaku) {
+                const spec = LOCAL_YAKU_REGISTRY.get(id);
+                if (!spec) {
+                    throw new UnsupportedLocalYakuError(id);
+                }
+                if (!declaredIds.has(id)) {
+                    throw new LocalYakuNotInRulesetError(id);
+                }
+                if (!spec.isApplicable(input)) {
+                    throw new HandDetailContextConflictError();
+                }
+                if (spec.conflictingContextFlags) {
+                    for (const flag of spec.conflictingContextFlags) {
+                        if (Boolean(ctx[flag])) {
+                            throw new HandDetailContextConflictError();
+                        }
+                    }
+                }
             }
         }
     }
@@ -371,20 +400,55 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
 
     const renhouHan = ctx?.renhou && blessingOfMan === 'mangan' ? 5 : 0;
 
-    // A renhou hand may legitimately have no other yaku; renhou itself is the
-    // yaku in that case. Without renhou the usual yaku-nashi rule applies.
-    if (!renhouHan && (res.defen === 0 || !res.hupai || res.hupai.length === 0)) {
+    let localYakuHan = 0;
+    let localYakumanCount = 0;
+    const localYakus: HandYaku[] = [];
+
+    if (ctx?.localYaku && ctx.localYaku.length > 0) {
+        for (const id of ctx.localYaku) {
+            const spec = LOCAL_YAKU_REGISTRY.get(id);
+            if (!spec) continue;
+            if (spec.yakumanCount !== undefined && spec.yakumanCount > 0) {
+                localYakumanCount += spec.yakumanCount;
+                localYakus.push({ code: spec.code, yakumanCount: spec.yakumanCount });
+            } else if (spec.han !== undefined && spec.han > 0) {
+                localYakuHan += spec.han;
+                localYakus.push({ code: spec.code, han: spec.han });
+            }
+        }
+    }
+
+    // A renhou or local yaku hand may legitimately have no other yaku; the local
+    // yaku itself is the yaku in that case. Without them the usual yaku-nashi rule applies.
+    if (
+        !renhouHan && !localYakuHan && !localYakumanCount && (res.defen === 0 || !res.hupai || res.hupai.length === 0)
+    ) {
         throw new HandHasNoYakuError();
+    }
+
+    const isOrdinaryYakuman = res.damanguan !== undefined && res.damanguan > 0;
+
+    if (localYakumanCount > 0 && !isOrdinaryYakuman) {
+        return {
+            yakumanCount: localYakumanCount,
+            yaku: localYakus.filter(y => 'yakumanCount' in y),
+        };
     }
 
     const yaku: HandYaku[] = [];
     let paoSeat: number | undefined;
     let paoYakumanCount = 0;
 
-    const isOrdinaryYakuman = res.damanguan !== undefined && res.damanguan > 0;
-
     if (renhouHan && !isOrdinaryYakuman) {
         yaku.push({ code: 'renhou', han: renhouHan });
+    }
+
+    if (localYakuHan > 0 && !isOrdinaryYakuman) {
+        for (const ly of localYakus) {
+            if ('han' in ly) {
+                yaku.push(ly);
+            }
+        }
     }
 
     for (const h of res.hupai ?? []) {
@@ -428,7 +492,7 @@ export function scoreHand(input: ScoreHandInput): DerivedHandScore {
         };
     }
 
-    const totalHan = (res.fanshu ?? 0) + renhouHan;
+    const totalHan = (res.fanshu ?? 0) + renhouHan + localYakuHan;
     const isCountedYakuman = totalHan >= 13 && rules?.['counted_yakuman'] !== false;
 
     return {

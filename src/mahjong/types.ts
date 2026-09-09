@@ -170,6 +170,14 @@ export interface ScoreHandInput {
     dealInSeat?: number | undefined; // 0..3 (for RON)
     riichiPlayerSeats?: Set<number> | undefined;
     rules?: Record<string, any> | undefined;
+    customRules?:
+        | readonly {
+            category: string;
+            value: boolean | number | string;
+            name?: string | undefined;
+            presetId?: string | undefined;
+        }[]
+        | undefined;
 }
 
 export interface DerivedHandScore {

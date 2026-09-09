@@ -2,8 +2,10 @@ import {
     HandDetailContextConflictError,
     HandHasNoYakuError,
     InvalidHandDetailStructureError,
+    LocalYakuNotInRulesetError,
     NonWinningHandError,
     UnmappedYakuError,
+    UnsupportedLocalYakuError,
     UnsupportedScoringContextError,
 } from '../src/error/PointCalculationErrors.ts';
 import { meldToMajiang } from '../src/mahjong/notation.ts';
@@ -1234,6 +1236,425 @@ describe('Mahjong Hand Scoring Engine', () => {
                     rules: { red_fives: 'none' },
                 })
             ).toThrow(InvalidHandDetailStructureError);
+        });
+    });
+
+    describe('Local Yaku Registry Scoring', () => {
+        const pinfuTanyaoDoraHand: HandDetail = {
+            concealedTiles: [
+                'man_2',
+                'man_3',
+                'man_4',
+                'pin_2',
+                'pin_3',
+                'pin_4',
+                'sou_3',
+                'sou_4',
+                'sou_5',
+                'pin_5',
+                'pin_6',
+                'sou_2',
+                'sou_2',
+            ],
+            melds: [],
+            winningTile: 'pin_7',
+            doraIndicators: ['pin_1'],
+            uraDoraIndicators: [],
+            context: { localYaku: ['tsubame_gaeshi'] },
+        };
+
+        const yakulessHand: HandDetail = {
+            concealedTiles: [
+                'man_1',
+                'man_2',
+                'man_3',
+                'pin_2',
+                'pin_3',
+                'pin_4',
+                'sou_3',
+                'sou_4',
+                'sou_5',
+                'man_6',
+                'man_7',
+                'ton',
+                'ton',
+            ],
+            melds: [],
+            winningTile: 'man_8',
+            doraIndicators: [],
+            uraDoraIndicators: [],
+            context: { localYaku: ['tsubame_gaeshi'] },
+        };
+
+        const tsubameCustomRules = [
+            { category: 'yaku' as const, value: 1, presetId: 'tsubame_gaeshi', name: 'Tsubame gaeshi' },
+        ];
+
+        it('scores 1 han and stacks with pinfu+tanyao+dora', () => {
+            const res = scoreHand({
+                handDetail: pinfuTanyaoDoraHand,
+                winType: 'RON',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 1,
+                riichiPlayerSeats: new Set([1]),
+                customRules: tsubameCustomRules,
+            });
+            expect(res.han).toBe(4);
+            expect(res.yakumanCount).toBe(0);
+            expect(res.yaku).toEqual([
+                { code: 'tsubame_gaeshi', han: 1 },
+                { code: 'pinfu', han: 1 },
+                { code: 'tanyao', han: 1 },
+                { code: 'dora', han: 1 },
+            ]);
+        });
+
+        it('carries an otherwise yaku-less hand', () => {
+            const res = scoreHand({
+                handDetail: yakulessHand,
+                winType: 'RON',
+                winnerSeat: 1,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 2,
+                riichiPlayerSeats: new Set([2]),
+                customRules: tsubameCustomRules,
+            });
+            expect(res.han).toBe(1);
+            expect(res.yakumanCount).toBe(0);
+            expect(res.yaku).toEqual([{ code: 'tsubame_gaeshi', han: 1 }]);
+        });
+
+        it('does not award disabled (value: false or value: 0) local yaku and throws LocalYakuNotInRulesetError', () => {
+            expect(() =>
+                scoreHand({
+                    handDetail: pinfuTanyaoDoraHand,
+                    winType: 'RON',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 1,
+                    riichiPlayerSeats: new Set([1]),
+                    customRules: [
+                        { category: 'yaku', value: false, presetId: 'tsubame_gaeshi', name: 'Tsubame' },
+                    ],
+                })
+            ).toThrow(LocalYakuNotInRulesetError);
+
+            expect(() =>
+                scoreHand({
+                    handDetail: pinfuTanyaoDoraHand,
+                    winType: 'RON',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 1,
+                    riichiPlayerSeats: new Set([1]),
+                    customRules: [
+                        { category: 'yaku', value: 0, presetId: 'tsubame_gaeshi', name: 'Tsubame' },
+                    ],
+                })
+            ).toThrow(LocalYakuNotInRulesetError);
+        });
+
+        it('throws HandDetailContextConflictError on TSUMO for tsubame_gaeshi', () => {
+            expect(() =>
+                scoreHand({
+                    handDetail: pinfuTanyaoDoraHand,
+                    winType: 'TSUMO',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    riichiPlayerSeats: new Set([1]),
+                    customRules: tsubameCustomRules,
+                })
+            ).toThrow(HandDetailContextConflictError);
+        });
+
+        it('throws HandDetailContextConflictError when discarder is not in riichi', () => {
+            expect(() =>
+                scoreHand({
+                    handDetail: pinfuTanyaoDoraHand,
+                    winType: 'RON',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 1,
+                    riichiPlayerSeats: new Set([2]), // seat 2 declared riichi, but seat 1 dealt in
+                    customRules: tsubameCustomRules,
+                })
+            ).toThrow(HandDetailContextConflictError);
+        });
+
+        it('throws HandDetailContextConflictError when conflicting context flags are set (chankan, renhou)', () => {
+            // with chankan
+            expect(() =>
+                scoreHand({
+                    handDetail: {
+                        ...pinfuTanyaoDoraHand,
+                        context: { chankan: true, localYaku: ['tsubame_gaeshi'] },
+                    },
+                    winType: 'RON',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 1,
+                    riichiPlayerSeats: new Set([1]),
+                    customRules: tsubameCustomRules,
+                })
+            ).toThrow(HandDetailContextConflictError);
+
+            // with renhou
+            expect(() =>
+                scoreHand({
+                    handDetail: {
+                        ...pinfuTanyaoDoraHand,
+                        context: { renhou: true, localYaku: ['tsubame_gaeshi'] },
+                    },
+                    winType: 'RON',
+                    winnerSeat: 1,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 2,
+                    riichiPlayerSeats: new Set([2]),
+                    customRules: tsubameCustomRules,
+                })
+            ).toThrow(HandDetailContextConflictError);
+        });
+
+        it('throws UnsupportedLocalYakuError for an unknown id', () => {
+            expect(() =>
+                scoreHand({
+                    handDetail: {
+                        ...pinfuTanyaoDoraHand,
+                        context: { localYaku: ['unknown_yaku'] },
+                    },
+                    winType: 'RON',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 1,
+                    riichiPlayerSeats: new Set([1]),
+                    customRules: tsubameCustomRules,
+                })
+            ).toThrow(UnsupportedLocalYakuError);
+        });
+
+        it('throws LocalYakuNotInRulesetError when local yaku is undeclared in ruleset', () => {
+            expect(() =>
+                scoreHand({
+                    handDetail: pinfuTanyaoDoraHand,
+                    winType: 'RON',
+                    winnerSeat: 0,
+                    dealerSeat: 0,
+                    roundWindSeat: 0,
+                    dealInSeat: 1,
+                    riichiPlayerSeats: new Set([1]),
+                    customRules: [], // undeclared
+                })
+            ).toThrow(LocalYakuNotInRulesetError);
+        });
+
+        it('coexists with open melds and with ippatsu', () => {
+            // Coexists with open melds
+            const openMeldHand: HandDetail = {
+                concealedTiles: [
+                    'pin_2',
+                    'pin_3',
+                    'pin_4',
+                    'sou_3',
+                    'sou_4',
+                    'sou_5',
+                    'man_6',
+                    'man_7',
+                    'ton',
+                    'ton',
+                ],
+                melds: [{
+                    type: 'CHII',
+                    tiles: ['man_1', 'man_2', 'man_3'],
+                    calledTileIndex: 0,
+                    calledFrom: 'KAMICHA',
+                }],
+                winningTile: 'man_8',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+                context: { localYaku: ['tsubame_gaeshi'] },
+            };
+
+            const openRes = scoreHand({
+                handDetail: openMeldHand,
+                winType: 'RON',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 1,
+                riichiPlayerSeats: new Set([1]),
+                customRules: tsubameCustomRules,
+            });
+            expect(openRes.han).toBe(1);
+            expect(openRes.yaku).toEqual([{ code: 'tsubame_gaeshi', han: 1 }]);
+
+            // Coexists with ippatsu (winner in riichi, discarder in riichi, ron on riichi declaration tile)
+            const riichiIppatsuHand: HandDetail = {
+                ...pinfuTanyaoDoraHand,
+                uraDoraIndicators: ['pin_9'],
+                context: { ippatsu: true, localYaku: ['tsubame_gaeshi'] },
+            };
+            const ippatsuRes = scoreHand({
+                handDetail: riichiIppatsuHand,
+                winType: 'RON',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 1,
+                riichiPlayerSeats: new Set([0, 1]), // both winner (0) and discarder (1)
+                customRules: tsubameCustomRules,
+            });
+            expect(ippatsuRes.han).toBe(6); // pinfu (1) + tanyao (1) + riichi (1) + ippatsu (1) + dora (1) + tsubame_gaeshi (1)
+            expect(ippatsuRes.yaku.some(y => y.code === 'ippatsu')).toBe(true);
+            expect(ippatsuRes.yaku.some(y => y.code === 'tsubame_gaeshi')).toBe(true);
+        });
+
+        it('awards yakuman for a yakuman-valued entry (daisharin)', () => {
+            const daisharinHand: HandDetail = {
+                concealedTiles: [
+                    'pin_2',
+                    'pin_2',
+                    'pin_3',
+                    'pin_3',
+                    'pin_4',
+                    'pin_4',
+                    'pin_5',
+                    'pin_5',
+                    'pin_6',
+                    'pin_6',
+                    'pin_7',
+                    'pin_7',
+                    'pin_8',
+                ],
+                melds: [],
+                winningTile: 'pin_8',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+                context: { localYaku: ['daisharin'] },
+            };
+
+            const res = scoreHand({
+                handDetail: daisharinHand,
+                winType: 'TSUMO',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                customRules: [
+                    { category: 'yaku', value: 'yakuman', presetId: 'daisharin', name: 'Daisharin' },
+                ],
+            });
+            expect(res.yakumanCount).toBe(1);
+            expect(res.yaku).toEqual([{ code: 'daisharin', yakumanCount: 1 }]);
+        });
+
+        it('suppresses local yaku when an ordinary yakuman is present', () => {
+            // Daisangen (ordinary yakuman) + asserted daisharin
+            const daisangenHand: HandDetail = {
+                concealedTiles: [
+                    'haku',
+                    'haku',
+                    'haku',
+                    'hatsu',
+                    'hatsu',
+                    'hatsu',
+                    'chun',
+                    'chun',
+                    'chun',
+                    'pin_1',
+                    'pin_2',
+                    'pin_3',
+                    'ton',
+                ],
+                melds: [],
+                winningTile: 'ton',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+                context: { localYaku: ['daisharin'] },
+            };
+
+            const res = scoreHand({
+                handDetail: daisangenHand,
+                winType: 'TSUMO',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                customRules: [
+                    { category: 'yaku', value: 'yakuman', presetId: 'daisharin', name: 'Daisharin' },
+                ],
+            });
+            expect(res.yakumanCount).toBe(1);
+            expect(res.yaku).toEqual([{ code: 'daisangen', yakumanCount: 1 }]);
+
+            // Daisangen + tsubame_gaeshi on RON off riichi player -> tsubame_gaeshi suppressed
+            const daisangenRonRes = scoreHand({
+                handDetail: {
+                    ...daisangenHand,
+                    context: { localYaku: ['tsubame_gaeshi'] },
+                },
+                winType: 'RON',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 1,
+                riichiPlayerSeats: new Set([1]),
+                customRules: tsubameCustomRules,
+            });
+            expect(daisangenRonRes.yakumanCount).toBe(1);
+            expect(daisangenRonRes.yaku).toEqual([{ code: 'daisangen', yakumanCount: 1 }]);
+        });
+
+        it('produces identical result in sanma', () => {
+            // Tanyao + pinfu hand in sanma (no man 2-8)
+            const sanmaHand: HandDetail = {
+                concealedTiles: [
+                    'pin_2',
+                    'pin_3',
+                    'pin_4',
+                    'pin_5',
+                    'pin_6',
+                    'pin_7',
+                    'sou_2',
+                    'sou_3',
+                    'sou_4',
+                    'sou_5',
+                    'sou_6',
+                    'sou_8',
+                    'sou_8',
+                ],
+                melds: [],
+                winningTile: 'sou_7',
+                doraIndicators: [],
+                uraDoraIndicators: [],
+                context: { localYaku: ['tsubame_gaeshi'] },
+            };
+
+            const res = scoreHand({
+                handDetail: sanmaHand,
+                winType: 'RON',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 1,
+                riichiPlayerSeats: new Set([1]),
+                rules: { number_of_players: 3 },
+                customRules: tsubameCustomRules,
+            });
+            // pinfu (1) + tanyao (1) + tsubame_gaeshi (1) = 3 han
+            expect(res.han).toBe(3);
+            expect(res.yaku).toEqual([
+                { code: 'tsubame_gaeshi', han: 1 },
+                { code: 'pinfu', han: 1 },
+                { code: 'tanyao', han: 1 },
+            ]);
         });
     });
 });

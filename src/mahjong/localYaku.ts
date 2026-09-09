@@ -14,6 +14,7 @@ export interface LocalYakuSpec {
 export interface CustomRuleLike {
     category: string;
     value: boolean | number | string;
+    name?: string | undefined;
     presetId?: string | undefined;
 }
 
