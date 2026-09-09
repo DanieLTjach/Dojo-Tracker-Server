@@ -1,11 +1,7 @@
 import type { HandContext, ScoreHandInput, YakuCode } from './types.ts';
 
 export interface LocalYakuSpec {
-    // The ruleset preset id (`CustomRuleEntry.presetId`), i.e. user-supplied data.
     id: string;
-    // The scoring vocabulary emitted in the result's `yaku` array. Every id happens to
-    // match its code today, but the two are separate vocabularies: typing this as
-    // YakuCode is what makes the compiler reject an output code that does not exist.
     code: YakuCode;
     han?: number | undefined;
     yakumanCount?: number | undefined;
@@ -38,9 +34,6 @@ export function declaredLocalYakuIds(customRules?: readonly CustomRuleLike[] | n
     return ids;
 }
 
-// Han and yakuman values are fixed constants taken from
-// notes/Local yaku - Japanese Mahjong Wiki.pdf. A ruleset enables or disables a yaku;
-// it never restates its value, so a typo in ruleset data cannot mint a yakuman.
 // renhou is deliberately absent: it predates this registry and keeps its own
 // `blessing_of_man` catalog key and scoring branch in scoreHand.ts.
 const LOCAL_YAKU_SPECS: readonly LocalYakuSpec[] = [
