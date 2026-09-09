@@ -5,8 +5,7 @@ export interface LocalYakuSpec {
     code: YakuCode;
     han?: number | undefined;
     yakumanCount?: number | undefined;
-    // Hand-shape yaku are operator-asserted because majiang-core does not evaluate non-standard patterns.
-    // Event/round-condition yaku (e.g. tsubame_gaeshi) verify verifiable round facts from ScoreHandInput.
+    // `() => true` means operator-asserted: majiang-core cannot evaluate the hand shape.
     isApplicable: (input: ScoreHandInput) => boolean;
     conflictingContextFlags?: readonly (keyof HandContext)[] | undefined;
 }
