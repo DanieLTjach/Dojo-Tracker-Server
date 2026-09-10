@@ -428,7 +428,7 @@ describe('Hand Detail Integration Tests', () => {
         expect(changes.find((c: any) => c.playerId === player3Id)?.pointChange).toBe(-8000);
     });
 
-    it('defaults a new game to full hand entry until the operator opts out', async () => {
+    it('accepts plain han/fu on a game whose default is full hand entry', async () => {
         const gameId = await createAndStartTrackedGame(eventId);
 
         const manualPayload = {
@@ -442,15 +442,15 @@ describe('Hand Detail Integration Tests', () => {
             },
         };
 
-        // Default game row: plain han/fu is rejected.
-        const rejectRes = await request(app)
+        // `enterHandDetail` is the editor's starting mode, not a gate: a hand the
+        // operator deliberately entered as han/fu is scored, not rejected.
+        const defaultRes = await request(app)
             .post(`/api/games/${gameId}/rounds/1`)
             .set('Authorization', player1AuthHeader)
             .send(manualPayload);
-        expect(rejectRes.status).toBe(400);
-        expect(rejectRes.body.errorCode).toBe('handDetailRequired');
+        expect(defaultRes.status).toBe(200);
 
-        // Opt out per game: the same payload previews and submits.
+        // Opting out per game leaves the same payload working.
         const patchRes = await request(app)
             .patch(`/api/games/${gameId}/hand-detail-mode`)
             .set('Authorization', player1AuthHeader)
@@ -459,16 +459,42 @@ describe('Hand Detail Integration Tests', () => {
         expect(patchRes.body.enterHandDetail).toBe(false);
 
         const previewRes = await request(app)
-            .post(`/api/games/${gameId}/rounds/1/preview`)
+            .post(`/api/games/${gameId}/rounds/2/preview`)
             .set('Authorization', player1AuthHeader)
             .send(manualPayload);
         expect(previewRes.status).toBe(200);
 
         const postRes = await request(app)
-            .post(`/api/games/${gameId}/rounds/1`)
+            .post(`/api/games/${gameId}/rounds/2`)
             .set('Authorization', player1AuthHeader)
             .send(manualPayload);
         expect(postRes.status).toBe(200);
+    });
+
+    it('still rejects plain han/fu when the event forces hand detail, whatever the game default', async () => {
+        const patchEventRes = await request(app)
+            .patch(`/api/events/${eventId}`)
+            .set('Authorization', adminAuthHeader)
+            .send({ config: { requireHandDetail: true } });
+        expect(patchEventRes.status).toBe(200);
+
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const rejectRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send({
+                type: 'TSUMO',
+                riichiPlayerIds: [],
+                winningHandData: {
+                    winnerPlayerId: player1Id,
+                    yakumanCount: 0,
+                    han: 1,
+                    fu: 30,
+                },
+            });
+        expect(rejectRes.status).toBe(400);
+        expect(rejectRes.body.errorCode).toBe('handDetailRequired');
     });
 
     it('locks the per-game switch when the event requires hand detail', async () => {
