@@ -196,3 +196,105 @@ describe('yakuTable agrees with the engine', () => {
         expect((honitsu as { han: number }).han).toBe(standardYakuHan('honitsu', { isOpen: true }));
     });
 });
+
+/**
+ * The frontend mirrors these values to label each row in the yaku picker
+ * (`Ranked-Telegram-App/src/features/live_game/domain/yakuPicker.civet`). The
+ * mirror is labels-only -- the backend stays the sole source of every score --
+ * but a label that disagrees with the price is a lie told at the moment the
+ * operator is deciding, so the two must not drift.
+ *
+ * This snapshot is the backend half of that guard: changing a value here fails
+ * with the FE file named, and the FE half re-reads this module and fails too.
+ */
+describe('yakuTable is a published contract', () => {
+    const MIRROR = 'Ranked-Telegram-App/src/features/live_game/domain/yakuPicker.civet';
+
+    it(`matches the han values mirrored by ${MIRROR}`, () => {
+        const contract: Record<string, string> = {};
+        for (const code of Object.keys(STANDARD_YAKU_SPECS).sort()) {
+            const spec = STANDARD_YAKU_SPECS[code as YakuCode]!;
+            if ('counted' in spec) contract[code] = 'counted';
+            else if ('yakumanCount' in spec) contract[code] = `yakuman:${spec.yakumanCount}`;
+            else if ('hanClosed' in spec) contract[code] = `${spec.hanClosed}/${spec.hanOpen}`;
+            else contract[code] = `${spec.han}`;
+        }
+
+        expect(contract).toEqual({
+            aka_dora: 'counted',
+            bakaze_nan: '1',
+            bakaze_pei: '1',
+            bakaze_shaa: '1',
+            bakaze_ton: '1',
+            chanta: '2/1',
+            chankan: '1',
+            chiihou: 'yakuman:1',
+            chiitoitsu: '2',
+            chinitsu: '6/5',
+            chinroutou: 'yakuman:1',
+            chun: '1',
+            chuuren_poutou: 'yakuman:1',
+            daisangen: 'yakuman:1',
+            daisuushi: 'yakuman:2',
+            dora: 'counted',
+            double_riichi: '2',
+            haitei: '1',
+            haku: '1',
+            hatsu: '1',
+            honitsu: '3/2',
+            honroutou: '2',
+            houtei: '1',
+            iipeikou: '1',
+            ippatsu: '1',
+            ittsuu: '2/1',
+            jikaze_nan: '1',
+            jikaze_pei: '1',
+            jikaze_shaa: '1',
+            jikaze_ton: '1',
+            junchan: '3/2',
+            junsei_chuuren_poutou: 'yakuman:2',
+            kita: 'counted',
+            kokushi_musou: 'yakuman:1',
+            kokushi_musou_13: 'yakuman:2',
+            menzen_tsumo: '1',
+            pinfu: '1',
+            riichi: '1',
+            rinshan_kaihou: '1',
+            ryanpeikou: '3',
+            ryuisou: 'yakuman:1',
+            sanankou: '2',
+            sankantsu: '2',
+            sanshoku_doujun: '2/1',
+            sanshoku_doukou: '2',
+            shousangen: '2',
+            shousuushi: 'yakuman:1',
+            suuankou: 'yakuman:1',
+            suuankou_tanki: 'yakuman:2',
+            suukantsu: 'yakuman:1',
+            tanyao: '1',
+            tenhou: 'yakuman:1',
+            toitoi: '2',
+            tsuisou: 'yakuman:1',
+            ura_dora: 'counted',
+            yakuhai: 'counted',
+        });
+    });
+
+    // The closed-only set is mirrored too, and is what stops the FE offering a
+    // closed-only yaku on an open hand before the backend has to reject it.
+    it(`matches the closed-only set mirrored by ${MIRROR}`, () => {
+        const closedOnly = Object.keys(STANDARD_YAKU_SPECS)
+            .filter(code => isClosedOnlyYaku(code as YakuCode))
+            .sort();
+        expect(closedOnly).toEqual([
+            'chiitoitsu',
+            'double_riichi',
+            'iipeikou',
+            'ippatsu',
+            'menzen_tsumo',
+            'pinfu',
+            'riichi',
+            'ryanpeikou',
+        ]);
+    });
+});
