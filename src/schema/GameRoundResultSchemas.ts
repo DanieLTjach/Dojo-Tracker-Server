@@ -194,6 +194,27 @@ export const handYakuSchema = z.union([
     }),
 ]);
 
+const doraCountSchema = z.number().int().min(0).max(36).optional();
+
+// The middle entry mode: the operator names the yaku instead of entering tiles.
+// Only the codes and counts travel — the server prices them, so `yaku` below
+// stays server-derived on every path.
+export const yakuSelectionSchema = z.object({
+    codes: z.array(yakuCodeSchema).min(1).max(12).refine(
+        codes => new Set(codes).size === codes.length,
+        { error: 'yaku codes must be unique' }
+    ),
+    isOpen: z.boolean().optional(),
+    dora: doraCountSchema,
+    akaDora: doraCountSchema,
+    uraDora: doraCountSchema,
+    kita: doraCountSchema,
+    fu: z.number().int().min(20).max(200).optional().refine(
+        fu => fu === undefined || fu % 10 === 0 || fu === 25,
+        { error: 'fu must a multiple of 10 or equal to 25' }
+    ),
+});
+
 const winningHandDataSchema = z.object({
     winnerPlayerId: userIdSchema,
     yakumanCount: z.number().int().min(0).max(6),
@@ -204,12 +225,18 @@ const winningHandDataSchema = z.object({
         { error: 'fu must a multiple of 10 or equal to 25' }
     ),
     handDetail: handDetailSchema.optional(),
+    yakuSelection: yakuSelectionSchema.optional(),
     // Yaku is present in responses and persisted results, but is always derived
-    // server-side when hand detail is supplied. Clients must never submit it.
+    // server-side from tiles or from a yaku selection. Clients never submit it.
     yaku: z.never({ error: 'yaku is server-derived' }).optional(),
 }).refine(
     winningHandData => winningHandData.yakumanLiabilityPlayerId !== winningHandData.winnerPlayerId,
     { error: 'Yakuman liability player cannot be the same as winner' }
+).refine(
+    // Tiles and a yaku list are two sources of truth for one hand; accepting both
+    // would leave which one scored the hand up to call order.
+    winningHandData => !(winningHandData.handDetail && winningHandData.yakuSelection),
+    { error: 'handDetail and yakuSelection cannot both be supplied' }
 );
 
 const tsumoSchema = z.object({
