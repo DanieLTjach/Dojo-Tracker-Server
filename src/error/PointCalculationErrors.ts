@@ -200,6 +200,12 @@ export class LocalYakuNotInRulesetError extends BadRequestError {
     }
 }
 
+export class YakuSelectionInvalidError extends BadRequestError {
+    constructor(reason?: string) {
+        super('yakuSelectionInvalid', reason ? { reason } : undefined);
+    }
+}
+
 export class UnmappedYakuError extends InternalServerError {
     constructor(yakuName: string) {
         super('unmappedYakuError', { yakuName });

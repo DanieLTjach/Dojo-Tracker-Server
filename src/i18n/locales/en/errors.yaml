@@ -198,3 +198,5 @@ errors:
 
   skillRatingNotEnabledForClub: OpenSkill rating is not enabled for club {{clubId}}
   invalidGameSize: "Invalid game size {{gameSize}}. Allowed values: 3, 4"
+
+  yakuSelectionInvalid: "The selected yaku cannot describe one hand: {{reason}}"

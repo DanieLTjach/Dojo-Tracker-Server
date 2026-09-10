@@ -198,3 +198,5 @@ errors:
 
   skillRatingNotEnabledForClub: Рейтинг OpenSkill не увімкнено для клубу {{clubId}}
   invalidGameSize: "Неприпустимий розмір гри {{gameSize}}. Дозволені значення: 3, 4"
+
+  yakuSelectionInvalid: "Вибрані яку не можуть описувати одну руку: {{reason}}"
