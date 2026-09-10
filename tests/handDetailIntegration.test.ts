@@ -497,6 +497,101 @@ describe('Hand Detail Integration Tests', () => {
         expect(rejectRes.body.errorCode).toBe('handDetailRequired');
     });
 
+    it('scores a yaku selection and persists the derived yaku list', async () => {
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const postRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send({
+                type: 'RON',
+                dealInPlayerId: player2Id,
+                riichiPlayerIds: [],
+                winningHandData: [{
+                    winnerPlayerId: player1Id,
+                    yakumanCount: 0,
+                    yakuSelection: { codes: ['tanyao', 'pinfu', 'dora'], dora: 3 },
+                }],
+            });
+        expect(postRes.status).toBe(200);
+
+        const getGameRes = await request(app)
+            .get(`/api/games/${gameId}`)
+            .set('Authorization', player1AuthHeader);
+        const saved = getGameRes.body.rounds[0].result.winningHandData[0];
+
+        expect(saved.han).toBe(5);
+        expect(saved.yaku).toEqual([
+            { code: 'tanyao', han: 1 },
+            { code: 'pinfu', han: 1 },
+            { code: 'dora', han: 3 },
+        ]);
+        // 5 han is a mangan; player1 is the dealer here, so a dealer ron is 12000.
+        const changes = getGameRes.body.rounds[0].result.playerPointChanges;
+        expect(changes.find((c: any) => c.playerId === player1Id)?.pointChange).toBe(12000);
+        expect(changes.find((c: any) => c.playerId === player2Id)?.pointChange).toBe(-12000);
+    });
+
+    // A yaku list carries no tiles but is still real hand data, so it satisfies an
+    // event that requires hand detail. A bare han/fu hand still does not.
+    it('accepts a yaku selection on an event that requires hand detail', async () => {
+        const patchEventRes = await request(app)
+            .patch(`/api/events/${eventId}`)
+            .set('Authorization', adminAuthHeader)
+            .send({ config: { requireHandDetail: true } });
+        expect(patchEventRes.status).toBe(200);
+
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const acceptedRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send({
+                type: 'RON',
+                dealInPlayerId: player2Id,
+                riichiPlayerIds: [],
+                winningHandData: [{
+                    winnerPlayerId: player1Id,
+                    yakumanCount: 0,
+                    yakuSelection: { codes: ['riichi', 'tanyao'] },
+                }],
+            });
+        expect(acceptedRes.status).toBe(200);
+
+        const rejectedRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/2`)
+            .set('Authorization', player1AuthHeader)
+            .send({
+                type: 'RON',
+                dealInPlayerId: player2Id,
+                riichiPlayerIds: [],
+                winningHandData: [{ winnerPlayerId: player1Id, yakumanCount: 0, han: 2, fu: 30 }],
+            });
+        expect(rejectedRes.status).toBe(400);
+        expect(rejectedRes.body.errorCode).toBe('handDetailRequired');
+    });
+
+    it('rejects a yaku selection that contradicts a supplied han', async () => {
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const res = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send({
+                type: 'RON',
+                dealInPlayerId: player2Id,
+                riichiPlayerIds: [],
+                winningHandData: [{
+                    winnerPlayerId: player1Id,
+                    yakumanCount: 0,
+                    han: 9,
+                    yakuSelection: { codes: ['tanyao'] },
+                }],
+            });
+        expect(res.status).toBe(400);
+        expect(res.body.errorCode).toBe('handDetailScoreMismatch');
+    });
+
     it('locks the per-game switch when the event requires hand detail', async () => {
         const patchEventRes = await request(app)
             .patch(`/api/events/${eventId}`)

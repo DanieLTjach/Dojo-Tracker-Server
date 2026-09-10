@@ -14,7 +14,7 @@ import type { HandDetail, ScoreHandInput } from '../src/mahjong/types.ts';
 import { mapJapaneseYakuToCode } from '../src/mahjong/yakuCodes.ts';
 import type { GamePlayer } from '../src/model/GameModels.ts';
 import { gameRoundResultWithoutPointsSchema } from '../src/schema/GameRoundResultSchemas.ts';
-import { normalizeWinningHandDataWithHandDetail } from '../src/util/PointCalculationUtil.ts';
+import { normalizeWinningHandData } from '../src/util/PointCalculationUtil.ts';
 
 describe('Mahjong Hand Scoring Engine', () => {
     describe('Regression Guard: Chiitoitsu + Riichi + Tsumo', () => {
@@ -466,7 +466,7 @@ describe('Mahjong Hand Scoring Engine', () => {
                 uraDoraIndicators: [],
             };
 
-            const normalized = normalizeWinningHandDataWithHandDetail(
+            const normalized = normalizeWinningHandData(
                 { winnerPlayerId: 20, yakumanCount: 0, handDetail },
                 'TSUMO',
                 undefined,

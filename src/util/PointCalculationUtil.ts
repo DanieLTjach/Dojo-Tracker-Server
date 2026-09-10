@@ -25,7 +25,8 @@ import {
     HandDetailScoreMismatchError,
 } from '../error/PointCalculationErrors.ts';
 import { scoreHand } from '../mahjong/scoreHand.ts';
-import type { ScoreHandInput } from '../mahjong/types.ts';
+import { scoreYakuSelection } from '../mahjong/scoreYakuSelection.ts';
+import type { HandYaku, ScoreHandInput } from '../mahjong/types.ts';
 import type { CustomRuleEntry, GameRules } from '../model/EventModels.ts';
 import type { GamePlayer, DetailedGame, GameState } from '../model/GameModels.ts';
 import { GameFinishReason, nextWind, Wind, WIND_ORDER } from '../model/GameModels.ts';
@@ -69,7 +70,7 @@ import {
     isAbortiveDrawEnabled,
 } from './RulesUtils.ts';
 
-export function normalizeWinningHandDataWithHandDetail(
+export function normalizeWinningHandData(
     hand: WinningHandData,
     winType: 'TSUMO' | 'RON',
     dealInPlayerId: number | undefined,
@@ -80,6 +81,17 @@ export function normalizeWinningHandDataWithHandDetail(
     requireHandDetail: boolean,
     customRules?: readonly CustomRuleEntry[] | undefined
 ): WinningHandData {
+    // A yaku selection carries no tiles but is still real hand data, so it
+    // satisfies an event that requires hand detail. Only a bare han/fu hand does not.
+    if (hand.yakuSelection) {
+        const derivedFromYaku = scoreYakuSelection({
+            selection: hand.yakuSelection,
+            winType,
+            customRules,
+        });
+        return finalizeDerivedHand(hand, derivedFromYaku, players);
+    }
+
     if (!hand.handDetail) {
         if (requireHandDetail) {
             throw new HandDetailRequiredError();
@@ -117,7 +129,25 @@ export function normalizeWinningHandDataWithHandDetail(
     };
 
     const derived = scoreHand(scoreInput);
+    return finalizeDerivedHand(hand, derived, players);
+}
 
+/**
+ * Reconciles a derived score with whatever the client claimed and resolves pao.
+ * Shared by both deriving entry modes (tiles and yaku selection) so a hand cannot
+ * be validated more loosely just because of how it was entered.
+ */
+function finalizeDerivedHand(
+    hand: WinningHandData,
+    derived: {
+        han?: number | undefined;
+        fu?: number | undefined;
+        yakumanCount: number;
+        yaku: HandYaku[];
+        paoSeat?: number | undefined;
+    },
+    players: GamePlayer[]
+): WinningHandData {
     if (hand.han !== undefined || hand.fu !== undefined || hand.yakumanCount > 0) {
         if (derived.yakumanCount > 0 && derived.han === undefined) {
             if (hand.yakumanCount !== derived.yakumanCount || hand.han !== undefined || hand.fu !== undefined) {
@@ -214,7 +244,7 @@ export function calculateGameRoundResult(
     const customRules = rules.details.customRules;
 
     if (result.type === 'TSUMO') {
-        const normalizedHand = normalizeWinningHandDataWithHandDetail(
+        const normalizedHand = normalizeWinningHandData(
             result.winningHandData,
             'TSUMO',
             undefined,
@@ -233,7 +263,7 @@ export function calculateGameRoundResult(
         const dealInPlayerId = result.dealInPlayerId;
         const riichiPlayerIds = result.riichiPlayerIds;
         const normalizedHands = result.winningHandData.map(hand =>
-            normalizeWinningHandDataWithHandDetail(
+            normalizeWinningHandData(
                 hand,
                 'RON',
                 dealInPlayerId,
