@@ -56,6 +56,27 @@ const MUTUALLY_EXCLUSIVE: readonly (readonly [YakuCode, YakuCode])[] = [
     ['iipeikou', 'ryanpeikou'],
 ];
 
+// Yaku that contradict a verifiable fact about the round rather than another
+// yaku. Unlike MUTUALLY_EXCLUSIVE these are not shape contradictions: the hand is
+// fine, it simply cannot have been won the way the operator described.
+const WIN_TYPE_ONLY: Readonly<Partial<Record<YakuCode, 'TSUMO' | 'RON'>>> = {
+    // You cannot draw your own winning tile off someone else's discard, and the
+    // three below all name a discard as the winning tile.
+    menzen_tsumo: 'TSUMO',
+    haitei: 'TSUMO',
+    houtei: 'RON',
+    chankan: 'RON',
+    // Robbing a kan and the last discard are both rons; the last drawn tile and
+    // the replacement after a kan are both tsumo.
+    rinshan_kaihou: 'TSUMO',
+};
+
+// Yaku that only exist as a rider on another declaration. Ippatsu is a window
+// opened by riichi: with no riichi there is no window to win inside.
+const REQUIRES_ANY: Readonly<Partial<Record<YakuCode, readonly YakuCode[]>>> = {
+    ippatsu: ['riichi', 'double_riichi'],
+};
+
 const COUNT_FIELD: Readonly<Partial<Record<YakuCode, keyof YakuSelection>>> = {
     yakuhai: 'yakuhai',
     dora: 'dora',
@@ -69,10 +90,23 @@ const COUNT_FIELD: Readonly<Partial<Record<YakuCode, keyof YakuSelection>>> = {
  * already pinned by the yaku themselves and fall back to the common 30.
  * The operator can override whenever the wait or the triplets actually matter.
  */
+export function allowedFu(
+    codes: readonly YakuCode[],
+    winType: 'TSUMO' | 'RON'
+): readonly number[] | null {
+    // Seven pairs is always 25 fu: there are no triplets, waits or melds left to
+    // add anything.
+    if (codes.includes('chiitoitsu')) return [25];
+    // Pinfu *is* the assertion that nothing scores fu: all sequences, a two-sided
+    // wait, a non-yakuhai pair. The 20 base is therefore the whole count, and the
+    // only addition possible is the 10 for winning off a discard.
+    if (codes.includes('pinfu')) return winType === 'TSUMO' ? [20] : [30];
+    // Every other hand depends on tiles this entry mode never sees.
+    return null;
+}
+
 export function inferFu(codes: readonly YakuCode[], winType: 'TSUMO' | 'RON'): number {
-    if (codes.includes('chiitoitsu')) return 25;
-    if (codes.includes('pinfu')) return winType === 'TSUMO' ? 20 : 30;
-    return 30;
+    return allowedFu(codes, winType)?.[0] ?? 30;
 }
 
 function countFor(selection: YakuSelection, code: YakuCode): number {
@@ -85,7 +119,11 @@ function yakuhaiCount(selection: YakuSelection): number {
     return Number(selection.yakuhai ?? 0);
 }
 
-function validate(selection: YakuSelection, declaredLocal: Set<string>): void {
+function validate(
+    selection: YakuSelection,
+    declaredLocal: Set<string>,
+    winType: 'TSUMO' | 'RON'
+): void {
     const codes = selection.codes;
     if (codes.length === 0 && yakuhaiCount(selection) <= 0) {
         throw new YakuSelectionInvalidError('empty');
@@ -108,6 +146,18 @@ function validate(selection: YakuSelection, declaredLocal: Set<string>): void {
         if (selection.isOpen && isClosedOnlyYaku(code)) {
             throw new YakuSelectionInvalidError(code);
         }
+        const requiredWin = WIN_TYPE_ONLY[code];
+        if (requiredWin && requiredWin !== winType) {
+            throw new YakuSelectionInvalidError(`${code}+${winType}`);
+        }
+    }
+
+    const prerequisiteFailure = codes.find(code => {
+        const needed = REQUIRES_ANY[code];
+        return needed !== undefined && !needed.some(dep => codes.includes(dep));
+    });
+    if (prerequisiteFailure) {
+        throw new YakuSelectionInvalidError(`${prerequisiteFailure}+missingPrerequisite`);
     }
 
     const selected = new Set<string>(codes);
@@ -123,6 +173,13 @@ function validate(selection: YakuSelection, declaredLocal: Set<string>): void {
     if (!hasNamedYaku && yakuhaiCount(selection) <= 0) {
         throw new YakuSelectionInvalidError('doraOnly');
     }
+
+    // An override is only worth honouring where the yaku leave the fu open. Where
+    // they pin it, a different number is a typo that would misprice the hand.
+    const fuChoices = allowedFu(codes, winType);
+    if (selection.fu !== undefined && fuChoices && !fuChoices.includes(selection.fu)) {
+        throw new YakuSelectionInvalidError(`fu+${selection.fu}`);
+    }
 }
 
 /**
@@ -136,7 +193,7 @@ function validate(selection: YakuSelection, declaredLocal: Set<string>): void {
 export function scoreYakuSelection(input: ScoreYakuSelectionInput): ScoreYakuSelectionResult {
     const { selection, winType, customRules } = input;
     const declaredLocal = declaredLocalYakuIds(customRules);
-    validate(selection, declaredLocal);
+    validate(selection, declaredLocal, winType);
 
     const isOpen = Boolean(selection.isOpen);
 

@@ -58,6 +58,81 @@ describe('scoreYakuSelection', () => {
             });
             expect(overridden.fu).toBe(40);
         });
+
+        // The playtest complaint: pinfu was accepting 40 fu, which no pinfu hand
+        // can score. The yaku itself asserts that nothing adds fu.
+        it('refuses an override the yaku have already pinned', () => {
+            expect(() =>
+                scoreYakuSelection({
+                    selection: { codes: ['pinfu', 'tanyao'], fu: 40 },
+                    winType: 'RON',
+                })
+            ).toThrow(YakuSelectionInvalidError);
+            expect(() =>
+                scoreYakuSelection({
+                    selection: { codes: ['pinfu', 'tanyao'], fu: 30 },
+                    winType: 'TSUMO',
+                })
+            ).toThrow(YakuSelectionInvalidError);
+            expect(() => scoreYakuSelection({ selection: { codes: ['chiitoitsu'], fu: 30 }, winType: 'RON' })).toThrow(
+                YakuSelectionInvalidError
+            );
+        });
+
+        it('accepts the one value each pinned shape allows', () => {
+            expect(
+                scoreYakuSelection({
+                    selection: { codes: ['pinfu', 'tanyao'], fu: 20 },
+                    winType: 'TSUMO',
+                }).fu
+            ).toBe(20);
+            expect(
+                scoreYakuSelection({ selection: { codes: ['pinfu', 'tanyao'], fu: 30 }, winType: 'RON' })
+                    .fu
+            ).toBe(30);
+        });
+    });
+
+    // Every case here is a hand that is fine on its own but cannot have been won
+    // the way the operator described the round.
+    describe('round-fact contradictions', () => {
+        it.each(
+            [
+                ['menzen_tsumo', 'RON'],
+                ['haitei', 'RON'],
+                ['rinshan_kaihou', 'RON'],
+                ['houtei', 'TSUMO'],
+                ['chankan', 'TSUMO'],
+            ] as const
+        )('rejects %s on a %s', (code, winType) => {
+            expect(() => scoreYakuSelection({ selection: { codes: [code, 'tanyao'] }, winType }))
+                .toThrow(YakuSelectionInvalidError);
+        });
+
+        it.each(
+            [
+                ['menzen_tsumo', 'TSUMO'],
+                ['haitei', 'TSUMO'],
+                ['rinshan_kaihou', 'TSUMO'],
+                ['houtei', 'RON'],
+                ['chankan', 'RON'],
+            ] as const
+        )('accepts %s on a %s', (code, winType) => {
+            expect(scoreYakuSelection({ selection: { codes: [code, 'tanyao'] }, winType }).han).toBe(2);
+        });
+
+        // Ippatsu is a window riichi opens; with no riichi there is no window.
+        it('rejects ippatsu without a riichi', () => {
+            expect(() => scoreYakuSelection({ selection: { codes: ['ippatsu', 'tanyao'] }, winType: 'RON' })).toThrow(
+                YakuSelectionInvalidError
+            );
+        });
+
+        it.each(['riichi', 'double_riichi'] as const)('accepts ippatsu alongside %s', declaration => {
+            expect(
+                scoreYakuSelection({ selection: { codes: ['ippatsu', declaration] }, winType: 'RON' }).han
+            ).toBeGreaterThanOrEqual(2);
+        });
     });
 
     it('scores a yakuman on its own track, ignoring dora', () => {
