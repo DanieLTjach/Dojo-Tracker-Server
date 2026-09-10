@@ -3,6 +3,7 @@ import { declaredLocalYakuIds, LOCAL_YAKU_REGISTRY } from './localYaku.ts';
 import type { CustomRuleLike } from './localYaku.ts';
 import type { HandYaku, YakuCode } from './types.ts';
 import {
+    COUNTED_YAKU_CODES,
     isClosedOnlyYaku,
     isCountedYakuCode,
     standardYakuHan,
@@ -153,8 +154,8 @@ export function scoreYakuSelection(input: ScoreYakuSelectionInput): ScoreYakuSel
     const yaku: HandYaku[] = [];
     let han = 0;
     for (const code of selection.codes) {
-        const count = countFor(selection, code);
-        const standard = standardYakuHan(code, { isOpen, count });
+        if (isCountedYakuCode(code)) continue; // handled below, from the counts
+        const standard = standardYakuHan(code, { isOpen });
         if (standard !== undefined) {
             han += standard;
             yaku.push({ code, han: standard });
@@ -164,6 +165,16 @@ export function scoreYakuSelection(input: ScoreYakuSelectionInput): ScoreYakuSel
         if (local?.han) {
             han += local.han;
             yaku.push({ code, han: local.han });
+        }
+    }
+
+    // A non-zero count is itself the assertion: "3 dora" needs no separate
+    // presence flag, and requiring one would silently drop the operator's count.
+    for (const code of COUNTED_YAKU_CODES) {
+        const count = countFor(selection, code);
+        if (count > 0) {
+            han += count;
+            yaku.push({ code, han: count });
         }
     }
 

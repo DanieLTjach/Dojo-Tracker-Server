@@ -6,7 +6,16 @@ const tsubameRules = [
 ];
 
 describe('scoreYakuSelection', () => {
-    it('prices the everyday case: tanyao + pinfu + 3 dora', () => {
+    // The count is the assertion: a client that sends `dora: 3` without listing
+    // 'dora' among the codes must still be charged for it.
+    it('prices the everyday case: tanyao + pinfu + 3 dora, code listed or not', () => {
+        const withoutCode = scoreYakuSelection({
+            selection: { codes: ['tanyao', 'pinfu'], dora: 3 },
+            winType: 'RON',
+        });
+        expect(withoutCode.han).toBe(5);
+        expect(withoutCode.yaku).toContainEqual({ code: 'dora', han: 3 });
+
         const res = scoreYakuSelection({
             selection: { codes: ['tanyao', 'pinfu', 'dora'], dora: 3 },
             winType: 'RON',
@@ -136,5 +145,22 @@ describe('scoreYakuSelection', () => {
         });
         expect(res.han).toBe(1);
         expect(res.yaku).toEqual([{ code: 'tanyao', han: 1 }]);
+    });
+
+    it('never double-counts a listed counted code', () => {
+        const res = scoreYakuSelection({
+            selection: { codes: ['tanyao', 'dora'], dora: 2 },
+            winType: 'RON',
+        });
+        expect(res.han).toBe(3);
+        expect(res.yaku.filter(y => y.code === 'dora')).toHaveLength(1);
+    });
+
+    it('sums every counted type', () => {
+        const res = scoreYakuSelection({
+            selection: { codes: ['riichi'], dora: 1, akaDora: 2, uraDora: 1 },
+            winType: 'RON',
+        });
+        expect(res.han).toBe(5);
     });
 });
