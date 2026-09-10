@@ -79,6 +79,11 @@ export const STANDARD_YAKU_SPECS: Readonly<Partial<Record<YakuCode, StandardYaku
     jikaze_pei: { han: 1 },
 
     // Han equals the count the operator entered.
+    // `yakuhai` collapses the eleven individual dragon and wind yaku into one
+    // count: the engine names each of them separately when it can see the tiles,
+    // but a yaku list only needs "how many", and eleven near-identical rows made
+    // the picker unusable.
+    yakuhai: { counted: true },
     dora: { counted: true },
     aka_dora: { counted: true },
     ura_dora: { counted: true },
@@ -89,7 +94,7 @@ export const STANDARD_YAKU_SPECS: Readonly<Partial<Record<YakuCode, StandardYaku
 // not by a fixed han, so it is excluded here exactly as it is from LOCAL_YAKU_REGISTRY.
 export const YAKU_CODES_PRICED_ELSEWHERE: readonly YakuCode[] = ['renhou'];
 
-export const COUNTED_YAKU_CODES: readonly YakuCode[] = ['dora', 'aka_dora', 'ura_dora', 'kita'];
+export const COUNTED_YAKU_CODES: readonly YakuCode[] = ['yakuhai', 'dora', 'aka_dora', 'ura_dora', 'kita'];
 
 export function isCountedYakuCode(code: YakuCode): boolean {
     return COUNTED_YAKU_CODES.includes(code);

@@ -164,3 +164,44 @@ describe('scoreYakuSelection', () => {
         expect(res.han).toBe(5);
     });
 });
+
+describe('yakuhai counting', () => {
+    // Eleven dragon and wind yaku collapse into one count in the picker, so the
+    // count has to score without any of their individual codes being present.
+    it('scores a yakuhai count with no codes at all', () => {
+        const res = scoreYakuSelection({ selection: { codes: [], yakuhai: 2 }, winType: 'RON' });
+        expect(res.han).toBe(2);
+        expect(res.yaku).toEqual([{ code: 'yakuhai', han: 2 }]);
+    });
+
+    it('adds the count to named yaku', () => {
+        const res = scoreYakuSelection({
+            selection: { codes: ['riichi', 'toitoi'], yakuhai: 3, dora: 1 },
+            winType: 'RON',
+        });
+        expect(res.han).toBe(7); // 1 + 2 + 3 + 1
+    });
+
+    // Unlike dora, yakuhai is a real yaku: a lone dragon triplet wins.
+    it('carries a hand on its own, where dora cannot', () => {
+        expect(() => scoreYakuSelection({ selection: { codes: [], yakuhai: 1 }, winType: 'RON' }))
+            .not.toThrow();
+        expect(() => scoreYakuSelection({ selection: { codes: [], dora: 3 }, winType: 'RON' }))
+            .toThrow(YakuSelectionInvalidError);
+    });
+
+    it('rejects a wholly empty selection', () => {
+        expect(() => scoreYakuSelection({ selection: { codes: [], yakuhai: 0 }, winType: 'RON' }))
+            .toThrow(YakuSelectionInvalidError);
+        expect(() => scoreYakuSelection({ selection: { codes: [] }, winType: 'RON' }))
+            .toThrow(YakuSelectionInvalidError);
+    });
+
+    it('omits the row when the count is zero', () => {
+        const res = scoreYakuSelection({
+            selection: { codes: ['tanyao'], yakuhai: 0 },
+            winType: 'RON',
+        });
+        expect(res.yaku).toEqual([{ code: 'tanyao', han: 1 }]);
+    });
+});

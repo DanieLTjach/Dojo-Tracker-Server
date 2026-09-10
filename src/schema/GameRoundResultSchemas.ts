@@ -162,6 +162,7 @@ export const yakuCodeValues = [
     'dora',
     'aka_dora',
     'ura_dora',
+    'yakuhai',
     'tsubame_gaeshi',
     'oopun_riichi',
     'sanrenkou',
@@ -200,11 +201,14 @@ const doraCountSchema = z.number().int().min(0).max(36).optional();
 // Only the codes and counts travel — the server prices them, so `yaku` below
 // stays server-derived on every path.
 export const yakuSelectionSchema = z.object({
-    codes: z.array(yakuCodeSchema).min(1).max(12).refine(
+    // Empty is allowed here: a hand can be nothing but yakuhai, which travels as
+    // a count rather than a code. scoreYakuSelection rejects a genuinely empty one.
+    codes: z.array(yakuCodeSchema).max(12).refine(
         codes => new Set(codes).size === codes.length,
         { error: 'yaku codes must be unique' }
     ),
     isOpen: z.boolean().optional(),
+    yakuhai: z.number().int().min(0).max(12).optional(),
     dora: doraCountSchema,
     akaDora: doraCountSchema,
     uraDora: doraCountSchema,

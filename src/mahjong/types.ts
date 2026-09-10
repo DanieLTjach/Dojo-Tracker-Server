@@ -138,6 +138,7 @@ export type YakuCode =
     | 'dora'
     | 'aka_dora'
     | 'ura_dora'
+    | 'yakuhai'
     | 'tsubame_gaeshi'
     | 'oopun_riichi'
     | 'sanrenkou'

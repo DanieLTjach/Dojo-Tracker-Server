@@ -18,6 +18,8 @@ export interface YakuSelection {
     akaDora?: number | undefined;
     uraDora?: number | undefined;
     kita?: number | undefined;
+    /** Dragon and seat/round wind triplets, counted rather than named. */
+    yakuhai?: number | undefined;
     /** Operator override of the inferred fu. */
     fu?: number | undefined;
 }
@@ -55,6 +57,7 @@ const MUTUALLY_EXCLUSIVE: readonly (readonly [YakuCode, YakuCode])[] = [
 ];
 
 const COUNT_FIELD: Readonly<Partial<Record<YakuCode, keyof YakuSelection>>> = {
+    yakuhai: 'yakuhai',
     dora: 'dora',
     aka_dora: 'akaDora',
     ura_dora: 'uraDora',
@@ -77,9 +80,14 @@ function countFor(selection: YakuSelection, code: YakuCode): number {
     return field ? Number(selection[field] ?? 0) : 0;
 }
 
+/** Yakuhai is counted like dora but, unlike dora, can carry a hand on its own. */
+function yakuhaiCount(selection: YakuSelection): number {
+    return Number(selection.yakuhai ?? 0);
+}
+
 function validate(selection: YakuSelection, declaredLocal: Set<string>): void {
     const codes = selection.codes;
-    if (codes.length === 0) {
+    if (codes.length === 0 && yakuhaiCount(selection) <= 0) {
         throw new YakuSelectionInvalidError('empty');
     }
     if (new Set(codes).size !== codes.length) {
@@ -109,9 +117,10 @@ function validate(selection: YakuSelection, declaredLocal: Set<string>): void {
         }
     }
 
-    // Dora is not a yaku: a hand of nothing but dora cannot win.
-    const hasRealYaku = codes.some(code => !isCountedYakuCode(code));
-    if (!hasRealYaku) {
+    // Dora is not a yaku: a hand of nothing but dora cannot win. Yakuhai is the
+    // exception among the counted codes -- a lone dragon triplet is a real hand.
+    const hasNamedYaku = codes.some(code => !isCountedYakuCode(code));
+    if (!hasNamedYaku && yakuhaiCount(selection) <= 0) {
         throw new YakuSelectionInvalidError('doraOnly');
     }
 }

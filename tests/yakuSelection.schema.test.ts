@@ -22,8 +22,17 @@ describe('yakuSelectionSchema', () => {
         expect(yakuSelectionSchema.safeParse({ codes: ['tanyao'] }).success).toBe(true);
     });
 
-    it('rejects an empty code list', () => {
-        expect(yakuSelectionSchema.safeParse({ codes: [] }).success).toBe(false);
+    // An empty code list is valid on the wire: a hand can be nothing but yakuhai,
+    // which travels as a count. scoreYakuSelection rejects a genuinely empty one,
+    // where neither codes nor counts carry a yaku.
+    it('accepts an empty code list carrying a yakuhai count', () => {
+        expect(yakuSelectionSchema.safeParse({ codes: [], yakuhai: 2 }).success).toBe(true);
+        expect(yakuSelectionSchema.safeParse({ codes: [] }).success).toBe(true);
+    });
+
+    it('rejects an out-of-range yakuhai count', () => {
+        expect(yakuSelectionSchema.safeParse({ codes: [], yakuhai: -1 }).success).toBe(false);
+        expect(yakuSelectionSchema.safeParse({ codes: [], yakuhai: 99 }).success).toBe(false);
     });
 
     it('rejects duplicate codes', () => {
