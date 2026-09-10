@@ -46,11 +46,14 @@ const LOCAL_YAKU_SPECS: readonly LocalYakuSpec[] = [
         id: 'tsubame_gaeshi',
         code: 'tsubame_gaeshi',
         han: 1,
+        // The discarder's riichi is deliberately unchecked: a riichi ronned on its
+        // declaration tile is never completed, so the discarder is absent from
+        // riichiPlayerSeats (the seats actually charged the deposit). Requiring it
+        // would only accept rounds that were recorded wrongly.
         isApplicable: (input: ScoreHandInput) =>
             input.winType === 'RON' &&
             input.dealInSeat !== undefined &&
-            input.dealInSeat !== input.winnerSeat &&
-            Boolean(input.riichiPlayerSeats?.has(input.dealInSeat)),
+            input.dealInSeat !== input.winnerSeat,
         // Not conflicting, deliberately: ippatsu, houtei, winner's riichi, open melds.
         conflictingContextFlags: ['chankan', 'haitei', 'rinshanKaihou', 'tenhou', 'chiihou', 'renhou'],
     },

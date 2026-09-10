@@ -1411,19 +1411,35 @@ describe('Mahjong Hand Scoring Engine', () => {
             ).toThrow(HandDetailContextConflictError);
         });
 
-        it('throws HandDetailContextConflictError when discarder is not in riichi', () => {
-            expect(() =>
-                scoreHand({
-                    handDetail: pinfuTanyaoDoraHand,
-                    winType: 'RON',
-                    winnerSeat: 0,
-                    dealerSeat: 0,
-                    roundWindSeat: 0,
-                    dealInSeat: 1,
-                    riichiPlayerSeats: new Set([2]), // seat 2 declared riichi, but seat 1 dealt in
-                    customRules: tsubameCustomRules,
-                })
-            ).toThrow(HandDetailContextConflictError);
+        // The riichi ronned on its declaration tile is never completed, so the
+        // discarder is never among the seats charged the deposit. This is the
+        // ordinary way a tsubame gaeshi round is recorded.
+        it('scores when the discarder is not among the charged riichi seats', () => {
+            const res = scoreHand({
+                handDetail: pinfuTanyaoDoraHand,
+                winType: 'RON',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 1,
+                riichiPlayerSeats: new Set([2]), // seat 2 completed riichi; seat 1 dealt in
+                customRules: tsubameCustomRules,
+            });
+            expect(res.yaku.some(y => y.code === 'tsubame_gaeshi')).toBe(true);
+        });
+
+        it('scores when no seat declared riichi at all', () => {
+            const res = scoreHand({
+                handDetail: pinfuTanyaoDoraHand,
+                winType: 'RON',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 1,
+                riichiPlayerSeats: new Set(),
+                customRules: tsubameCustomRules,
+            });
+            expect(res.yaku.some(y => y.code === 'tsubame_gaeshi')).toBe(true);
         });
 
         it('throws HandDetailContextConflictError when conflicting context flags are set (chankan, renhou)', () => {

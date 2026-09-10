@@ -66,7 +66,7 @@ describe('LOCAL_YAKU_REGISTRY', () => {
             uraDoraIndicators: ['haku'],
         };
 
-        it('is applicable on RON when discarder declared riichi', () => {
+        it('is applicable on RON off another seat', () => {
             const input: ScoreHandInput = {
                 handDetail: dummyHandDetail,
                 winType: 'RON',
@@ -117,7 +117,9 @@ describe('LOCAL_YAKU_REGISTRY', () => {
             expect(tsubame.isApplicable(input)).toBe(false);
         });
 
-        it('is not applicable when discarder did not declare riichi', () => {
+        // A riichi ronned on its declaration tile is never completed, so the
+        // discarder is absent from riichiPlayerSeats. This is the normal case.
+        it('is applicable when the discarder is not among the charged riichi seats', () => {
             const input: ScoreHandInput = {
                 handDetail: dummyHandDetail,
                 winType: 'RON',
@@ -125,9 +127,22 @@ describe('LOCAL_YAKU_REGISTRY', () => {
                 dealerSeat: 0,
                 roundWindSeat: 0,
                 dealInSeat: 1,
-                riichiPlayerSeats: new Set([2]), // different seat in riichi
+                riichiPlayerSeats: new Set([2]), // a different seat completed riichi
             };
-            expect(tsubame.isApplicable(input)).toBe(false);
+            expect(tsubame.isApplicable(input)).toBe(true);
+        });
+
+        it('is applicable when no seat declared riichi at all', () => {
+            const input: ScoreHandInput = {
+                handDetail: dummyHandDetail,
+                winType: 'RON',
+                winnerSeat: 0,
+                dealerSeat: 0,
+                roundWindSeat: 0,
+                dealInSeat: 1,
+                riichiPlayerSeats: new Set(),
+            };
+            expect(tsubame.isApplicable(input)).toBe(true);
         });
 
         it('has expected conflicting context flags', () => {
