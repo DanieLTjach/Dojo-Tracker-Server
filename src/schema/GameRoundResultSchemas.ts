@@ -105,7 +105,7 @@ export const handDetailSchema = z.object({
     context: handContextSchema.optional(),
 });
 
-const yakuCodeValues = [
+export const yakuCodeValues = [
     'menzen_tsumo',
     'riichi',
     'ippatsu',
