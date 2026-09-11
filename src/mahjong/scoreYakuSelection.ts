@@ -98,15 +98,21 @@ const COUNT_FIELD: Readonly<Partial<Record<YakuCode, keyof YakuSelection>>> = {
     kita: 'kita',
 };
 
+// Every fu an ordinary hand can land on once rounded up to the next ten. 20 and
+// 25 are absent because only pinfu tsumo and chiitoitsu reach them.
+const ROUNDED_FU = [30, 40, 50, 60, 70, 80, 90, 100, 110] as const;
+
 /**
- * Fu cannot be derived without a hand shape, so infer the cases the shape is
- * already pinned by the yaku themselves and fall back to the common 30.
- * The operator can override whenever the wait or the triplets actually matter.
+ * Fu cannot be derived without a hand shape, so narrow it to what the yaku and
+ * the round still allow. Pinfu and chiitoitsu pin a single value; every other
+ * hand gets a floor, and the operator picks above it when the wait or the
+ * triplets add more.
  */
 export function allowedFu(
     codes: readonly YakuCode[],
-    winType: 'TSUMO' | 'RON'
-): readonly number[] | null {
+    winType: 'TSUMO' | 'RON',
+    isOpen: boolean
+): readonly number[] {
     // Seven pairs is always 25 fu: there are no triplets, waits or melds left to
     // add anything.
     if (codes.includes('chiitoitsu')) return [25];
@@ -114,12 +120,18 @@ export function allowedFu(
     // wait, a non-yakuhai pair. The 20 base is therefore the whole count, and the
     // only addition possible is the 10 for winning off a discard.
     if (codes.includes('pinfu')) return winType === 'TSUMO' ? [20] : [30];
-    // Every other hand depends on tiles this entry mode never sees.
-    return null;
+    // Without pinfu something in the hand scores fu -- a triplet, a closed or edge
+    // wait, a yakuhai pair -- and even the cheapest 2 lifts a closed ron's 20 base
+    // + 10 for the concealed ron past 30, so it rounds to 40. Any other hand
+    // reaches 30: a tsumo adds 2, and an open hand with nothing to add is still
+    // counted as 30.
+    const floor = !isOpen && winType === 'RON' ? 40 : 30;
+    return ROUNDED_FU.filter(fu => fu >= floor);
 }
 
-export function inferFu(codes: readonly YakuCode[], winType: 'TSUMO' | 'RON'): number {
-    return allowedFu(codes, winType)?.[0] ?? 30;
+/** The cheapest reachable fu: what the hand scores when nothing adds to it. */
+export function inferFu(codes: readonly YakuCode[], winType: 'TSUMO' | 'RON', isOpen: boolean): number {
+    return allowedFu(codes, winType, isOpen)[0] ?? 30;
 }
 
 function countFor(selection: YakuSelection, code: YakuCode): number {
@@ -197,10 +209,10 @@ function validate(
         throw new YakuSelectionInvalidError('doraOnly');
     }
 
-    // An override is only worth honouring where the yaku leave the fu open. Where
-    // they pin it, a different number is a typo that would misprice the hand.
-    const fuChoices = allowedFu(codes, winType);
-    if (selection.fu !== undefined && fuChoices && !fuChoices.includes(selection.fu)) {
+    // A fu the hand cannot reach is a typo that would misprice it: pinfu at 40, or
+    // a closed ron at 30.
+    const fuChoices = allowedFu(codes, winType, Boolean(selection.isOpen));
+    if (selection.fu !== undefined && !fuChoices.includes(selection.fu)) {
         throw new YakuSelectionInvalidError(`fu+${selection.fu}`);
     }
 }
@@ -273,7 +285,7 @@ export function scoreYakuSelection(input: ScoreYakuSelectionInput): ScoreYakuSel
 
     return {
         han,
-        fu: selection.fu ?? inferFu(selection.codes, winType),
+        fu: selection.fu ?? inferFu(selection.codes, winType, isOpen),
         yakumanCount: 0,
         yaku,
     };

@@ -41,11 +41,31 @@ describe('scoreYakuSelection', () => {
 
     describe('fu inference', () => {
         it('uses 25 for chiitoitsu, 20 for pinfu tsumo and 30 for pinfu ron', () => {
-            expect(inferFu(['chiitoitsu'], 'TSUMO')).toBe(25);
-            expect(inferFu(['chiitoitsu'], 'RON')).toBe(25);
-            expect(inferFu(['pinfu', 'tanyao'], 'TSUMO')).toBe(20);
-            expect(inferFu(['pinfu', 'tanyao'], 'RON')).toBe(30);
-            expect(inferFu(['toitoi'], 'RON')).toBe(30);
+            expect(inferFu(['chiitoitsu'], 'TSUMO', false)).toBe(25);
+            expect(inferFu(['chiitoitsu'], 'RON', false)).toBe(25);
+            expect(inferFu(['pinfu', 'tanyao'], 'TSUMO', false)).toBe(20);
+            expect(inferFu(['pinfu', 'tanyao'], 'RON', false)).toBe(30);
+        });
+
+        // Without pinfu something in the hand scores fu, so a closed ron rounds
+        // past 30 to 40. A tsumo or an open hand still bottoms out at 30.
+        it('floors a closed ron without pinfu at 40 and every other hand at 30', () => {
+            expect(inferFu(['riichi', 'tanyao'], 'RON', false)).toBe(40);
+            expect(inferFu(['riichi', 'tanyao'], 'TSUMO', false)).toBe(30);
+            expect(inferFu(['toitoi'], 'RON', true)).toBe(30);
+            expect(inferFu(['tanyao'], 'TSUMO', true)).toBe(30);
+            expect(scoreYakuSelection({ selection: { codes: ['riichi', 'tanyao'] }, winType: 'RON' }).fu).toBe(40);
+        });
+
+        it('refuses a fu below the floor', () => {
+            expect(() => scoreYakuSelection({ selection: { codes: ['riichi', 'tanyao'], fu: 30 }, winType: 'RON' }))
+                .toThrow(YakuSelectionInvalidError);
+            expect(() =>
+                scoreYakuSelection({ selection: { codes: ['tanyao'], isOpen: true, fu: 20 }, winType: 'TSUMO' })
+            ).toThrow(YakuSelectionInvalidError);
+            expect(
+                scoreYakuSelection({ selection: { codes: ['riichi', 'tanyao'], fu: 30 }, winType: 'TSUMO' }).fu
+            ).toBe(30);
         });
 
         it('lets the operator override the inferred value', () => {
