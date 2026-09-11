@@ -35,6 +35,7 @@ export interface CustomRuleEntry {
     value: boolean | number | string;
     name: string;
     tooltip?: string | undefined;
+    presetId?: string | undefined;
 }
 
 export interface GameRulesDetails {

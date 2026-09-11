@@ -138,6 +138,8 @@ describe('error catalog coverage', () => {
         new PointCalculationErrors.HandDetailScoreMismatchError(),
         new PointCalculationErrors.HandDetailContextConflictError(),
         new PointCalculationErrors.UnsupportedScoringContextError(),
+        new PointCalculationErrors.UnsupportedLocalYakuError('tsubame_gaeshi'),
+        new PointCalculationErrors.LocalYakuNotInRulesetError('tsubame_gaeshi'),
         new PointCalculationErrors.UnmappedYakuError('dummy'),
         // Rating
         new RatingErrors.UserRatingChangeInGameNotFound(1, 2),

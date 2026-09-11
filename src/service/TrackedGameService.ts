@@ -379,14 +379,12 @@ export class TrackedGameService {
         }
     }
 
-    // The event flag forces hand detail and removes the per-game choice;
-    // otherwise the game row decides. One helper so submit and preview cannot
-    // drift.
-    private resolveRequireHandDetail(game: GameWithPlayers, event: Event): boolean {
-        if (event.config?.requireHandDetail) {
-            return true;
-        }
-        return game.enterHandDetail;
+    // Only the event flag forces hand detail. `game.enterHandDetail` is the
+    // editor's starting mode, not a gate: an operator who deliberately entered
+    // han/fu for one hand must not have it rejected. One helper so submit and
+    // preview cannot drift.
+    private resolveRequireHandDetail(_game: GameWithPlayers, event: Event): boolean {
+        return event.config?.requireHandDetail === true;
     }
 
     private validateGameIsInProgress(game: GameWithPlayers, error: () => BadRequestError): void {

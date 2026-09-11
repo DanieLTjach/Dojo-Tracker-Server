@@ -1,6 +1,6 @@
 import type { GameRulesValues } from '../src/data/gameRulesCatalog.ts';
 import { UmaTieBreak } from '../src/model/EventModels.ts';
-import type { GameRules } from '../src/model/EventModels.ts';
+import type { CustomRuleEntry, GameRules } from '../src/model/EventModels.ts';
 import { GameStatus, Wind } from '../src/model/GameModels.ts';
 import type { DetailedGame, GamePlayer, GameState } from '../src/model/GameModels.ts';
 
@@ -166,5 +166,19 @@ export function makeGameRules(rules: GameRulesValues): GameRules {
         umaTieBreak: UmaTieBreak.WIND,
         allowNonZeroSumUma: false,
         details: { rules },
+    };
+}
+
+export function makeGameRulesWithCustomRules(
+    rules: GameRulesValues,
+    customRules: CustomRuleEntry[]
+): GameRules {
+    const base = makeGameRules(rules);
+    return {
+        ...base,
+        details: {
+            ...base.details!,
+            customRules,
+        },
     };
 }

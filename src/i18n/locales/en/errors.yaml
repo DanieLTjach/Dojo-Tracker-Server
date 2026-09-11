@@ -178,6 +178,8 @@ errors:
   handDetailContextConflict: Hand context conflicts with round result
   handDetailLockedByEvent: This event requires full hand entry — the switch is unavailable
   unsupportedScoringContext: Hand context is not supported by scoring rules
+  unsupportedLocalYaku: "Local yaku is not supported: {{localYakuId}}"
+  localYakuNotInRuleset: "Local yaku is not enabled in this ruleset: {{localYakuId}}"
   unmappedYakuError: "Scoring engine produced an unmapped yaku: {{yakuName}}"
 
   userRatingChangeInGameNotFound: Rating change for user {{userId}} in game {{gameId}} was not found
@@ -196,3 +198,5 @@ errors:
 
   skillRatingNotEnabledForClub: OpenSkill rating is not enabled for club {{clubId}}
   invalidGameSize: "Invalid game size {{gameSize}}. Allowed values: 3, 4"
+
+  yakuSelectionInvalid: "The selected yaku cannot describe one hand: {{reason}}"
