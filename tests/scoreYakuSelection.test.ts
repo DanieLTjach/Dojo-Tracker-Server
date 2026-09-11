@@ -30,13 +30,13 @@ describe('scoreYakuSelection', () => {
     });
 
     it('charges the open value for a split yaku', () => {
-        const closed = scoreYakuSelection({ selection: { codes: ['honitsu', 'toitoi'] }, winType: 'RON' });
+        const closed = scoreYakuSelection({ selection: { codes: ['honitsu', 'ittsuu'] }, winType: 'RON' });
         const open = scoreYakuSelection({
-            selection: { codes: ['honitsu', 'toitoi'], isOpen: true },
+            selection: { codes: ['honitsu', 'ittsuu'], isOpen: true },
             winType: 'RON',
         });
         expect(closed.han).toBe(5); // 3 + 2
-        expect(open.han).toBe(4); // 2 + 2
+        expect(open.han).toBe(3); // 2 + 1
     });
 
     describe('fu inference', () => {
@@ -49,11 +49,11 @@ describe('scoreYakuSelection', () => {
         });
 
         it('lets the operator override the inferred value', () => {
-            const inferred = scoreYakuSelection({ selection: { codes: ['toitoi'] }, winType: 'RON' });
+            const inferred = scoreYakuSelection({ selection: { codes: ['toitoi'], isOpen: true }, winType: 'RON' });
             expect(inferred.fu).toBe(30);
 
             const overridden = scoreYakuSelection({
-                selection: { codes: ['toitoi'], fu: 40 },
+                selection: { codes: ['toitoi'], isOpen: true, fu: 40 },
                 winType: 'RON',
             });
             expect(overridden.fu).toBe(40);
@@ -199,6 +199,21 @@ describe('scoreYakuSelection', () => {
             );
         });
 
+        // A closed toitoi has at least three concealed triplets, so without
+        // sanankou the hand was really open.
+        it('rejects a closed toitoi without sanankou', () => {
+            expect(() => scoreYakuSelection({ selection: { codes: ['toitoi'] }, winType: 'RON' })).toThrow(
+                YakuSelectionInvalidError
+            );
+        });
+
+        it('accepts a closed toitoi with sanankou, and an open toitoi alone', () => {
+            expect(scoreYakuSelection({ selection: { codes: ['toitoi', 'sanankou'] }, winType: 'RON' }).han).toBe(4);
+            expect(
+                scoreYakuSelection({ selection: { codes: ['toitoi'], isOpen: true }, winType: 'RON' }).han
+            ).toBe(2);
+        });
+
         it('rejects dora with no actual yaku', () => {
             expect(() => scoreYakuSelection({ selection: { codes: ['dora'], dora: 3 }, winType: 'RON' })).toThrow(
                 YakuSelectionInvalidError
@@ -255,7 +270,7 @@ describe('yakuhai counting', () => {
 
     it('adds the count to named yaku', () => {
         const res = scoreYakuSelection({
-            selection: { codes: ['riichi', 'toitoi'], yakuhai: 3, dora: 1 },
+            selection: { codes: ['riichi', 'chanta'], yakuhai: 3, dora: 1 },
             winType: 'RON',
         });
         expect(res.han).toBe(7); // 1 + 2 + 3 + 1

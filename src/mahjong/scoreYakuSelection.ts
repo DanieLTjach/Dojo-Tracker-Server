@@ -82,6 +82,14 @@ const REQUIRES_ANY: Readonly<Partial<Record<YakuCode, readonly YakuCode[]>>> = {
     ippatsu: ['riichi', 'double_riichi'],
 };
 
+// Yaku a concealed hand cannot have without another. Every set in a closed
+// toitoi was drawn rather than called, so at least three of its triplets are
+// concealed -- only one completed off a discard stops counting. Toitoi without
+// sanankou is an open hand that was never marked open.
+const CLOSED_HAND_IMPLIES: Readonly<Partial<Record<YakuCode, YakuCode>>> = {
+    toitoi: 'sanankou',
+};
+
 const COUNT_FIELD: Readonly<Partial<Record<YakuCode, keyof YakuSelection>>> = {
     yakuhai: 'yakuhai',
     dora: 'dora',
@@ -163,6 +171,16 @@ function validate(
     });
     if (prerequisiteFailure) {
         throw new YakuSelectionInvalidError(`${prerequisiteFailure}+missingPrerequisite`);
+    }
+
+    if (!selection.isOpen) {
+        const unimplied = codes.find(code => {
+            const implied = CLOSED_HAND_IMPLIES[code];
+            return implied !== undefined && !codes.includes(implied);
+        });
+        if (unimplied) {
+            throw new YakuSelectionInvalidError(`${unimplied}+closedWithout+${CLOSED_HAND_IMPLIES[unimplied]}`);
+        }
     }
 
     const selected = new Set<string>(codes);
