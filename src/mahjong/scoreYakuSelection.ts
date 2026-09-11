@@ -54,6 +54,11 @@ const MUTUALLY_EXCLUSIVE: readonly (readonly [YakuCode, YakuCode])[] = [
     ['honroutou', 'tanyao'],
     ['riichi', 'double_riichi'],
     ['iipeikou', 'ryanpeikou'],
+    // Toitoi is four triplets, so nothing built from sequences can sit beside it.
+    ['toitoi', 'sanshoku_doujun'],
+    ['toitoi', 'ittsuu'],
+    ['toitoi', 'iipeikou'],
+    ['toitoi', 'ryanpeikou'],
 ];
 
 // Yaku that contradict a verifiable fact about the round rather than another

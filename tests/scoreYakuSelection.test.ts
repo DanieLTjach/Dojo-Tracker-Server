@@ -189,6 +189,10 @@ describe('scoreYakuSelection', () => {
             ['honitsu', 'chinitsu'],
             ['riichi', 'double_riichi'],
             ['tanyao', 'chanta'],
+            ['toitoi', 'sanshoku_doujun'],
+            ['toitoi', 'ittsuu'],
+            ['toitoi', 'iipeikou'],
+            ['toitoi', 'ryanpeikou'],
         ])('rejects the contradictory pair %s + %s', (a, b) => {
             expect(() => scoreYakuSelection({ selection: { codes: [a, b] as never }, winType: 'RON' })).toThrow(
                 YakuSelectionInvalidError
