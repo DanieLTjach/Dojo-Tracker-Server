@@ -1,5 +1,9 @@
 import { describe, expect, test } from '@jest/globals';
-import { buildDetailsSchemaForCore, gameRulesDetailsSchema } from '../src/schema/GameRulesSchemas.ts';
+import {
+    buildDetailsSchemaForCore,
+    gameRulesDetailsSchema,
+    parseGameRulesDetailsForCore,
+} from '../src/schema/GameRulesSchemas.ts';
 import { gameRulesPresets } from '../src/data/gameRulesPresets.ts';
 import { gameRulesCatalogByKey } from '../src/data/gameRulesCatalog.ts';
 
@@ -256,16 +260,42 @@ describe('top-level core field validation', () => {
         expect(result.success).toBe(true);
     });
 
+    // A preset seeds these two into the rule blob, where no form field renders
+    // them; the operator then edits the top-level value. The duplicate is never
+    // stored (compactDetails strips it) and never scored by (the read path
+    // rebuilds it from the core), so rejecting the save only stranded the
+    // operator at a field they could not see.
+    const sanmaCore = { numberOfPlayers: 3 as const, startingPoints: 40000 };
+
     test.each([
         ['number_of_players', 4],
         ['starting_points', 35000],
-    ])('rejects compatibility duplicate %s when it conflicts with top-level core', (key, value) => {
+    ])('accepts a stale compatibility duplicate %s', (key, value) => {
         const result = sanmaSchema.safeParse({ rules: { [key]: value } });
 
-        expect(result.success).toBe(false);
-        if (!result.success) {
-            expect(result.error.issues[0]?.path).toEqual(['rules', key]);
-        }
+        expect(result.success).toBe(true);
+    });
+
+    // Accepting the duplicate must not become a way to smuggle yonma rules past
+    // a sanma core: every other rule is still checked against the core.
+    test('still rejects rules that contradict the core player count', () => {
+        expect(() =>
+            parseGameRulesDetailsForCore(
+                { rules: { number_of_players: 4, honba: '3x300' } },
+                sanmaCore
+            )
+        ).toThrow();
+    });
+
+    // Sanma splits the noten penalty two ways, so an odd value cannot divide --
+    // and the duplicate claiming yonma does not buy it the yonma divisor.
+    test('still rejects a noten penalty that does not divide for the core count', () => {
+        expect(() =>
+            parseGameRulesDetailsForCore(
+                { rules: { number_of_players: 4, noten_penalty: 3001 } },
+                sanmaCore
+            )
+        ).toThrow();
     });
 
     test('uses top-level sanma player count for noten validation even when preset is yonma', () => {

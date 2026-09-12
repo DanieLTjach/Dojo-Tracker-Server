@@ -624,19 +624,51 @@ describe('Game Rules API Endpoints', () => {
                     numberOfPlayers: 3,
                     startingPoints: 40000,
                     uma: [15, 0, -15],
-                    details: { rules: { starting_points: 35000 } },
+                    // A sanma ruleset cannot carry a yonma honba prefix.
+                    details: { rules: { honba: '3x300' } },
                 });
 
             expect(response.status).toBe(400);
             expect(response.body).toMatchObject({
                 errorCode: 'gameRulesValidationFailed',
-                validationErrors: [{
-                    path: 'details.rules.starting_points',
-                    code: 'coreFieldMismatch',
-                }],
+                validationErrors: [{ path: 'details.rules.honba' }],
             });
             const row = dbManager.db.prepare('SELECT id FROM gameRules WHERE name = ?').get(name);
             expect(row).toBeUndefined();
+        });
+
+        // A preset seeds starting_points into the rule blob, the operator then
+        // types a different value in the only field the form shows, and the save
+        // used to be refused over the invisible duplicate. It is stripped before
+        // storage and rebuilt from the core on read, so the operator's value is
+        // what the ruleset ends up with.
+        test('POST accepts a stale core duplicate and keeps the submitted value', async () => {
+            const name = 'Core Duplicate POST';
+            const response = await request(app)
+                .post('/api/game-rules')
+                .set('Authorization', adminAuthHeader)
+                .send({
+                    ...validBody,
+                    name,
+                    numberOfPlayers: 4,
+                    startingPoints: 30000,
+                    details: { rules: { starting_points: 25000 } },
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body.startingPoints).toBe(30000);
+
+            // The duplicate never reaches the row.
+            const row = dbManager.db
+                .prepare('SELECT details FROM gameRules WHERE name = ?')
+                .get(name) as { details: string };
+            expect(Object.hasOwn(JSON.parse(row.details).rules, 'starting_points')).toBe(false);
+
+            // And reading it back rebuilds it from the authoritative core value.
+            const fetched = await request(app)
+                .get(`/api/game-rules/${response.body.id}`)
+                .set('Authorization', adminAuthHeader);
+            expect(fetched.body.details.rules.starting_points).toBe(30000);
         });
 
         test('POST creates rule as club owner', async () => {

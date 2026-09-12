@@ -94,10 +94,6 @@ function notenPenaltyDividesCleanly(rules: Record<string, unknown>, numberOfPlay
 // These custom refine messages are contract-coupled to publicCode() in
 // GameRulesValidationUtil.ts, which maps each exact string to a user-facing
 // validation code. Keep the two in sync — reword here, update the map there.
-export const CORE_FIELD_MISMATCH_MESSAGES = {
-    number_of_players: 'number_of_players must match top-level numberOfPlayers',
-    starting_points: 'starting_points must match top-level startingPoints',
-} as const;
 export const NOTEN_PENALTY_DIVISIBILITY_MESSAGE =
     'noten_penalty must divide evenly among the noten players (a multiple of 6 for yonma, 2 for sanma)';
 export const HONBA_PAYER_COUNT_MESSAGE = 'honba payer count must match top-level numberOfPlayers';
@@ -156,23 +152,9 @@ export function buildDetailsSchemaForCore(
     catalog: GameRulesCatalog = gameRulesCatalog
 ): z.ZodType<GameRulesDetails> {
     return buildDetailsSchema(catalog).superRefine((details, ctx) => {
-        const duplicatePlayers = details.rules['number_of_players'];
-        if (duplicatePlayers !== undefined && duplicatePlayers !== core.numberOfPlayers) {
-            ctx.addIssue({
-                code: 'custom',
-                message: CORE_FIELD_MISMATCH_MESSAGES.number_of_players,
-                path: ['rules', 'number_of_players'],
-            });
-        }
-
-        const duplicateStartingPoints = details.rules['starting_points'];
-        if (duplicateStartingPoints !== undefined && duplicateStartingPoints !== core.startingPoints) {
-            ctx.addIssue({
-                code: 'custom',
-                message: CORE_FIELD_MISMATCH_MESSAGES.starting_points,
-                path: ['rules', 'starting_points'],
-            });
-        }
+        // number_of_players and starting_points are deliberately not checked
+        // against the core: compactDetails strips both before the row is written
+        // and the read path rebuilds them, so the duplicate never persists.
 
         if (!notenPenaltyDividesCleanly(details.rules, core.numberOfPlayers)) {
             ctx.addIssue({
