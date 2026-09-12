@@ -25,10 +25,8 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
     }
     const locale: SupportedLocale = resolveRequestLocale(req, user);
 
-    // A ZodError and a ResponseStatusError below 500 are both requests we refused
-    // deliberately, so they are the client's problem to fix, not an incident: they
-    // stay in the console and raise no Telegram alert. Everything else -- a
-    // SqliteError, a bare Error, a 5xx we threw ourselves -- is a genuine fault.
+    // 4xx is a request we refused on purpose, not an incident: console only, no
+    // Telegram alert. 5xx and anything unrecognised still alerts.
     const statusCode = err instanceof ZodError
         ? StatusCodes.BAD_REQUEST
         : err instanceof ResponseStatusError

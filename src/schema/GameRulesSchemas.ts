@@ -152,15 +152,9 @@ export function buildDetailsSchemaForCore(
     catalog: GameRulesCatalog = gameRulesCatalog
 ): z.ZodType<GameRulesDetails> {
     return buildDetailsSchema(catalog).superRefine((details, ctx) => {
-        // number_of_players and starting_points are duplicated inside the rule
-        // blob, where a preset supplies them and no form field renders them. They
-        // are deliberately not checked against the core: compactDetails strips
-        // both before the row is written, and the read path rebuilds them from the
-        // authoritative top-level values, so the duplicate never persists and
-        // never scores anything. Rejecting a save over it only stranded the
-        // operator at a field the form does not show. Every other rule here is
-        // still validated against the core, so a yonma honba under a sanma core
-        // is rejected as before.
+        // number_of_players and starting_points are deliberately not checked
+        // against the core: compactDetails strips both before the row is written
+        // and the read path rebuilds them, so the duplicate never persists.
 
         if (!notenPenaltyDividesCleanly(details.rules, core.numberOfPlayers)) {
             ctx.addIssue({
