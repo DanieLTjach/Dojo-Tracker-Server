@@ -32,6 +32,10 @@ class LogService {
         }
     }
 
+    /**
+     * A fault the operator of the server needs to know about: it goes to the
+     * console *and* raises an alert in Telegram.
+     */
     logError(message: string, error: unknown = null) {
         console.error(message, error);
         if (globalErrorLogsTopic !== null) {
@@ -43,6 +47,15 @@ class LogService {
                 topic: globalErrorLogsTopic,
             });
         }
+    }
+
+    /**
+     * A request we refused on purpose. The console keeps it for debugging, but it
+     * raises no alert: a rejected 4xx is the validation layer doing its job, and
+     * one operator mistyping a hand should not look like the server breaking.
+     */
+    logClientError(message: string, error: unknown = null) {
+        console.warn(message, error);
     }
 
     private async processQueue() {

@@ -24,12 +24,26 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
         }
     }
     const locale: SupportedLocale = resolveRequestLocale(req, user);
-    LogService.logError(
-        `Error while processing request ${req.method} ${req.url} from user ${userInfo} with body ${
-            JSON.stringify(req.body)
-        }`,
-        err
-    );
+
+    // A ZodError and a ResponseStatusError below 500 are both requests we refused
+    // deliberately, so they are the client's problem to fix, not an incident: they
+    // stay in the console and raise no Telegram alert. Everything else -- a
+    // SqliteError, a bare Error, a 5xx we threw ourselves -- is a genuine fault.
+    const statusCode = err instanceof ZodError
+        ? StatusCodes.BAD_REQUEST
+        : err instanceof ResponseStatusError
+        ? err.statusCode
+        : StatusCodes.INTERNAL_SERVER_ERROR;
+    const isClientError = statusCode >= 400 && statusCode < 500;
+
+    const logLine = `Error while processing request ${req.method} ${req.url} from user ${userInfo} with body ${
+        JSON.stringify(req.body)
+    }`;
+    if (isClientError) {
+        LogService.logClientError(logLine, err);
+    } else {
+        LogService.logError(logLine, err);
+    }
 
     if (res.headersSent) {
         return next(err);
@@ -63,8 +77,7 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
         return;
     }
 
-    const status = err instanceof ResponseStatusError ? err.statusCode : StatusCodes.INTERNAL_SERVER_ERROR;
-    res.status(status).json({
+    res.status(statusCode).json({
         errorCode: err instanceof ResponseStatusError ? err.errorCode : undefined,
         message: err instanceof ResponseStatusError
             ? err.getLocalizedMessage(locale)
