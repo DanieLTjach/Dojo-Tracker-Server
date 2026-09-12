@@ -32,20 +32,6 @@ describe('normalizeGameRulesValidationIssues', () => {
         }]);
     });
 
-    test('normalizes compatibility mismatch messages', () => {
-        const error = new ZodError([{
-            code: 'custom',
-            path: ['body', 'details', 'rules', 'starting_points'],
-            message: 'starting_points must match top-level startingPoints',
-        }]);
-
-        expect(normalizeGameRulesValidationIssues(error.issues, 'uk')).toEqual([{
-            path: 'details.rules.starting_points',
-            code: 'coreFieldMismatch',
-            message: 'Значення має збігатися з основним налаштуванням набору правил.',
-        }]);
-    });
-
     test('gives honba payer-count mismatch its own code rather than coreFieldMismatch', () => {
         const error = new ZodError([{
             code: 'custom',

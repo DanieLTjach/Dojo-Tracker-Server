@@ -158,7 +158,8 @@ describe('Game Rules CRUD', () => {
                     startingPoints: 40000,
                     uma: [15, 0, -15],
                     details: {
-                        rules: { starting_points: 35000 },
+                        // A sanma ruleset cannot carry a yonma honba prefix.
+                        rules: { honba: '3x300' },
                     },
                 }, ADMIN_USER_ID)
             ).toThrow();
