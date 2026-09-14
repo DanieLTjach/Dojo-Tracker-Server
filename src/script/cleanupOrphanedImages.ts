@@ -24,6 +24,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { readFileSync } from 'fs';
 import { dbManager } from '../db/dbInit.ts';
 import { extractObjectPath } from '../util/StorageUrlUtil.ts';
+import { findImageColumns, type StorageColumn } from '../util/StorageColumnUtil.ts';
 
 const DEFAULT_MIN_AGE_HOURS = 24;
 
@@ -62,18 +63,8 @@ function getRequiredEnv(name: string): string {
     return value;
 }
 
-function collectReferencedPaths(): Set<string> {
+function collectReferencedPaths(sources: StorageColumn[]): Set<string> {
     const referenced = new Set<string>();
-
-    // Every column that can hold a Storage URL. Keep this list in step with the
-    // schema - a column missed here reads as "unreferenced" and its objects
-    // would be deleted while still in use.
-    const sources: { table: string, column: string }[] = [
-        { table: 'profile', column: 'avatarUrl' },
-        { table: 'club', column: 'logoUrl' },
-        { table: 'post_image', column: 'url' },
-        { table: 'clubAchievementDefinition', column: 'icon' },
-    ];
 
     for (const { table, column } of sources) {
         const rows = dbManager.db
@@ -95,14 +86,23 @@ async function main(): Promise<void> {
     const minAgeHours = parseMinAgeHours();
     const prefix = getFlagValue('--prefix') ?? process.env['FIREBASE_STORAGE_ENV'] ?? 'development';
 
+    // Derived from the live schema, so a new image column is picked up without
+    // anyone remembering to register it here. Reported before anything else so
+    // a dry run shows exactly what was considered "in use".
+    const sources = findImageColumns(dbManager.db);
+    console.log(`Scanning ${sources.length} image column(s):`);
+    for (const { table, column } of sources) {
+        console.log(`  ${table}.${column}`);
+    }
+
+    const referenced = collectReferencedPaths(sources);
+    console.log(`Referenced by the database: ${referenced.size} object(s)`);
+
     const credentialsPath = getRequiredEnv('GOOGLE_APPLICATION_CREDENTIALS');
     const bucketName = getRequiredEnv('FIREBASE_STORAGE_BUCKET');
 
     const serviceAccount = JSON.parse(readFileSync(credentialsPath, 'utf8')) as ServiceAccount;
     initializeApp({ credential: cert(serviceAccount), storageBucket: bucketName });
-
-    const referenced = collectReferencedPaths();
-    console.log(`Referenced by the database: ${referenced.size} object(s)`);
 
     const bucket = getStorage().bucket();
     const [files] = await bucket.getFiles({ prefix: `${prefix}/` });
