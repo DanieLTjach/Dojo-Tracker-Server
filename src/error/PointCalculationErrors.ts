@@ -188,6 +188,24 @@ export class UnsupportedScoringContextError extends BadRequestError {
     }
 }
 
+export class UnsupportedLocalYakuError extends BadRequestError {
+    constructor(localYakuId?: string) {
+        super('unsupportedLocalYaku', localYakuId ? { localYakuId } : undefined);
+    }
+}
+
+export class LocalYakuNotInRulesetError extends BadRequestError {
+    constructor(localYakuId?: string) {
+        super('localYakuNotInRuleset', localYakuId ? { localYakuId } : undefined);
+    }
+}
+
+export class YakuSelectionInvalidError extends BadRequestError {
+    constructor(reason?: string) {
+        super('yakuSelectionInvalid', reason ? { reason } : undefined);
+    }
+}
+
 export class UnmappedYakuError extends InternalServerError {
     constructor(yakuName: string) {
         super('unmappedYakuError', { yakuName });

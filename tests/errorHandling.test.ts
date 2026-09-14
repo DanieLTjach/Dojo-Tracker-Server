@@ -7,6 +7,8 @@ import { SqliteError } from 'better-sqlite3';
 import { NOTEN_PENALTY_DIVISIBILITY_MESSAGE } from '../src/schema/GameRulesSchemas.ts';
 import { resolveRequestLocale } from '../src/util/LocaleResolver.ts';
 import type { User } from '../src/model/UserModels.ts';
+import LogService from '../src/service/LogService.ts';
+import { YakuSelectionInvalidError } from '../src/error/PointCalculationErrors.ts';
 import { jest } from '@jest/globals';
 
 describe('ErrorHandling Middleware', () => {
@@ -14,6 +16,7 @@ describe('ErrorHandling Middleware', () => {
     let mockRes: Partial<Response>;
     let mockNext: NextFunction;
     let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
+    let consoleWarnSpy: jest.SpiedFunction<typeof console.warn>;
 
     beforeEach(() => {
         mockReq = {
@@ -30,11 +33,13 @@ describe('ErrorHandling Middleware', () => {
             headersSent: false,
         };
         mockNext = jest.fn();
-        consoleErrorSpy = jest.spyOn(console, 'error');
+        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     });
 
     afterEach(() => {
         consoleErrorSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
     });
 
     it('should handle ZodError and return 400 with error details', () => {
@@ -55,7 +60,8 @@ describe('ErrorHandling Middleware', () => {
             message: 'Некоректні дані запиту',
             details: zodError.issues,
         });
-        expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+        expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
     });
 
     it('should return localized field errors without raw Zod data for game-rules requests', () => {
@@ -194,5 +200,61 @@ describe('ErrorHandling Middleware', () => {
             'Error while processing request GET /test from user (ID: 123) with body {"test":"data"}',
             error
         );
+    });
+
+    // A rejected 4xx is the validation layer working. Alerting on it buries the
+    // faults that do need attention: an operator mistyping a hand raised an ERROR
+    // in Telegram indistinguishable from the server falling over.
+    describe('alerting', () => {
+        let logErrorSpy: jest.SpiedFunction<typeof LogService.logError>;
+        let logClientErrorSpy: jest.SpiedFunction<typeof LogService.logClientError>;
+
+        beforeEach(() => {
+            logErrorSpy = jest.spyOn(LogService, 'logError').mockImplementation(() => {});
+            logClientErrorSpy = jest.spyOn(LogService, 'logClientError').mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            logErrorSpy.mockRestore();
+            logClientErrorSpy.mockRestore();
+        });
+
+        it.each([
+            ['a 400 we threw', new ResponseStatusError(StatusCodes.BAD_REQUEST, 'invalidInput')],
+            ['a 404', new ResponseStatusError(StatusCodes.NOT_FOUND, 'notFound')],
+            ['a 403', new ResponseStatusError(StatusCodes.FORBIDDEN, 'forbidden')],
+            ['a schema rejection', new ZodError([])],
+            // The payload that reached production: an unscorable yaku selection.
+            ['an unscorable hand', new YakuSelectionInvalidError('empty')],
+        ])('does not raise an alert for %s', (_label, error) => {
+            handleErrors(error as Error, mockReq as Request, mockRes as Response, mockNext);
+
+            expect(logClientErrorSpy).toHaveBeenCalledTimes(1);
+            expect(logErrorSpy).not.toHaveBeenCalled();
+        });
+
+        it.each([
+            ['a bare Error', new Error('boom')],
+            ['a database failure', new SqliteError('UNIQUE constraint failed', 'SQLITE_CONSTRAINT_UNIQUE')],
+            ['a 500 we threw', new ResponseStatusError(StatusCodes.INTERNAL_SERVER_ERROR, 'internalServerError')],
+            ['a 503', new ResponseStatusError(StatusCodes.SERVICE_UNAVAILABLE, 'internalServerError')],
+        ])('still raises an alert for %s', (_label, error) => {
+            handleErrors(error as Error, mockReq as Request, mockRes as Response, mockNext);
+
+            expect(logErrorSpy).toHaveBeenCalledTimes(1);
+            expect(logClientErrorSpy).not.toHaveBeenCalled();
+        });
+
+        it('keeps the response status and the alerting decision in agreement', () => {
+            handleErrors(
+                new YakuSelectionInvalidError('empty'),
+                mockReq as Request,
+                mockRes as Response,
+                mockNext
+            );
+
+            expect(mockRes.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
+            expect(logErrorSpy).not.toHaveBeenCalled();
+        });
     });
 });

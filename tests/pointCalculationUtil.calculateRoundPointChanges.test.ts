@@ -13,10 +13,18 @@ import {
     NoTripleRonFirstWinsOnlyError,
     TripleRonShouldBeAbortiveDrawError,
     DealInPlayerCannotBeWinnerError,
+    LocalYakuNotInRulesetError,
     NagashiManganNotInRulesetError,
     PlayerNotInGameError,
 } from '../src/error/PointCalculationErrors.ts';
-import { detailedGame, fourPlayers, gameState, makeGameRules, threePlayers } from './pointCalculationUtil.helpers.ts';
+import {
+    detailedGame,
+    fourPlayers,
+    gameState,
+    makeGameRules,
+    makeGameRulesWithCustomRules,
+    threePlayers,
+} from './pointCalculationUtil.helpers.ts';
 
 const ema = gameRulesPresetsByKey.get('ema_2025')!.rules;
 const mahjongSoul = gameRulesPresetsByKey.get('mahjong_soul')!.rules;
@@ -764,6 +772,84 @@ describe('calculateRoundPointChanges (via calculateGameRoundResult)', () => {
                     nagashiManganPlayerIds: [],
                 })
             ).toThrow(PlayerNotInGameError);
+        });
+    });
+
+    describe('Local Yaku in calculateGameRoundResult', () => {
+        const tsubameRules = [
+            { category: 'yaku' as const, value: 1, presetId: 'tsubame_gaeshi', name: 'Tsubame gaeshi' },
+        ];
+
+        const handWithTsubame = {
+            concealedTiles: [
+                'man_2',
+                'man_3',
+                'man_4',
+                'pin_2',
+                'pin_3',
+                'pin_4',
+                'sou_2',
+                'sou_3',
+                'sou_4',
+                'pin_5',
+                'pin_6',
+                'sou_7',
+                'sou_7',
+            ] as any[],
+            melds: [],
+            winningTile: 'pin_7' as any,
+            doraIndicators: [],
+            uraDoraIndicators: [],
+            context: { localYaku: ['tsubame_gaeshi'] },
+        };
+
+        const ronResult: GameRoundResultInputDTO = {
+            type: 'RON',
+            dealInPlayerId: 2,
+            riichiPlayerIds: [2],
+            winningHandData: [{
+                winnerPlayerId: 1,
+                yakumanCount: 0,
+                handDetail: handWithTsubame,
+            }],
+        };
+
+        it('scores tsubame_gaeshi end-to-end and shifts point deltas with the extra han', () => {
+            const game = detailedGame(fourPlayers(), gameState(Wind.EAST, 1, 0, 0));
+            const rulesWithCustom = makeGameRulesWithCustomRules(ema, tsubameRules);
+
+            const roundResult = calculateGameRoundResult(game, rulesWithCustom, ronResult);
+
+            // 1 han tanyao + 1 han pinfu + 2 han sanshoku + 1 han tsubame_gaeshi = 5 han (mangan).
+            // Dealer ron is 12000 pts + 1000 riichi stick = +13000 for player 1.
+            // Player 2 loses 12000 pts + 1000 riichi stick = -13000.
+            expect(sorted(roundResult.playerPointChanges)).toEqual(sorted([
+                { playerId: 1, pointChange: 13000 },
+                { playerId: 2, pointChange: -13000 },
+            ]));
+
+            expect(roundResult.type).toBe('RON');
+            if (roundResult.type === 'RON') {
+                const winningHand = roundResult.winningHandData[0]!;
+                expect(winningHand.han).toBe(5);
+                expect(winningHand.yaku).toEqual(
+                    expect.arrayContaining([
+                        { code: 'tsubame_gaeshi', han: 1 },
+                        { code: 'sanshoku_doujun', han: 2 },
+                        { code: 'pinfu', han: 1 },
+                        { code: 'tanyao', han: 1 },
+                    ])
+                );
+            }
+        });
+
+        it('throws LocalYakuNotInRulesetError when local yaku is undeclared in the ruleset', () => {
+            const game = detailedGame(fourPlayers(), gameState(Wind.EAST, 1, 0, 0));
+            const rulesWithoutCustom = makeGameRules(ema);
+
+            expect(() => calculateGameRoundResult(game, rulesWithoutCustom, ronResult)).toThrow(
+                LocalYakuNotInRulesetError
+            );
         });
     });
 });

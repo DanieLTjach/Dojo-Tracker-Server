@@ -32,6 +32,7 @@ class LogService {
         }
     }
 
+    /** A genuine fault: console plus a Telegram alert. */
     logError(message: string, error: unknown = null) {
         console.error(message, error);
         if (globalErrorLogsTopic !== null) {
@@ -43,6 +44,11 @@ class LogService {
                 topic: globalErrorLogsTopic,
             });
         }
+    }
+
+    /** A request we refused on purpose: console only, no alert. */
+    logClientError(message: string, error: unknown = null) {
+        console.warn(message, error);
     }
 
     private async processQueue() {

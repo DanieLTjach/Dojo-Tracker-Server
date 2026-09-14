@@ -428,7 +428,7 @@ describe('Hand Detail Integration Tests', () => {
         expect(changes.find((c: any) => c.playerId === player3Id)?.pointChange).toBe(-8000);
     });
 
-    it('defaults a new game to full hand entry until the operator opts out', async () => {
+    it('accepts plain han/fu on a game whose default is full hand entry', async () => {
         const gameId = await createAndStartTrackedGame(eventId);
 
         const manualPayload = {
@@ -442,15 +442,15 @@ describe('Hand Detail Integration Tests', () => {
             },
         };
 
-        // Default game row: plain han/fu is rejected.
-        const rejectRes = await request(app)
+        // `enterHandDetail` is the editor's starting mode, not a gate: a hand the
+        // operator deliberately entered as han/fu is scored, not rejected.
+        const defaultRes = await request(app)
             .post(`/api/games/${gameId}/rounds/1`)
             .set('Authorization', player1AuthHeader)
             .send(manualPayload);
-        expect(rejectRes.status).toBe(400);
-        expect(rejectRes.body.errorCode).toBe('handDetailRequired');
+        expect(defaultRes.status).toBe(200);
 
-        // Opt out per game: the same payload previews and submits.
+        // Opting out per game leaves the same payload working.
         const patchRes = await request(app)
             .patch(`/api/games/${gameId}/hand-detail-mode`)
             .set('Authorization', player1AuthHeader)
@@ -459,16 +459,137 @@ describe('Hand Detail Integration Tests', () => {
         expect(patchRes.body.enterHandDetail).toBe(false);
 
         const previewRes = await request(app)
-            .post(`/api/games/${gameId}/rounds/1/preview`)
+            .post(`/api/games/${gameId}/rounds/2/preview`)
             .set('Authorization', player1AuthHeader)
             .send(manualPayload);
         expect(previewRes.status).toBe(200);
 
         const postRes = await request(app)
-            .post(`/api/games/${gameId}/rounds/1`)
+            .post(`/api/games/${gameId}/rounds/2`)
             .set('Authorization', player1AuthHeader)
             .send(manualPayload);
         expect(postRes.status).toBe(200);
+    });
+
+    it('still rejects plain han/fu when the event forces hand detail, whatever the game default', async () => {
+        const patchEventRes = await request(app)
+            .patch(`/api/events/${eventId}`)
+            .set('Authorization', adminAuthHeader)
+            .send({ config: { requireHandDetail: true } });
+        expect(patchEventRes.status).toBe(200);
+
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const rejectRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send({
+                type: 'TSUMO',
+                riichiPlayerIds: [],
+                winningHandData: {
+                    winnerPlayerId: player1Id,
+                    yakumanCount: 0,
+                    han: 1,
+                    fu: 30,
+                },
+            });
+        expect(rejectRes.status).toBe(400);
+        expect(rejectRes.body.errorCode).toBe('handDetailRequired');
+    });
+
+    it('scores a yaku selection and persists the derived yaku list', async () => {
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const postRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send({
+                type: 'RON',
+                dealInPlayerId: player2Id,
+                riichiPlayerIds: [],
+                winningHandData: [{
+                    winnerPlayerId: player1Id,
+                    yakumanCount: 0,
+                    yakuSelection: { codes: ['tanyao', 'pinfu', 'dora'], dora: 3 },
+                }],
+            });
+        expect(postRes.status).toBe(200);
+
+        const getGameRes = await request(app)
+            .get(`/api/games/${gameId}`)
+            .set('Authorization', player1AuthHeader);
+        const saved = getGameRes.body.rounds[0].result.winningHandData[0];
+
+        expect(saved.han).toBe(5);
+        expect(saved.yaku).toEqual([
+            { code: 'tanyao', han: 1 },
+            { code: 'pinfu', han: 1 },
+            { code: 'dora', han: 3 },
+        ]);
+        // 5 han is a mangan; player1 is the dealer here, so a dealer ron is 12000.
+        const changes = getGameRes.body.rounds[0].result.playerPointChanges;
+        expect(changes.find((c: any) => c.playerId === player1Id)?.pointChange).toBe(12000);
+        expect(changes.find((c: any) => c.playerId === player2Id)?.pointChange).toBe(-12000);
+    });
+
+    // A yaku list carries no tiles but is still real hand data, so it satisfies an
+    // event that requires hand detail. A bare han/fu hand still does not.
+    it('accepts a yaku selection on an event that requires hand detail', async () => {
+        const patchEventRes = await request(app)
+            .patch(`/api/events/${eventId}`)
+            .set('Authorization', adminAuthHeader)
+            .send({ config: { requireHandDetail: true } });
+        expect(patchEventRes.status).toBe(200);
+
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const acceptedRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send({
+                type: 'RON',
+                dealInPlayerId: player2Id,
+                riichiPlayerIds: [],
+                winningHandData: [{
+                    winnerPlayerId: player1Id,
+                    yakumanCount: 0,
+                    yakuSelection: { codes: ['riichi', 'tanyao'] },
+                }],
+            });
+        expect(acceptedRes.status).toBe(200);
+
+        const rejectedRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/2`)
+            .set('Authorization', player1AuthHeader)
+            .send({
+                type: 'RON',
+                dealInPlayerId: player2Id,
+                riichiPlayerIds: [],
+                winningHandData: [{ winnerPlayerId: player1Id, yakumanCount: 0, han: 2, fu: 30 }],
+            });
+        expect(rejectedRes.status).toBe(400);
+        expect(rejectedRes.body.errorCode).toBe('handDetailRequired');
+    });
+
+    it('rejects a yaku selection that contradicts a supplied han', async () => {
+        const gameId = await createAndStartTrackedGame(eventId);
+
+        const res = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send({
+                type: 'RON',
+                dealInPlayerId: player2Id,
+                riichiPlayerIds: [],
+                winningHandData: [{
+                    winnerPlayerId: player1Id,
+                    yakumanCount: 0,
+                    han: 9,
+                    yakuSelection: { codes: ['tanyao'] },
+                }],
+            });
+        expect(res.status).toBe(400);
+        expect(res.body.errorCode).toBe('handDetailScoreMismatch');
     });
 
     it('locks the per-game switch when the event requires hand detail', async () => {
@@ -514,5 +635,119 @@ describe('Hand Detail Integration Tests', () => {
             .send({ enterHandDetail: false });
         expect(patchRes.status).toBe(400);
         expect(patchRes.body.errorCode).toBe('gameNotInProgressWhenChangingHandDetail');
+    });
+
+    it('scores tsubame_gaeshi over HTTP and includes it in the returned yaku array', async () => {
+        const rulesRes = await request(app)
+            .post('/api/game-rules')
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Local Yaku Rules',
+                numberOfPlayers: 4,
+                startingPoints: 25000,
+                uma: [15, 5, -5, -15],
+                umaTieBreak: 'WIND',
+                clubId: 1,
+                allowNonZeroSumUma: false,
+                details: {
+                    rules: {
+                        number_of_players: 4,
+                        starting_points: 25000,
+                    },
+                    customRules: [
+                        {
+                            category: 'yaku',
+                            value: 1,
+                            presetId: 'tsubame_gaeshi',
+                            name: 'Tsubame gaeshi',
+                        },
+                    ],
+                },
+            });
+        expect(rulesRes.status).toBe(201);
+        const customRulesId = rulesRes.body.id;
+
+        const customEventRes = await request(app)
+            .post('/api/events')
+            .set('Authorization', adminAuthHeader)
+            .send({
+                name: 'Local Yaku Event',
+                type: 'SEASON',
+                clubId: 1,
+                gameRulesId: customRulesId,
+            });
+        expect(customEventRes.status).toBe(201);
+        const customEventId = customEventRes.body.id;
+
+        const gameId = await createAndStartTrackedGame(customEventId);
+
+        // Player 2 is in riichi, player 1 rons off player 2 with tsubame_gaeshi
+        const roundPayload = {
+            type: 'RON',
+            dealInPlayerId: player2Id,
+            riichiPlayerIds: [player2Id],
+            winningHandData: [{
+                winnerPlayerId: player1Id,
+                yakumanCount: 0,
+                handDetail: {
+                    concealedTiles: [
+                        'man_2',
+                        'man_3',
+                        'man_4',
+                        'pin_2',
+                        'pin_3',
+                        'pin_4',
+                        'sou_2',
+                        'sou_3',
+                        'sou_4',
+                        'pin_5',
+                        'pin_6',
+                        'sou_7',
+                        'sou_7',
+                    ],
+                    melds: [],
+                    winningTile: 'pin_7',
+                    doraIndicators: [],
+                    uraDoraIndicators: [],
+                    context: { localYaku: ['tsubame_gaeshi'] },
+                },
+            }],
+        };
+
+        const previewRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1/preview`)
+            .set('Authorization', player1AuthHeader)
+            .send(roundPayload);
+
+        expect(previewRes.status).toBe(200);
+        const winningHandPreview = previewRes.body.winningHandData[0];
+        expect(winningHandPreview.han).toBe(5); // tanyao (1) + pinfu (1) + sanshoku (2) + tsubame_gaeshi (1)
+        expect(winningHandPreview.yaku).toEqual(
+            expect.arrayContaining([
+                { code: 'tsubame_gaeshi', han: 1 },
+                { code: 'tanyao', han: 1 },
+            ])
+        );
+
+        const postRes = await request(app)
+            .post(`/api/games/${gameId}/rounds/1`)
+            .set('Authorization', player1AuthHeader)
+            .send(roundPayload);
+
+        expect(postRes.status).toBe(200);
+
+        const getGameRes = await request(app)
+            .get(`/api/games/${gameId}`)
+            .set('Authorization', player1AuthHeader);
+
+        const savedRound = getGameRes.body.rounds[0];
+        const savedWinningHand = savedRound.result.winningHandData[0];
+        expect(savedWinningHand.han).toBe(5);
+        expect(savedWinningHand.yaku).toEqual(
+            expect.arrayContaining([
+                { code: 'tsubame_gaeshi', han: 1 },
+                { code: 'tanyao', han: 1 },
+            ])
+        );
     });
 });

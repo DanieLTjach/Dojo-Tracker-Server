@@ -24,12 +24,24 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
         }
     }
     const locale: SupportedLocale = resolveRequestLocale(req, user);
-    LogService.logError(
-        `Error while processing request ${req.method} ${req.url} from user ${userInfo} with body ${
-            JSON.stringify(req.body)
-        }`,
-        err
-    );
+
+    // 4xx is a request we refused on purpose, not an incident: console only, no
+    // Telegram alert. 5xx and anything unrecognised still alerts.
+    const statusCode = err instanceof ZodError
+        ? StatusCodes.BAD_REQUEST
+        : err instanceof ResponseStatusError
+        ? err.statusCode
+        : StatusCodes.INTERNAL_SERVER_ERROR;
+    const isClientError = statusCode >= 400 && statusCode < 500;
+
+    const logLine = `Error while processing request ${req.method} ${req.url} from user ${userInfo} with body ${
+        JSON.stringify(req.body)
+    }`;
+    if (isClientError) {
+        LogService.logClientError(logLine, err);
+    } else {
+        LogService.logError(logLine, err);
+    }
 
     if (res.headersSent) {
         return next(err);
@@ -63,8 +75,7 @@ export const handleErrors = (err: Error, req: Request, res: Response, next: Next
         return;
     }
 
-    const status = err instanceof ResponseStatusError ? err.statusCode : StatusCodes.INTERNAL_SERVER_ERROR;
-    res.status(status).json({
+    res.status(statusCode).json({
         errorCode: err instanceof ResponseStatusError ? err.errorCode : undefined,
         message: err instanceof ResponseStatusError
             ? err.getLocalizedMessage(locale)

@@ -1,4 +1,5 @@
 import type { HandDetail, HandYaku } from '../mahjong/types.ts';
+import type { YakuSelection } from '../mahjong/scoreYakuSelection.ts';
 import type { GameFinishReason, GameState } from './GameModels.ts';
 
 export type GameRoundResult = GameRoundResultInputDTO & {
@@ -34,6 +35,7 @@ export interface WinningHandData {
     han?: number | undefined; // han are undefined for yakumans (except kazoe yakuman)
     fu?: number | undefined; // fu are undefined for hands with at least 5 hans
     handDetail?: HandDetail | undefined;
+    yakuSelection?: YakuSelection | undefined;
     yaku?: HandYaku[] | undefined;
 }
 
