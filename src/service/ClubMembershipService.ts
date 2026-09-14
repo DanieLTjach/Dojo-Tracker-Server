@@ -113,10 +113,15 @@ export class ClubMembershipService {
     leaveClub(clubId: number, userId: number): ClubMembership {
         this.clubService.validateClubExists(clubId);
         const membership = this.getMembership(clubId, userId);
-        this.validateMembershipExists(clubId, userId);
 
+        this.validateMembershipStatus(clubId, userId);
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'INACTIVE', userId);
-        this.logLeftClub(membership, userId);
+
+        if (membership.status === 'PENDING') {
+            this.logCancelledRequest(membership, userId);
+        } else if (membership.status === 'ACTIVE') {
+            this.logLeftClub(membership, userId);
+        }
         return this.getMembership(clubId, userId);
     }
 
@@ -176,7 +181,7 @@ export class ClubMembershipService {
     deactivateMember(clubId: number, userId: number, modifiedBy: number): ClubMembership {
         this.clubService.validateClubExists(clubId);
         const membership = this.getMembership(clubId, userId);
-        this.validateMembershipExists(clubId, userId);
+        this.validateMembershipStatus(clubId, userId);
 
         this.membershipRepository.updateMembershipStatus(clubId, userId, 'INACTIVE', modifiedBy);
         this.logMemberDeactivated(membership, modifiedBy);
@@ -203,8 +208,14 @@ export class ClubMembershipService {
         return newMembership;
     }
 
-    private validateMembershipExists(clubId: number, userId: number): void {
-        this.getMembership(clubId, userId);
+    private validateMembershipStatus(clubId: number, userId: number): void {
+        const membership = this.getMembership(clubId, userId);
+        if (membership.status === 'INACTIVE') {
+            throw new InvalidClubMembershipStateError(translationRef('telegram.actions.reject'), membership.status, [
+                'PENDING',
+                'ACTIVE',
+            ]);
+        }
     }
 
     private getMembership(clubId: number, userId: number): ClubMembership {
@@ -268,6 +279,22 @@ export class ClubMembershipService {
             }</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
                 <b>${tr('telegram.membershipLog.userLabel')}</b> ${user.name} <code>(ID: ${user.id})</code>
                 <b>${tr('telegram.membershipLog.previousRoleLabel')}</b> ${membership.role}
+            `;
+        });
+    }
+
+    private logCancelledRequest(membership: ClubMembership, userId: number): void {
+        const user = this.userService.getUserById(userId);
+        this.logClubEvent(membership.clubId, locale => {
+            const tr = (key: string) => t(key, locale);
+            return dedent`
+            <b>${tr('telegram.membershipLog.cancelledRequestTitle')}</b>
+
+            <b>${
+                tr('telegram.membershipLog.clubLabel')
+            }</b> ${membership.clubName} <code>(ID: ${membership.clubId})</code>
+            <b>${tr('telegram.membershipLog.userLabel')}</b>${user.name}<code>(ID: ${user.id})</code>
+            <b>${tr('telegram.membershipLog.previousRoleLabel')}</b> ${membership.role}
             `;
         });
     }

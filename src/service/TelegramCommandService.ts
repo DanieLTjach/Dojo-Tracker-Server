@@ -206,7 +206,9 @@ class TelegramCommandService {
             { command: 'create_invite', description: t('telegram.commands.createInvite', DEFAULT_LOCALE) },
             { command: 'list_invites', description: t('telegram.commands.listInvites', DEFAULT_LOCALE) },
             { command: 'revoke_invite', description: t('telegram.commands.revokeInvite', DEFAULT_LOCALE) },
-        ]);
+        ]).catch(error => {
+            LogService.logError('Failed to register Telegram bot commands: ', error);
+        });
 
         telegramBot.launch(() => {
             console.log('Telegram bot started');

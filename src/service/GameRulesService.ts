@@ -68,8 +68,13 @@ export class GameRulesService {
             ? undefined
             : parseGameRulesDetailsForCore(details, gameRulesParams);
 
-        if (!gameRulesCoreFieldsEqual(gameRules, gameRulesParams)) {
+        // A rename cannot change how any past game scored, so it stays allowed for
+        // a ruleset that already has games; only the scoring fields are guarded.
+        if (!gameRulesScoringFieldsEqual(gameRules, gameRulesParams)) {
             this.validateGameRulesHaveNoGames(gameRules);
+        }
+
+        if (!gameRulesWritableFieldsEqual(gameRules, gameRulesParams)) {
             this.gameRulesRepository.updateGameRules(id, gameRulesParams);
         }
 
@@ -127,8 +132,12 @@ export interface CreateGameRulesServiceParams extends InsertGameRulesParams {
     details?: GameRulesDetails | undefined;
 }
 
-const GAME_RULES_CORE_FIELDS = [
-    'name',
+// Editing any of these under a played game either rewrites what that game was
+// worth (uma, startingPoints, numberOfPlayers, umaTieBreak) or moves its results
+// out from under the club that owns them (clubId), so they are only editable
+// while the ruleset has no games. `name` is deliberately absent — see
+// GAME_RULES_WRITABLE_FIELDS.
+const GAME_RULES_SCORING_FIELDS = [
     'clubId',
     'numberOfPlayers',
     'startingPoints',
@@ -136,13 +145,32 @@ const GAME_RULES_CORE_FIELDS = [
     'uma',
 ] as const satisfies readonly (keyof InsertGameRulesParams)[];
 
-function gameRulesCoreFieldsEqual(gameRules: GameRules, params: InsertGameRulesParams): boolean {
+// Everything the update statement persists. A rename is in here but not in the
+// scoring set: it must still be written, it just is not worth blocking over.
+const GAME_RULES_WRITABLE_FIELDS = [
+    ...GAME_RULES_SCORING_FIELDS,
+    'name',
+] as const satisfies readonly (keyof InsertGameRulesParams)[];
+
+function gameRulesScoringFieldsEqual(gameRules: GameRules, params: InsertGameRulesParams): boolean {
+    return gameRulesFieldsEqual(gameRules, params, GAME_RULES_SCORING_FIELDS);
+}
+
+function gameRulesWritableFieldsEqual(gameRules: GameRules, params: InsertGameRulesParams): boolean {
+    return gameRulesFieldsEqual(gameRules, params, GAME_RULES_WRITABLE_FIELDS);
+}
+
+function gameRulesFieldsEqual(
+    gameRules: GameRules,
+    params: InsertGameRulesParams,
+    fields: readonly (keyof InsertGameRulesParams)[]
+): boolean {
     // The opt-in flag is optional on the wire but always stored, so compare it
     // against its persisted default rather than through isDeepStrictEqual.
     if (gameRules.allowNonZeroSumUma !== (params.allowNonZeroSumUma ?? false)) {
         return false;
     }
-    return GAME_RULES_CORE_FIELDS.every(key => isDeepStrictEqual(gameRules[key], params[key]));
+    return fields.every(key => isDeepStrictEqual(gameRules[key], params[key]));
 }
 
 function ruleValuesEqual(a: RuleValue, b: RuleValue): boolean {

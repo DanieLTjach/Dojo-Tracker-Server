@@ -315,6 +315,7 @@ telegram:
   # ── Club membership log posts (ClubMembershipService) ──
   membershipLog:
     joinRequestTitle: 🔔 Запит на вступ до клубу
+    cancelledRequestTitle: ❌ Користува скасував заяву на вступ до клубу
     leftClubTitle: 🚪 Учасник залишив клуб
     memberApprovedTitle: ✅ Учасника схвалено
     memberRemovedTitle: ❌ Учасника видалено

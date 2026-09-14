@@ -480,6 +480,33 @@ describe('User API Endpoints', () => {
                 )
             );
         });
+
+        it('should clear user telegram username when empty string is sent', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ telegramUsername: '' });
+
+            expect(response.status).toBe(200);
+            expect(response.body.id).toBe(testUserId);
+            expect(response.body.telegramUsername).toBeNull();
+        });
+
+        it('should clear user telegram username when null is sent', async () => {
+            await request(app)
+                .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ telegramUsername: '@tobecleared' })
+                .expect(200);
+
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ telegramUsername: null });
+
+            expect(response.status).toBe(200);
+            expect(response.body.telegramUsername).toBeNull();
+        });
     });
 
     describe('POST /api/users/:id/activate', () => {

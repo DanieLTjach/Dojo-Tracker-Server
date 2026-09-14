@@ -745,7 +745,7 @@ describe('Permissions matrix integration specification', () => {
 
         createRoleTest(
             'moderator',
-            403,
+            201,
             authHeader =>
                 request(app)
                     .post('/api/events')
@@ -778,7 +778,16 @@ describe('Permissions matrix integration specification', () => {
     });
 
     describe('Edit event (for own club)', () => {
+        const SECOND_CLUB_ID = 95150;
         let editableEventId: number;
+
+        beforeAll(() => {
+            insertClub(SECOND_CLUB_ID, 'Permissions Matrix Second Club');
+        });
+
+        afterAll(() => {
+            cleanupClub(SECOND_CLUB_ID);
+        });
 
         beforeEach(() => {
             editableEventId = nextId();
@@ -816,13 +825,24 @@ describe('Permissions matrix integration specification', () => {
 
         createRoleTest(
             'moderator',
-            403,
+            200,
             authHeader =>
                 request(app)
                     .put(`/api/events/${editableEventId}`)
                     .set('Authorization', authHeader)
                     .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
         );
+
+        // Managing a club's events is not the same as moving one out of the club:
+        // re-homing an event stays admin-only for every club role.
+        test('moderator cannot move the event to another club', async () => {
+            const response = await request(app)
+                .put(`/api/events/${editableEventId}`)
+                .set('Authorization', authHeaders.moderator)
+                .send(buildEventPayload(SECOND_CLUB_ID, OWN_CLUB_GAME_RULES_ID));
+
+            expect(response.status).toBe(403);
+        });
 
         createRoleTest(
             'member',
@@ -843,6 +863,46 @@ describe('Permissions matrix integration specification', () => {
                     .set('Authorization', authHeader)
                     .send(buildEventPayload(TEST_CLUB_ID, OWN_CLUB_GAME_RULES_ID))
         );
+    });
+
+    describe('Delete event (in own club)', () => {
+        let deletableEventId: number;
+
+        beforeEach(() => {
+            deletableEventId = nextId();
+            insertEvent(
+                deletableEventId,
+                `Permissions Matrix Deletable Event ${deletableEventId}`,
+                TEST_CLUB_ID,
+                OWN_CLUB_GAME_RULES_ID
+            );
+        });
+
+        afterEach(() => {
+            cleanupEventCascade(deletableEventId);
+        });
+
+        for (const [role, expectedStatus] of [['admin', 204], ['owner', 204], ['moderator', 204]] as const) {
+            createRoleTest(
+                role,
+                expectedStatus,
+                authHeader =>
+                    request(app)
+                        .delete(`/api/events/${deletableEventId}`)
+                        .set('Authorization', authHeader)
+            );
+        }
+
+        for (const role of ['member', 'nonMember'] as const) {
+            createRoleTest(
+                role,
+                403,
+                authHeader =>
+                    request(app)
+                        .delete(`/api/events/${deletableEventId}`)
+                        .set('Authorization', authHeader)
+            );
+        }
     });
 
     describe('Create game rules (for own club)', () => {

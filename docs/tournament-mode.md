@@ -4,7 +4,7 @@ Tournament Mode bypasses Telegram authentication for offline tournament environm
 
 ## Configuration
 
-Add to your `.env` file:
+Add to your `.env.development` file (or `.env` for `npm start`):
 
 ```bash
 TOURNAMENT_MODE=true
@@ -39,21 +39,18 @@ TOURNAMENT_USER_ID=1  # User ID to use for all requests (default: 1)
 
 ### Offline Tournament Workflow
 
-```bash
-# 1. Pull latest database
-npm run db:pull
-
-# 2. Enable tournament mode in .env
-TOURNAMENT_MODE=true
-TOURNAMENT_USER_ID=1
-
-# 3. Start server
-npm run dev
-
-# 4. After tournament: disable mode and push data
-TOURNAMENT_MODE=false
-npm run db:push
-```
+1. Get a current copy of the database (see the `sync-db` procedure; there is no
+   `npm run db:pull` script).
+2. Enable tournament mode in `.env.development`:
+   ```env
+   TOURNAMENT_MODE=true
+   TOURNAMENT_USER_ID=1
+   ```
+3. Start the server:
+   ```bash
+   npm run dev
+   ```
+4. After the tournament, set `TOURNAMENT_MODE=false` and sync the data back.
 
 ### API Usage
 
@@ -77,6 +74,10 @@ UPDATE user SET isAdmin = 1 WHERE id = 1;
 ```
 
 **Tournament mode not working:**
-1. Verify `TOURNAMENT_MODE=true` in `.env`
+1. Verify `TOURNAMENT_MODE=true` in `.env.development` (or `.env` for `npm start`)
 2. Restart server after config changes
 3. Check server logs for errors
+
+## Related Documentation
+
+- [Local Development Setup](local-setup.md) — local env setup and authenticating without a bot

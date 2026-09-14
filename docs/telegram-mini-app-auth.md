@@ -13,7 +13,7 @@ User registers via POST /api/users (if new)
   ↓
 Frontend sends initData as query params to backend
   ↓
-Backend validates hash using TELEGRAM_BOT_TOKEN
+Backend validates hash using BOT_TOKEN
   ↓
 Backend returns JWT accessToken
   ↓
@@ -98,50 +98,46 @@ const headers = {
 };
 ```
 
-## Development Mode
+## Local Development
 
-For local testing without a real Telegram bot token, the hash validation is bypassed when `NODE_ENV=development` and no `TELEGRAM_BOT_TOKEN` is set.
+There is **no development bypass** of hash validation. `AuthService.validateInitData`
+verifies the hash in every environment, including `NODE_ENV=development`.
 
-**Backend Setup (.env.development):**
-```env
-NODE_ENV=development
-# Leave TELEGRAM_BOT_TOKEN empty or unset
-JWT_SECRET=dev-secret-key
+You do not need a real bot token, though. The server validates initData by recomputing
+an HMAC from the configured `BOT_TOKEN` — it never checks that token against Telegram.
+Signing initData with the same placeholder token you put in `.env.development` produces
+initData the server accepts:
+
+```bash
+npm run initdata:dev -- --telegram-id 123456789 --username your_handle --name "Your Name"
 ```
 
-**Frontend Mock Data:**
-```typescript
-const mockInitData = 'query_id=test&user=' +
-  encodeURIComponent(JSON.stringify({
-    id: 123456789,
-    first_name: "Test",
-    username: "testuser"
-  })) +
-  '&auth_date=' + Math.floor(Date.now() / 1000) +
-  '&hash=dev_mode_hash';
-
-// Use in development
-const response = await fetch(`${API_URL}/api/authenticate?${mockInitData}`, {
-  method: 'POST'
-});
-```
-
-**Warning:** In production, always set `TELEGRAM_BOT_TOKEN` to enable real signature validation.
+See **[Local Development Setup](local-setup.md)** for the full walkthrough.
 
 ## Environment Variables
 
-**Required for Production:**
+**Required (all environments):**
 ```env
-NODE_ENV=production
-TELEGRAM_BOT_TOKEN=your_bot_token_from_botfather
+NODE_ENV=development        # or production
+BOT_TOKEN=your_bot_token_from_botfather
+BOT_URL=https://t.me/your_bot
 JWT_SECRET=your_secure_random_secret
+FRONTEND_URLS=https://your-frontend-origin
+```
+
+**Required in production only:**
+```env
+GLOBAL_LOGS_CHAT_ID=your_logs_chat_id
 ```
 
 **Optional:**
 ```env
-JWT_EXPIRES_IN=24h
+JWT_EXPIRY=7d
 AUTH_INIT_DATA_VALIDITY_SECONDS=86400
 ```
+
+> The variable is `BOT_TOKEN`. Earlier revisions of this document called it
+> `TELEGRAM_BOT_TOKEN`, which the code has never read.
 
 ## Security Features
 
@@ -149,24 +145,24 @@ AUTH_INIT_DATA_VALIDITY_SECONDS=86400
 - 24-hour initData expiration check
 - Stateless JWT authentication
 - User must be pre-registered before authentication
-- Dev mode for testing (disabled in production)
 
 ## User Registration
 
 Before a user can authenticate, they must be registered:
 
+Registration is a public endpoint, but it still requires valid initData in the query
+string: the Telegram ID and username are taken from the **signed** initData, not from
+the request body. The body carries only the display name.
+
 ```bash
-# Register a new user
-curl -X POST http://localhost:3000/api/users \
+# Register a new user (initData in the query string, name in the body)
+curl -X POST "http://localhost:3000/api/users?$INIT_DATA" \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "telegramUsername": "@johndoe",
-    "telegramId": 123456789
-  }'
+  -d '{"name": "John Doe"}'
 ```
 
-The user registration endpoint is public and does not require authentication.
+Locally, generate `$INIT_DATA` with `npm run initdata:dev` — see
+[Local Development Setup](local-setup.md).
 
 ## Related Documentation
 

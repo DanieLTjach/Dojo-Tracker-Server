@@ -56,6 +56,13 @@ export interface GameRules {
     // activity is rewarded. Only supported for a flat (non-matrix) uma.
     allowNonZeroSumUma: boolean;
     details: GameRulesDetails | null;
+    // Games already played under this ruleset. Read-only, derived per query and
+    // only populated by the game-rules endpoints — the copy embedded in an event
+    // payload omits it rather than pay for a correlated count on every event
+    // read. Non-zero means the scoring fields are locked (see
+    // GAME_RULES_SCORING_FIELDS in GameRulesService) and the editor must present
+    // those inputs as read-only instead of failing the user at save time.
+    gameCount?: number;
 }
 
 export interface EventInfoScheduleItem {

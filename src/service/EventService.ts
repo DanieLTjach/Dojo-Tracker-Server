@@ -59,6 +59,12 @@ import {
     TeamDraftIncompleteError,
 } from '../error/TeamErrors.ts';
 
+// Creating, editing, deleting and running a club's events are all the same job,
+// so they share one role set. Moderators are the people who actually run the
+// club day to day; restricting event creation to the single OWNER left them
+// unable to open a new season.
+const EVENT_MANAGEMENT_ROLES: readonly ClubRole[] = [ClubRole.OWNER, ClubRole.MODERATOR];
+
 export class EventService {
     private eventRepository: EventRepository = new EventRepository();
     private clubRepository: ClubRepository = new ClubRepository();
@@ -415,18 +421,24 @@ export class EventService {
     }
 
     private authorizeEventCreation(clubId: number | null | undefined, userId: number): void {
+        this.authorizeClubEventAction(clubId ?? null, userId);
+    }
+
+    // A global admin may act on any event; everyone else needs an event-management
+    // role in the event's own club, and a club-less event is admin-only.
+    private authorizeClubEventAction(clubId: number | null, userId: number): void {
         const user = this.userService.getUserById(userId);
         if (user.isAdmin) {
             return;
         }
 
-        if (clubId === null || clubId === undefined) {
+        if (clubId === null) {
             throw new InsufficientPermissionsError();
         }
 
         const clubRole = this.membershipRepository.getUserClubRole(clubId, userId);
-        if (clubRole !== 'OWNER') {
-            throw new InsufficientClubPermissionsError('OWNER');
+        if (clubRole === undefined || !EVENT_MANAGEMENT_ROLES.includes(clubRole)) {
+            throw new InsufficientClubPermissionsError([...EVENT_MANAGEMENT_ROLES]);
         }
     }
 
@@ -436,20 +448,11 @@ export class EventService {
         userId: number
     ): void {
         const user = this.userService.getUserById(userId);
-        if (user.isAdmin) {
-            return;
-        }
+        this.authorizeClubEventAction(existingEvent.clubId, userId);
 
-        if (existingEvent.clubId === null) {
-            throw new InsufficientPermissionsError();
-        }
-
-        const clubRole = this.membershipRepository.getUserClubRole(existingEvent.clubId, userId);
-        if (clubRole !== 'OWNER') {
-            throw new InsufficientClubPermissionsError('OWNER');
-        }
-
-        if (requestedClubId !== existingEvent.clubId) {
+        // Only a global admin may move an event to a different club; a club role
+        // is scoped to the club the event already belongs to.
+        if (!user.isAdmin && requestedClubId !== existingEvent.clubId) {
             throw new InsufficientPermissionsError();
         }
     }
@@ -479,19 +482,7 @@ export class EventService {
     }
 
     private authorizeEventDeletion(event: Event, userId: number): void {
-        const user = this.userService.getUserById(userId);
-        if (user.isAdmin) {
-            return;
-        }
-
-        if (event.clubId === null) {
-            throw new InsufficientPermissionsError();
-        }
-
-        const clubRole = this.membershipRepository.getUserClubRole(event.clubId, userId);
-        if (clubRole !== 'OWNER') {
-            throw new InsufficientClubPermissionsError('OWNER');
-        }
+        this.authorizeClubEventAction(event.clubId, userId);
     }
 
     private validateTournamentClub(data: EventData): void {
@@ -544,19 +535,7 @@ export class EventService {
     }
 
     private authorizeTournamentManagement(event: Event, userId: number): void {
-        const user = this.userService.getUserById(userId);
-        if (user.isAdmin) {
-            return;
-        }
-
-        if (event.clubId === null) {
-            throw new InsufficientPermissionsError();
-        }
-
-        const role = this.membershipRepository.getUserClubRole(event.clubId, userId);
-        if (role !== ClubRole.OWNER && role !== ClubRole.MODERATOR) {
-            throw new InsufficientClubPermissionsError([ClubRole.OWNER, ClubRole.MODERATOR]);
-        }
+        this.authorizeClubEventAction(event.clubId, userId);
     }
 
     validateTeamTournamentComposition(event: Event, requireTeamCountDivisibleByTableSize: boolean): void {

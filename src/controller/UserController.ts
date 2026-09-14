@@ -69,7 +69,7 @@ export class UserController {
         } = userEditSchema.parse(req);
 
         const modifiedBy = req.user!.userId; // Non-null assertion safe because requireAuth ensures user exists
-        const editedUser = this.userService.editUser(id, name ?? undefined, telegramUsername ?? undefined, modifiedBy);
+        const editedUser = this.userService.editUser(id, name ?? undefined, telegramUsername, modifiedBy);
         return res.status(StatusCodes.OK).json(editedUser);
     }
 
