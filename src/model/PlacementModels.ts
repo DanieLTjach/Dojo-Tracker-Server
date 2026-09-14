@@ -14,6 +14,8 @@ export interface UserPlacementEntry {
 
 export interface UserPlacementHistoryResponse {
     userId: number;
+    gamesPlayed: number;
+    wins: number;
     tournaments: UserPlacementEntry[];
     seasons: UserPlacementEntry[];
 }

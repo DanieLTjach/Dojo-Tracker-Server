@@ -95,6 +95,8 @@ describe('PlacementHistory API (/api/users/:id/placements)', () => {
         expect(response.status).toBe(200);
         expect(response.body).toEqual({
             userId: USER_1,
+            gamesPlayed: 0,
+            wins: 0,
             tournaments: [],
             seasons: [],
         });
@@ -174,6 +176,8 @@ describe('PlacementHistory API (/api/users/:id/placements)', () => {
 
         expect(response.status).toBe(200);
         expect(response.body.userId).toBe(USER_1);
+        expect(response.body.gamesPlayed).toBe(2);
+        expect(response.body.wins).toBe(1);
 
         // Tournaments check
         expect(response.body.tournaments).toHaveLength(1);

@@ -14,6 +14,7 @@ export interface UserEventHistoryDBEntity {
     createdAt: string;
     minimumGamesForRating: number;
     gamesPlayed: number;
+    wins: number;
     rating: number | null;
 }
 
@@ -28,6 +29,7 @@ export interface UserEventHistoryItem {
     createdAt: Date;
     minimumGamesForRating: number;
     gamesPlayed: number;
+    wins: number;
     rating: number;
 }
 
@@ -45,6 +47,37 @@ export class PlacementHistoryRepository {
                 e.createdAt,
                 e.minimumGamesForRating,
                 COUNT(DISTINCT g.id) as gamesPlayed,
+                SUM(CASE WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM userToGame opponent
+                    WHERE opponent.gameId = g.id
+                      AND (
+                          opponent.points > utg.points
+                          OR (
+                              gr.umaTieBreak = 'WIND'
+                              AND opponent.points = utg.points
+                              AND NOT EXISTS (
+                                  SELECT 1
+                                  FROM userToGame seatedPlayer
+                                  WHERE seatedPlayer.gameId = g.id
+                                    AND seatedPlayer.startPlace IS NULL
+                              )
+                              AND CASE opponent.startPlace
+                                  WHEN 'EAST' THEN 0
+                                  WHEN 'SOUTH' THEN 1
+                                  WHEN 'WEST' THEN 2
+                                  WHEN 'NORTH' THEN 3
+                                  ELSE 4
+                              END < CASE utg.startPlace
+                                  WHEN 'EAST' THEN 0
+                                  WHEN 'SOUTH' THEN 1
+                                  WHEN 'WEST' THEN 2
+                                  WHEN 'NORTH' THEN 3
+                                  ELSE 4
+                              END
+                          )
+                      )
+                ) THEN 1 ELSE 0 END) as wins,
                 (
                     SELECT urc.rating
                     FROM userRatingChange urc
@@ -55,6 +88,7 @@ export class PlacementHistoryRepository {
             FROM game g
             JOIN event e ON g.eventId = e.id
             JOIN club c ON e.clubId = c.id
+            JOIN gameRules gr ON e.gameRules = gr.id
             JOIN userToGame utg ON g.id = utg.gameId
             WHERE utg.userId = :userId
               AND g.status = 'FINISHED'
@@ -88,6 +122,7 @@ function userEventHistoryFromDBEntity(dbEntity: UserEventHistoryDBEntity): UserE
         createdAt: new Date(dbEntity.createdAt),
         minimumGamesForRating: dbEntity.minimumGamesForRating,
         gamesPlayed: dbEntity.gamesPlayed,
+        wins: dbEntity.wins,
         rating: dbEntity.rating ?? 0,
     };
 }
