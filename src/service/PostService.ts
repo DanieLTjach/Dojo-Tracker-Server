@@ -2,6 +2,7 @@ import { BadRequestError, ForbiddenError, NotFoundError } from '../error/BaseErr
 import type {
     CreateCommentDTO,
     CreatePostDTO,
+    CreatePostImageDTO,
     Post,
     PostComment,
     UpdatePostDTO,
@@ -11,6 +12,7 @@ import { ClubRepository } from '../repository/ClubRepository.ts';
 import { PostRepository } from '../repository/PostRepository.ts';
 
 export const COMMENT_MAX_LENGTH = 500;
+export const MAX_POST_IMAGES = 4;
 
 export class PostService {
     private postRepository: PostRepository;
@@ -27,18 +29,22 @@ export class PostService {
         this.clubMembershipRepository = clubMembershipRepository;
     }
 
-    createPost(authorId: number, dto: CreatePostDTO): Post {
-        if (!dto.images || !Array.isArray(dto.images) || dto.images.length === 0) {
+    private validateImages(images: CreatePostImageDTO[] | undefined): void {
+        if (!images || !Array.isArray(images) || images.length === 0) {
             throw new BadRequestError('postMustHaveImages');
         }
-        if (dto.images.length > 4) {
+        if (images.length > MAX_POST_IMAGES) {
             throw new BadRequestError('postMaxFourImages');
         }
-        for (const img of dto.images) {
+        for (const img of images) {
             if (!img.url || typeof img.url !== 'string') {
                 throw new BadRequestError('postInvalidImageUrl');
             }
         }
+    }
+
+    createPost(authorId: number, dto: CreatePostDTO): Post {
+        this.validateImages(dto.images);
         if (dto.text && dto.text.length > 280) {
             throw new BadRequestError('postTextTooLong');
         }
@@ -113,6 +119,12 @@ export class PostService {
             if (!club) {
                 throw new NotFoundError('clubNotFound');
             }
+        }
+        if (dto.images !== undefined) {
+            // A post is a photo post - the same invariant createPost enforces.
+            // Emptying the list is a delete, not an edit, so it is refused here
+            // rather than silently leaving a post with nothing to show.
+            this.validateImages(dto.images);
         }
 
         this.postRepository.updatePost(postId, dto);

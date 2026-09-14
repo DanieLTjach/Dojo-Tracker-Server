@@ -48,11 +48,21 @@ export const updatePostSchema = z.object({
     params: z.object({
         id: postIdParamSchema,
     }),
-    // Both fields optional so a caller can edit the caption without restating
+    // Every field optional so a caller can edit the caption without restating
     // the club - the repository only writes the keys that are present.
+    //
+    // `images`, when sent, is the post's complete new set: add, replace,
+    // reorder and remove all travel as one list.
     body: z.object({
         text: z.string().max(280).nullable().optional(),
         clubId: z.number().int().positive().nullable().optional(),
+        images: z.array(
+            z.object({
+                url: z.string().trim().min(1, 'Image URL cannot be empty'),
+                width: z.number().int().positive().nullable().optional(),
+                height: z.number().int().positive().nullable().optional(),
+            })
+        ).min(1, 'Post must have at least one image').max(4, 'Post cannot have more than 4 images').optional(),
     }),
 });
 

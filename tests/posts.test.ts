@@ -599,4 +599,196 @@ describe('Posts API Endpoints', () => {
             .set('Authorization', authorAuthHeader)
             .expect(404);
     });
+    it('replaces a post images with the list it is given', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({
+                text: 'Swap my photos',
+                images: [
+                    { url: 'https://example.com/one.jpg' },
+                    { url: 'https://example.com/two.jpg' },
+                ],
+            })
+            .expect(201);
+        const postId = createRes.body.id;
+
+        const editRes = await request(app)
+            .patch(`/api/posts/${postId}`)
+            .set('Authorization', authorAuthHeader)
+            .send({
+                images: [
+                    { url: 'https://example.com/two.jpg' },
+                    { url: 'https://example.com/three.jpg' },
+                    { url: 'https://example.com/four.jpg' },
+                ],
+            })
+            .expect(200);
+
+        expect(editRes.body.images.map((i: { url: string }) => i.url)).toEqual([
+            'https://example.com/two.jpg',
+            'https://example.com/three.jpg',
+            'https://example.com/four.jpg',
+        ]);
+        // An images-only edit still counts as an edit.
+        expect(editRes.body.editedAt).toBeTruthy();
+        // The caption was not sent, so it must be untouched.
+        expect(editRes.body.text).toBe('Swap my photos');
+    });
+
+    it('keeps the order the images were sent in', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({
+                images: [
+                    { url: 'https://example.com/a.jpg' },
+                    { url: 'https://example.com/b.jpg' },
+                    { url: 'https://example.com/c.jpg' },
+                ],
+            })
+            .expect(201);
+
+        // Same three images, reversed - a pure reorder.
+        const reordered = await request(app)
+            .patch(`/api/posts/${createRes.body.id}`)
+            .set('Authorization', authorAuthHeader)
+            .send({
+                images: [
+                    { url: 'https://example.com/c.jpg' },
+                    { url: 'https://example.com/b.jpg' },
+                    { url: 'https://example.com/a.jpg' },
+                ],
+            })
+            .expect(200);
+
+        expect(reordered.body.images.map((i: { url: string }) => i.url)).toEqual([
+            'https://example.com/c.jpg',
+            'https://example.com/b.jpg',
+            'https://example.com/a.jpg',
+        ]);
+    });
+
+    it('removes photos down to a single one', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({
+                images: [
+                    { url: 'https://example.com/keep.jpg' },
+                    { url: 'https://example.com/drop1.jpg' },
+                    { url: 'https://example.com/drop2.jpg' },
+                ],
+            })
+            .expect(201);
+
+        const trimmed = await request(app)
+            .patch(`/api/posts/${createRes.body.id}`)
+            .set('Authorization', authorAuthHeader)
+            .send({ images: [{ url: 'https://example.com/keep.jpg' }] })
+            .expect(200);
+
+        expect(trimmed.body.images).toHaveLength(1);
+        expect(trimmed.body.images[0].url).toBe('https://example.com/keep.jpg');
+    });
+
+    it('refuses to leave a post with no photos, or with too many', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ images: [{ url: 'https://example.com/solo.jpg' }] })
+            .expect(201);
+        const postId = createRes.body.id;
+
+        // Emptying a photo post is a delete, not an edit.
+        await request(app)
+            .patch(`/api/posts/${postId}`)
+            .set('Authorization', authorAuthHeader)
+            .send({ images: [] })
+            .expect(400);
+
+        await request(app)
+            .patch(`/api/posts/${postId}`)
+            .set('Authorization', authorAuthHeader)
+            .send({
+                images: [
+                    { url: 'https://example.com/1.jpg' },
+                    { url: 'https://example.com/2.jpg' },
+                    { url: 'https://example.com/3.jpg' },
+                    { url: 'https://example.com/4.jpg' },
+                    { url: 'https://example.com/5.jpg' },
+                ],
+            })
+            .expect(400);
+
+        // Neither attempt may have touched the stored set.
+        const after = await request(app).get(`/api/posts/${postId}`).expect(200);
+        expect(after.body.images).toHaveLength(1);
+        expect(after.body.editedAt).toBeNull();
+    });
+
+    it('leaves images alone when the caption is edited on its own', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({
+                text: 'before',
+                images: [
+                    { url: 'https://example.com/x.jpg' },
+                    { url: 'https://example.com/y.jpg' },
+                ],
+            })
+            .expect(201);
+
+        const edited = await request(app)
+            .patch(`/api/posts/${createRes.body.id}`)
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'after' })
+            .expect(200);
+
+        expect(edited.body.text).toBe('after');
+        expect(edited.body.images.map((i: { url: string }) => i.url)).toEqual([
+            'https://example.com/x.jpg',
+            'https://example.com/y.jpg',
+        ]);
+    });
+
+    it('refuses image edits from anyone but the author', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'mine', images: [{ url: 'https://example.com/mine.jpg' }] })
+            .expect(201);
+
+        await request(app)
+            .patch(`/api/posts/${createRes.body.id}`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ images: [{ url: 'https://example.com/theirs.jpg' }] })
+            .expect(403);
+
+        const after = await request(app).get(`/api/posts/${createRes.body.id}`).expect(200);
+        expect(after.body.images[0].url).toBe('https://example.com/mine.jpg');
+    });
+
+    it('edits the caption, club and images together', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'all at once', images: [{ url: 'https://example.com/old.jpg' }] })
+            .expect(201);
+
+        const edited = await request(app)
+            .patch(`/api/posts/${createRes.body.id}`)
+            .set('Authorization', authorAuthHeader)
+            .send({
+                text: 'updated',
+                clubId: testClubId,
+                images: [{ url: 'https://example.com/new.jpg' }],
+            })
+            .expect(200);
+
+        expect(edited.body.text).toBe('updated');
+        expect(edited.body.clubId).toBe(testClubId);
+        expect(edited.body.images[0].url).toBe('https://example.com/new.jpg');
+    });
 });

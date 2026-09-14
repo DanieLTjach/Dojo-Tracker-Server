@@ -52,13 +52,18 @@ export interface CreatePostDTO {
 }
 
 /**
- * Only the caption and club are editable. Images are deliberately immutable:
- * re-ordering or swapping them would orphan Storage objects that the cleanup
- * script only collects after an age delay, and nothing in the UI asks for it.
+ * Every field is optional: only the keys present are written, so editing a
+ * caption cannot clear the club by omission.
+ *
+ * `images`, when given, is the complete set the post should end up with -
+ * add, replace, reorder and remove are all expressed as "here is the new
+ * list". Objects dropped from it stay in Storage until the orphan cleanup
+ * script collects them, which is exactly what that script is for.
  */
 export interface UpdatePostDTO {
     text?: string | null | undefined;
     clubId?: number | null | undefined;
+    images?: CreatePostImageDTO[] | undefined;
 }
 
 export interface PostComment {

@@ -2,6 +2,7 @@ import { dbManager } from '../db/dbInit.ts';
 import type {
     CreateCommentDTO,
     CreatePostDTO,
+    CreatePostImageDTO,
     Post,
     PostComment,
     PostGameTag,
@@ -88,14 +89,7 @@ export class PostRepository {
         const postId = Number(result.lastInsertRowid);
 
         if (dto.images && dto.images.length > 0) {
-            const imgStmt = dbManager.db.prepare(`
-                INSERT INTO post_image (postId, url, width, height, sortOrder)
-                VALUES (?, ?, ?, ?, ?)
-            `);
-            for (let i = 0; i < dto.images.length; i++) {
-                const img = dto.images[i]!;
-                imgStmt.run(postId, img.url, img.width ?? null, img.height ?? null, i);
-            }
+            this.insertImages(postId, dto.images);
         }
 
         return postId;
@@ -201,6 +195,34 @@ export class PostRepository {
      * Applies only the fields present in the DTO, so a caller editing just the
      * caption cannot accidentally clear the club by omitting it.
      */
+    private insertImages(postId: number, images: CreatePostImageDTO[]): void {
+        const imgStmt = dbManager.db.prepare(`
+            INSERT INTO post_image (postId, url, width, height, sortOrder)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+        // sortOrder is the array position, so the caller's order is the order
+        // the collage renders in.
+        for (let i = 0; i < images.length; i++) {
+            const img = images[i]!;
+            imgStmt.run(postId, img.url, img.width ?? null, img.height ?? null, i);
+        }
+    }
+
+    /**
+     * Replaces a post's images with exactly the list given.
+     *
+     * Rows are swapped wholesale rather than diffed: image identity is the URL
+     * and the client already re-sends the ones it kept, so a diff would buy
+     * nothing but a chance to get reordering subtly wrong. Callers run inside
+     * the request transaction, so a failure leaves the old set in place.
+     */
+    replaceImages(postId: number, images: CreatePostImageDTO[]): void {
+        dbManager.db.prepare(`DELETE FROM post_image WHERE postId = ?`).run(postId);
+        if (images.length > 0) {
+            this.insertImages(postId, images);
+        }
+    }
+
     updatePost(id: number, dto: UpdatePostDTO): void {
         const assignments: string[] = [];
         const values: (string | number | null)[] = [];
@@ -213,7 +235,10 @@ export class PostRepository {
             assignments.push('clubId = ?');
             values.push(dto.clubId ?? null);
         }
-        if (assignments.length === 0) {
+
+        if (dto.images !== undefined) {
+            this.replaceImages(id, dto.images);
+        } else if (assignments.length === 0) {
             return;
         }
 
