@@ -35,6 +35,7 @@ export interface Post {
     commentCount: number;
     likedByMe: boolean;
     createdAt: Date | string;
+    editedAt?: Date | string | null | undefined;
 }
 
 export interface CreatePostImageDTO {
@@ -48,4 +49,30 @@ export interface CreatePostDTO {
     gameId?: number | null | undefined;
     text?: string | null | undefined;
     images: CreatePostImageDTO[];
+}
+
+/**
+ * Only the caption and club are editable. Images are deliberately immutable:
+ * re-ordering or swapping them would orphan Storage objects that the cleanup
+ * script only collects after an age delay, and nothing in the UI asks for it.
+ */
+export interface UpdatePostDTO {
+    text?: string | null | undefined;
+    clubId?: number | null | undefined;
+}
+
+export interface PostComment {
+    id: number;
+    postId: number;
+    authorId: number;
+    author: PostAuthor;
+    text: string;
+    createdAt: Date | string;
+    editedAt: Date | string | null;
+    likeCount: number;
+    likedByMe: boolean;
+}
+
+export interface CreateCommentDTO {
+    text: string;
 }

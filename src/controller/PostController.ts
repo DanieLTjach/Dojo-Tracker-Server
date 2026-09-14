@@ -1,11 +1,16 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import {
+    commentActionSchema,
+    createCommentSchema,
     createPostSchema,
     getClubPostsSchema,
+    getCommentsSchema,
     getPostByIdSchema,
     getUserPostsSchema,
     postActionSchema,
+    updateCommentSchema,
+    updatePostSchema,
 } from '../schema/PostSchemas.ts';
 import { PostService } from '../service/PostService.ts';
 import { UserService } from '../service/UserService.ts';
@@ -46,11 +51,54 @@ export class PostController {
         return res.status(StatusCodes.OK).json(posts);
     }
 
+    updatePost(req: Request, res: Response) {
+        const { params: { id }, body } = updatePostSchema.parse(req);
+        const post = this.postService.updatePost(id, body, { id: req.user!.userId });
+        return res.status(StatusCodes.OK).json(post);
+    }
+
     deletePost(req: Request, res: Response) {
         const { params: { id } } = postActionSchema.parse(req);
         const user = this.userService.getUserById(req.user!.userId);
         this.postService.deletePost(id, { id: user.id, isAdmin: user.isAdmin });
         return res.status(StatusCodes.NO_CONTENT).send();
+    }
+
+    getComments(req: Request, res: Response) {
+        const { params: { id } } = getCommentsSchema.parse(req);
+        const comments = this.postService.getComments(id, req.user?.userId);
+        return res.status(StatusCodes.OK).json(comments);
+    }
+
+    createComment(req: Request, res: Response) {
+        const { params: { id }, body } = createCommentSchema.parse(req);
+        const comment = this.postService.createComment(id, req.user!.userId, body);
+        return res.status(StatusCodes.CREATED).json(comment);
+    }
+
+    updateComment(req: Request, res: Response) {
+        const { params: { commentId }, body } = updateCommentSchema.parse(req);
+        const comment = this.postService.updateComment(commentId, body, { id: req.user!.userId });
+        return res.status(StatusCodes.OK).json(comment);
+    }
+
+    deleteComment(req: Request, res: Response) {
+        const { params: { commentId } } = commentActionSchema.parse(req);
+        const user = this.userService.getUserById(req.user!.userId);
+        this.postService.deleteComment(commentId, { id: user.id, isAdmin: user.isAdmin });
+        return res.status(StatusCodes.NO_CONTENT).send();
+    }
+
+    likeComment(req: Request, res: Response) {
+        const { params: { commentId } } = commentActionSchema.parse(req);
+        this.postService.likeComment(commentId, req.user!.userId);
+        return res.status(StatusCodes.OK).json({ success: true });
+    }
+
+    unlikeComment(req: Request, res: Response) {
+        const { params: { commentId } } = commentActionSchema.parse(req);
+        this.postService.unlikeComment(commentId, req.user!.userId);
+        return res.status(StatusCodes.OK).json({ success: true });
     }
 
     likePost(req: Request, res: Response) {

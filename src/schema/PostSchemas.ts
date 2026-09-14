@@ -41,3 +41,47 @@ export const postActionSchema = z.object({
         id: postIdParamSchema,
     }),
 });
+
+export const commentIdParamSchema = z.coerce.number().int('Comment ID must be an integer');
+
+export const updatePostSchema = z.object({
+    params: z.object({
+        id: postIdParamSchema,
+    }),
+    // Both fields optional so a caller can edit the caption without restating
+    // the club - the repository only writes the keys that are present.
+    body: z.object({
+        text: z.string().max(280).nullable().optional(),
+        clubId: z.number().int().positive().nullable().optional(),
+    }),
+});
+
+export const getCommentsSchema = z.object({
+    params: z.object({
+        id: postIdParamSchema,
+    }),
+});
+
+export const createCommentSchema = z.object({
+    params: z.object({
+        id: postIdParamSchema,
+    }),
+    body: z.object({
+        text: z.string().trim().min(1, 'Comment cannot be empty').max(500),
+    }),
+});
+
+export const updateCommentSchema = z.object({
+    params: z.object({
+        commentId: commentIdParamSchema,
+    }),
+    body: z.object({
+        text: z.string().trim().min(1, 'Comment cannot be empty').max(500),
+    }),
+});
+
+export const commentActionSchema = z.object({
+    params: z.object({
+        commentId: commentIdParamSchema,
+    }),
+});

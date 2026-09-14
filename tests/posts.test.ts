@@ -247,4 +247,356 @@ describe('Posts API Endpoints', () => {
             .get(`/api/posts/${postId}`)
             .expect(404);
     });
+    it('lets the author edit the caption and marks the post edited', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({
+                text: 'Original caption',
+                clubId: testClubId,
+                images: [{ url: 'https://example.com/edit.jpg' }],
+            })
+            .expect(201);
+        const postId = createRes.body.id;
+        expect(createRes.body.editedAt).toBeNull();
+
+        const editRes = await request(app)
+            .patch(`/api/posts/${postId}`)
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'Updated caption' })
+            .expect(200);
+
+        expect(editRes.body.text).toBe('Updated caption');
+        expect(editRes.body.editedAt).toBeTruthy();
+        // Omitting clubId must not clear it - only the sent fields are written.
+        expect(editRes.body.clubId).toBe(testClubId);
+        // Images are not editable, and must survive a caption edit untouched.
+        expect(editRes.body.images).toHaveLength(1);
+    });
+
+    it('refuses edits from everyone but the author, including admins', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({
+                text: 'Not yours to edit',
+                clubId: testClubId,
+                images: [{ url: 'https://example.com/noedit.jpg' }],
+            })
+            .expect(201);
+        const postId = createRes.body.id;
+
+        await request(app)
+            .patch(`/api/posts/${postId}`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: 'hijacked' })
+            .expect(403);
+
+        // Admins may delete a post but may not rewrite its words.
+        await request(app)
+            .patch(`/api/posts/${postId}`)
+            .set('Authorization', adminAuthHeader)
+            .send({ text: 'hijacked by admin' })
+            .expect(403);
+
+        const after = await request(app).get(`/api/posts/${postId}`).expect(200);
+        expect(after.body.text).toBe('Not yours to edit');
+    });
+
+    it('validates edited caption length', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'short', images: [{ url: 'https://example.com/len.jpg' }] })
+            .expect(201);
+
+        await request(app)
+            .patch(`/api/posts/${createRes.body.id}`)
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'x'.repeat(281) })
+            .expect(400);
+    });
+
+    it('lets another user comment, and reflects the count on the post', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'Comment me', images: [{ url: 'https://example.com/c.jpg' }] })
+            .expect(201);
+        const postId = createRes.body.id;
+        expect(createRes.body.commentCount).toBe(0);
+
+        const commentRes = await request(app)
+            .post(`/api/posts/${postId}/comments`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: '  Nice hand!  ' })
+            .expect(201);
+
+        expect(commentRes.body.text).toBe('Nice hand!');
+        expect(commentRes.body.authorId).toBe(otherUserId);
+        expect(commentRes.body.author.name).toBe('Post Other User');
+        expect(commentRes.body.editedAt).toBeNull();
+
+        const listRes = await request(app).get(`/api/posts/${postId}/comments`).expect(200);
+        expect(listRes.body).toHaveLength(1);
+
+        const postRes = await request(app).get(`/api/posts/${postId}`).expect(200);
+        expect(postRes.body.commentCount).toBe(1);
+    });
+
+    it('rejects empty and overlong comments', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'Validation', images: [{ url: 'https://example.com/v.jpg' }] })
+            .expect(201);
+        const postId = createRes.body.id;
+
+        await request(app)
+            .post(`/api/posts/${postId}/comments`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: '   ' })
+            .expect(400);
+
+        await request(app)
+            .post(`/api/posts/${postId}/comments`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: 'x'.repeat(501) })
+            .expect(400);
+    });
+
+    it('requires auth to comment but not to read comments', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'Auth check', images: [{ url: 'https://example.com/a.jpg' }] })
+            .expect(201);
+        const postId = createRes.body.id;
+
+        await request(app)
+            .post(`/api/posts/${postId}/comments`)
+            .send({ text: 'anonymous' })
+            .expect(401);
+
+        await request(app).get(`/api/posts/${postId}/comments`).expect(200);
+    });
+
+    it('lets the comment author edit their own comment only', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'Edit comment', images: [{ url: 'https://example.com/ec.jpg' }] })
+            .expect(201);
+
+        const commentRes = await request(app)
+            .post(`/api/posts/${createRes.body.id}/comments`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: 'first take' })
+            .expect(201);
+        const commentId = commentRes.body.id;
+
+        // The post's author does not get to reword someone else's comment.
+        await request(app)
+            .patch(`/api/comments/${commentId}`)
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'rewritten' })
+            .expect(403);
+
+        const edited = await request(app)
+            .patch(`/api/comments/${commentId}`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: 'second take' })
+            .expect(200);
+        expect(edited.body.text).toBe('second take');
+        expect(edited.body.editedAt).toBeTruthy();
+    });
+
+    it('lets the post author moderate comments on their own post', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'Moderation', images: [{ url: 'https://example.com/m.jpg' }] })
+            .expect(201);
+        const postId = createRes.body.id;
+
+        const commentRes = await request(app)
+            .post(`/api/posts/${postId}/comments`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: 'to be removed' })
+            .expect(201);
+
+        await request(app)
+            .delete(`/api/comments/${commentRes.body.id}`)
+            .set('Authorization', authorAuthHeader)
+            .expect(204);
+
+        const listRes = await request(app).get(`/api/posts/${postId}/comments`).expect(200);
+        expect(listRes.body).toHaveLength(0);
+    });
+
+    it('refuses comment deletion by an unrelated user', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', adminAuthHeader)
+            .send({ text: 'Third party', images: [{ url: 'https://example.com/t.jpg' }] })
+            .expect(201);
+
+        const commentRes = await request(app)
+            .post(`/api/posts/${createRes.body.id}/comments`)
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'mine' })
+            .expect(201);
+
+        await request(app)
+            .delete(`/api/comments/${commentRes.body.id}`)
+            .set('Authorization', otherUserAuthHeader)
+            .expect(403);
+    });
+
+    it('removes a post comments along with the post', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'Cascade', images: [{ url: 'https://example.com/cascade.jpg' }] })
+            .expect(201);
+        const postId = createRes.body.id;
+
+        const commentRes = await request(app)
+            .post(`/api/posts/${postId}/comments`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: 'orphan candidate' })
+            .expect(201);
+
+        await request(app)
+            .delete(`/api/posts/${postId}`)
+            .set('Authorization', authorAuthHeader)
+            .expect(204);
+
+        // The comment must go with it rather than linger pointing at nothing.
+        await request(app)
+            .patch(`/api/comments/${commentRes.body.id}`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: 'still here?' })
+            .expect(404);
+    });
+
+    it('404s comments on a post that does not exist', async () => {
+        await request(app).get('/api/posts/99999/comments').expect(404);
+        await request(app)
+            .post('/api/posts/99999/comments')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'nowhere' })
+            .expect(404);
+    });
+    it('likes and unlikes a comment, and counts each user once', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'Like my comments', images: [{ url: 'https://example.com/cl.jpg' }] })
+            .expect(201);
+        const postId = createRes.body.id;
+
+        const commentRes = await request(app)
+            .post(`/api/posts/${postId}/comments`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: 'worth a like' })
+            .expect(201);
+        const commentId = commentRes.body.id;
+        expect(commentRes.body.likeCount).toBe(0);
+        expect(commentRes.body.likedByMe).toBe(false);
+
+        await request(app)
+            .post(`/api/comments/${commentId}/like`)
+            .set('Authorization', authorAuthHeader)
+            .expect(200);
+
+        // Liking twice must not double count - the primary key absorbs it.
+        await request(app)
+            .post(`/api/comments/${commentId}/like`)
+            .set('Authorization', authorAuthHeader)
+            .expect(200);
+
+        const asLiker = await request(app)
+            .get(`/api/posts/${postId}/comments`)
+            .set('Authorization', authorAuthHeader)
+            .expect(200);
+        expect(asLiker.body[0].likeCount).toBe(1);
+        expect(asLiker.body[0].likedByMe).toBe(true);
+
+        // likedByMe is per viewer: the comment's own author has not liked it.
+        const asOther = await request(app)
+            .get(`/api/posts/${postId}/comments`)
+            .set('Authorization', otherUserAuthHeader)
+            .expect(200);
+        expect(asOther.body[0].likeCount).toBe(1);
+        expect(asOther.body[0].likedByMe).toBe(false);
+
+        await request(app)
+            .delete(`/api/comments/${commentId}/like`)
+            .set('Authorization', authorAuthHeader)
+            .expect(200);
+
+        const afterUnlike = await request(app).get(`/api/posts/${postId}/comments`).expect(200);
+        expect(afterUnlike.body[0].likeCount).toBe(0);
+    });
+
+    it('reports no likedByMe for an anonymous reader', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'Anon read', images: [{ url: 'https://example.com/an.jpg' }] })
+            .expect(201);
+
+        const commentRes = await request(app)
+            .post(`/api/posts/${createRes.body.id}/comments`)
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'hello' })
+            .expect(201);
+
+        await request(app)
+            .post(`/api/comments/${commentRes.body.id}/like`)
+            .set('Authorization', otherUserAuthHeader)
+            .expect(200);
+
+        const anon = await request(app).get(`/api/posts/${createRes.body.id}/comments`).expect(200);
+        expect(anon.body[0].likeCount).toBe(1);
+        expect(anon.body[0].likedByMe).toBe(false);
+    });
+
+    it('requires auth to like a comment and 404s an unknown one', async () => {
+        await request(app).post('/api/comments/999999/like').expect(401);
+        await request(app)
+            .post('/api/comments/999999/like')
+            .set('Authorization', authorAuthHeader)
+            .expect(404);
+    });
+
+    it('drops comment likes when the comment is deleted', async () => {
+        const createRes = await request(app)
+            .post('/api/posts')
+            .set('Authorization', authorAuthHeader)
+            .send({ text: 'Cascade likes', images: [{ url: 'https://example.com/cc.jpg' }] })
+            .expect(201);
+
+        const commentRes = await request(app)
+            .post(`/api/posts/${createRes.body.id}/comments`)
+            .set('Authorization', otherUserAuthHeader)
+            .send({ text: 'doomed' })
+            .expect(201);
+
+        await request(app)
+            .post(`/api/comments/${commentRes.body.id}/like`)
+            .set('Authorization', authorAuthHeader)
+            .expect(200);
+
+        await request(app)
+            .delete(`/api/comments/${commentRes.body.id}`)
+            .set('Authorization', otherUserAuthHeader)
+            .expect(204);
+
+        await request(app)
+            .post(`/api/comments/${commentRes.body.id}/like`)
+            .set('Authorization', authorAuthHeader)
+            .expect(404);
+    });
 });

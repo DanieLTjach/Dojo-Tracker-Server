@@ -1,5 +1,12 @@
 import { dbManager } from '../db/dbInit.ts';
-import type { CreatePostDTO, Post, PostGameTag } from '../model/PostModels.ts';
+import type {
+    CreateCommentDTO,
+    CreatePostDTO,
+    Post,
+    PostComment,
+    PostGameTag,
+    UpdatePostDTO,
+} from '../model/PostModels.ts';
 
 interface PostDBRow {
     id: number;
@@ -10,11 +17,64 @@ interface PostDBRow {
     gameId: number | null;
     text: string | null;
     createdAt: string;
+    editedAt: string | null;
     likeCount: number;
+    commentCount: number;
     likedByMe: number;
     gamePlayedAt: string | null;
     gameScore: number | null;
     gameClubName: string | null;
+}
+
+interface CommentDBRow {
+    id: number;
+    postId: number;
+    authorId: number;
+    authorName: string;
+    authorAvatarUrl: string | null;
+    text: string;
+    createdAt: string;
+    editedAt: string | null;
+    likeCount: number;
+    likedByMe: number;
+}
+
+// Shared by the single-comment and thread queries so the two can never drift.
+const COMMENT_SELECT = `
+    SELECT
+        pc.id,
+        pc.postId,
+        pc.authorId,
+        u.name as authorName,
+        prof.avatarUrl as authorAvatarUrl,
+        pc.text,
+        pc.createdAt,
+        pc.editedAt,
+        (SELECT COUNT(*) FROM post_comment_like WHERE commentId = pc.id) as likeCount,
+        EXISTS(
+            SELECT 1 FROM post_comment_like WHERE commentId = pc.id AND userId = ?
+        ) as likedByMe
+    FROM post_comment pc
+    JOIN user u ON pc.authorId = u.id
+    LEFT JOIN profile prof ON u.id = prof.userId
+`;
+
+function mapCommentRow(row: CommentDBRow): PostComment {
+    return {
+        id: row.id,
+        postId: row.postId,
+        authorId: row.authorId,
+        author: {
+            id: row.authorId,
+            name: row.authorName,
+            avatarUrl: row.authorAvatarUrl,
+        },
+        text: row.text,
+        createdAt: row.createdAt,
+        editedAt: row.editedAt,
+        likeCount: row.likeCount,
+        likedByMe: Boolean(row.likedByMe),
+    };
 }
 
 export class PostRepository {
@@ -52,7 +112,9 @@ export class PostRepository {
                 p.gameId,
                 p.text,
                 p.createdAt,
+                p.editedAt,
                 (SELECT COUNT(*) FROM post_like WHERE postId = p.id) as likeCount,
+                (SELECT COUNT(*) FROM post_comment WHERE postId = p.id) as commentCount,
                 EXISTS(SELECT 1 FROM post_like WHERE postId = p.id AND userId = ?) as likedByMe,
                 g.createdAt as gamePlayedAt,
                 utg.points as gameScore,
@@ -82,7 +144,9 @@ export class PostRepository {
                 p.gameId,
                 p.text,
                 p.createdAt,
+                p.editedAt,
                 (SELECT COUNT(*) FROM post_like WHERE postId = p.id) as likeCount,
+                (SELECT COUNT(*) FROM post_comment WHERE postId = p.id) as commentCount,
                 EXISTS(SELECT 1 FROM post_like WHERE postId = p.id AND userId = ?) as likedByMe,
                 g.createdAt as gamePlayedAt,
                 utg.points as gameScore,
@@ -112,7 +176,9 @@ export class PostRepository {
                 p.gameId,
                 p.text,
                 p.createdAt,
+                p.editedAt,
                 (SELECT COUNT(*) FROM post_like WHERE postId = p.id) as likeCount,
+                (SELECT COUNT(*) FROM post_comment WHERE postId = p.id) as commentCount,
                 EXISTS(SELECT 1 FROM post_like WHERE postId = p.id AND userId = ?) as likedByMe,
                 g.createdAt as gamePlayedAt,
                 utg.points as gameScore,
@@ -131,8 +197,84 @@ export class PostRepository {
         return this.mapPostRowsToPosts(rows);
     }
 
+    /**
+     * Applies only the fields present in the DTO, so a caller editing just the
+     * caption cannot accidentally clear the club by omitting it.
+     */
+    updatePost(id: number, dto: UpdatePostDTO): void {
+        const assignments: string[] = [];
+        const values: (string | number | null)[] = [];
+
+        if ('text' in dto) {
+            assignments.push('text = ?');
+            values.push(dto.text ?? null);
+        }
+        if ('clubId' in dto) {
+            assignments.push('clubId = ?');
+            values.push(dto.clubId ?? null);
+        }
+        if (assignments.length === 0) {
+            return;
+        }
+
+        assignments.push('editedAt = ?');
+        values.push(new Date().toISOString());
+        values.push(id);
+
+        dbManager.db.prepare(`UPDATE post SET ${assignments.join(', ')} WHERE id = ?`).run(...values);
+    }
+
     deletePost(id: number): void {
         dbManager.db.prepare(`DELETE FROM post WHERE id = ?`).run(id);
+    }
+
+    createComment(postId: number, authorId: number, dto: CreateCommentDTO): number {
+        const now = new Date().toISOString();
+        const result = dbManager.db.prepare(`
+            INSERT INTO post_comment (postId, authorId, text, createdAt)
+            VALUES (?, ?, ?, ?)
+        `).run(postId, authorId, dto.text, now);
+        return Number(result.lastInsertRowid);
+    }
+
+    findCommentById(id: number, currentUserId?: number): PostComment | null {
+        const row = dbManager.db.prepare(`
+            ${COMMENT_SELECT}
+            WHERE pc.id = ?
+        `).get(currentUserId ?? -1, id) as CommentDBRow | undefined;
+        return row ? mapCommentRow(row) : null;
+    }
+
+    findCommentsByPostId(postId: number, currentUserId?: number): PostComment[] {
+        const rows = dbManager.db.prepare(`
+            ${COMMENT_SELECT}
+            WHERE pc.postId = ?
+            ORDER BY pc.createdAt ASC, pc.id ASC
+        `).all(currentUserId ?? -1, postId) as CommentDBRow[];
+        return rows.map(mapCommentRow);
+    }
+
+    addCommentLike(commentId: number, userId: number): void {
+        dbManager.db.prepare(`
+            INSERT OR IGNORE INTO post_comment_like (commentId, userId, createdAt)
+            VALUES (?, ?, ?)
+        `).run(commentId, userId, new Date().toISOString());
+    }
+
+    removeCommentLike(commentId: number, userId: number): void {
+        dbManager.db.prepare(`
+            DELETE FROM post_comment_like WHERE commentId = ? AND userId = ?
+        `).run(commentId, userId);
+    }
+
+    updateComment(id: number, text: string): void {
+        dbManager.db.prepare(`
+            UPDATE post_comment SET text = ?, editedAt = ? WHERE id = ?
+        `).run(text, new Date().toISOString(), id);
+    }
+
+    deleteComment(id: number): void {
+        dbManager.db.prepare(`DELETE FROM post_comment WHERE id = ?`).run(id);
     }
 
     addLike(postId: number, userId: number): void {
@@ -178,9 +320,10 @@ export class PostRepository {
             text: row.text,
             images,
             likeCount: row.likeCount,
-            commentCount: 0,
+            commentCount: row.commentCount,
             likedByMe: Boolean(row.likedByMe),
             createdAt: row.createdAt,
+            editedAt: row.editedAt,
         };
     }
 
@@ -237,9 +380,10 @@ export class PostRepository {
                 text: row.text,
                 images: imagesByPostId.get(row.id) || [],
                 likeCount: row.likeCount,
-                commentCount: 0,
+                commentCount: row.commentCount,
                 likedByMe: Boolean(row.likedByMe),
                 createdAt: row.createdAt,
+                editedAt: row.editedAt,
             };
         });
     }
