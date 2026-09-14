@@ -55,6 +55,24 @@ export class ClubRepository {
         return dbEntity !== undefined ? clubFromDBEntity(dbEntity) : undefined;
     }
 
+    /**
+     * Games played in a club's events.
+     *
+     * Counts FINISHED games only: a game still in progress has not been played
+     * yet, and including it would make the number tick up and down as tables
+     * start and finish. Games reach a club through their event, since `game`
+     * has no clubId of its own.
+     */
+    countClubGames(clubId: number): number {
+        const row = dbManager.db.prepare(`
+            SELECT COUNT(*) as gamesCount
+            FROM game g
+            JOIN event e ON g.eventId = e.id
+            WHERE e.clubId = :clubId AND g.status = 'FINISHED'
+        `).get({ clubId }) as { gamesCount: number };
+        return row.gamesCount;
+    }
+
     private findClubByNameStatement(): Statement<{ name: string }, ClubDBEntity> {
         return dbManager.db.prepare(`
             SELECT

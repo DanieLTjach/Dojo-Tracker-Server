@@ -34,6 +34,16 @@ export interface Club {
     modifiedBy: number;
 }
 
+/**
+ * A club plus counters that are derived rather than stored. Only the
+ * single-club read returns this: the count is a join across every game in the
+ * club's events, which the permission checks that call findClubById have no
+ * use for.
+ */
+export interface ClubWithStats extends Club {
+    gamesCount: number;
+}
+
 export interface ClubTelegramTopics {
     rating: TelegramTopic | null;
     userLogs: TelegramTopic | null;

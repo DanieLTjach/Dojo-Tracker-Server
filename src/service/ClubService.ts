@@ -1,5 +1,5 @@
 import { ClubNameAlreadyExistsError, ClubNotFoundError } from '../error/ClubErrors.ts';
-import type { Club, ClubTelegramTopics } from '../model/ClubModels.ts';
+import type { Club, ClubWithStats, ClubTelegramTopics } from '../model/ClubModels.ts';
 import { ClubTelegramTopicType, GLOBAL_LOGS_LOCALE, globalClubLogsTopic } from '../model/TelegramTopic.ts';
 import type { TelegramTopic } from '../model/TelegramTopic.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
@@ -27,6 +27,16 @@ export class ClubService {
             throw new ClubNotFoundError(clubId);
         }
         return club;
+    }
+
+    /**
+     * The club plus its derived counters, for the club detail screen.
+     * Kept separate from getClubById so the many permission and validation
+     * callers of that method do not pay for the extra count.
+     */
+    getClubWithStats(clubId: number): ClubWithStats {
+        const club = this.getClubById(clubId);
+        return { ...club, gamesCount: this.clubRepository.countClubGames(clubId) };
     }
 
     validateClubExists(clubId: number): void {

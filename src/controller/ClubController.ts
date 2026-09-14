@@ -13,7 +13,7 @@ export class ClubController {
 
     getClubById(req: Request, res: Response) {
         const { params: { clubId } } = clubGetByIdSchema.parse(req);
-        const club = this.clubService.getClubById(clubId);
+        const club = this.clubService.getClubWithStats(clubId);
         return res.status(StatusCodes.OK).json(club);
     }
 
