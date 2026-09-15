@@ -135,100 +135,100 @@ achievements:
       description: Здійснив камбек з мінусу та виборов перше місце.
     FIRST_RON:
       name: Рон!
-      description: Зібрав свій перший рон.
+      description: Зібрав свій перший рон
     FIRST_TSUMO:
       name: Цумо!
-      description: Зібрав свій перший цумо.
+      description: Зібрав свій перший цумо
     FIRST_DEALER_WIN:
       name: Сила Ойя
-      description: Здобув першу перемогу на дилері.
+      description: Здобув першу перемогу на дилері
     FIRST_RIICHI:
       name: Крок до перемоги
-      description: Оголосив свій перший ріічі.
+      description: Оголосив свій перший ріічі
     DEALER_WINS_STREAK_3:
       name: Майстер ренчану
-      description: Виграв 3 раунди поспіль на дилері.
+      description: Виграв 3 раунди поспіль на дилері
     DEALER_WINS_STREAK_5:
       name: Нестримний дилер
-      description: Виграв 5 раундів поспіль на дилері.
+      description: Виграв 5 раундів поспіль на дилері
     RIICHI_10:
       name: Агресивний гравець
-      description: Оголосив ріічі 10 разів.
+      description: Оголосив ріічі 10 разів
     RIICHI_100:
       name: Фанат ріічі
-      description: Оголосив ріічі 100 разів.
+      description: Оголосив ріічі 100 разів
     RIICHI_NOMI_WIN:
       name: Чисте ріічі
-      description: Виграв руку, де ріічі було єдиним ханом.
+      description: Виграв руку, де ріічі було єдиним ханом
     ONE_HAN_WIN:
       name: Дешево та швидко
-      description: Виграв руку в 1 хан.
+      description: Виграв руку в 1 хан
     CHIITOITSU_NOMI_WIN:
       name: Лише сім пар
-      description: Виграв чіітоіцу без інших яку.
+      description: Виграв чіітоіцу без інших яку
     FU_50:
       name: Колекціонер фу
-      description: Виграв руку на 50 фу.
+      description: Виграв руку на 50 фу
     FU_70:
       name: Важке фу
-      description: Виграв руку на 70 фу.
+      description: Виграв руку на 70 фу
     FU_100:
       name: Вежа з фу
-      description: Виграв руку на 100 фу.
+      description: Виграв руку на 100 фу
     FIRST_MANGAN:
       name: Великий удар
-      description: Зібрав свій перший манган.
+      description: Зібрав свій перший манган
     FIRST_HANEMAN:
       name: Потужний сплеск
-      description: Зібрав свій перший ханеман.
+      description: Зібрав свій перший ханеман
     FIRST_BAIMAN:
       name: Подвійна сила
-      description: Зібрав свій перший байман.
+      description: Зібрав свій перший байман
     FIRST_SANBAIMAN:
       name: Потрійний вибух
-      description: Зібрав свій перший санбайман.
+      description: Зібрав свій перший санбайман
     FIRST_KAZOE:
       name: Рука тринадцяти
-      description: Зібрав свій перший казое якуман.
+      description: Зібрав свій перший казое якуман
     FIRST_YAKUMAN:
       name: Божественний дотик
-      description: Зібрав свій перший якуман.
+      description: Зібрав свій перший якуман
     FIRST_DOUBLE_YAKUMAN:
       name: Міфічний володар
-      description: Зібрав свій перший дабл якуман.
+      description: Зібрав свій перший дабл якуман
     NAGASHI_MANGAN:
       name: Тихі річки
-      description: Зібрав нагаші манган.
+      description: Зібрав нагаші манган
     EXHAUSTIVE_DRAW_TENPAI_10:
       name: Наполегливий темпай
-      description: Втримав темпай у 10 вичерпних нічиїх.
+      description: Втримав темпай у 10 вичерпних нічиїх
     EXHAUSTIVE_DRAW_TENPAI_50:
       name: Спеціаліст нічиїх
-      description: Втримав темпай у 50 вичерпних нічиїх.
+      description: Втримав темпай у 50 вичерпних нічиїх
     NO_DEAL_IN_STREAK_50:
       name: Залізна стіна
-      description: Зіграв 50 відстежуваних раундів поспіль без накидів.
+      description: Зіграв 50 відстежуваних раундів поспіль без накидів
     DOUBLE_RON_WINNER:
       name: Синхронний удар
-      description: Виграв у складі дабл рону.
+      description: Виграв у складі дабл рону
     YAKUMAN_LIABILITY:
       name: Секинін барай
-      description: Оплатив повну відповідальність за якуман іншого гравця.
+      description: Оплатив повну відповідальність за якуман іншого гравця
     DEAL_IN_32000:
       name: Ядерний накид
-      description: Накинув 32 000 очок або більше за один раз.
+      description: Накинув 32 000 очок або більше за один раз
     LOST_RIICHI_STICKS_10:
       name: Щедрий спонсор
-      description: Втратив 10 паличок ріічі на користь суперників.
+      description: Втратив 10 паличок ріічі на користь суперників
     TSUMO_LOSS_50000:
       name: Спільний тягар
-      description: Накопичив 50 000 очок втрат від цумо суперників.
+      description: Накопичив 50 000 очок втрат від цумо суперників
     FIRST_CHOMBO:
       name: Упс!
-      description: Отримав своє перше чомбо.
+      description: Отримав своє перше чомбо
     FOUR_RIICHI_ABORTIVE_DRAW:
       name: Патова ситуація
-      description: Взяв участь у перерваній нічиї через чотири ріічі.
+      description: Взяв участь у перерваній нічиї через чотири ріічі
     FIRST_IPPATSU:
       name: Блискавичний удар
       description: Виграв руку з іппацу (ріічі, виграна наступним же ходом).
