@@ -503,4 +503,33 @@ describe('EventRegistrationService', () => {
                 .toThrow(EventRegistrationNotFoundError);
         });
     });
+
+    describe('EventRegistrationRepository avatarUrl mapping', () => {
+        it('returns avatarUrl from profile and null when user has no profile row', () => {
+            profileRepo.upsertProfile(
+                EXISTING_MEMBER_USER_ID,
+                mergeProfileValues(undefined, {
+                    firstName: 'MemberFirst',
+                    lastName: 'MemberLast',
+                    avatarUrl: 'https://example.com/player-avatar.jpg',
+                }),
+                SYSTEM_USER_ID
+            );
+            service.apply(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID);
+            registrationRepo.createRegistration({
+                eventId: TOURNAMENT_EVENT_ID,
+                userId: NO_NAMES_USER_ID,
+                status: 'APPROVED',
+                createdAt: new Date(),
+                modifiedAt: new Date(),
+                modifiedBy: SYSTEM_USER_ID,
+            });
+
+            const regWithAvatar = registrationRepo.findRegistration(TOURNAMENT_EVENT_ID, EXISTING_MEMBER_USER_ID);
+            const regWithoutAvatar = registrationRepo.findRegistration(TOURNAMENT_EVENT_ID, NO_NAMES_USER_ID);
+
+            expect(regWithAvatar?.avatarUrl).toBe('https://example.com/player-avatar.jpg');
+            expect(regWithoutAvatar?.avatarUrl).toBeNull();
+        });
+    });
 });

@@ -57,6 +57,7 @@ export interface ClubMembership {
     clubName: string;
     userId: number;
     userName: string;
+    avatarUrl: string | null;
     role: ClubRole;
     status: ClubMembershipStatus;
     createdAt: Date;

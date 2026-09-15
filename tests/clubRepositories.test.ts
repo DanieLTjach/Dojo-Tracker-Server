@@ -41,6 +41,11 @@ function seedTestUsers(): void {
         isAdmin: 0,
         status: 'ACTIVE',
     });
+
+    dbManager.db.prepare(`
+        INSERT INTO profile (userId, avatarUrl, modifiedAt, modifiedBy)
+        VALUES (?, 'https://example.com/avatar_a.jpg', ?, ?)
+    `).run(TEST_USER_A_ID, timestamp, SYSTEM_USER_ID);
 }
 
 function cleanupRepositoryData(): void {
@@ -50,6 +55,7 @@ function cleanupRepositoryData(): void {
 
 function cleanupRepositoryFixtures(): void {
     cleanupRepositoryData();
+    dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?)').run(TEST_USER_A_ID, TEST_USER_B_ID);
     dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?)').run(TEST_USER_A_ID, TEST_USER_B_ID);
 }
 
@@ -186,9 +192,13 @@ describe('Club and Membership repositories', () => {
 
         const allMembers = membershipRepository.findMembersByClubId(clubId);
         expect(allMembers.map(member => member.userId)).toEqual([TEST_USER_A_ID, TEST_USER_B_ID]);
+        expect(allMembers[0]!.avatarUrl).toBe('https://example.com/avatar_a.jpg');
+        expect(allMembers[1]!.avatarUrl).toBeNull();
 
         const pendingMembers = membershipRepository.findPendingMembersByClubId(clubId);
         expect(pendingMembers).toHaveLength(2);
+        expect(pendingMembers[0]!.avatarUrl).toBe('https://example.com/avatar_a.jpg');
+        expect(pendingMembers[1]!.avatarUrl).toBeNull();
 
         expect(membershipRepository.getUserClubRole(clubId, TEST_USER_A_ID)).toBeUndefined();
 
@@ -200,6 +210,7 @@ describe('Club and Membership repositories', () => {
         expect(updated).toMatchObject({
             clubId,
             userId: TEST_USER_A_ID,
+            avatarUrl: 'https://example.com/avatar_a.jpg',
             role: 'MODERATOR',
             status: 'ACTIVE',
             modifiedBy: TEST_USER_B_ID,

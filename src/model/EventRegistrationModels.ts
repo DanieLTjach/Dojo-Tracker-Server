@@ -13,6 +13,7 @@ export interface EventRegistration {
     userName: string;
     firstName: string | null;
     lastName: string | null;
+    avatarUrl: string | null;
     hideProfile: boolean;
     isFillerPlayer: boolean;
     status: EventRegistrationStatus;

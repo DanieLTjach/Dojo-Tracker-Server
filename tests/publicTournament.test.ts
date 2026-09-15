@@ -52,10 +52,10 @@ describe('Public tournament endpoint', () => {
         );
 
         dbManager.db.prepare(
-            `INSERT INTO profile (userId, firstName, lastName, hideProfile, modifiedAt, modifiedBy)
+            `INSERT INTO profile (userId, firstName, lastName, avatarUrl, hideProfile, modifiedAt, modifiedBy)
              VALUES
-                (?, 'Visible', 'Participant', 0, ?, ?),
-                (?, 'Hidden', 'Participant', 1, ?, ?)`
+                (?, 'Visible', 'Participant', 'https://example.com/visible.jpg', 0, ?, ?),
+                (?, 'Hidden', 'Participant', 'https://example.com/hidden.jpg', 1, ?, ?)`
         ).run(
             PARTICIPANT_USER_ID,
             ts,
@@ -173,6 +173,7 @@ describe('Public tournament endpoint', () => {
                 userName: 'Public Test User',
                 firstName: 'Visible',
                 lastName: 'Participant',
+                avatarUrl: 'https://example.com/visible.jpg',
                 hideProfile: false,
             },
             {
@@ -180,6 +181,7 @@ describe('Public tournament endpoint', () => {
                 userName: 'Public Hidden User',
                 firstName: null,
                 lastName: null,
+                avatarUrl: null,
                 hideProfile: true,
             },
         ]);
