@@ -83,6 +83,7 @@ export interface UserAchievement {
     name: string;
     description: string;
     icon: string | null;
+    imageUrl?: string | null | undefined;
     awardedAt?: Date | undefined;
     updatedAt?: Date | undefined;
     valueUnit: AchievementValueUnit | undefined;

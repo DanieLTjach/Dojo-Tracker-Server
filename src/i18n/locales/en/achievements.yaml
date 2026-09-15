@@ -250,6 +250,9 @@ achievements:
     FIRST_CHANKAN:
       name: Kan Robber
       description: Win by robbing a kan (chankan).
+    TSUBAME_GAESHI:
+      name: Kakapo Gaeshi
+      description: Win a hand with Tsubame Gaeshi.
     FIRST_TENHOU:
       name: Heavenly Hand
       description: Win as dealer on your first draw (tenhou).
@@ -397,6 +400,18 @@ achievements:
     NO_DORA_MANGAN:
       name: Pure Skill
       description: Score a mangan or better with no dora at all.
+    DORA_PON_WIN:
+      name: Pondor
+      description: Win with a pon containing dora, ura-dora, or aka-dora.
+    DORA_KAN_WIN:
+      name: Kandor
+      description: Win with a kan containing dora, ura-dora, or aka-dora.
+    SOU_1_PON_WIN:
+      name: Kakapo Trio
+      description: Win with a pon of 1-sou.
+    SOU_1_KAN_WIN:
+      name: Kakapo Quartet
+      description: Win with a kan of 1-sou.
     FIRST_KAN:
       name: First Kan
       description: Win a hand containing a kan.

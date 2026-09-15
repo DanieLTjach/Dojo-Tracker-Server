@@ -1,13 +1,16 @@
+import Majiang from 'majiang-core';
 import { Wind } from '../model/GameModels.ts';
 import type { GameRoundResult, WinningHandData } from '../model/GameRoundResultModels.ts';
-import type { HandDetail, YakuCode } from '../mahjong/types.ts';
+import type { HandDetail, Meld, TileCode, YakuCode } from '../mahjong/types.ts';
 import {
     AUTOMATIC_ACHIEVEMENTS_BY_CODE,
     type AutomaticAchievementDefinition,
 } from '../data/automaticAchievementCatalog.ts';
+import { getBaseTileCode, majiangToTileCode, tileCodeToMajiang } from '../mahjong/notation.ts';
 
 // Maps a persisted yaku code to the first-win achievement it unlocks.
 const YAKU_FIRST_CODES: ReadonlyArray<readonly [YakuCode, string]> = [
+    ['tsubame_gaeshi', 'TSUBAME_GAESHI'],
     ['pinfu', 'FIRST_PINFU'],
     ['tanyao', 'FIRST_TANYAO'],
     ['iipeikou', 'FIRST_IIPEIKOU'],
@@ -77,6 +80,39 @@ const TIMING_FLAGS: ReadonlyArray<readonly [YakuCode, keyof NonNullable<HandDeta
     ['chiihou', 'chiihou', 'FIRST_CHIIHOU'],
     ['renhou', 'renhou', 'FIRST_RENHOU'],
 ];
+
+const KAN_MELD_TYPES = new Set<Meld['type']>(['ANKAN', 'DAIMINKAN', 'KAKAN']);
+
+function meldUsesTile(meld: Meld, tile: TileCode): boolean {
+    return meld.tiles.every(meldTile => getBaseTileCode(meldTile) === tile);
+}
+
+function doraTilesForWinningHand(hand: WinningHandData, isSanma: boolean): Set<TileCode> {
+    const doraTiles = new Set<TileCode>();
+    const detail = hand.handDetail;
+    if (detail === undefined) return doraTiles;
+
+    const addIndicators = (indicators: TileCode[]) => {
+        for (const indicator of indicators) {
+            const dora = Majiang.Shan.zhenbaopai(tileCodeToMajiang(indicator), isSanma);
+            doraTiles.add(getBaseTileCode(majiangToTileCode(dora)));
+        }
+    };
+
+    if (getYakuHan(hand, 'dora') > 0) addIndicators(detail.doraIndicators);
+    if (getYakuHan(hand, 'ura_dora') > 0) addIndicators(detail.uraDoraIndicators);
+
+    return doraTiles;
+}
+
+function meldContainsDora(
+    meld: Meld,
+    doraTiles: ReadonlySet<TileCode>,
+    akaDoraEnabled: boolean
+): boolean {
+    if (doraTiles.has(getBaseTileCode(meld.tiles[0]))) return true;
+    return akaDoraEnabled && meld.tiles.some(tile => tile.startsWith('aka_'));
+}
 
 export interface EvaluatorGamePlayer {
     userId: number;
@@ -523,11 +559,26 @@ export function evaluateAutomaticAchievements(
 
                     // --- Hand-detail derived achievements ---
                     const melds = hand.handDetail?.melds ?? [];
+                    const ponMelds = melds.filter(meld => meld.type === 'PON');
 
                     // Kans in the winning hand
-                    const kanMelds = melds.filter(m =>
-                        m.type === 'ANKAN' || m.type === 'DAIMINKAN' || m.type === 'KAKAN'
-                    );
+                    const kanMelds = melds.filter(meld => KAN_MELD_TYPES.has(meld.type));
+
+                    if (ponMelds.some(meld => meldUsesTile(meld, 'sou_1'))) {
+                        unlockCode(winnerId, 'SOU_1_PON_WIN', game, round.roundNumber);
+                    }
+                    if (kanMelds.some(meld => meldUsesTile(meld, 'sou_1'))) {
+                        unlockCode(winnerId, 'SOU_1_KAN_WIN', game, round.roundNumber);
+                    }
+
+                    const doraTiles = doraTilesForWinningHand(hand, isSanma);
+                    const akaDoraEnabled = getYakuHan(hand, 'aka_dora') > 0;
+                    if (ponMelds.some(meld => meldContainsDora(meld, doraTiles, akaDoraEnabled))) {
+                        unlockCode(winnerId, 'DORA_PON_WIN', game, round.roundNumber);
+                    }
+                    if (kanMelds.some(meld => meldContainsDora(meld, doraTiles, akaDoraEnabled))) {
+                        unlockCode(winnerId, 'DORA_KAN_WIN', game, round.roundNumber);
+                    }
                     if (kanMelds.length > 0) {
                         unlockCode(winnerId, 'FIRST_KAN', game, round.roundNumber);
                         if (kanMelds.some(m => m.type === 'ANKAN')) {

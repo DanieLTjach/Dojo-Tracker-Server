@@ -223,6 +223,152 @@ describe('AutomaticAchievementEvaluator', () => {
         expect(results.find(r => r.userId === 101 && r.code === 'OPEN_HAND_WIN_10')).toBeUndefined();
     });
 
+    it('evaluates kakapo, Tsubame Gaeshi, and dora achievements only from winning-hand evidence', () => {
+        const winningHand = (
+            winnerPlayerId: number,
+            melds: any[],
+            doraIndicators: string[] = [],
+            uraDoraIndicators: string[] = [],
+            yaku: any[] = []
+        ) => ({
+            winnerPlayerId,
+            han: 3,
+            fu: 40,
+            yakumanCount: 0,
+            handDetail: {
+                concealedTiles: [],
+                melds,
+                winningTile: 'pin_1',
+                doraIndicators,
+                uraDoraIndicators,
+            },
+            yaku,
+        });
+
+        const game = makeGame(1, [
+            { userId: 101, points: 40000 },
+            { userId: 102, points: 30000 },
+            { userId: 103, points: 20000 },
+            { userId: 104, points: 10000 },
+        ], {
+            rounds: [
+                {
+                    roundNumber: 1,
+                    wind: Wind.EAST,
+                    dealerNumber: 1,
+                    counters: 0,
+                    riichiSticks: 0,
+                    result: {
+                        type: 'RON',
+                        dealInPlayerId: 104,
+                        winningHandData: [winningHand(
+                            101,
+                            [{
+                                type: 'PON',
+                                tiles: ['sou_1', 'sou_1', 'sou_1'],
+                                calledTileIndex: 0,
+                                calledFrom: 'KAMICHA',
+                            }],
+                            ['sou_9'],
+                            [],
+                            [
+                                { code: 'dora', han: 3 },
+                                { code: 'tsubame_gaeshi', han: 1 },
+                            ]
+                        )],
+                        riichiPlayerIds: [],
+                        playerPointChanges: [],
+                    },
+                },
+                {
+                    roundNumber: 2,
+                    wind: Wind.EAST,
+                    dealerNumber: 1,
+                    counters: 0,
+                    riichiSticks: 0,
+                    result: {
+                        type: 'TSUMO',
+                        winningHandData: winningHand(
+                            102,
+                            [{
+                                type: 'ANKAN',
+                                tiles: ['sou_1', 'sou_1', 'sou_1', 'sou_1'],
+                            }],
+                            ['man_1'],
+                            ['sou_9'],
+                            [{ code: 'ura_dora', han: 4 }]
+                        ),
+                        riichiPlayerIds: [],
+                        playerPointChanges: [],
+                    },
+                },
+                {
+                    roundNumber: 3,
+                    wind: Wind.EAST,
+                    dealerNumber: 1,
+                    counters: 0,
+                    riichiSticks: 0,
+                    result: {
+                        type: 'TSUMO',
+                        winningHandData: winningHand(
+                            103,
+                            [{
+                                type: 'PON',
+                                tiles: ['man_5', 'aka_man_5', 'man_5'],
+                                calledTileIndex: 0,
+                                calledFrom: 'KAMICHA',
+                            }],
+                            [],
+                            [],
+                            [{ code: 'aka_dora', han: 1 }]
+                        ),
+                        riichiPlayerIds: [],
+                        playerPointChanges: [],
+                    },
+                },
+                {
+                    roundNumber: 4,
+                    wind: Wind.EAST,
+                    dealerNumber: 1,
+                    counters: 0,
+                    riichiSticks: 0,
+                    result: {
+                        type: 'TSUMO',
+                        winningHandData: winningHand(
+                            104,
+                            [{
+                                type: 'PON',
+                                tiles: ['sou_1', 'sou_1', 'sou_1'],
+                                calledTileIndex: 0,
+                                calledFrom: 'KAMICHA',
+                            }],
+                            ['sou_9']
+                        ),
+                        riichiPlayerIds: [],
+                        playerPointChanges: [],
+                    },
+                },
+            ],
+        });
+
+        const results = evaluateAutomaticAchievements([game], [], []);
+        const unlocked = (userId: number, code: string) =>
+            results.find(result => result.userId === userId && result.code === code)?.unlockedAt;
+
+        expect(unlocked(101, 'SOU_1_PON_WIN')).toBeInstanceOf(Date);
+        expect(unlocked(101, 'DORA_PON_WIN')).toBeInstanceOf(Date);
+        expect(unlocked(101, 'TSUBAME_GAESHI')).toBeInstanceOf(Date);
+        expect(unlocked(101, 'SOU_1_KAN_WIN')).toBeUndefined();
+        expect(unlocked(101, 'DORA_KAN_WIN')).toBeUndefined();
+
+        expect(unlocked(102, 'SOU_1_KAN_WIN')).toBeInstanceOf(Date);
+        expect(unlocked(102, 'DORA_KAN_WIN')).toBeInstanceOf(Date);
+        expect(unlocked(103, 'DORA_PON_WIN')).toBeInstanceOf(Date);
+
+        expect(unlocked(104, 'SOU_1_PON_WIN')).toBeInstanceOf(Date);
+        expect(unlocked(104, 'DORA_PON_WIN')).toBeUndefined();
+    });
+
     it('evaluates yakuman-specific firsts and pao liability', () => {
         const g1 = makeGame(1, [
             { userId: 101, points: 40000 },

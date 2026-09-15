@@ -27,7 +27,10 @@ import { dbManager } from '../db/dbInit.ts';
 import type { ComputedAchievementState } from '../util/AutomaticAchievementEvaluator.ts';
 import type { GamePlayer } from '../model/GameModels.ts';
 import type { GameAchievementUnlock } from '../model/AchievementModels.ts';
-import { getAutomaticAchievementIconUrl } from '../data/automaticAchievementCatalog.ts';
+import {
+    getAutomaticAchievementIconUrl,
+    getAutomaticAchievementImageUrl,
+} from '../data/automaticAchievementCatalog.ts';
 
 const DEFINITION_BY_METRIC = new Map<AchievementMetric, AchievementDefinition>(
     ACHIEVEMENTS.map(definition => [definition.metric, definition])
@@ -95,6 +98,7 @@ export class ProfileAchievementService {
             name,
             description,
             icon: def ? (def.icon ?? getAutomaticAchievementIconUrl(def.code)) : null,
+            imageUrl: def ? getAutomaticAchievementImageUrl(def.code) : null,
             valueUnit: def?.valueUnit,
             value,
             valueFormatted,

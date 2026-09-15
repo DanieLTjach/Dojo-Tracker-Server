@@ -250,6 +250,9 @@ achievements:
     FIRST_CHANKAN:
       name: Викрадач кана
       description: Виграв, забравши чужий кан (чанкан).
+    TSUBAME_GAESHI:
+      name: Какапо Ґаеші
+      description: Виграв руку з яку «Розворот ластівки».
     FIRST_TENHOU:
       name: Небесна рука
       description: Виграв дилером з першого взяття (тенхо).
@@ -397,6 +400,18 @@ achievements:
     NO_DORA_MANGAN:
       name: Чиста майстерність
       description: Зібрав манган або більше зовсім без дора.
+    DORA_PON_WIN:
+      name: Пондор
+      description: Переміг з поном, що містить дору, урадору або акадору.
+    DORA_KAN_WIN:
+      name: Кандор
+      description: Переміг з каном, що містить дору, урадору або акадору.
+    SOU_1_PON_WIN:
+      name: Тріо Какапо
+      description: Переміг з поном одиниць соу.
+    SOU_1_KAN_WIN:
+      name: Квартет Какапо
+      description: Переміг з каном одиниць соу.
     FIRST_KAN:
       name: Перший кан
       description: Виграв руку з каном.

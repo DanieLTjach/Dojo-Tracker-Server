@@ -145,15 +145,15 @@ describe('Achievement completion and tournament contracts', () => {
 
         expect(response.status).toBe(200);
         const { catalog } = response.body;
-        expect(catalog.length).toBe(154);
+        expect(catalog.length).toBe(159);
 
         const g1 = catalog.find((c: any) => c.code === 'GAMES_1');
         expect(g1).toBeDefined();
         expect(g1.scopeType).toBe('GLOBAL');
         expect(g1.repeatable).toBe(false);
         expect(g1.trackedOnly).toBe(false);
-        expect(g1.icon).toContain('https://firebasestorage.googleapis.com/v0/b/');
-        expect(g1.icon).toContain('GAMES_1.webp');
+        expect(g1.icon).toBe('/achievement-icons/automatic/v1/thumbnails/GAMES_1.webp');
+        expect(g1.imageUrl).toBe('/achievement-icons/automatic/v1/details/GAMES_1.webp');
     });
 
     test('POST /api/games direct submission calculates and returns achievementUnlocks', async () => {

@@ -570,6 +570,15 @@ export const AUTOMATIC_ACHIEVEMENTS: readonly AutomaticAchievementDefinition[] =
         trackedOnly: true,
     },
     {
+        code: 'TSUBAME_GAESHI',
+        category: 'TIMING',
+        target: 1,
+        valueUnit: 'wins',
+        scopeType: 'GLOBAL',
+        repeatable: false,
+        trackedOnly: true,
+    },
+    {
         code: 'FIRST_TENHOU',
         category: 'TIMING',
         target: 1,
@@ -1016,8 +1025,44 @@ export const AUTOMATIC_ACHIEVEMENTS: readonly AutomaticAchievementDefinition[] =
         repeatable: false,
         trackedOnly: true,
     },
+    {
+        code: 'DORA_PON_WIN',
+        category: 'DORA',
+        target: 1,
+        valueUnit: 'wins',
+        scopeType: 'GLOBAL',
+        repeatable: false,
+        trackedOnly: true,
+    },
+    {
+        code: 'DORA_KAN_WIN',
+        category: 'DORA',
+        target: 1,
+        valueUnit: 'wins',
+        scopeType: 'GLOBAL',
+        repeatable: false,
+        trackedOnly: true,
+    },
 
     // --- KAN (kans in winning hands; non-winner kans are not persisted) ---
+    {
+        code: 'SOU_1_PON_WIN',
+        category: 'HAND',
+        target: 1,
+        valueUnit: 'wins',
+        scopeType: 'GLOBAL',
+        repeatable: false,
+        trackedOnly: true,
+    },
+    {
+        code: 'SOU_1_KAN_WIN',
+        category: 'KAN',
+        target: 1,
+        valueUnit: 'wins',
+        scopeType: 'GLOBAL',
+        repeatable: false,
+        trackedOnly: true,
+    },
     {
         code: 'FIRST_KAN',
         category: 'KAN',
@@ -1469,8 +1514,11 @@ export const AUTOMATIC_ACHIEVEMENTS_BY_CODE = new Map<string, AutomaticAchieveme
 );
 
 export function getAutomaticAchievementIconUrl(code: string): string {
-    const bucket = process.env['FIREBASE_STORAGE_BUCKET'] || 'dojo-games.firebasestorage.app';
-    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/achievement-icons%2Fautomatic%2F${code}.webp?alt=media`;
+    return `/achievement-icons/automatic/v1/thumbnails/${code}.webp`;
+}
+
+export function getAutomaticAchievementImageUrl(code: string): string {
+    return `/achievement-icons/automatic/v1/details/${code}.webp`;
 }
 
 export function getAutomaticAchievementDefinition(code: string): AutomaticAchievementDefinition | undefined {
@@ -1484,6 +1532,7 @@ export function getAutomaticCatalog(locale: SupportedLocale) {
         name: t(`achievements.automatic.${def.code}.name`, locale),
         description: t(`achievements.automatic.${def.code}.description`, locale),
         icon: def.icon ?? getAutomaticAchievementIconUrl(def.code),
+        imageUrl: getAutomaticAchievementImageUrl(def.code),
         target: def.target,
         valueUnit: def.valueUnit,
         scopeType: def.scopeType,
