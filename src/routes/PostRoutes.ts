@@ -41,8 +41,9 @@ router.delete(
     withTransaction((req, res) => postController.unlikeComment(req, res))
 );
 
-// User & Club posts feeds
+// User, Club & Game posts feeds
 router.get('/users/:id/posts', optionalAuth, (req, res) => postController.getUserPosts(req, res));
 router.get('/clubs/:id/posts', optionalAuth, (req, res) => postController.getClubPosts(req, res));
+router.get('/games/:gameId/posts', optionalAuth, (req, res) => postController.getGamePosts(req, res));
 
 export default router;

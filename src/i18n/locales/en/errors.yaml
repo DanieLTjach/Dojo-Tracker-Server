@@ -123,7 +123,11 @@ errors:
   missingProfileNamesForTournamentRegistration: First and last name must be filled in the profile to apply for a tournament
   eventNotTournament: "Registration is only available for TOURNAMENT events (current type: {{type}})"
   eventCapacityReached: 'Tournament "{{eventName}}" has already reached the participant limit ({{maxParticipants}})'
+  gameNotFound: Game was not found
   gameNotFoundById: Game with id {{id}} was not found
+  gameRoundNotFound: Game round was not found
+  notGameParticipant: You are not a participant in this game
+  roundRequiresGame: Round number requires a game
   tooManyGamesFound: Too many games found. Please narrow your search criteria.
   incorrectPlayerCount: Game requires {{requiredPlayers}} players
   duplicatePlayer: Player {{playerName}} appears more than once in this game

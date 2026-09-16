@@ -344,6 +344,9 @@ export class GameRepository {
 
     deleteGameRound(gameId: number, roundNumber: number): void {
         this.deleteGameRoundStatement().run({ gameId, roundNumber });
+        dbManager.db.prepare(`
+            UPDATE post SET roundNumber = NULL WHERE gameId = ? AND roundNumber = ?
+        `).run(gameId, roundNumber);
     }
 
     private deleteGameRoundsByGameIdStatement(): Statement<{ gameId: number }, void> {
@@ -352,6 +355,9 @@ export class GameRepository {
 
     deleteGameRoundsByGameId(gameId: number): void {
         this.deleteGameRoundsByGameIdStatement().run({ gameId });
+        dbManager.db.prepare(`
+            UPDATE post SET roundNumber = NULL WHERE gameId = ?
+        `).run(gameId);
     }
 
     private setLastRoundWasDeletedStatement(): Statement<{

@@ -6,6 +6,7 @@ import {
     createPostSchema,
     getClubPostsSchema,
     getCommentsSchema,
+    getGamePostsSchema,
     getPostByIdSchema,
     getUserPostsSchema,
     postActionSchema,
@@ -48,6 +49,12 @@ export class PostController {
     getClubPosts(req: Request, res: Response) {
         const { params: { id } } = getClubPostsSchema.parse(req);
         const posts = this.postService.getClubPosts(id, req.user?.userId);
+        return res.status(StatusCodes.OK).json(posts);
+    }
+
+    getGamePosts(req: Request, res: Response) {
+        const { params: { gameId } } = getGamePostsSchema.parse(req);
+        const posts = this.postService.getGamePosts(gameId, req.user?.userId);
         return res.status(StatusCodes.OK).json(posts);
     }
 

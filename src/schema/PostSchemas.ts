@@ -7,6 +7,7 @@ export const createPostSchema = z.object({
     body: z.object({
         clubId: z.number().int().positive().nullable().optional(),
         gameId: z.number().int().positive().nullable().optional(),
+        roundNumber: z.number().int().positive().nullable().optional(),
         text: z.string().max(280).nullable().optional(),
         images: z.array(
             z.object({
@@ -33,6 +34,12 @@ export const getUserPostsSchema = z.object({
 export const getClubPostsSchema = z.object({
     params: z.object({
         id: entityIdParamSchema,
+    }),
+});
+
+export const getGamePostsSchema = z.object({
+    params: z.object({
+        gameId: entityIdParamSchema,
     }),
 });
 

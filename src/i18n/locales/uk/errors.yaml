@@ -123,7 +123,11 @@ errors:
   missingProfileNamesForTournamentRegistration: Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі
   eventNotTournament: "Реєстрація доступна лише для подій типу TOURNAMENT (поточний тип: {{type}})"
   eventCapacityReached: 'Турнір "{{eventName}}" вже досяг максимальної кількості учасників ({{maxParticipants}})'
+  gameNotFound: Гру не знайдено
   gameNotFoundById: Гру з id {{id}} не знайдено
+  gameRoundNotFound: Раунд гри не знайдено
+  notGameParticipant: Ви не є учасником цієї гри
+  roundRequiresGame: Номер раунду вимагає вказання гри
   tooManyGamesFound: Знайдено забагато ігор. Будь ласка, звузьте критерії пошуку.
   incorrectPlayerCount: Для гри потрібно {{requiredPlayers}} гравців
   duplicatePlayer: Гравець {{playerName}} присутній більше одного разу в цій грі

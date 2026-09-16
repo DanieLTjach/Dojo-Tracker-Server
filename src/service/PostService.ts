@@ -9,6 +9,7 @@ import type {
 } from '../model/PostModels.ts';
 import { ClubMembershipRepository } from '../repository/ClubMembershipRepository.ts';
 import { ClubRepository } from '../repository/ClubRepository.ts';
+import { GameRepository } from '../repository/GameRepository.ts';
 import { PostRepository } from '../repository/PostRepository.ts';
 
 export const COMMENT_MAX_LENGTH = 500;
@@ -18,15 +19,18 @@ export class PostService {
     private postRepository: PostRepository;
     private clubRepository: ClubRepository;
     private clubMembershipRepository: ClubMembershipRepository;
+    private gameRepository: GameRepository;
 
     constructor(
         postRepository: PostRepository = new PostRepository(),
         clubRepository: ClubRepository = new ClubRepository(),
-        clubMembershipRepository: ClubMembershipRepository = new ClubMembershipRepository()
+        clubMembershipRepository: ClubMembershipRepository = new ClubMembershipRepository(),
+        gameRepository: GameRepository = new GameRepository()
     ) {
         this.postRepository = postRepository;
         this.clubRepository = clubRepository;
         this.clubMembershipRepository = clubMembershipRepository;
+        this.gameRepository = gameRepository;
     }
 
     private validateImages(images: CreatePostImageDTO[] | undefined): void {
@@ -52,6 +56,27 @@ export class PostService {
             const club = this.clubRepository.findClubById(dto.clubId);
             if (!club) {
                 throw new NotFoundError('clubNotFound');
+            }
+        }
+        if (dto.roundNumber != null && dto.gameId == null) {
+            throw new BadRequestError('roundRequiresGame');
+        }
+        if (dto.gameId != null) {
+            const game = this.gameRepository.findGameById(dto.gameId);
+            if (!game) {
+                throw new NotFoundError('gameNotFound');
+            }
+            const players = this.gameRepository.findGamePlayersByGameId(dto.gameId);
+            const isParticipant = players.some(p => p.userId === authorId);
+            if (!isParticipant) {
+                throw new ForbiddenError('notGameParticipant');
+            }
+            if (dto.roundNumber != null) {
+                const rounds = this.gameRepository.findGameRoundsByGameId(dto.gameId);
+                const roundExists = rounds.some(r => r.roundNumber === dto.roundNumber);
+                if (!roundExists) {
+                    throw new NotFoundError('gameRoundNotFound');
+                }
             }
         }
 
@@ -81,6 +106,14 @@ export class PostService {
             throw new NotFoundError('clubNotFound');
         }
         return this.postRepository.findPostsByClubId(clubId, currentUserId);
+    }
+
+    getGamePosts(gameId: number, currentUserId?: number): Post[] {
+        const game = this.gameRepository.findGameById(gameId);
+        if (!game) {
+            throw new NotFoundError('gameNotFound');
+        }
+        return this.postRepository.findPostsByGameId(gameId, currentUserId);
     }
 
     /**

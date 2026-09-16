@@ -16,6 +16,7 @@ interface PostDBRow {
     authorAvatarUrl: string | null;
     clubId: number | null;
     gameId: number | null;
+    roundNumber: number | null;
     text: string | null;
     createdAt: string;
     editedAt: string | null;
@@ -25,6 +26,8 @@ interface PostDBRow {
     gamePlayedAt: string | null;
     gameScore: number | null;
     gameClubName: string | null;
+    roundWind: string | null;
+    roundDealerNumber: number | null;
 }
 
 interface CommentDBRow {
@@ -39,6 +42,37 @@ interface CommentDBRow {
     likeCount: number;
     likedByMe: number;
 }
+
+// Shared by all post feed and retrieval queries so the joins and projection never drift.
+const POST_SELECT = `
+    SELECT 
+        p.id,
+        p.authorId,
+        u.name as authorName,
+        prof.avatarUrl as authorAvatarUrl,
+        p.clubId,
+        p.gameId,
+        p.roundNumber,
+        p.text,
+        p.createdAt,
+        p.editedAt,
+        (SELECT COUNT(*) FROM post_like WHERE postId = p.id) as likeCount,
+        (SELECT COUNT(*) FROM post_comment WHERE postId = p.id) as commentCount,
+        EXISTS(SELECT 1 FROM post_like WHERE postId = p.id AND userId = ?) as likedByMe,
+        g.createdAt as gamePlayedAt,
+        utg.points as gameScore,
+        c.name as gameClubName,
+        gr.wind as roundWind,
+        gr.dealerNumber as roundDealerNumber
+    FROM post p
+    JOIN user u ON p.authorId = u.id
+    LEFT JOIN profile prof ON u.id = prof.userId
+    LEFT JOIN game g ON p.gameId = g.id
+    LEFT JOIN event e ON g.eventId = e.id
+    LEFT JOIN club c ON e.clubId = c.id
+    LEFT JOIN userToGame utg ON p.gameId = utg.gameId AND p.authorId = utg.userId
+    LEFT JOIN gameRound gr ON gr.gameId = p.gameId AND gr.roundNumber = p.roundNumber
+`;
 
 // Shared by the single-comment and thread queries so the two can never drift.
 const COMMENT_SELECT = `
@@ -82,10 +116,17 @@ export class PostRepository {
     createPost(authorId: number, dto: CreatePostDTO): number {
         const now = new Date().toISOString();
         const stmt = dbManager.db.prepare(`
-            INSERT INTO post (authorId, clubId, gameId, text, createdAt)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO post (authorId, clubId, gameId, roundNumber, text, createdAt)
+            VALUES (?, ?, ?, ?, ?, ?)
         `);
-        const result = stmt.run(authorId, dto.clubId ?? null, dto.gameId ?? null, dto.text ?? null, now);
+        const result = stmt.run(
+            authorId,
+            dto.clubId ?? null,
+            dto.gameId ?? null,
+            dto.roundNumber ?? null,
+            dto.text ?? null,
+            now
+        );
         const postId = Number(result.lastInsertRowid);
 
         if (dto.images && dto.images.length > 0) {
@@ -97,29 +138,7 @@ export class PostRepository {
 
     findPostById(id: number, currentUserId?: number): Post | null {
         const row = dbManager.db.prepare(`
-            SELECT 
-                p.id,
-                p.authorId,
-                u.name as authorName,
-                prof.avatarUrl as authorAvatarUrl,
-                p.clubId,
-                p.gameId,
-                p.text,
-                p.createdAt,
-                p.editedAt,
-                (SELECT COUNT(*) FROM post_like WHERE postId = p.id) as likeCount,
-                (SELECT COUNT(*) FROM post_comment WHERE postId = p.id) as commentCount,
-                EXISTS(SELECT 1 FROM post_like WHERE postId = p.id AND userId = ?) as likedByMe,
-                g.createdAt as gamePlayedAt,
-                utg.points as gameScore,
-                c.name as gameClubName
-            FROM post p
-            JOIN user u ON p.authorId = u.id
-            LEFT JOIN profile prof ON u.id = prof.userId
-            LEFT JOIN game g ON p.gameId = g.id
-            LEFT JOIN event e ON g.eventId = e.id
-            LEFT JOIN club c ON e.clubId = c.id
-            LEFT JOIN userToGame utg ON p.gameId = utg.gameId AND p.authorId = utg.userId
+            ${POST_SELECT}
             WHERE p.id = ?
         `).get(currentUserId ?? -1, id) as PostDBRow | undefined;
 
@@ -129,29 +148,7 @@ export class PostRepository {
 
     findPostsByAuthorId(authorId: number, currentUserId?: number): Post[] {
         const rows = dbManager.db.prepare(`
-            SELECT 
-                p.id,
-                p.authorId,
-                u.name as authorName,
-                prof.avatarUrl as authorAvatarUrl,
-                p.clubId,
-                p.gameId,
-                p.text,
-                p.createdAt,
-                p.editedAt,
-                (SELECT COUNT(*) FROM post_like WHERE postId = p.id) as likeCount,
-                (SELECT COUNT(*) FROM post_comment WHERE postId = p.id) as commentCount,
-                EXISTS(SELECT 1 FROM post_like WHERE postId = p.id AND userId = ?) as likedByMe,
-                g.createdAt as gamePlayedAt,
-                utg.points as gameScore,
-                c.name as gameClubName
-            FROM post p
-            JOIN user u ON p.authorId = u.id
-            LEFT JOIN profile prof ON u.id = prof.userId
-            LEFT JOIN game g ON p.gameId = g.id
-            LEFT JOIN event e ON g.eventId = e.id
-            LEFT JOIN club c ON e.clubId = c.id
-            LEFT JOIN userToGame utg ON p.gameId = utg.gameId AND p.authorId = utg.userId
+            ${POST_SELECT}
             WHERE p.authorId = ?
             ORDER BY p.createdAt DESC, p.id DESC
         `).all(currentUserId ?? -1, authorId) as PostDBRow[];
@@ -161,34 +158,28 @@ export class PostRepository {
 
     findPostsByClubId(clubId: number, currentUserId?: number): Post[] {
         const rows = dbManager.db.prepare(`
-            SELECT 
-                p.id,
-                p.authorId,
-                u.name as authorName,
-                prof.avatarUrl as authorAvatarUrl,
-                p.clubId,
-                p.gameId,
-                p.text,
-                p.createdAt,
-                p.editedAt,
-                (SELECT COUNT(*) FROM post_like WHERE postId = p.id) as likeCount,
-                (SELECT COUNT(*) FROM post_comment WHERE postId = p.id) as commentCount,
-                EXISTS(SELECT 1 FROM post_like WHERE postId = p.id AND userId = ?) as likedByMe,
-                g.createdAt as gamePlayedAt,
-                utg.points as gameScore,
-                c.name as gameClubName
-            FROM post p
-            JOIN user u ON p.authorId = u.id
-            LEFT JOIN profile prof ON u.id = prof.userId
-            LEFT JOIN game g ON p.gameId = g.id
-            LEFT JOIN event e ON g.eventId = e.id
-            LEFT JOIN club c ON e.clubId = c.id
-            LEFT JOIN userToGame utg ON p.gameId = utg.gameId AND p.authorId = utg.userId
+            ${POST_SELECT}
             WHERE p.clubId = ?
             ORDER BY p.createdAt DESC, p.id DESC
         `).all(currentUserId ?? -1, clubId) as PostDBRow[];
 
         return this.mapPostRowsToPosts(rows);
+    }
+
+    findPostsByGameId(gameId: number, currentUserId?: number): Post[] {
+        const rows = dbManager.db.prepare(`
+            ${POST_SELECT}
+            WHERE p.gameId = ?
+            ORDER BY p.createdAt DESC, p.id DESC
+        `).all(currentUserId ?? -1, gameId) as PostDBRow[];
+
+        return this.mapPostRowsToPosts(rows);
+    }
+
+    nullPostRoundLink(gameId: number, roundNumber: number): void {
+        dbManager.db.prepare(`
+            UPDATE post SET roundNumber = NULL WHERE gameId = ? AND roundNumber = ?
+        `).run(gameId, roundNumber);
     }
 
     /**
@@ -328,6 +319,9 @@ export class PostRepository {
                 playedAt: row.gamePlayedAt,
                 score: row.gameScore ?? undefined,
                 clubName: row.gameClubName ?? undefined,
+                roundNumber: row.roundNumber ?? undefined,
+                wind: row.roundWind ?? undefined,
+                dealerNumber: row.roundDealerNumber ?? undefined,
             };
         }
 
@@ -341,6 +335,7 @@ export class PostRepository {
             },
             clubId: row.clubId,
             gameId: row.gameId,
+            roundNumber: row.roundNumber ?? null,
             game,
             text: row.text,
             images,
@@ -388,6 +383,9 @@ export class PostRepository {
                     playedAt: row.gamePlayedAt,
                     score: row.gameScore ?? undefined,
                     clubName: row.gameClubName ?? undefined,
+                    roundNumber: row.roundNumber ?? undefined,
+                    wind: row.roundWind ?? undefined,
+                    dealerNumber: row.roundDealerNumber ?? undefined,
                 };
             }
 
@@ -401,6 +399,7 @@ export class PostRepository {
                 },
                 clubId: row.clubId,
                 gameId: row.gameId,
+                roundNumber: row.roundNumber ?? null,
                 game,
                 text: row.text,
                 images: imagesByPostId.get(row.id) || [],

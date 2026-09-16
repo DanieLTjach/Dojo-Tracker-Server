@@ -20,6 +20,9 @@ export interface PostGameTag {
     score?: number | undefined;
     clubName?: string | undefined;
     length?: string | undefined;
+    roundNumber?: number | null | undefined;
+    wind?: string | null | undefined;
+    dealerNumber?: number | null | undefined;
 }
 
 export interface Post {
@@ -28,6 +31,7 @@ export interface Post {
     author: PostAuthor;
     clubId: number | null;
     gameId: number | null;
+    roundNumber: number | null;
     game?: PostGameTag | null | undefined;
     text: string | null;
     images: { id: number, url: string, width: number | null, height: number | null }[];
@@ -47,6 +51,7 @@ export interface CreatePostImageDTO {
 export interface CreatePostDTO {
     clubId?: number | null | undefined;
     gameId?: number | null | undefined;
+    roundNumber?: number | null | undefined;
     text?: string | null | undefined;
     images: CreatePostImageDTO[];
 }
