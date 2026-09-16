@@ -16,8 +16,6 @@ import {
 // checks must currently FAIL - fixing a bug means deleting its entry here, at
 // which point the full assertion runs instead.
 const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
-    // A tie for the lead is excluded (margin > 0 required) - 0 is inside budget.
-    WIN_BY_MARGIN_1000: ['extra'],
     // A double ron's summed payments unlock the single-hit threshold.
     DEAL_IN_32000: ['nearMiss'],
     // Exact fu equality leaves 110-fu hands unlocking nothing.
@@ -40,8 +38,6 @@ const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
     DICE_LUCKY_SEVEN: ['trackedOnly'],
     DICE_ANY_DOUBLE: ['trackedOnly'],
     DICE_TEN_DOUBLES: ['trackedOnly'],
-    // The evidence margin lands in the round-number slot, value defaults to 1.
-    WIN_BY_MARGIN_30000: ['extra'],
 };
 
 // Codes whose positive unlock currently reports a bare value of 1 (rendered as
@@ -142,8 +138,6 @@ const KNOWN_VALUE_DEVIATIONS = new Set<string>([
     'DICE_ANY_DOUBLE',
     'EVENT_DEBUT',
     'TOURNAMENT_CHAMPION',
-    'WIN_BY_MARGIN_1000',
-    'WIN_BY_MARGIN_30000',
     'SEASON_CHAMPION',
 ]);
 

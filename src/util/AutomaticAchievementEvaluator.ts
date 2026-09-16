@@ -449,11 +449,12 @@ export function evaluateAutomaticAchievements(
                 }
 
                 const margin = topScore - secondScore;
-                if (margin > 0 && margin <= 1000) {
-                    unlockCode(player.userId, 'WIN_BY_MARGIN_1000', game, margin);
+                // A tie for the lead is a win by 0 - inside the 1,000-point budget.
+                if (margin <= 1000) {
+                    unlockCode(player.userId, 'WIN_BY_MARGIN_1000', game, undefined, margin);
                 }
                 if (margin >= 30000) {
-                    unlockCode(player.userId, 'WIN_BY_MARGIN_30000', game, margin);
+                    unlockCode(player.userId, 'WIN_BY_MARGIN_30000', game, undefined, margin);
                 }
 
                 // Check comeback from negative points
