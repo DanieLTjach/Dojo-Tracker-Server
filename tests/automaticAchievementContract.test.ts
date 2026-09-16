@@ -16,8 +16,6 @@ import {
 // checks must currently FAIL - fixing a bug means deleting its entry here, at
 // which point the full assertion runs instead.
 const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
-    // Any abortive draw with four riichi players unlocks; the draw type is unchecked.
-    FOUR_RIICHI_ABORTIVE_DRAW: ['nearMiss'],
     // The superior yakuman variant does not unlock the base achievement.
     FIRST_KOKUSHI: ['positive'],
     FIRST_SUUANKOU: ['positive'],

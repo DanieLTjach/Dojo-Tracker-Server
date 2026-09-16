@@ -765,7 +765,9 @@ export function evaluateAutomaticAchievements(
                         }
                     }
                 } else if (res.type === 'ABORTIVE_DRAW') {
-                    if (riichiPlayerIds.size === 4) {
+                    // Four riichi is its own abortive draw type; other abortive
+                    // draws can also carry four declared riichi.
+                    if (res.drawType === 'FOUR_RIICHI') {
                         for (const pid of riichiPlayerIds) {
                             if (pid !== 0) unlockCode(pid, 'FOUR_RIICHI_ABORTIVE_DRAW', game, round.roundNumber);
                         }
