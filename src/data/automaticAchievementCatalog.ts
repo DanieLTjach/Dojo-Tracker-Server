@@ -18,7 +18,7 @@ export const ACHIEVEMENT_CATEGORIES = [
 
 export type AchievementCategory = typeof ACHIEVEMENT_CATEGORIES[number];
 
-export type AchievementScopeType = 'GLOBAL' | 'CLUB' | 'SKILL_4P' | 'SKILL_3P' | 'EVENT';
+export type AchievementScopeType = 'GLOBAL' | 'SKILL_4P' | 'SKILL_3P' | 'EVENT';
 
 export interface AutomaticAchievementDefinition {
     code: string;

@@ -125,9 +125,6 @@ describe('Automatic achievement contract', () => {
                         case 'EVENT':
                             expect(s!.scope.startsWith('EVENT:')).toBe(true);
                             break;
-                        case 'CLUB':
-                            expect(s!.scope.startsWith('CLUB:')).toBe(true);
-                            break;
                     }
                 });
             });

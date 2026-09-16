@@ -7,6 +7,7 @@ import {
 } from '../data/automaticAchievementCatalog.ts';
 import { getBaseTileCode } from '../mahjong/notation.ts';
 import { resolveDoraTile } from '../mahjong/dora.ts';
+import { isBaiman, isHaneman, isMangan, isSanbaiman, iterWinningHands } from './handTiers.ts';
 
 // Maps a persisted yaku code to the first-win achievement it unlocks.
 const YAKU_FIRST_CODES: ReadonlyArray<readonly [YakuCode, string]> = [
@@ -241,10 +242,6 @@ interface UserTracker {
     eventsPlayed: Set<number>;
     podiumCount: number;
     championshipCount: number;
-
-    // OpenSkill tracks: scope -> peakRating
-    openSkillGamesCount: Map<string, number>;
-    openSkillPeakRating: Map<string, number>;
 }
 
 function newUserTracker(userId: number): UserTracker {
@@ -278,8 +275,6 @@ function newUserTracker(userId: number): UserTracker {
         eventsPlayed: new Set<number>(),
         podiumCount: 0,
         championshipCount: 0,
-        openSkillGamesCount: new Map<string, number>(),
-        openSkillPeakRating: new Map<string, number>(),
     };
 }
 
@@ -726,17 +721,16 @@ export function evaluateAutomaticAchievements(
                     if (yakumanCount >= 1) {
                         unlockCode(winnerId, 'FIRST_YAKUMAN', game, round.roundNumber);
                         if (isSanma) unlockCode(winnerId, 'SANMA_FIRST_YAKUMAN', game, round.roundNumber);
-                    } else {
-                        const han = hand.han || 0;
-                        if (han >= 13) unlockCode(winnerId, 'FIRST_KAZOE', game, round.roundNumber);
-                        else if (han >= 11) unlockCode(winnerId, 'FIRST_SANBAIMAN', game, round.roundNumber);
-                        else if (han >= 8) unlockCode(winnerId, 'FIRST_BAIMAN', game, round.roundNumber);
-                        else if (han >= 6) unlockCode(winnerId, 'FIRST_HANEMAN', game, round.roundNumber);
-                        else if (
-                            han === 5 || (han === 4 && (hand.fu || 0) >= 40) || (han === 3 && (hand.fu || 0) >= 70)
-                        ) {
-                            unlockCode(winnerId, 'FIRST_MANGAN', game, round.roundNumber);
-                        }
+                    } else if ((hand.han || 0) >= 13) {
+                        unlockCode(winnerId, 'FIRST_KAZOE', game, round.roundNumber);
+                    } else if (isSanbaiman(hand)) {
+                        unlockCode(winnerId, 'FIRST_SANBAIMAN', game, round.roundNumber);
+                    } else if (isBaiman(hand)) {
+                        unlockCode(winnerId, 'FIRST_BAIMAN', game, round.roundNumber);
+                    } else if (isHaneman(hand)) {
+                        unlockCode(winnerId, 'FIRST_HANEMAN', game, round.roundNumber);
+                    } else if (isMangan(hand)) {
+                        unlockCode(winnerId, 'FIRST_MANGAN', game, round.roundNumber);
                     }
                 }
 
@@ -1341,16 +1335,6 @@ function wentNegativeDuringGame(game: EvaluatorGame, userId: number, finalPoints
         if (running < 0) return true;
     }
     return false;
-}
-
-function iterWinningHands(res: GameRoundResult): { hand: WinningHandData, winType: 'TSUMO' | 'RON' }[] {
-    if (res.type === 'TSUMO') {
-        return [{ hand: res.winningHandData, winType: 'TSUMO' }];
-    }
-    if (res.type === 'RON') {
-        return res.winningHandData.map(h => ({ hand: h, winType: 'RON' as const }));
-    }
-    return [];
 }
 
 function hasYaku(hand: WinningHandData, code: YakuCode): boolean {

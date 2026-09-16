@@ -1,11 +1,6 @@
 import { dbManager } from '../db/dbInit.ts';
 import { AutomaticAchievementRepository } from '../repository/AutomaticAchievementRepository.ts';
-import {
-    evaluateAutomaticAchievements,
-    type EvaluatorEventPlacement,
-    type EvaluatorGame,
-    type EvaluatorSkillGameResult,
-} from '../util/AutomaticAchievementEvaluator.ts';
+import { evaluateAutomaticAchievements } from '../util/AutomaticAchievementEvaluator.ts';
 
 export class AutomaticAchievementService {
     private achievementRepository: AutomaticAchievementRepository = new AutomaticAchievementRepository();
@@ -58,17 +53,5 @@ export class AutomaticAchievementService {
         }
 
         this.recomputeUsers(Array.from(clubUserIds), computedAt);
-    }
-
-    fetchEvaluatorGames(userIds?: number[]): EvaluatorGame[] {
-        return this.achievementRepository.fetchEvaluatorGames(userIds);
-    }
-
-    fetchEvaluatorEvents(userIds?: number[], clubFilter?: number): EvaluatorEventPlacement[] {
-        return this.achievementRepository.fetchEvaluatorEvents(userIds, clubFilter);
-    }
-
-    fetchEvaluatorSkillResults(userIds?: number[], clubFilter?: number): EvaluatorSkillGameResult[] {
-        return this.achievementRepository.fetchEvaluatorSkillResults(userIds, clubFilter);
     }
 }
