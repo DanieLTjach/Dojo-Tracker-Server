@@ -16,8 +16,6 @@ import {
 // checks must currently FAIL - fixing a bug means deleting its entry here, at
 // which point the full assertion runs instead.
 const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
-    // Comeback unlocks on "lost points at least once", not on a negative score.
-    COMEBACK_NEGATIVE_TO_FIRST: ['nearMiss'],
     // Any abortive draw with four riichi players unlocks; the draw type is unchecked.
     FOUR_RIICHI_ABORTIVE_DRAW: ['nearMiss'],
     // The superior yakuman variant does not unlock the base achievement.

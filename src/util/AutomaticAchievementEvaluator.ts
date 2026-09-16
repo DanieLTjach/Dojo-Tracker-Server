@@ -448,21 +448,8 @@ export function evaluateAutomaticAchievements(
                 }
 
                 // Check comeback from negative points
-                if (game.rounds.length > 0) {
-                    let hadNegativePoints = false;
-                    // Check initial or round point states
-                    for (const rd of game.rounds) {
-                        for (const pc of rd.result.playerPointChanges) {
-                            if (pc.playerId === player.userId && pc.pointChange < 0) {
-                                // check if points dropped below 0
-                                // if round result has state or if point change indicates negative
-                                hadNegativePoints = true;
-                            }
-                        }
-                    }
-                    if (hadNegativePoints) {
-                        unlockCode(player.userId, 'COMEBACK_NEGATIVE_TO_FIRST', game);
-                    }
+                if (wentNegativeDuringGame(game, player.userId, player.points)) {
+                    unlockCode(player.userId, 'COMEBACK_NEGATIVE_TO_FIRST', game);
                 }
             } else {
                 tracker.winStreak = 0;
@@ -1309,6 +1296,23 @@ export function evaluateAutomaticAchievements(
     }
 
     return Array.from(states.values());
+}
+
+// True when the player's running score dipped below zero at any point in the
+// game. Only point deltas are stored per round, so the running total is
+// reconstructed backwards from the final points.
+function wentNegativeDuringGame(game: EvaluatorGame, userId: number, finalPoints: number): boolean {
+    const changeByRound = game.rounds.map(rd =>
+        rd.result.playerPointChanges
+            .filter(pc => pc.playerId === userId)
+            .reduce((sum, pc) => sum + pc.pointChange, 0)
+    );
+    let running = finalPoints - changeByRound.reduce((a, b) => a + b, 0);
+    for (const change of changeByRound) {
+        running += change;
+        if (running < 0) return true;
+    }
+    return false;
 }
 
 function iterWinningHands(res: GameRoundResult): { hand: WinningHandData, winType: 'TSUMO' | 'RON' }[] {
