@@ -18,8 +18,6 @@ import {
 const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
     // A double ron's summed payments unlock the single-hit threshold.
     DEAL_IN_32000: ['nearMiss'],
-    // No progress call, so a small loss produces no row at all.
-    OPENSKILL_LOSS_50_ONE_GAME: ['progress'],
     // Unlocks under GLOBAL scope while the catalog declares SKILL_4P.
     OPENSKILL_MULTI_CLUB_RANKED_2: ['scope'],
     // Dice come from the game row, not the rounds - trackedOnly is dishonest.

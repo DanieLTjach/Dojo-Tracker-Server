@@ -1181,6 +1181,8 @@ export function evaluateAutomaticAchievements(
                         sourceGameId: sr.gameId,
                         value: -gain,
                     });
+                } else {
+                    updateProgress(userSnap.userId, getDef('OPENSKILL_LOSS_50_ONE_GAME')!, scope, Math.max(0, -gain));
                 }
 
                 // Gain/loss streaks
