@@ -1229,7 +1229,9 @@ export function evaluateAutomaticAchievements(
             if (pl.userId === 0 || !pl.isEligible) continue;
             const tracker = getTracker(pl.userId);
 
-            if (!tracker.eventsPlayed.has(ev.eventId)) {
+            // Seasons have their own champion/podium achievements and are not
+            // tournaments, so they do not feed the tournament counters.
+            if (!ev.isSeason && !tracker.eventsPlayed.has(ev.eventId)) {
                 tracker.eventsPlayed.add(ev.eventId);
                 checkThreshold(pl.userId, 'EVENT_DEBUT', 1, tracker.eventsPlayed.size, {
                     id: 0,
