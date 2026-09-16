@@ -216,7 +216,7 @@ achievements:
       description: Paid full liability for a player's Yakuman.
     DEAL_IN_32000:
       name: Nuclear Impact
-      description: Dealt in for 32,000 points or more in a single hit.
+      description: Dealt in for 32,000 points or more in a single round.
     LOST_RIICHI_STICKS_10:
       name: Generous Sponsor
       description: Lost 10 riichi sticks to opponents' wins.
