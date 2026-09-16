@@ -100,6 +100,7 @@ const KNOWN_VALUE_DEVIATIONS = new Set<string>([
     'FIRST_TENHOU',
     'FIRST_CHIIHOU',
     'FIRST_RENHOU',
+    'FIRST_YAKUHAI',
     'FIRST_PINFU',
     'FIRST_TANYAO',
     'FIRST_IIPEIKOU',
