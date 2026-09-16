@@ -1411,7 +1411,7 @@ export const AUTOMATIC_ACHIEVEMENTS: readonly AutomaticAchievementDefinition[] =
         category: 'OPENSKILL',
         target: 2,
         valueUnit: 'clubs',
-        scopeType: 'SKILL_4P',
+        scopeType: 'GLOBAL',
         repeatable: false,
         trackedOnly: false,
     },

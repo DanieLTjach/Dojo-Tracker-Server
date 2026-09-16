@@ -18,15 +18,6 @@ import {
 const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
     // A double ron's summed payments unlock the single-hit threshold.
     DEAL_IN_32000: ['nearMiss'],
-    // Unlocks under GLOBAL scope while the catalog declares SKILL_4P.
-    OPENSKILL_MULTI_CLUB_RANKED_2: ['scope'],
-    // Dice come from the game row, not the rounds - trackedOnly is dishonest.
-    DICE_FIRST_ROLL: ['trackedOnly'],
-    DICE_SNAKE_EYES: ['trackedOnly'],
-    DICE_BOXCARS: ['trackedOnly'],
-    DICE_LUCKY_SEVEN: ['trackedOnly'],
-    DICE_ANY_DOUBLE: ['trackedOnly'],
-    DICE_TEN_DOUBLES: ['trackedOnly'],
 };
 
 // Codes whose positive unlock currently reports a bare value of 1 (rendered as
@@ -39,7 +30,10 @@ function run(input: ScenarioInput): ComputedAchievementState[] {
 }
 
 function stripRounds(input: ScenarioInput): ScenarioInput {
-    return { ...input, games: (input.games ?? []).map(g => ({ ...g, rounds: [] })) };
+    return {
+        ...input,
+        games: (input.games ?? []).map(g => ({ ...g, rounds: [], startingDie1: null, startingDie2: null })),
+    };
 }
 
 function unlocked(states: ComputedAchievementState[], code: string, userId?: number): ComputedAchievementState[] {
