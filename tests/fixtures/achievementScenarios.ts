@@ -1018,7 +1018,9 @@ scenario({
     progresses: true,
 });
 
-// "In a single hit" - a double ron of 16,000 each is two hits, not one of 32,000.
+// The stored point changes merge a double ron into one summed payment, and
+// per-hit attribution would need the club's scoring rules, so the achievement
+// is defined on the round's whole deal-in loss (descriptions say "single round").
 scenario({
     code: 'DEAL_IN_32000',
     subject: 102,
@@ -1037,11 +1039,7 @@ scenario({
     nearMiss: size => ({
         games: [standardGame([round(
             1,
-            ronResult(
-                [plainHand(SUBJECT, 4, 40), plainHand(103, 4, 40)],
-                102,
-                { payments: [16000, 16000] }
-            )
+            ronResult([plainHand(SUBJECT, 4, 40)], 102, { payments: [30000] })
         )], size)],
     }),
 });
