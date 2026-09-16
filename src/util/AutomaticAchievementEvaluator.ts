@@ -1018,6 +1018,9 @@ export function evaluateAutomaticAchievements(
     for (const [scope, scopeResults] of resultsByScope) {
         // Running display rating for every player ever seen in this track
         const runningRatings = new Map<number, number>();
+        // Highest display rating ever reached in this track - progress against
+        // the PEAK achievements must never slide backwards with later games.
+        const peakRatings = new Map<number, number>();
 
         for (const sr of scopeResults) {
             const minRating = Math.min(...sr.userSnapshots.map(u => u.initialDisplayRating));
@@ -1096,41 +1099,43 @@ export function evaluateAutomaticAchievements(
 
                 // Display rating peaks
                 const rating = userSnap.finalDisplayRating;
-                if (rating >= 1600) {
+                const peak = Math.max(peakRatings.get(userSnap.userId) ?? Number.NEGATIVE_INFINITY, rating);
+                peakRatings.set(userSnap.userId, peak);
+                if (peak >= 1600) {
                     unlock(userSnap.userId, def1600, scope, {
                         progress: 1600,
                         unlockedAt: sr.timestamp,
                         sourceGameId: sr.gameId,
-                        value: rating,
+                        value: peak,
                     });
-                } else updateProgress(userSnap.userId, def1600, scope, rating);
+                } else updateProgress(userSnap.userId, def1600, scope, peak);
 
-                if (rating >= 1800) {
+                if (peak >= 1800) {
                     unlock(userSnap.userId, def1800, scope, {
                         progress: 1800,
                         unlockedAt: sr.timestamp,
                         sourceGameId: sr.gameId,
-                        value: rating,
+                        value: peak,
                     });
-                } else updateProgress(userSnap.userId, def1800, scope, rating);
+                } else updateProgress(userSnap.userId, def1800, scope, peak);
 
-                if (rating >= 2000) {
+                if (peak >= 2000) {
                     unlock(userSnap.userId, def2000, scope, {
                         progress: 2000,
                         unlockedAt: sr.timestamp,
                         sourceGameId: sr.gameId,
-                        value: rating,
+                        value: peak,
                     });
-                } else updateProgress(userSnap.userId, def2000, scope, rating);
+                } else updateProgress(userSnap.userId, def2000, scope, peak);
 
-                if (rating >= 2200) {
+                if (peak >= 2200) {
                     unlock(userSnap.userId, def2200, scope, {
                         progress: 2200,
                         unlockedAt: sr.timestamp,
                         sourceGameId: sr.gameId,
-                        value: rating,
+                        value: peak,
                     });
-                } else updateProgress(userSnap.userId, def2200, scope, rating);
+                } else updateProgress(userSnap.userId, def2200, scope, peak);
 
                 // Underdog win
                 if (userSnap.place === 1 && userSnap.initialDisplayRating < minRating + 1e-6) {

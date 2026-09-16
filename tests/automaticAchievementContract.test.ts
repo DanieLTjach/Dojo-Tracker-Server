@@ -18,11 +18,6 @@ import {
 const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
     // A double ron's summed payments unlock the single-hit threshold.
     DEAL_IN_32000: ['nearMiss'],
-    // Peak progress is overwritten by later, lower ratings.
-    OPENSKILL_PEAK_1600: ['extra'],
-    OPENSKILL_PEAK_1800: ['extra'],
-    OPENSKILL_PEAK_2000: ['extra'],
-    OPENSKILL_PEAK_2200: ['extra'],
     // No progress call, so a small loss produces no row at all.
     OPENSKILL_LOSS_50_ONE_GAME: ['progress'],
     // Unlocks under GLOBAL scope while the catalog declares SKILL_4P.
