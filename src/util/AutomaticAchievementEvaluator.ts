@@ -846,7 +846,7 @@ export function evaluateAutomaticAchievements(
                     }
 
                     // Chombo
-                    if (res.type === 'CHOMBO' && 'chomboPlayerId' in res && (res as any).chomboPlayerId === p.userId) {
+                    if (res.type === 'CHOMBO' && res.offenderPlayerId === p.userId) {
                         unlockCode(p.userId, 'FIRST_CHOMBO', game, round.roundNumber);
                     }
                 }

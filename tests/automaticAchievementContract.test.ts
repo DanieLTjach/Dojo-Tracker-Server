@@ -16,8 +16,6 @@ import {
 // checks must currently FAIL - fixing a bug means deleting its entry here, at
 // which point the full assertion runs instead.
 const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
-    // FIRST_CHOMBO reads chomboPlayerId; the model field is offenderPlayerId.
-    FIRST_CHOMBO: ['positive'],
     // Hands scored through yaku selection persist the collapsed 'yakuhai' code,
     // which the FIRST_YAKUHAI lookup set does not contain.
     FIRST_YAKUHAI: ['positive'],
@@ -100,6 +98,7 @@ const KNOWN_VALUE_DEVIATIONS = new Set<string>([
     'FIRST_HOUTEI',
     'FIRST_RINSHAN',
     'FIRST_CHANKAN',
+    'FIRST_CHOMBO',
     'TSUBAME_GAESHI',
     'FIRST_TENHOU',
     'FIRST_CHIIHOU',
