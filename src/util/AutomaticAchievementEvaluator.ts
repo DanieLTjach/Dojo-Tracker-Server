@@ -881,7 +881,7 @@ export function evaluateAutomaticAchievements(
                 sourceEventId: game.eventId,
                 sourceGameId: game.id,
                 sourceRoundNumber: roundNumber ?? null,
-                value: current,
+                value: target === 1 ? null : current,
             });
         } else {
             updateProgress(userId, def, 'GLOBAL', current);
@@ -905,7 +905,7 @@ export function evaluateAutomaticAchievements(
                 sourceEventId: game.eventId,
                 sourceGameId: game.id,
                 sourceRoundNumber: roundNumber ?? null,
-                value: currentStreak,
+                value: target === 1 ? null : currentStreak,
             });
         } else {
             updateProgress(userId, def, 'GLOBAL', currentStreak);
@@ -939,7 +939,7 @@ export function evaluateAutomaticAchievements(
             sourceEventId: game.eventId,
             sourceGameId: game.id,
             sourceRoundNumber: roundNumber ?? null,
-            value: value ?? 1,
+            value: value ?? null,
         });
     }
 
@@ -962,7 +962,7 @@ export function evaluateAutomaticAchievements(
                 progress: target,
                 unlockedAt: sr.timestamp,
                 sourceGameId: sr.gameId,
-                value: current,
+                value: target === 1 ? null : current,
             });
         } else {
             updateProgress(userId, def, scope, current);
@@ -976,7 +976,7 @@ export function evaluateAutomaticAchievements(
             progress: def.target,
             unlockedAt,
             sourceGameId: gameId,
-            value: value ?? 1,
+            value: value ?? null,
         });
     }
 
@@ -1065,7 +1065,7 @@ export function evaluateAutomaticAchievements(
                     progress: 1,
                     unlockedAt: sr.timestamp,
                     sourceGameId: sr.gameId,
-                    value: 1,
+                    value: null,
                 });
 
                 // Sigma low & leave provisional
@@ -1148,7 +1148,7 @@ export function evaluateAutomaticAchievements(
                             progress: 1,
                             unlockedAt: sr.timestamp,
                             sourceGameId: sr.gameId,
-                            value: 1,
+                            value: null,
                         });
                     }
                 }
@@ -1276,7 +1276,7 @@ export function evaluateAutomaticAchievements(
                     progress: 1,
                     unlockedAt: ev.dateTo,
                     sourceEventId: ev.eventId,
-                    value: 1,
+                    value: null,
                 });
 
                 const podiumCode = ev.isSeason ? 'SEASON_PODIUM' : 'TOURNAMENT_PODIUM';
@@ -1285,7 +1285,7 @@ export function evaluateAutomaticAchievements(
                     progress: 1,
                     unlockedAt: ev.dateTo,
                     sourceEventId: ev.eventId,
-                    value: 1,
+                    value: null,
                 });
             } else if (pl.place <= 3) {
                 tracker.podiumCount += 1;
@@ -1296,7 +1296,7 @@ export function evaluateAutomaticAchievements(
                     progress: 1,
                     unlockedAt: ev.dateTo,
                     sourceEventId: ev.eventId,
-                    value: pl.place,
+                    value: null,
                 });
             }
 
