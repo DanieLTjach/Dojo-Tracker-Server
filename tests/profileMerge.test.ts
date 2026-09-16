@@ -22,6 +22,7 @@ const existing: Profile = {
     discord: 'ivan_d',
     majsoulAccount: 'IvanMajsoul',
     tenhouAccount: 'NoName',
+    theme: 'auto',
 };
 
 describe('mergeProfileValues', () => {
@@ -116,6 +117,7 @@ describe('mergeProfileValues', () => {
             discord: null,
             majsoulAccount: null,
             tenhouAccount: null,
+            theme: null,
         });
     });
 });

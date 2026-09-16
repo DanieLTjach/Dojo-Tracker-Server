@@ -16,13 +16,13 @@ export class ProfileRepository {
     private upsertProfileStatement(): Statement<ProfileUpsertParams, void> {
         return dbManager.db.prepare(`
             INSERT INTO profile (
-                userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, locale, hideProfile,
+                userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, locale, theme, hideProfile,
                 avatarUrl, statusLine, birthDay, birthMonth, birthYear, hideBirthYear,
                 city, favouriteYaku, favouriteTile, discord, majsoulAccount, tenhouAccount,
                 modifiedBy, modifiedAt
             )
             VALUES (
-                :userId, :firstNameEn, :lastNameEn, :firstName, :lastName, :emaNumber, :locale, :hideProfile,
+                :userId, :firstNameEn, :lastNameEn, :firstName, :lastName, :emaNumber, :locale, :theme, :hideProfile,
                 :avatarUrl, :statusLine, :birthDay, :birthMonth, :birthYear, :hideBirthYear,
                 :city, :favouriteYaku, :favouriteTile, :discord, :majsoulAccount, :tenhouAccount,
                 :modifiedBy, :timestamp
@@ -34,6 +34,7 @@ export class ProfileRepository {
                 lastName = :lastName,
                 emaNumber = :emaNumber,
                 locale = :locale,
+                theme = :theme,
                 hideProfile = :hideProfile,
                 avatarUrl = :avatarUrl,
                 statusLine = :statusLine,
@@ -60,6 +61,7 @@ export class ProfileRepository {
             lastName: values.lastName,
             emaNumber: values.emaNumber,
             locale: values.locale ?? null,
+            theme: values.theme ?? null,
             hideProfile: booleanToInteger(values.hideProfile),
             avatarUrl: values.avatarUrl,
             statusLine: values.statusLine,
@@ -119,6 +121,7 @@ interface ProfileUpsertParams {
     lastName: string | null;
     emaNumber: string | null;
     locale: string | null;
+    theme: string | null;
     hideProfile: number;
     avatarUrl: string | null;
     statusLine: string | null;
@@ -144,6 +147,7 @@ interface ProfileDBEntity {
     lastName: string | null;
     emaNumber: string | null;
     locale: string | null;
+    theme: string | null;
     hideProfile: number;
     avatarUrl: string | null;
     statusLine: string | null;
@@ -170,6 +174,7 @@ function profileFromDBEntity(dbEntity: ProfileDBEntity): Profile {
         lastName: dbEntity.lastName,
         emaNumber: dbEntity.emaNumber,
         locale: dbEntity.locale,
+        theme: (dbEntity.theme as Profile['theme']) ?? null,
         hideProfile: Boolean(dbEntity.hideProfile),
         avatarUrl: dbEntity.avatarUrl,
         statusLine: dbEntity.statusLine,

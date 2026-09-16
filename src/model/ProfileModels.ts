@@ -19,7 +19,10 @@ export interface Profile {
     discord: string | null;
     majsoulAccount: string | null;
     tenhouAccount: string | null;
+    theme: ThemePreference | null;
 }
+
+export type ThemePreference = 'auto' | 'light' | 'dark';
 
 /**
  * Fields a profile update may carry.
@@ -35,6 +38,7 @@ export interface ProfileUpdate {
     lastName?: string | null | undefined;
     emaNumber?: string | null | undefined;
     locale?: string | null | undefined;
+    theme?: ThemePreference | null | undefined;
     hideProfile?: boolean | undefined;
     avatarUrl?: string | null | undefined;
     statusLine?: string | null | undefined;

@@ -20,6 +20,7 @@ export const profileEditSchema = z.object({
         lastName: z.string().trim().min(1).nullish(),
         emaNumber: z.string().regex(/^\d+$/, 'EMA number must contain only digits').nullish(),
         locale: localeSchema.nullish(),
+        theme: z.enum(['auto', 'light', 'dark']).nullish(),
         hideProfile: z.boolean().optional(),
         avatarUrl: imageUrlSchema.nullish(),
         statusLine: boundedTextSchema(140),

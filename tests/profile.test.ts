@@ -193,6 +193,37 @@ describe('Profile API Endpoints', () => {
             expect(response.status).toBe(400);
         });
 
+        it('should allow non-admin to update own profile theme', async () => {
+            for (const theme of ['light', 'dark', 'auto'] as const) {
+                const response = await request(app)
+                    .patch(`/api/users/${testUserId}/profile`)
+                    .set('Authorization', regularUserAuthHeader)
+                    .send({ theme })
+                    .expect(200);
+
+                expect(response.body.theme).toBe(theme);
+            }
+        });
+
+        it('should allow clearing profile theme to null', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ theme: null })
+                .expect(200);
+
+            expect(response.body.theme).toBeNull();
+        });
+
+        it('should reject invalid profile theme', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ theme: 'blue' });
+
+            expect(response.status).toBe(400);
+        });
+
         it('should fail when non-admin tries to update another users profile', async () => {
             const response = await request(app)
                 .patch(`/api/users/${testUser2Id}/profile`)
