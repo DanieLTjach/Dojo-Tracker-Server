@@ -1,4 +1,3 @@
-import Majiang from 'majiang-core';
 import { Wind } from '../model/GameModels.ts';
 import type { GameRoundResult, WinningHandData } from '../model/GameRoundResultModels.ts';
 import type { HandDetail, Meld, TileCode, YakuCode } from '../mahjong/types.ts';
@@ -6,7 +5,8 @@ import {
     AUTOMATIC_ACHIEVEMENTS_BY_CODE,
     type AutomaticAchievementDefinition,
 } from '../data/automaticAchievementCatalog.ts';
-import { getBaseTileCode, majiangToTileCode, tileCodeToMajiang } from '../mahjong/notation.ts';
+import { getBaseTileCode } from '../mahjong/notation.ts';
+import { resolveDoraTile } from '../mahjong/dora.ts';
 
 // Maps a persisted yaku code to the first-win achievement it unlocks.
 const YAKU_FIRST_CODES: ReadonlyArray<readonly [YakuCode, string]> = [
@@ -94,8 +94,7 @@ function doraTilesForWinningHand(hand: WinningHandData, isSanma: boolean): Set<T
 
     const addIndicators = (indicators: TileCode[]) => {
         for (const indicator of indicators) {
-            const dora = Majiang.Shan.zhenbaopai(tileCodeToMajiang(indicator), isSanma);
-            doraTiles.add(getBaseTileCode(majiangToTileCode(dora)));
+            doraTiles.add(resolveDoraTile(indicator, isSanma));
         }
     };
 
