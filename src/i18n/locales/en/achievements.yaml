@@ -168,13 +168,13 @@ achievements:
       description: Won a chiitoitsu hand with no other yaku.
     FU_50:
       name: Fu Collector
-      description: Won a 50-fu hand.
+      description: Won a hand worth 50 fu or more.
     FU_70:
       name: Heavy Fu
-      description: Won a 70-fu hand.
+      description: Won a hand worth 70 fu or more.
     FU_100:
       name: Fu Tower
-      description: Won a 100-fu hand.
+      description: Won a hand worth 100 fu or more.
     FIRST_MANGAN:
       name: Big Strike
       description: Scored your first Mangan.

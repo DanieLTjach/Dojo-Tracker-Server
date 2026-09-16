@@ -716,9 +716,10 @@ export function evaluateAutomaticAchievements(
                         unlockCode(winnerId, 'CHIITOITSU_NOMI_WIN', game, round.roundNumber);
                     }
 
-                    if (hand.fu === 50 && (hand.han || 0) < 5) unlockCode(winnerId, 'FU_50', game, round.roundNumber);
-                    if (hand.fu === 70 && (hand.han || 0) < 5) unlockCode(winnerId, 'FU_70', game, round.roundNumber);
-                    if (hand.fu === 100 && (hand.han || 0) < 5) unlockCode(winnerId, 'FU_100', game, round.roundNumber);
+                    // Cumulative fu tiers, so a 110-fu hand satisfies every tier it tops.
+                    if (plainFu >= 50 && (hand.han || 0) < 5) unlockCode(winnerId, 'FU_50', game, round.roundNumber);
+                    if (plainFu >= 70 && (hand.han || 0) < 5) unlockCode(winnerId, 'FU_70', game, round.roundNumber);
+                    if (plainFu >= 100 && (hand.han || 0) < 5) unlockCode(winnerId, 'FU_100', game, round.roundNumber);
 
                     const yakumanCount = hand.yakumanCount || 0;
                     if (yakumanCount >= 2) unlockCode(winnerId, 'FIRST_DOUBLE_YAKUMAN', game, round.roundNumber);

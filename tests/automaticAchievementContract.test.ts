@@ -18,10 +18,6 @@ import {
 const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
     // A double ron's summed payments unlock the single-hit threshold.
     DEAL_IN_32000: ['nearMiss'],
-    // Exact fu equality leaves 110-fu hands unlocking nothing.
-    FU_50: ['extra'],
-    FU_70: ['extra'],
-    FU_100: ['extra'],
     // Peak progress is overwritten by later, lower ratings.
     OPENSKILL_PEAK_1600: ['extra'],
     OPENSKILL_PEAK_1800: ['extra'],

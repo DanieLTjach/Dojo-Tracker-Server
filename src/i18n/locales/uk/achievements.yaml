@@ -168,13 +168,13 @@ achievements:
       description: Виграв чіітоіцу без інших яку
     FU_50:
       name: Колекціонер фу
-      description: Виграв руку на 50 фу
+      description: Виграв руку вартістю 50 фу або більше
     FU_70:
       name: Важке фу
-      description: Виграв руку на 70 фу
+      description: Виграв руку вартістю 70 фу або більше
     FU_100:
       name: Вежа з фу
-      description: Виграв руку на 100 фу
+      description: Виграв руку вартістю 100 фу або більше
     FIRST_MANGAN:
       name: Великий удар
       description: Зібрав свій перший манган
