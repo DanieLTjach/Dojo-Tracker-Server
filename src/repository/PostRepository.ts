@@ -176,10 +176,21 @@ export class PostRepository {
         return this.mapPostRowsToPosts(rows);
     }
 
+    /**
+     * Clears the round link when a round is rolled back. The post itself
+     * survives as a game-tagged photo - a user's photo is not ours to delete.
+     */
     nullPostRoundLink(gameId: number, roundNumber: number): void {
         dbManager.db.prepare(`
             UPDATE post SET roundNumber = NULL WHERE gameId = ? AND roundNumber = ?
         `).run(gameId, roundNumber);
+    }
+
+    /** Same, for every round of a game (a full round wipe). */
+    nullAllPostRoundLinks(gameId: number): void {
+        dbManager.db.prepare(`
+            UPDATE post SET roundNumber = NULL WHERE gameId = ?
+        `).run(gameId);
     }
 
     /**

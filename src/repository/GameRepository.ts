@@ -5,8 +5,11 @@ import { dbManager } from '../db/dbInit.ts';
 import { RATING_TO_POINTS_COEFFICIENT } from '../model/RatingModels.ts';
 import { parseGameStatus, parseWind } from '../util/EnumUtil.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
+import { PostRepository } from './PostRepository.ts';
 
 export class GameRepository {
+    private postRepository: PostRepository = new PostRepository();
+
     private createGameStatement(): Statement<{
         eventId: number;
         modifiedBy: number;
@@ -344,9 +347,9 @@ export class GameRepository {
 
     deleteGameRound(gameId: number, roundNumber: number): void {
         this.deleteGameRoundStatement().run({ gameId, roundNumber });
-        dbManager.db.prepare(`
-            UPDATE post SET roundNumber = NULL WHERE gameId = ? AND roundNumber = ?
-        `).run(gameId, roundNumber);
+        // A hand photo outlives the round it was taken in: drop the dangling
+        // link rather than the user's post.
+        this.postRepository.nullPostRoundLink(gameId, roundNumber);
     }
 
     private deleteGameRoundsByGameIdStatement(): Statement<{ gameId: number }, void> {
@@ -355,9 +358,7 @@ export class GameRepository {
 
     deleteGameRoundsByGameId(gameId: number): void {
         this.deleteGameRoundsByGameIdStatement().run({ gameId });
-        dbManager.db.prepare(`
-            UPDATE post SET roundNumber = NULL WHERE gameId = ?
-        `).run(gameId);
+        this.postRepository.nullAllPostRoundLinks(gameId);
     }
 
     private setLastRoundWasDeletedStatement(): Statement<{
