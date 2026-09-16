@@ -14,11 +14,9 @@ import {
 // Recorded places where the evaluator does not yet implement the behaviour its
 // achievement description states. Each entry is self-verifying: the listed
 // checks must currently FAIL - fixing a bug means deleting its entry here, at
-// which point the full assertion runs instead.
-const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
-    // A double ron's summed payments unlock the single-hit threshold.
-    DEAL_IN_32000: ['nearMiss'],
-};
+// which point the full assertion runs instead. Currently empty: every recorded
+// deviation has been fixed.
+const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {};
 
 // Codes whose positive unlock currently reports a bare value of 1 (rendered as
 // "1 wins"-style unit lines). Shrinks to empty once unlock evidence values stop
