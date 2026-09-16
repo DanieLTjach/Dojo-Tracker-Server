@@ -57,6 +57,9 @@ const YAKUHAI_CODES: ReadonlySet<YakuCode> = new Set<YakuCode>([
     'bakaze_nan',
     'bakaze_shaa',
     'bakaze_pei',
+    // Hands scored through yaku selection persist the collapsed yakuhai code
+    // rather than the eleven individual wind/dragon yaku.
+    'yakuhai',
 ]);
 
 // Career counters keyed by the yaku code they count.

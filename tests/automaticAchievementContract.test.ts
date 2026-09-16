@@ -16,9 +16,6 @@ import {
 // checks must currently FAIL - fixing a bug means deleting its entry here, at
 // which point the full assertion runs instead.
 const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
-    // Hands scored through yaku selection persist the collapsed 'yakuhai' code,
-    // which the FIRST_YAKUHAI lookup set does not contain.
-    FIRST_YAKUHAI: ['positive'],
     // Comeback unlocks on "lost points at least once", not on a negative score.
     COMEBACK_NEGATIVE_TO_FIRST: ['nearMiss'],
     // Any abortive draw with four riichi players unlocks; the draw type is unchecked.
