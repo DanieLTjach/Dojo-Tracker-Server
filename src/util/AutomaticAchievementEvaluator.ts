@@ -45,6 +45,15 @@ const YAKUMAN_FIRST_CODES: ReadonlyArray<readonly [YakuCode, string]> = [
     ['junsei_chuuren_poutou', 'FIRST_JUNSEI_CHUUREN'],
 ];
 
+// Variant yakuman whose base achievement the variant's description also
+// satisfies: a 13-wait kokushi is a kokushi, a tanki suuankou is a suuankou,
+// a junsei chuuren is a chuuren.
+const YAKUMAN_VARIANT_BASE_CODES: ReadonlyMap<string, string> = new Map([
+    ['FIRST_KOKUSHI_13', 'FIRST_KOKUSHI'],
+    ['FIRST_SUUANKOU_TANKI', 'FIRST_SUUANKOU'],
+    ['FIRST_JUNSEI_CHUUREN', 'FIRST_CHUUREN'],
+]);
+
 const YAKUHAI_CODES: ReadonlySet<YakuCode> = new Set<YakuCode>([
     'haku',
     'hatsu',
@@ -642,11 +651,17 @@ export function evaluateAutomaticAchievements(
                         }
                     }
 
-                    // Yakuman-specific firsts (only identifiable when the yaku list is present)
+                    // Yakuman-specific firsts (only identifiable when the yaku list is present).
+                    // Scoring the superior variant plainly satisfies the base
+                    // description, so both unlock together.
                     if (hand.yaku !== undefined) {
                         for (const [yakuCode, code] of YAKUMAN_FIRST_CODES) {
                             if (hasYaku(hand, yakuCode)) {
                                 unlockCode(winnerId, code, game, round.roundNumber);
+                                const baseCode = YAKUMAN_VARIANT_BASE_CODES.get(code);
+                                if (baseCode !== undefined) {
+                                    unlockCode(winnerId, baseCode, game, round.roundNumber);
+                                }
                             }
                         }
                     }

@@ -16,10 +16,6 @@ import {
 // checks must currently FAIL - fixing a bug means deleting its entry here, at
 // which point the full assertion runs instead.
 const KNOWN_DEVIATIONS: Partial<Record<string, CheckName[]>> = {
-    // The superior yakuman variant does not unlock the base achievement.
-    FIRST_KOKUSHI: ['positive'],
-    FIRST_SUUANKOU: ['positive'],
-    FIRST_CHUUREN: ['positive'],
     // A tie for the lead is excluded (margin > 0 required) - 0 is inside budget.
     WIN_BY_MARGIN_1000: ['extra'],
     // Seasons feed the tournament counters.
@@ -114,7 +110,9 @@ const KNOWN_VALUE_DEVIATIONS = new Set<string>([
     'FIRST_HONITSU',
     'FIRST_CHINITSU',
     'FULLY_OPEN_WIN',
+    'FIRST_KOKUSHI',
     'FIRST_KOKUSHI_13',
+    'FIRST_SUUANKOU',
     'FIRST_SUUANKOU_TANKI',
     'FIRST_DAISANGEN',
     'FIRST_DAISUUSHI',
@@ -124,6 +122,7 @@ const KNOWN_VALUE_DEVIATIONS = new Set<string>([
     'FIRST_CHINROUTOU',
     'FIRST_SUUKANTSU',
     'FIRST_JUNSEI_CHUUREN',
+    'FIRST_CHUUREN',
     'FIRST_AKA_DORA_WIN',
     'NO_DORA_MANGAN',
     'DORA_PON_WIN',
