@@ -592,4 +592,28 @@ export class AutomaticAchievementRepository {
 
         return Array.from(grouped.values());
     }
+
+    hasUserPlayedGameSize(userId: number, gameSize: 3 | 4): boolean {
+        const row = dbManager.db.prepare(`
+            SELECT 1
+            FROM userToGame utg
+            JOIN game g ON g.id = utg.gameId
+            JOIN event e ON e.id = g.eventId
+            JOIN gameRules gr ON gr.id = e.gameRules
+            WHERE utg.userId = ? AND gr.numberOfPlayers = ? AND g.status = 'FINISHED'
+            LIMIT 1
+        `).get(userId, gameSize);
+        return row !== undefined;
+    }
+
+    hasUserPlayedTrackedGame(userId: number): boolean {
+        const row = dbManager.db.prepare(`
+            SELECT 1
+            FROM userToGame utg
+            JOIN gameRound grnd ON grnd.gameId = utg.gameId
+            WHERE utg.userId = ?
+            LIMIT 1
+        `).get(userId);
+        return row !== undefined;
+    }
 }

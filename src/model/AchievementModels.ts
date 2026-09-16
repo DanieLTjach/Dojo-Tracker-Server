@@ -67,6 +67,10 @@ export interface UserAchievementEvidence {
 export interface UserAchievementCoverage {
     unlockedCount: number;
     totalCount: number;
+    // Catalog codes this user can actually unlock: sanma-only codes are
+    // excluded until they have played sanma, and trackedOnly codes until they
+    // have played a game with recorded rounds.
+    eligibleCount: number;
     percentage: number;
 }
 

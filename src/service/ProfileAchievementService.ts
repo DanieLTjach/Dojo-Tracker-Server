@@ -236,11 +236,26 @@ export class ProfileAchievementService {
         const unlockedCodes = new Set(unlockedStates.map(s => s.code));
         const unlockedCount = unlockedCodes.size;
         const totalCount = AUTOMATIC_ACHIEVEMENTS.length;
-        const percentage = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 10000) / 100 : 0;
+
+        // First production reads of trackedOnly/gameSize: a code only counts
+        // toward the denominator when this user can ever unlock it. Sanma-only
+        // codes need a sanma game; trackedOnly codes need a game with recorded
+        // rounds.
+        const playedSanma = this.automaticAchievementRepository.hasUserPlayedGameSize(userId, 3);
+        const hasTrackedGames = this.automaticAchievementRepository.hasUserPlayedTrackedGame(userId);
+        let eligibleCount = 0;
+        for (const def of AUTOMATIC_ACHIEVEMENTS) {
+            if (def.gameSize === 3 && !playedSanma) continue;
+            if (def.trackedOnly && !hasTrackedGames) continue;
+            eligibleCount += 1;
+        }
+
+        const percentage = eligibleCount > 0 ? Math.round((unlockedCount / eligibleCount) * 10000) / 100 : 0;
 
         return {
             unlockedCount,
             totalCount,
+            eligibleCount,
             percentage,
         };
     }
