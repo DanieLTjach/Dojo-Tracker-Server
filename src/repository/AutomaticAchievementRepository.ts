@@ -506,28 +506,36 @@ export class AutomaticAchievementRepository {
             const validUserIds = Array.from(new Set(userIds.filter(id => id !== 0)));
             if (validUserIds.length === 0) return [];
 
+            // The skill achievements replay whole (clubId, gameSize) tracks:
+            // another player's game can move the leaderboard the subject is
+            // measured against. Fetch every game of every scope the users
+            // touched, not just the games they played in, so a per-user
+            // recompute always reaches the same answer as a full recompute.
             const userChunks = chunkArray(validUserIds, 500);
-            const gameIdSet = new Set<number>();
+            const scopeSet = new Set<string>();
             for (const chunk of userChunks) {
                 const placeholders = chunk.map(() => '?').join(',');
-                const gRows = dbManager.db.prepare(`
-                    SELECT DISTINCT gameId FROM skillRatingGame WHERE userId IN (${placeholders})
-                `).all(...chunk) as Array<{ gameId: number }>;
-                for (const r of gRows) gameIdSet.add(r.gameId);
+                const scopeRows = dbManager.db.prepare(`
+                    SELECT DISTINCT clubId, gameSize FROM skillRatingGame WHERE userId IN (${placeholders})
+                `).all(...chunk) as Array<{ clubId: number, gameSize: number }>;
+                for (const r of scopeRows) scopeSet.add(`${r.clubId}:${r.gameSize}`);
             }
 
-            const matchedGameIds = Array.from(gameIdSet);
-            if (matchedGameIds.length === 0) return [];
+            const scopes = Array.from(scopeSet);
+            if (scopes.length === 0) return [];
 
-            const gameChunks = chunkArray(matchedGameIds, 500);
-            for (const chunk of gameChunks) {
-                const placeholders = chunk.map(() => '?').join(',');
+            const scopeChunks = chunkArray(scopes, 250);
+            for (const chunk of scopeChunks) {
+                const scopeClauses = chunk.map(() => `(clubId = ? AND gameSize = ?)`).join(' OR ');
                 let sql = `
                     SELECT gameId, userId, clubId, gameSize, rank, muBefore, sigmaBefore, muAfter, sigmaAfter, playedAt
                     FROM skillRatingGame
-                    WHERE gameId IN (${placeholders})
+                    WHERE (${scopeClauses})
                 `;
-                const params: any[] = [...chunk];
+                const params: any[] = chunk.flatMap(scope => {
+                    const [clubId, gameSize] = scope.split(':');
+                    return [Number(clubId), Number(gameSize)];
+                });
                 if (clubFilter !== undefined) {
                     sql += ` AND clubId = ?`;
                     params.push(clubFilter);
