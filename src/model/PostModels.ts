@@ -54,6 +54,11 @@ export interface CreatePostDTO {
     roundNumber?: number | null | undefined;
     text?: string | null | undefined;
     images: CreatePostImageDTO[];
+    /**
+     * Publish this post to the club's Telegram group as well. Not a column -
+     * it is consumed while handling the request and never stored.
+     */
+    shareToTelegram?: boolean | undefined;
 }
 
 /**

@@ -11,6 +11,13 @@ import { ClubMembershipRepository } from '../repository/ClubMembershipRepository
 import { ClubRepository } from '../repository/ClubRepository.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { PostRepository } from '../repository/PostRepository.ts';
+import { UserRepository } from '../repository/UserRepository.ts';
+import config from '../../config/config.ts';
+import { t } from '../i18n/index.ts';
+import { resolveClubLocale } from '../util/LocaleResolver.ts';
+import { escapeTelegramHtml, userProfileLink } from '../util/TelegramHtmlUtil.ts';
+import LogService from './LogService.ts';
+import telegramMessageService from './TelegramMessageService.ts';
 
 export const COMMENT_MAX_LENGTH = 500;
 export const MAX_POST_IMAGES = 4;
@@ -20,17 +27,20 @@ export class PostService {
     private clubRepository: ClubRepository;
     private clubMembershipRepository: ClubMembershipRepository;
     private gameRepository: GameRepository;
+    private userRepository: UserRepository;
 
     constructor(
         postRepository: PostRepository = new PostRepository(),
         clubRepository: ClubRepository = new ClubRepository(),
         clubMembershipRepository: ClubMembershipRepository = new ClubMembershipRepository(),
-        gameRepository: GameRepository = new GameRepository()
+        gameRepository: GameRepository = new GameRepository(),
+        userRepository: UserRepository = new UserRepository()
     ) {
         this.postRepository = postRepository;
         this.clubRepository = clubRepository;
         this.clubMembershipRepository = clubMembershipRepository;
         this.gameRepository = gameRepository;
+        this.userRepository = userRepository;
     }
 
     private validateImages(images: CreatePostImageDTO[] | undefined): void {
@@ -85,7 +95,61 @@ export class PostService {
         if (!createdPost) {
             throw new NotFoundError('postNotFound');
         }
+
+        if (dto.shareToTelegram) {
+            // Deliberately not awaited: the post is saved and the response must
+            // not wait on Telegram, nor fail if Telegram is down.
+            void this.sharePostToTelegram(createdPost, authorId);
+        }
+
         return createdPost;
+    }
+
+    /**
+     * Publishes a post to the Telegram group of the club it was posted to.
+     *
+     * A post carrying a game goes to the club's RATING topic, where the rest of
+     * the game traffic lives; anything else goes to MAIN, alongside the polls.
+     * A post with no club has no group to go to and is skipped.
+     */
+    private async sharePostToTelegram(post: Post, authorId: number): Promise<void> {
+        try {
+            if (post.clubId == null) {
+                return;
+            }
+
+            const club = this.clubRepository.findClubById(post.clubId);
+            if (!club) {
+                return;
+            }
+
+            const topics = this.clubRepository.getClubTelegramTopics(post.clubId);
+            const topic = post.gameId != null ? topics?.rating : topics?.main;
+            if (!topic) {
+                return;
+            }
+
+            const author = this.userRepository.findUserById(authorId);
+            if (!author) {
+                return;
+            }
+
+            const locale = resolveClubLocale(club);
+            const header = t('telegram.post.published', locale, {
+                author: userProfileLink(config.botUrl, author.id, author.name),
+            });
+            const body = post.text?.trim();
+            // The caption is HTML, and `body` is user-authored - escape it.
+            const caption = body
+                ? `${header}\n\n${escapeTelegramHtml(body)}`
+                : header;
+
+            const imageUrls = post.images.map(image => image.url).filter(Boolean);
+            await telegramMessageService.sendPhotos(imageUrls, caption, topic);
+        } catch (error) {
+            // Sharing is a side effect of an already-saved post; never surface it.
+            LogService.logError(`Error sharing post ${post.id} to Telegram`, error);
+        }
     }
 
     getPostById(postId: number, currentUserId?: number): Post {

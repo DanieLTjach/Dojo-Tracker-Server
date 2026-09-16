@@ -9,6 +9,9 @@ export const createPostSchema = z.object({
         gameId: z.number().int().positive().nullable().optional(),
         roundNumber: z.number().int().positive().nullable().optional(),
         text: z.string().max(280).nullable().optional(),
+        // Not persisted: it only decides whether this request also publishes the
+        // post to the club's Telegram group.
+        shareToTelegram: z.boolean().optional(),
         images: z.array(
             z.object({
                 url: z.string().trim().min(1, 'Image URL cannot be empty'),

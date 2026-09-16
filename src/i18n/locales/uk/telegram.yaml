@@ -224,6 +224,10 @@ telegram:
     addedToClubBody: Тепер ви є повноцінним членом клубу та можете додавати нові ігри.
     openApp: Відкрити додаток
 
+  # ── Shared user post (PostService) ──
+  post:
+    published: "{{author}} опублікував:"
+
   # ── Tournament registration log posts ──
   registrationLog:
     titleApplied: 🔔 Заявка на турнір
