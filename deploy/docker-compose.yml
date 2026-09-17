@@ -24,6 +24,8 @@ services:
       --non-interactive --agree-tos
       -d dojo-tracker.japan-dojo.com
       -d games.japan-dojo.com
+      -d tracker.japan-dojo.com
+      -d riichi-dojo.com
     networks:
       - shared_network
     volumes:
@@ -35,7 +37,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DB_PATH=/app/db/data/data.db
-      - FRONTEND_URLS=https://mahjong-tma-1.web.app,https://tracker.japan-dojo.com
+      - FRONTEND_URLS=https://mahjong-tma-1.web.app,https://tracker.japan-dojo.com,https://riichi-dojo.com
       - BOT_URL=https://t.me/japan_dojo_bot/tracker
     env_file:
       - .env
