@@ -227,7 +227,6 @@ interface UserTracker {
     openHandWinsCount: number;
     ippatsuWinsCount: number;
     kansCount: number;
-    paoPaidCount: number;
     yakuWins: Map<YakuCode, number>;
 
     // Sanma counts
@@ -266,7 +265,6 @@ function newUserTracker(userId: number): UserTracker {
         openHandWinsCount: 0,
         ippatsuWinsCount: 0,
         kansCount: 0,
-        paoPaidCount: 0,
         yakuWins: new Map<YakuCode, number>(),
         sanmaGamesCount: 0,
         sanmaWinsCount: 0,
@@ -556,9 +554,6 @@ export function evaluateAutomaticAchievements(
                     const paoPayerId = hand.yakumanLiabilityPlayerId;
                     if (paoPayerId !== undefined && paoPayerId !== 0) {
                         unlockCode(paoPayerId, 'YAKUMAN_LIABILITY', game, round.roundNumber);
-                        const pt = getTracker(paoPayerId);
-                        pt.paoPaidCount += 1;
-                        checkThreshold(paoPayerId, 'PAID_PAO_3', 3, pt.paoPaidCount, game, round.roundNumber);
                     }
 
                     // --- Hand-detail derived achievements ---

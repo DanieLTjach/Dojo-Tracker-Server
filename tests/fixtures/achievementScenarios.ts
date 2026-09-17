@@ -978,46 +978,6 @@ scenario({
     }),
 });
 
-scenario({
-    code: 'PAID_PAO_3',
-    subject: 102,
-    positive: size => ({
-        games: [standardGame(
-            repeat(3, () =>
-                round(
-                    1,
-                    tsumoResult(SUBJECT, {
-                        hand: hand(SUBJECT, {
-                            yakumanCount: 1,
-                            yakumanLiabilityPlayerId: 102,
-                            yaku: [yakuMan('daisangen')],
-                        }),
-                        size,
-                    })
-                )),
-            size
-        )],
-    }),
-    nearMiss: size => ({
-        games: [standardGame(
-            repeat(2, () =>
-                round(
-                    1,
-                    tsumoResult(SUBJECT, {
-                        hand: hand(SUBJECT, {
-                            yakumanCount: 1,
-                            yakumanLiabilityPlayerId: 102,
-                            yaku: [yakuMan('daisangen')],
-                        }),
-                        size,
-                    })
-                )),
-            size
-        )],
-    }),
-    progresses: true,
-});
-
 // The stored point changes merge a double ron into one summed payment, and
 // per-hit attribution would need the club's scoring rules, so the achievement
 // is defined on the round's whole deal-in loss (descriptions say "single round").

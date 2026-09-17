@@ -382,9 +382,6 @@ achievements:
     FIRST_JUNSEI_CHUUREN:
       name: Pure Nine Gates
       description: Score junsei chuuren poutou (the 9-sided wait).
-    PAID_PAO_3:
-      name: Deep Pockets
-      description: Pay full pao liability for a yakuman 3 times.
     DORA_5_ONE_HAND:
       name: Dora Devourer
       description: Win a hand with 5 or more dora.

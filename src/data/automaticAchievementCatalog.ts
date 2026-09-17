@@ -969,15 +969,6 @@ export const AUTOMATIC_ACHIEVEMENTS: readonly AutomaticAchievementDefinition[] =
         repeatable: false,
         trackedOnly: true,
     },
-    {
-        code: 'PAID_PAO_3',
-        category: 'YAKUMAN',
-        target: 3,
-        valueUnit: 'events',
-        scopeType: 'GLOBAL',
-        repeatable: false,
-        trackedOnly: true,
-    },
 
     // --- DORA (dora counts derived from dora-family yaku han values) ---
     {

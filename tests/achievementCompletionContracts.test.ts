@@ -5,6 +5,7 @@ import gameRoutes from '../src/routes/GameRoutes.ts';
 import eventRoutes from '../src/routes/EventRoutes.ts';
 import achievementRoutes from '../src/routes/AchievementRoutes.ts';
 import { handleErrors } from '../src/middleware/ErrorHandling.ts';
+import { AUTOMATIC_ACHIEVEMENTS } from '../src/data/automaticAchievementCatalog.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { cleanupTestDatabase } from './setup.ts';
 import { createAuthHeader } from './testHelpers.ts';
@@ -145,7 +146,9 @@ describe('Achievement completion and tournament contracts', () => {
 
         expect(response.status).toBe(200);
         const { catalog } = response.body;
-        expect(catalog.length).toBe(159);
+        // Derived, not hardcoded: the endpoint must ship the whole catalog, and a
+        // literal here just breaks whenever an achievement is added or removed.
+        expect(catalog.length).toBe(AUTOMATIC_ACHIEVEMENTS.length);
 
         const g1 = catalog.find((c: any) => c.code === 'GAMES_1');
         expect(g1).toBeDefined();

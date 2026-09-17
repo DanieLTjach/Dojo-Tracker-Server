@@ -401,9 +401,10 @@ describe('AutomaticAchievementEvaluator', () => {
         expect(results.find(r => r.userId === 101 && r.code === 'FIRST_DAISANGEN')?.unlockedAt).not.toBeNull();
         expect(results.find(r => r.userId === 102 && r.code === 'YAKUMAN_LIABILITY')?.unlockedAt).not.toBeNull();
 
-        const paoProgress = results.find(r => r.userId === 102 && r.code === 'PAID_PAO_3');
-        expect(paoProgress).toBeDefined();
-        expect(paoProgress?.progress).toBe(1);
+        // Paying pao is recognised once, by YAKUMAN_LIABILITY above. There is no
+        // separate "pay it N times" award: it duplicated that same trigger, and
+        // nobody in the production data has paid pao even once.
+        expect(results.find(r => r.code === 'PAID_PAO_3')).toBeUndefined();
     });
 
     it('evaluates nagashi mangan from exhaustive draws', () => {
