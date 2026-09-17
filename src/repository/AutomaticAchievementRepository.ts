@@ -126,20 +126,11 @@ export class AutomaticAchievementRepository {
         dbManager.db.prepare('DELETE FROM automaticAchievementState WHERE userId = :userId').run({ userId });
     }
 
-    /**
-     * Records newly unlocked achievements as notifications, one row each.
-     *
-     * `unlocked` is already filtered by the caller to genuine new unlocks: a
-     * user with no prior state at all is seeded silently, because a first
-     * computation (an import, or a backfill after this table was added) would
-     * otherwise announce their whole back-catalogue in one pass.
-     */
+    /** One notification per newly unlocked achievement. */
     private insertUnlockNotifications(unlocked: ComputedAchievementState[], isoComputed: string): void {
         if (unlocked.length === 0) return;
 
-        // INSERT OR IGNORE against the unique index on
-        // (userId, achievementCode, scope) keeps a re-run of the same recompute
-        // from duplicating rows.
+        // OR IGNORE against the unique index: a re-run must not duplicate.
         const notifyStmt = dbManager.db.prepare(`
             INSERT OR IGNORE INTO notification (
                 userId, type, achievementCode, scope, createdAt
@@ -162,13 +153,9 @@ export class AutomaticAchievementRepository {
         const isoComputed = computedAt.toISOString();
 
         dbManager.db.transaction(() => {
-            // Any prior row at all - not just unlocked ones - is what marks this
-            // as a recompute rather than a first computation. A user whose state
-            // is being built for the first time (an import, or a backfill after
-            // the notification table was added) has their whole back-catalogue
-            // "unlock" in one pass; announcing that is a burst of dozens of
-            // notifications for things they did months ago, so it is seeded
-            // silently instead.
+            // No prior rows at all means a first computation (import, or backfill
+            // after this table was added), not a recompute: seed it silently
+            // rather than announcing the user's whole back-catalogue at once.
             const hadPriorState = (dbManager.db.prepare(`
                 SELECT 1 FROM automaticAchievementState WHERE userId = :userId LIMIT 1
             `).get({ userId }) as unknown) !== undefined;
@@ -223,10 +210,8 @@ export class AutomaticAchievementRepository {
         const isoComputed = computedAt.toISOString();
 
         dbManager.db.transaction(() => {
-            // Per user, not globally: a full recompute that includes a brand-new
-            // player must stay silent for that player while still announcing a
-            // genuine new unlock for everyone else. See the note on
-            // replaceUserStatesTransactionally.
+            // Per user, not globally: a brand-new player stays silent while a
+            // genuine unlock still notifies everyone else.
             const priorStateUserRows = dbManager.db.prepare(`
                 SELECT DISTINCT userId FROM automaticAchievementState
             `).all() as Array<{ userId: number }>;
