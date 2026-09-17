@@ -126,10 +126,53 @@ export class AutomaticAchievementRepository {
         dbManager.db.prepare('DELETE FROM automaticAchievementState WHERE userId = :userId').run({ userId });
     }
 
+    /**
+     * Records newly unlocked achievements as notifications, one row each.
+     *
+     * `unlocked` is already filtered by the caller to genuine new unlocks: a
+     * user with no prior state at all is seeded silently, because a first
+     * computation (an import, or a backfill after this table was added) would
+     * otherwise announce their whole back-catalogue in one pass.
+     */
+    private insertUnlockNotifications(unlocked: ComputedAchievementState[], isoComputed: string): void {
+        if (unlocked.length === 0) return;
+
+        // INSERT OR IGNORE against the unique index on
+        // (userId, achievementCode, scope) keeps a re-run of the same recompute
+        // from duplicating rows.
+        const notifyStmt = dbManager.db.prepare(`
+            INSERT OR IGNORE INTO notification (
+                userId, type, achievementCode, scope, createdAt
+            ) VALUES (
+                :userId, 'ACHIEVEMENT_UNLOCK', :achievementCode, :scope, :createdAt
+            )
+        `);
+
+        for (const s of unlocked) {
+            notifyStmt.run({
+                userId: s.userId,
+                achievementCode: s.code,
+                scope: s.scope || 'GLOBAL',
+                createdAt: isoComputed,
+            });
+        }
+    }
+
     replaceUserStatesTransactionally(userId: number, states: ComputedAchievementState[], computedAt: Date): void {
         const isoComputed = computedAt.toISOString();
 
         dbManager.db.transaction(() => {
+            // Any prior row at all - not just unlocked ones - is what marks this
+            // as a recompute rather than a first computation. A user whose state
+            // is being built for the first time (an import, or a backfill after
+            // the notification table was added) has their whole back-catalogue
+            // "unlock" in one pass; announcing that is a burst of dozens of
+            // notifications for things they did months ago, so it is seeded
+            // silently instead.
+            const hadPriorState = (dbManager.db.prepare(`
+                SELECT 1 FROM automaticAchievementState WHERE userId = :userId LIMIT 1
+            `).get({ userId }) as unknown) !== undefined;
+
             const previouslyUnlockedRows = dbManager.db.prepare(`
                 SELECT code, scope
                 FROM automaticAchievementState
@@ -168,27 +211,11 @@ export class AutomaticAchievementRepository {
                 });
             }
 
-            const notifyStmt = dbManager.db.prepare(`
-                INSERT OR IGNORE INTO notification (
-                    userId, type, achievementCode, scope, createdAt
-                ) VALUES (
-                    :userId, 'ACHIEVEMENT_UNLOCK', :achievementCode, :scope, :createdAt
-                )
-            `);
+            const newlyUnlocked = hadPriorState
+                ? states.filter(s => s.unlockedAt !== null && !previouslyUnlocked.has(`${s.code}::${s.scope}`))
+                : [];
 
-            for (const s of states) {
-                if (s.unlockedAt !== null) {
-                    const key = `${s.code}::${s.scope}`;
-                    if (!previouslyUnlocked.has(key)) {
-                        notifyStmt.run({
-                            userId: s.userId,
-                            achievementCode: s.code,
-                            scope: s.scope || 'GLOBAL',
-                            createdAt: isoComputed,
-                        });
-                    }
-                }
-            }
+            this.insertUnlockNotifications(newlyUnlocked, isoComputed);
         })();
     }
 
@@ -196,6 +223,16 @@ export class AutomaticAchievementRepository {
         const isoComputed = computedAt.toISOString();
 
         dbManager.db.transaction(() => {
+            // Per user, not globally: a full recompute that includes a brand-new
+            // player must stay silent for that player while still announcing a
+            // genuine new unlock for everyone else. See the note on
+            // replaceUserStatesTransactionally.
+            const priorStateUserRows = dbManager.db.prepare(`
+                SELECT DISTINCT userId FROM automaticAchievementState
+            `).all() as Array<{ userId: number }>;
+
+            const usersWithPriorState = new Set(priorStateUserRows.map(r => r.userId));
+
             const previouslyUnlockedRows = dbManager.db.prepare(`
                 SELECT userId, code, scope
                 FROM automaticAchievementState
@@ -240,27 +277,13 @@ export class AutomaticAchievementRepository {
                 }
             }
 
-            const notifyStmt = dbManager.db.prepare(`
-                INSERT OR IGNORE INTO notification (
-                    userId, type, achievementCode, scope, createdAt
-                ) VALUES (
-                    :userId, 'ACHIEVEMENT_UNLOCK', :achievementCode, :scope, :createdAt
-                )
-            `);
+            const newlyUnlocked = states.filter(s =>
+                usersWithPriorState.has(s.userId) &&
+                s.unlockedAt !== null &&
+                !previouslyUnlocked.has(`${s.userId}::${s.code}::${s.scope}`)
+            );
 
-            for (const s of states) {
-                if (s.unlockedAt !== null) {
-                    const key = `${s.userId}::${s.code}::${s.scope}`;
-                    if (!previouslyUnlocked.has(key)) {
-                        notifyStmt.run({
-                            userId: s.userId,
-                            achievementCode: s.code,
-                            scope: s.scope || 'GLOBAL',
-                            createdAt: isoComputed,
-                        });
-                    }
-                }
-            }
+            this.insertUnlockNotifications(newlyUnlocked, isoComputed);
         })();
     }
 

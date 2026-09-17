@@ -59,9 +59,7 @@ export class ShareController {
             ? (textDesc.length > 200 ? `${textDesc.slice(0, 197)}...` : textDesc)
             : 'Mahjong game results and achievements on Riichi Dojo';
 
-        const imageUrl = post.images.length > 0
-            ? post.images[0].url
-            : (post.author.avatarUrl || null);
+        const imageUrl = post.images[0]?.url ?? post.author.avatarUrl ?? null;
 
         const canonicalUrl = `${config.publicWebUrl}/posts/${post.id}`;
 

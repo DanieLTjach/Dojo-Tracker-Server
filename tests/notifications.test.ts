@@ -231,10 +231,52 @@ describe('Notifications System', () => {
         test('diffing emits ACHIEVEMENT_UNLOCK notification, consecutive recomputes create 0 duplicates', () => {
             const userDate = new Date('2026-06-01T12:00:00.000Z');
 
+            // Seed: the user's very first computation. A user with no prior
+            // state is being built for the first time (an import, or a backfill
+            // after the notification table was added), so their existing
+            // achievements are recorded silently rather than announced - a real
+            // recompute over the production data emitted 76 notifications for
+            // one such user before this was guarded.
+            achievementRepo.replaceUserStatesTransactionally(
+                USER_A,
+                [
+                    {
+                        userId: USER_A,
+                        code: 'GAMES_1',
+                        scope: 'GLOBAL',
+                        progress: 1,
+                        target: 1,
+                        unlockedAt: userDate,
+                        sourceEventId: null,
+                        sourceGameId: null,
+                        sourceRoundNumber: null,
+                        value: 1,
+                    },
+                ],
+                userDate
+            );
+
+            const seedNotifs = dbManager.db.prepare(
+                `SELECT * FROM notification WHERE userId = ? AND type = 'ACHIEVEMENT_UNLOCK'`
+            ).all(USER_A) as any[];
+            expect(seedNotifs.length).toBe(0);
+
             // Pass 1: user gains unlocked achievement GAMES_10
             achievementRepo.replaceUserStatesTransactionally(
                 USER_A,
                 [
+                    {
+                        userId: USER_A,
+                        code: 'GAMES_1',
+                        scope: 'GLOBAL',
+                        progress: 1,
+                        target: 1,
+                        unlockedAt: userDate,
+                        sourceEventId: null,
+                        sourceGameId: null,
+                        sourceRoundNumber: null,
+                        value: 1,
+                    },
                     {
                         userId: USER_A,
                         code: 'GAMES_10',
