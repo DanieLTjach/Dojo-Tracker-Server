@@ -18,7 +18,6 @@ services:
       --non-interactive --agree-tos
       -d dojo-tracker.japan-dojo.com
       -d games.japan-dojo.com
-      -d tracker.japan-dojo.com
       -d riichi-dojo.com
       -d www.riichi-dojo.com
     volumes:
