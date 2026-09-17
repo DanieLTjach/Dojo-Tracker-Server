@@ -16,6 +16,7 @@ interface Config {
     telegramNotificationsEnabled: boolean;
     tournamentMode: boolean;
     tournamentUserId: number | undefined;
+    publicWebUrl: string;
 }
 
 function getRequiredStringEnvVariable(varName: string): string {
@@ -82,6 +83,7 @@ const config: Config = {
     telegramNotificationsEnabled: parseBooleanEnvVariable('TELEGRAM_NOTIFICATIONS_ENABLED', true),
     tournamentMode,
     tournamentUserId: tournamentMode ? (tryParseIntEnvVariable('TOURNAMENT_USER_ID') || 1) : undefined,
+    publicWebUrl: process.env['PUBLIC_WEB_URL'] || 'https://tracker.japan-dojo.com',
 };
 
 export default config;

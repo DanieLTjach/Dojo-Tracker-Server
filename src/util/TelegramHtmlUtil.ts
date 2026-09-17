@@ -22,3 +22,15 @@ export function escapeTelegramHtml(text: string): string {
 export function userProfileLink(botUrl: string, userId: number, name: string): string {
     return `<a href="${botUrl}?startapp=user_${userId}"><b>${escapeTelegramHtml(name)}</b></a>`;
 }
+
+/**
+ * Escapes characters that have special meaning in HTML text and attributes.
+ */
+export function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
