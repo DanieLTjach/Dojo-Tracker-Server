@@ -1537,6 +1537,10 @@ export function getAutomaticCatalog(locale: SupportedLocale) {
         valueUnit: def.valueUnit,
         scopeType: def.scopeType,
         repeatable: def.repeatable,
+        // Both eligibility flags ship so the client can explain *why* an
+        // achievement is locked rather than just greying it out: trackedOnly
+        // needs hand-by-hand recorded rounds, gameSize 3 needs a sanma game.
         trackedOnly: def.trackedOnly,
+        gameSize: def.gameSize,
     }));
 }

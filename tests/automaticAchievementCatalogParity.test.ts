@@ -1,4 +1,4 @@
-import { AUTOMATIC_ACHIEVEMENTS } from '../src/data/automaticAchievementCatalog.ts';
+import { AUTOMATIC_ACHIEVEMENTS, getAutomaticCatalog } from '../src/data/automaticAchievementCatalog.ts';
 import { MANUAL_ACHIEVEMENT_CODES } from '../src/data/manualAchievementCatalog.ts';
 import { SUPPORTED_LOCALES, t } from '../src/i18n/index.ts';
 
@@ -33,5 +33,32 @@ describe('automatic achievement catalog parity', () => {
             expect(t(nameKey, locale)).not.toBe(nameKey);
             expect(t(descriptionKey, locale)).not.toBe(descriptionKey);
         }
+    });
+});
+
+// The client renders every catalog entry, including ones this player can never
+// unlock yet, and explains *why* each locked one is locked. That explanation is
+// only possible if both eligibility flags survive the wire - `gameSize` was
+// omitted once, which left sanma achievements greyed out with no reason given.
+describe('catalog eligibility flags', () => {
+    it('ships every achievement, not a per-user subset', () => {
+        expect(getAutomaticCatalog('en')).toHaveLength(AUTOMATIC_ACHIEVEMENTS.length);
+    });
+
+    it('exposes gameSize and trackedOnly for every definition that sets them', () => {
+        const entries = new Map(getAutomaticCatalog('en').map(entry => [entry.code, entry]));
+
+        for (const def of AUTOMATIC_ACHIEVEMENTS) {
+            const entry = entries.get(def.code);
+            expect(entry).toBeDefined();
+            expect(entry!.gameSize).toBe(def.gameSize);
+            expect(entry!.trackedOnly).toBe(def.trackedOnly);
+        }
+    });
+
+    it('carries the sanma-only codes that drive the locked reason', () => {
+        const sanma = getAutomaticCatalog('en').filter(entry => entry.gameSize === 3);
+        expect(sanma.length).toBe(AUTOMATIC_ACHIEVEMENTS.filter(d => d.gameSize === 3).length);
+        expect(sanma.length).toBeGreaterThan(0);
     });
 });
