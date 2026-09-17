@@ -184,6 +184,39 @@ describe('ClubAchievementService', () => {
     });
 
     describe('assignAchievement', () => {
+        it('backdates an award to the date it was actually earned', () => {
+            // Awards usually record something past (a tournament, a season), so the
+            // stored date must be the supplied one, not the moment of the click.
+            const earnedAt = new Date('2026-05-04T10:00:00.000Z');
+
+            const assignment = achievementService.assignAchievement(
+                clubId,
+                activeMemberId,
+                { builtInCode: 'MENTOR', definitionId: undefined, newDefinition: undefined },
+                'Ran the spring tournament',
+                SYSTEM_USER_ID,
+                earnedAt
+            );
+
+            expect(assignment.awardedAt.toISOString()).toBe(earnedAt.toISOString());
+            expect(assignment.note).toBe('Ran the spring tournament');
+        });
+
+        it('falls back to now when no award date is given', () => {
+            const before = Date.now();
+
+            const assignment = achievementService.assignAchievement(
+                clubId,
+                activeMemberId,
+                { builtInCode: 'MENTOR', definitionId: undefined, newDefinition: undefined },
+                null,
+                SYSTEM_USER_ID
+            );
+
+            expect(assignment.awardedAt.getTime()).toBeGreaterThanOrEqual(before);
+            expect(assignment.awardedAt.getTime()).toBeLessThanOrEqual(Date.now());
+        });
+
         it('assigns a built-in achievement to an active member', () => {
             const assignment = achievementService.assignAchievement(
                 clubId,

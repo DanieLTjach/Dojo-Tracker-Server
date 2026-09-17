@@ -33,6 +33,13 @@ export const clubAchievementDescriptionSchema = z.string().trim().min(1, 'Descri
 export const clubAchievementIconSchema = imageUrlSchema.nullish();
 export const clubAchievementNoteSchema = z.string().trim().max(500, 'Note must be 500 characters or less').nullish();
 
+// An award often records something that happened earlier (a tournament, a season).
+// Optional: omitted means "now". The future is refused because an award cannot be
+// earned before it happens, and a stray future date would sort above everything.
+export const clubAchievementAwardedAtSchema = z.coerce.date()
+    .refine(value => value.getTime() <= Date.now(), 'Awarded date cannot be in the future')
+    .optional();
+
 export const recomputeAutomaticAchievementsSchema = z.object({
     body: z.object({
         userId: z.coerce.number().int().positive().optional(),
@@ -73,6 +80,7 @@ export const clubAchievementAssignSchema = z.object({
         definitionId: z.coerce.number().int().optional(),
         newDefinition: newDefinitionBodySchema.optional(),
         note: clubAchievementNoteSchema,
+        awardedAt: clubAchievementAwardedAtSchema,
     }).refine(
         body => [body.builtInCode, body.definitionId, body.newDefinition].filter(v => v !== undefined).length === 1,
         { message: 'Provide exactly one of builtInCode, definitionId, or newDefinition' }

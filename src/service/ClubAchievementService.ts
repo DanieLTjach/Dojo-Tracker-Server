@@ -116,7 +116,8 @@ export class ClubAchievementService {
         userId: number,
         source: AssignAchievementSource,
         note: string | null,
-        awardedBy: number
+        awardedBy: number,
+        awardedAt?: Date
     ): ClubUserAchievement {
         this.clubService.validateClubExists(clubId);
         this.validateActiveMember(clubId, userId);
@@ -162,7 +163,9 @@ export class ClubAchievementService {
             definitionId,
             note,
             awardedBy,
-            awardedAt: new Date(),
+            // Backdating is allowed so an award can record when it was actually
+            // earned; omitted means now.
+            awardedAt: awardedAt ?? new Date(),
         });
 
         this.logAssignmentAwarded(assignment, awardedBy);

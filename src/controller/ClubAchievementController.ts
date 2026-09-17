@@ -62,7 +62,7 @@ export class ClubAchievementController {
     }
 
     assign(req: Request, res: Response) {
-        const { params: { clubId, userId }, body: { builtInCode, definitionId, newDefinition, note } } =
+        const { params: { clubId, userId }, body: { builtInCode, definitionId, newDefinition, note, awardedAt } } =
             clubAchievementAssignSchema.parse(req);
         const awardedBy = req.user!.userId;
         const assignment = this.achievementService.assignAchievement(
@@ -76,7 +76,8 @@ export class ClubAchievementController {
                     : undefined,
             },
             note ?? null,
-            awardedBy
+            awardedBy,
+            awardedAt
         );
         return res.status(StatusCodes.CREATED).json(assignment);
     }
