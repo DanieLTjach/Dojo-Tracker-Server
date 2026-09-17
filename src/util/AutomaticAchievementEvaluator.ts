@@ -346,6 +346,11 @@ export function evaluateAutomaticAchievements(
         }
     };
 
+    // Achievement values are the figure a player is shown. Everything counted
+    // here is a whole thing (games, wins, rating points); sigma is the exception,
+    // so it gets one decimal rather than full float noise.
+    const roundSigma = (sigma: number) => Math.round(sigma * 10) / 10;
+
     const updateProgress = (
         userId: number,
         def: AutomaticAchievementDefinition,
@@ -354,7 +359,12 @@ export function evaluateAutomaticAchievements(
     ) => {
         const s = getOrCreateState(userId, def, scope);
         if (s.unlockedAt === null) {
-            s.progress = Math.min(currentProgress, def.target);
+            // Best attempt so far, never the most recent one. This used to
+            // overwrite, so a "closest you have come" bar moved *backwards*
+            // after an ordinary game and showed whatever the last game happened
+            // to be rather than the player's high-water mark.
+            const capped = Math.min(currentProgress, def.target);
+            s.progress = Math.max(s.progress ?? 0, capped);
         }
     };
 
@@ -1068,13 +1078,16 @@ export function evaluateAutomaticAchievements(
                         progress: 1,
                         unlockedAt: sr.timestamp,
                         sourceGameId: sr.gameId,
-                        value: userSnap.finalSigma,
+                        // Sigma is the one genuinely continuous figure here, so it
+                        // is rounded to the precision the threshold is stated in
+                        // (4.0) rather than stored as 3.9933894870307856.
+                        value: roundSigma(userSnap.finalSigma),
                     });
                     unlock(userSnap.userId, defSigmaLow, scope, {
                         progress: 1,
                         unlockedAt: sr.timestamp,
                         sourceGameId: sr.gameId,
-                        value: userSnap.finalSigma,
+                        value: roundSigma(userSnap.finalSigma),
                     });
 
                     const clubs = provisionalClubs.get(userSnap.userId) ?? new Set<number>();

@@ -564,3 +564,84 @@ describe('AutomaticAchievementEvaluator', () => {
         expect(results.find(r => r.userId === 102 && r.code === 'OPENSKILL_RANK1_DEFEND_3')).toBeUndefined();
     });
 });
+
+// The evaluator's rating thresholds (1600..2200 peaks, a 50-point one-game
+// swing) are written in DISPLAY points - the 1500-based number the player sees.
+// Production fed it the raw OpenSkill ordinal (~27) instead, so every one of
+// these was unreachable: the largest ordinal gain across 8025 rated
+// player-games is 4.95, against a target of 50. These tests pin the units.
+describe('OpenSkill achievements use display-rating units', () => {
+    const skillGame = (initial: number, final: number) => [{
+        clubId: 1,
+        gameSize: 4 as const,
+        gameId: 1,
+        timestamp: new Date('2026-01-01T12:00:00.000Z'),
+        userSnapshots: [
+            {
+                userId: 101,
+                initialMu: 25,
+                initialSigma: 5,
+                initialDisplayRating: initial,
+                finalMu: 26,
+                finalSigma: 4,
+                finalDisplayRating: final,
+                place: 1,
+            },
+            {
+                userId: 102,
+                initialMu: 25,
+                initialSigma: 5,
+                initialDisplayRating: 1500,
+                finalMu: 24,
+                finalSigma: 5,
+                finalDisplayRating: 1480,
+                place: 2,
+            },
+        ],
+    }];
+
+    it('unlocks the one-game gain on a realistic display-point swing', () => {
+        // +60 display points: attainable (649 such games in production data).
+        const results = evaluateAutomaticAchievements([], [], skillGame(1500, 1560));
+        const gain = results.find(r => r.userId === 101 && r.code === 'OPENSKILL_GAIN_50_ONE_GAME');
+        expect(gain?.unlockedAt).not.toBeNull();
+    });
+
+    it('records whole display points of progress, never a raw ordinal fraction', () => {
+        const results = evaluateAutomaticAchievements([], [], skillGame(1500, 1530));
+        const gain = results.find(r => r.userId === 101 && r.code === 'OPENSKILL_GAIN_50_ONE_GAME');
+
+        expect(gain?.unlockedAt).toBeNull();
+        expect(gain?.progress).toBe(30);
+        expect(Number.isInteger(gain?.progress)).toBe(true);
+    });
+
+    it('rounds sigma to the precision its threshold is stated in', () => {
+        const game = skillGame(1500, 1510);
+        game[0]!.userSnapshots[0]!.finalSigma = 3.9933894870307856;
+
+        const results = evaluateAutomaticAchievements([], [], game);
+        const sigmaLow = results.find(r => r.userId === 101 && r.code === 'OPENSKILL_SIGMA_LOW');
+
+        expect(sigmaLow?.unlockedAt).not.toBeNull();
+        expect(sigmaLow?.value).toBe(4);
+    });
+
+    it('keeps the best attempt when a later game is worse', () => {
+        const best = skillGame(1500, 1540)[0]!;
+        const worse = {
+            ...best,
+            gameId: 2,
+            timestamp: new Date('2026-01-02T12:00:00.000Z'),
+            userSnapshots: best.userSnapshots.map(s =>
+                s.userId === 101 ? { ...s, initialDisplayRating: 1540, finalDisplayRating: 1545 } : s
+            ),
+        };
+
+        const results = evaluateAutomaticAchievements([], [], [best, worse]);
+        const gain = results.find(r => r.userId === 101 && r.code === 'OPENSKILL_GAIN_50_ONE_GAME');
+
+        // 40 from the first game, not 5 from the most recent one.
+        expect(gain?.progress).toBe(40);
+    });
+});

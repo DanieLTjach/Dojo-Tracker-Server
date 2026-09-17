@@ -11,6 +11,7 @@ import {
 import { Wind } from '../model/GameModels.ts';
 import type { GameRoundResult } from '../model/GameRoundResultModels.ts';
 import { RatingService } from '../service/RatingService.ts';
+import { toDisplaySkill } from '../util/SkillMathUtil.ts';
 
 function chunkArray<T>(items: T[], chunkSize: number = 500): T[][] {
     const chunks: T[][] = [];
@@ -582,10 +583,16 @@ export class AutomaticAchievementRepository {
                 userId: r.userId,
                 initialMu: r.muBefore,
                 initialSigma: r.sigmaBefore,
-                initialDisplayRating: r.muBefore - 3 * r.sigmaBefore,
+                // The DISPLAY rating the player actually sees (1500-based, scaled),
+                // not the raw OpenSkill ordinal (~27). The achievement targets are
+                // written in display points - 1600/2200 peaks, a 50-point one-game
+                // swing - so comparing a raw ordinal against them made every one of
+                // these unreachable: the largest ordinal gain in the whole database
+                // is 4.95 against a target of 50.
+                initialDisplayRating: toDisplaySkill(r.muBefore, r.sigmaBefore),
                 finalMu: r.muAfter,
                 finalSigma: r.sigmaAfter,
-                finalDisplayRating: r.muAfter - 3 * r.sigmaAfter,
+                finalDisplayRating: toDisplaySkill(r.muAfter, r.sigmaAfter),
                 place: r.rank,
             });
         }

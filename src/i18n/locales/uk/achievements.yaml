@@ -501,7 +501,7 @@ achievements:
       description: Виграв гру, маючи найнижчий рейтинг за столом.
     OPENSKILL_GAIN_50_ONE_GAME:
       name: Квантовий стрибок
-      description: Здобув 50 або більше рейтингових очок за одну гру.
+      description: Здобув 50 або більше пунктів рейтингу за одну гру.
     OPENSKILL_SIGMA_LOW:
       name: Непохитна точність
       description: Досяг невизначеності рейтингу (сигма) 4.0 або нижче.
@@ -513,7 +513,7 @@ achievements:
       description: Зіграв 100 рейтингових ігор OpenSkill на одному треку.
     OPENSKILL_LOSS_50_ONE_GAME:
       name: Повернення на землю
-      description: Втратив 50 або більше очок рейтингу за одну гру.
+      description: Втратив 50 або більше пунктів рейтингу за одну гру.
     OPENSKILL_STREAK_GAIN_3:
       name: Розігрів
       description: Набирав рейтинг 3 рейтингові ігри поспіль.

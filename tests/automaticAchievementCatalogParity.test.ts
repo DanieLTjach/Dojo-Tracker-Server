@@ -1,6 +1,8 @@
 import { AUTOMATIC_ACHIEVEMENTS, getAutomaticCatalog } from '../src/data/automaticAchievementCatalog.ts';
 import { MANUAL_ACHIEVEMENT_CODES } from '../src/data/manualAchievementCatalog.ts';
 import { SUPPORTED_LOCALES, t } from '../src/i18n/index.ts';
+import { toDisplaySkill } from '../src/util/SkillMathUtil.ts';
+import { SKILL_DISPLAY_BASE, SKILL_DISPLAY_SCALE } from '../src/model/SkillModels.ts';
 
 describe('automatic achievement catalog parity', () => {
     it('has unique codes', () => {
@@ -60,5 +62,28 @@ describe('catalog eligibility flags', () => {
         const sanma = getAutomaticCatalog('en').filter(entry => entry.gameSize === 3);
         expect(sanma.length).toBe(AUTOMATIC_ACHIEVEMENTS.filter(d => d.gameSize === 3).length);
         expect(sanma.length).toBeGreaterThan(0);
+    });
+});
+
+// The bug that made six OpenSkill achievements permanently unreachable lived at
+// this seam, not in the evaluator: the evaluator's unit tests hand it
+// `finalDisplayRating: 1650` and pass, while production passed it the raw
+// ordinal (~27). Pin the conversion itself.
+describe('display rating conversion feeding the evaluator', () => {
+    it('converts mu/sigma into the 1500-based rating the player sees', () => {
+        // A mid-table player: raw ordinal ~10, display ~1720.
+        expect(toDisplaySkill(25, 5)).toBe(SKILL_DISPLAY_BASE + SKILL_DISPLAY_SCALE * 10);
+    });
+
+    it('produces values on the same scale as the peak targets', () => {
+        // A strong player must be able to cross 1600 - under the raw ordinal this
+        // was ~27 and no peak achievement could ever fire.
+        expect(toDisplaySkill(28, 2)).toBeGreaterThan(1600);
+    });
+
+    it('always returns a whole number, so progress never shows a float', () => {
+        for (const [mu, sigma] of [[25, 5], [26.4, 3.17], [30.01, 2.004]]) {
+            expect(Number.isInteger(toDisplaySkill(mu!, sigma!))).toBe(true);
+        }
     });
 });
