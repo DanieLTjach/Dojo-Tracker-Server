@@ -130,6 +130,16 @@ export class AutomaticAchievementRepository {
         const isoComputed = computedAt.toISOString();
 
         dbManager.db.transaction(() => {
+            const previouslyUnlockedRows = dbManager.db.prepare(`
+                SELECT code, scope
+                FROM automaticAchievementState
+                WHERE userId = :userId AND unlockedAt IS NOT NULL
+            `).all({ userId }) as Array<{ code: string, scope: string }>;
+
+            const previouslyUnlocked = new Set(
+                previouslyUnlockedRows.map(r => `${r.code}::${r.scope}`)
+            );
+
             this.deleteStatesForUser(userId);
 
             const insertStmt = dbManager.db.prepare(`
@@ -157,6 +167,28 @@ export class AutomaticAchievementRepository {
                     computedAt: isoComputed,
                 });
             }
+
+            const notifyStmt = dbManager.db.prepare(`
+                INSERT OR IGNORE INTO notification (
+                    userId, type, achievementCode, scope, createdAt
+                ) VALUES (
+                    :userId, 'ACHIEVEMENT_UNLOCK', :achievementCode, :scope, :createdAt
+                )
+            `);
+
+            for (const s of states) {
+                if (s.unlockedAt !== null) {
+                    const key = `${s.code}::${s.scope}`;
+                    if (!previouslyUnlocked.has(key)) {
+                        notifyStmt.run({
+                            userId: s.userId,
+                            achievementCode: s.code,
+                            scope: s.scope || 'GLOBAL',
+                            createdAt: isoComputed,
+                        });
+                    }
+                }
+            }
         })();
     }
 
@@ -164,6 +196,16 @@ export class AutomaticAchievementRepository {
         const isoComputed = computedAt.toISOString();
 
         dbManager.db.transaction(() => {
+            const previouslyUnlockedRows = dbManager.db.prepare(`
+                SELECT userId, code, scope
+                FROM automaticAchievementState
+                WHERE unlockedAt IS NOT NULL
+            `).all() as Array<{ userId: number, code: string, scope: string }>;
+
+            const previouslyUnlocked = new Set(
+                previouslyUnlockedRows.map(r => `${r.userId}::${r.code}::${r.scope}`)
+            );
+
             dbManager.db.prepare('DELETE FROM automaticAchievementState').run();
 
             const insertStmt = dbManager.db.prepare(`
@@ -195,6 +237,28 @@ export class AutomaticAchievementRepository {
                     throw new Error(
                         `Failed to insert automatic achievement state s=${JSON.stringify(s)}: ${err.message}`
                     );
+                }
+            }
+
+            const notifyStmt = dbManager.db.prepare(`
+                INSERT OR IGNORE INTO notification (
+                    userId, type, achievementCode, scope, createdAt
+                ) VALUES (
+                    :userId, 'ACHIEVEMENT_UNLOCK', :achievementCode, :scope, :createdAt
+                )
+            `);
+
+            for (const s of states) {
+                if (s.unlockedAt !== null) {
+                    const key = `${s.userId}::${s.code}::${s.scope}`;
+                    if (!previouslyUnlocked.has(key)) {
+                        notifyStmt.run({
+                            userId: s.userId,
+                            achievementCode: s.code,
+                            scope: s.scope || 'GLOBAL',
+                            createdAt: isoComputed,
+                        });
+                    }
                 }
             }
         })();

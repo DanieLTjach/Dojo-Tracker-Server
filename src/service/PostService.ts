@@ -18,6 +18,7 @@ import { resolveClubLocale } from '../util/LocaleResolver.ts';
 import { escapeTelegramHtml, userProfileLink } from '../util/TelegramHtmlUtil.ts';
 import LogService from './LogService.ts';
 import telegramMessageService from './TelegramMessageService.ts';
+import { NotificationService } from './NotificationService.ts';
 
 export const COMMENT_MAX_LENGTH = 500;
 export const MAX_POST_IMAGES = 4;
@@ -28,19 +29,22 @@ export class PostService {
     private clubMembershipRepository: ClubMembershipRepository;
     private gameRepository: GameRepository;
     private userRepository: UserRepository;
+    private notificationService: NotificationService;
 
     constructor(
         postRepository: PostRepository = new PostRepository(),
         clubRepository: ClubRepository = new ClubRepository(),
         clubMembershipRepository: ClubMembershipRepository = new ClubMembershipRepository(),
         gameRepository: GameRepository = new GameRepository(),
-        userRepository: UserRepository = new UserRepository()
+        userRepository: UserRepository = new UserRepository(),
+        notificationService: NotificationService = new NotificationService()
     ) {
         this.postRepository = postRepository;
         this.clubRepository = clubRepository;
         this.clubMembershipRepository = clubMembershipRepository;
         this.gameRepository = gameRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     private validateImages(images: CreatePostImageDTO[] | undefined): void {
@@ -275,6 +279,17 @@ export class PostService {
         if (!created) {
             throw new NotFoundError('commentNotFound');
         }
+
+        if (post.authorId !== authorId) {
+            this.notificationService.notify({
+                userId: post.authorId,
+                type: 'POST_COMMENT',
+                actorId: authorId,
+                postId,
+                commentId,
+            });
+        }
+
         return created;
     }
 
@@ -330,8 +345,20 @@ export class PostService {
     }
 
     likeComment(commentId: number, userId: number): void {
-        this.requireComment(commentId);
-        this.postRepository.addCommentLike(commentId, userId);
+        const comment = this.postRepository.findCommentById(commentId);
+        if (!comment) {
+            throw new NotFoundError('commentNotFound');
+        }
+        const inserted = this.postRepository.addCommentLike(commentId, userId);
+        if (inserted && comment.authorId !== userId) {
+            this.notificationService.notify({
+                userId: comment.authorId,
+                type: 'COMMENT_LIKE',
+                actorId: userId,
+                postId: comment.postId,
+                commentId,
+            });
+        }
     }
 
     unlikeComment(commentId: number, userId: number): void {
@@ -350,7 +377,15 @@ export class PostService {
         if (!post) {
             throw new NotFoundError('postNotFound');
         }
-        this.postRepository.addLike(postId, userId);
+        const inserted = this.postRepository.addLike(postId, userId);
+        if (inserted && post.authorId !== userId) {
+            this.notificationService.notify({
+                userId: post.authorId,
+                type: 'POST_LIKE',
+                actorId: userId,
+                postId,
+            });
+        }
     }
 
     unlikePost(postId: number, userId: number): void {

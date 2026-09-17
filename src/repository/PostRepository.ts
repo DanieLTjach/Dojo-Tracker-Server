@@ -281,11 +281,12 @@ export class PostRepository {
         return rows.map(mapCommentRow);
     }
 
-    addCommentLike(commentId: number, userId: number): void {
-        dbManager.db.prepare(`
+    addCommentLike(commentId: number, userId: number): boolean {
+        const result = dbManager.db.prepare(`
             INSERT OR IGNORE INTO post_comment_like (commentId, userId, createdAt)
             VALUES (?, ?, ?)
         `).run(commentId, userId, new Date().toISOString());
+        return result.changes > 0;
     }
 
     removeCommentLike(commentId: number, userId: number): void {
@@ -304,12 +305,13 @@ export class PostRepository {
         dbManager.db.prepare(`DELETE FROM post_comment WHERE id = ?`).run(id);
     }
 
-    addLike(postId: number, userId: number): void {
+    addLike(postId: number, userId: number): boolean {
         const now = new Date().toISOString();
-        dbManager.db.prepare(`
+        const result = dbManager.db.prepare(`
             INSERT OR IGNORE INTO post_like (postId, userId, createdAt)
             VALUES (?, ?, ?)
         `).run(postId, userId, now);
+        return result.changes > 0;
     }
 
     removeLike(postId: number, userId: number): void {

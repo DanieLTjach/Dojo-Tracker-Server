@@ -17,6 +17,7 @@ import publicRoutes from './routes/PublicRoutes.ts';
 import achievementRoutes from './routes/AchievementRoutes.ts';
 import postRoutes from './routes/PostRoutes.ts';
 import shareRoutes from './routes/ShareRoutes.ts';
+import notificationRoutes from './routes/NotificationRoutes.ts';
 import { handleErrors } from './middleware/ErrorHandling.ts';
 
 import LogService from './service/LogService.ts';
@@ -53,6 +54,7 @@ app.use('/api/invites', inviteRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api', postRoutes);
+app.use('/api', notificationRoutes);
 app.use('/share', shareRoutes);
 
 app.use(handleErrors);
