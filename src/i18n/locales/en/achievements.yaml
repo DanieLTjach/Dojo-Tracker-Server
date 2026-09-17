@@ -454,9 +454,9 @@ achievements:
     SANMA_FIRST_KITA:
       name: Northern Exposure
       description: Win a sanma hand using north dora (kita).
-    SANMA_KITA_8_ONE_HAND:
+    SANMA_KITA_4_ONE_HAND:
       name: Blizzard
-      description: Win a sanma hand with 8 kita extracted.
+      description: Win a sanma hand having extracted all four kita.
     DICE_FIRST_ROLL:
       name: Roll the Dice
       description: Recorded your first dice roll as East.

@@ -354,7 +354,7 @@ achievements:
       description: Зібрав суанко (чотири приховані триплети)
     FIRST_SUUANKOU_TANKI:
       name: Самотній захисник
-      description: Зібрав суанко на очікуванні однієї плитки
+      description: Зібрав суанко на очікуванні одного тайлу
     FIRST_DAISANGEN:
       name: Великі три дракони
       description: Зібрав дайсанґен
@@ -384,79 +384,79 @@ achievements:
       description: Зібрав джюнсей чюренпото (9-стороннє очікування)
     DORA_5_ONE_HAND:
       name: Пожирач дора
-      description: Виграв руку з 5 або більше дора.
+      description: Виграв руку з 5 або більше дор
     DORA_8_ONE_HAND:
       name: Цунамі дора
-      description: Виграв руку з 8 або більше дора.
+      description: Виграв руку з 8 або більше дор
     URA_DORA_3:
       name: Прихована сила
-      description: Виграв руку ріічі з 3 або більше ура-дора.
+      description: Виграв руку ріічі з 3 або більше ура-дор
     FIRST_AKA_DORA_WIN:
       name: Побачивши червоне
-      description: Виграв руку з червоною п'ятіркою.
+      description: Виграв руку з червоною п'ятіркою
     NO_DORA_MANGAN:
       name: Чиста майстерність
-      description: Зібрав манґан або більше зовсім без дора.
+      description: Зібрав манґан або більше зовсім без дор
     DORA_PON_WIN:
       name: Пондор
-      description: Переміг з поном, що містить дору, урадору або акадору.
+      description: Переміг з поном, що містить дору, урадору або акадору
     DORA_KAN_WIN:
       name: Кандор
-      description: Переміг з каном, що містить дору, урадору або акадору.
+      description: Переміг з каном, що містить дору, урадору або акадору
     SOU_1_PON_WIN:
       name: Тріо Какапо
-      description: Переміг з поном одиниць соу.
+      description: Переміг з поном одиниць соу
     SOU_1_KAN_WIN:
       name: Квартет Какапо
-      description: Переміг з каном одиниць соу.
+      description: Переміг з каном одиниць соу
     FIRST_KAN:
       name: Перший кан
-      description: Виграв руку з каном.
+      description: Виграв руку з каном
     FIRST_ANKAN:
       name: Прихований дракон
-      description: Виграв руку з прихованим каном (анкан).
+      description: Виграв руку з прихованим каном (анкан)
     FIRST_DAIMINKAN:
       name: Відкриті брами
-      description: Виграв руку з відкритим каном зі скиду (даймінкан).
+      description: Виграв руку з відкритим каном зі скиду (даймінкан)
     FIRST_KAKAN:
       name: Пізнє доповнення
-      description: Виграв руку з доданим каном (какан).
+      description: Виграв руку з доданим каном (какан)
     KANS_10:
       name: Руйнівник стін
-      description: Виграв руки з 10 канами загалом.
+      description: Виграв руки з 10 канами загалом
     SANMA_GAMES_1:
       name: Тріо дебют
-      description: Зіграв свою першу гру на трьох.
+      description: Зіграв свою першу гру на трьох
     SANMA_GAMES_10:
       name: Любитель трьох вітрів
-      description: Зіграв 10 ігор на трьох.
+      description: Зіграв 10 ігор на трьох
     SANMA_GAMES_50:
       name: Санма регуляр
-      description: Зіграв 50 ігор на трьох.
+      description: Зіграв 50 ігор на трьох
     SANMA_GAMES_100:
       name: Майстер санми
-      description: Зіграв 100 ігор на трьох.
+      description: Зіграв 100 ігор на трьох
     SANMA_WINS_1:
       name: Перемога на трьох
-      description: Виграв свою першу гру в санму.
+      description: Виграв свою першу гру в санму
     SANMA_WINS_10:
       name: Чемпіон санми
-      description: Виграв 10 ігор у санму.
+      description: Виграв 10 ігор у санму
     SANMA_FIRST_DEALER_WIN:
-      name: Санма Ойя удар
-      description: Виграв раунд на дилері в санмі.
+      name: Санма Оя удар
+      description: Виграв раунд на дилері в санмі
     SANMA_FIRST_TSUMO:
       name: Санма цумо
-      description: Зібрав цумо в санмі.
+      description: Зібрав цумо в санмі
     SANMA_FIRST_YAKUMAN:
       name: Диво на трьох
-      description: Зібрав якуман у санмі.
+      description: Зібрав якуман у санмі
     SANMA_FIRST_KITA:
       name: Північне сяйво
-      description: Виграв руку санма з північною дорою (кіта).
-    SANMA_KITA_8_ONE_HAND:
+      description: Виграв руку санма з північною дорою (кіта)
+    SANMA_KITA_4_ONE_HAND:
       name: Хуртовина
-      description: Виграв руку санма з 8 вилученими кіта.
+      description: Виграв руку санма, вилучивши всі чотири кіта
     DICE_FIRST_ROLL:
       name: Кидок кубиків
       description: Записав свій перший кидок кубиків на Сході.

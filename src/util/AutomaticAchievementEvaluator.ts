@@ -695,8 +695,10 @@ export function evaluateAutomaticAchievements(
                         const kitaCount = getYakuHan(hand, 'kita') || hand.handDetail?.kitaCount || 0;
                         if (kitaCount > 0) {
                             unlockCode(winnerId, 'SANMA_FIRST_KITA', game, round.roundNumber);
-                            if (kitaCount >= 8) {
-                                unlockCode(winnerId, 'SANMA_KITA_8_ONE_HAND', game, round.roundNumber, kitaCount);
+                            // All four north tiles in one hand - the maximum
+                            // possible, since only four exist.
+                            if (kitaCount >= 4) {
+                                unlockCode(winnerId, 'SANMA_KITA_4_ONE_HAND', game, round.roundNumber, kitaCount);
                             }
                         }
                     }

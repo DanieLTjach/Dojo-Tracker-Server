@@ -1204,9 +1204,12 @@ export const AUTOMATIC_ACHIEVEMENTS: readonly AutomaticAchievementDefinition[] =
         gameSize: 3,
     },
     {
-        code: 'SANMA_KITA_8_ONE_HAND',
+        code: 'SANMA_KITA_4_ONE_HAND',
         category: 'SANMA',
-        target: 8,
+        // Four, not eight: a set holds exactly four north tiles, and the API
+        // schema caps kitaCount at 4 to match. The old target of 8 could only
+        // ever be met by data the API would reject.
+        target: 4,
         valueUnit: 'dora',
         scopeType: 'GLOBAL',
         repeatable: false,

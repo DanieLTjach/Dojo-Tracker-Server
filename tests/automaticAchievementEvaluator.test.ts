@@ -461,11 +461,13 @@ describe('AutomaticAchievementEvaluator', () => {
                             winningTile: 'pei',
                             doraIndicators: [],
                             uraDoraIndicators: [],
-                            kitaCount: 8,
+                            // Four is the maximum a real hand can hold, and the
+                            // API schema rejects anything higher.
+                            kitaCount: 4,
                         },
                         yaku: [
                             { code: 'riichi', han: 1 },
-                            { code: 'kita', han: 8 },
+                            { code: 'kita', han: 4 },
                         ],
                     },
                     playerPointChanges: [],
@@ -476,7 +478,7 @@ describe('AutomaticAchievementEvaluator', () => {
         const results = evaluateAutomaticAchievements([g1], [], []);
 
         expect(results.find(r => r.userId === 101 && r.code === 'SANMA_FIRST_KITA')?.unlockedAt).not.toBeNull();
-        expect(results.find(r => r.userId === 101 && r.code === 'SANMA_KITA_8_ONE_HAND')?.unlockedAt).not.toBeNull();
+        expect(results.find(r => r.userId === 101 && r.code === 'SANMA_KITA_4_ONE_HAND')?.unlockedAt).not.toBeNull();
     });
 
     it('evaluates OpenSkill loss, gain streak, and multi-club provisional', () => {

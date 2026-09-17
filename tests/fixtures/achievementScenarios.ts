@@ -1530,13 +1530,16 @@ scenario({
     }),
 });
 
+// Four kita is the ceiling - a set holds four north tiles - so the positive case
+// uses the real maximum and the near miss is three. The old fixture asserted 8
+// against 7, neither of which the API would accept (kitaCount is capped at 4).
 scenario({
-    code: 'SANMA_KITA_8_ONE_HAND',
+    code: 'SANMA_KITA_4_ONE_HAND',
     positive: size => ({
         games: [standardGame([round(
             1,
             tsumoResult(SUBJECT, {
-                hand: hand(SUBJECT, { han: 9, fu: 30, yaku: [y('tanyao', 1), y('kita', 8)] }),
+                hand: hand(SUBJECT, { han: 5, fu: 30, yaku: [y('tanyao', 1), y('kita', 4)] }),
                 size,
             })
         )], size)],
@@ -1545,7 +1548,7 @@ scenario({
         games: [standardGame([round(
             1,
             tsumoResult(SUBJECT, {
-                hand: hand(SUBJECT, { han: 8, fu: 30, yaku: [y('tanyao', 1), y('kita', 7)] }),
+                hand: hand(SUBJECT, { han: 4, fu: 30, yaku: [y('tanyao', 1), y('kita', 3)] }),
                 size,
             })
         )], size)],
