@@ -12,7 +12,7 @@ import type {
 interface PostDBRow {
     id: number;
     authorId: number;
-    authorName: string;
+    authorName: string | null;
     authorAvatarUrl: string | null;
     clubId: number | null;
     gameId: number | null;
@@ -34,7 +34,7 @@ interface CommentDBRow {
     id: number;
     postId: number;
     authorId: number;
-    authorName: string;
+    authorName: string | null;
     authorAvatarUrl: string | null;
     text: string;
     createdAt: string;
@@ -48,8 +48,8 @@ const POST_SELECT = `
     SELECT 
         p.id,
         p.authorId,
-        u.name as authorName,
-        prof.avatarUrl as authorAvatarUrl,
+        CASE WHEN prof.hideProfile = 1 THEN NULL ELSE u.name END as authorName,
+        CASE WHEN prof.hideProfile = 1 THEN NULL ELSE prof.avatarUrl END as authorAvatarUrl,
         p.clubId,
         p.gameId,
         p.roundNumber,
@@ -80,8 +80,8 @@ const COMMENT_SELECT = `
         pc.id,
         pc.postId,
         pc.authorId,
-        u.name as authorName,
-        prof.avatarUrl as authorAvatarUrl,
+        CASE WHEN prof.hideProfile = 1 THEN NULL ELSE u.name END as authorName,
+        CASE WHEN prof.hideProfile = 1 THEN NULL ELSE prof.avatarUrl END as authorAvatarUrl,
         pc.text,
         pc.createdAt,
         pc.editedAt,

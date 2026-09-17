@@ -71,6 +71,14 @@ export class AutomaticAchievementRepository {
         return rows.map(stateFromDBEntity);
     }
 
+    findUnlockedStateByUserIdAndCode(userId: number, code: string): ComputedAchievementState | null {
+        const stmt = dbManager.db.prepare(
+            `${this.selectQuery} WHERE userId = :userId AND code = :code AND unlockedAt IS NOT NULL ORDER BY unlockedAt DESC LIMIT 1`
+        );
+        const row = stmt.get({ userId, code }) as AutomaticAchievementStateDBEntity | undefined;
+        return row ? stateFromDBEntity(row) : null;
+    }
+
     findProgressStatesByUserId(userId: number): (ComputedAchievementState & { computedAt: Date })[] {
         const stmt = dbManager.db.prepare(
             `${this.selectQuery} WHERE userId = :userId AND unlockedAt IS NULL AND progress > 0 ORDER BY code, scope`

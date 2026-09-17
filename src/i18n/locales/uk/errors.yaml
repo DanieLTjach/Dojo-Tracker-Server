@@ -48,6 +48,7 @@ errors:
   clubAchievementAssignmentNotFound: Присвоєння нагороди з id {{assignmentId}} не знайдено
   clubAchievementAssignmentAlreadyRevoked: Присвоєння нагороди {{assignmentId}} вже скасовано
   targetNotActiveClubMember: Користувач {{userId}} має бути активним учасником клубу, щоб отримати цю нагороду
+  achievementNotFound: Досягнення з кодом '{{code}}' не знайдено
 
   eventNotFound: Подію з id {{eventId}} не знайдено
   insufficientEventManagementPermissions: Недостатньо прав для управління цією подією. Потрібна роль адміна або OWNER/MODERATOR клубу події.

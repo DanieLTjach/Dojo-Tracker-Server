@@ -138,6 +138,10 @@ export class AchievementService {
         );
     }
 
+    getPublicUserAchievement(userId: number, code: string, locale: SupportedLocale) {
+        return this.profileAchievementService.getPublicUserAchievement(userId, code, locale);
+    }
+
     getUserProfileAchievements(userId: number, requestingUserId: number) {
         const requestingUser = this.userService.getUserById(requestingUserId);
         const locale = resolveUserLocale(requestingUser);

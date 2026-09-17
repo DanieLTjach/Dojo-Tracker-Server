@@ -9,7 +9,7 @@ export interface PostImage {
 
 export interface PostAuthor {
     id: number;
-    name: string;
+    name: string | null;
     avatarUrl: string | null;
 }
 

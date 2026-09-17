@@ -58,6 +58,34 @@ export class ProfileAchievementService {
         return achievements.sort((a, b) => (b.awardedAt?.getTime() ?? 0) - (a.awardedAt?.getTime() ?? 0));
     }
 
+    getPublicUserAchievement(
+        userId: number,
+        code: string,
+        locale: SupportedLocale
+    ): UserAchievement | null {
+        const state = this.automaticAchievementRepository.findUnlockedStateByUserIdAndCode(userId, code);
+        if (state) {
+            const def = AUTOMATIC_ACHIEVEMENTS_BY_CODE.get(state.code);
+            if (def) {
+                return this.buildAutomaticAchievement(state, locale, false);
+            }
+        }
+
+        const manualAchievements = this.getManualAchievements(userId, locale);
+        const manualMatch = manualAchievements.find(a => a.code === code && a.awardedAt);
+        if (manualMatch) {
+            return manualMatch;
+        }
+
+        const tournamentAwards = this.getTournamentAwards(userId, locale);
+        const tournamentMatch = tournamentAwards.find(a => a.code === code && a.awardedAt);
+        if (tournamentMatch) {
+            return tournamentMatch;
+        }
+
+        return null;
+    }
+
     getUserProfileAchievementsResponse(
         userId: number,
         locale: SupportedLocale

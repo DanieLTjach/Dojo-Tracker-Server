@@ -48,6 +48,7 @@ errors:
   clubAchievementAssignmentNotFound: Achievement assignment with id {{assignmentId}} was not found
   clubAchievementAssignmentAlreadyRevoked: Achievement assignment {{assignmentId}} has already been revoked
   targetNotActiveClubMember: User {{userId}} must be an active club member to receive this achievement
+  achievementNotFound: Achievement with code '{{code}}' was not found
 
   eventNotFound: Event with id {{eventId}} was not found
   insufficientEventManagementPermissions: You do not have permission to manage this event. Admin or event club OWNER/MODERATOR role is required.
