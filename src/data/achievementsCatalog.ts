@@ -243,3 +243,26 @@ export function achievementName(definition: AchievementDefinition, locale: Suppo
     const translated = t(key, locale);
     return translated === key ? definition.name : translated;
 }
+
+/**
+ * The description shown under a tournament award's name.
+ */
+export function achievementDescription(definition: AchievementDefinition, locale: SupportedLocale): string {
+    return t(`achievements.descriptions.${definition.metric}`, locale);
+}
+
+/**
+ * A metric value with its unit, e.g. "5 wins". Grouping digits with en-US and
+ * then translating only the unit keeps the number readable in every locale
+ * without a per-locale number format to maintain.
+ */
+export function formatValue(
+    value: number | undefined,
+    unit: AchievementValueUnit,
+    locale: SupportedLocale
+): string | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+    return t(`achievements.units.${unit}`, locale, { value: value.toLocaleString('en-US') });
+}

@@ -1,8 +1,8 @@
 import {
     ACHIEVEMENTS,
+    achievementDescription,
     achievementName,
-    type AchievementDefinition,
-    type AchievementValueUnit,
+    formatValue,
 } from '../data/achievementsCatalog.ts';
 import { getAutomaticCatalog } from '../data/automaticAchievementCatalog.ts';
 import type { Event } from '../model/EventModels.ts';
@@ -19,7 +19,7 @@ import { type AchievementGame, computeAchievements } from '../util/AchievementCa
 import { AchievementsOnlyForTournamentsError } from '../error/EventErrors.ts';
 import { EventService } from './EventService.ts';
 import LogService from './LogService.ts';
-import { type SupportedLocale, t } from '../i18n/index.ts';
+import type { SupportedLocale } from '../i18n/index.ts';
 import { UserService } from './UserService.ts';
 import { resolveUserLocale } from '../util/LocaleResolver.ts';
 import { ProfileAchievementService } from './ProfileAchievementService.ts';
@@ -188,19 +188,4 @@ export class AchievementService {
             };
         });
     }
-}
-
-function achievementDescription(definition: AchievementDefinition, locale: SupportedLocale): string {
-    return t(`achievements.descriptions.${definition.metric}`, locale);
-}
-
-function formatValue(
-    value: number | undefined,
-    unit: AchievementValueUnit,
-    locale: SupportedLocale
-): string | undefined {
-    if (value === undefined) {
-        return undefined;
-    }
-    return t(`achievements.units.${unit}`, locale, { value: value.toLocaleString('en-US') });
 }

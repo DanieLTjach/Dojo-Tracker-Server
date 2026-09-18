@@ -1,9 +1,10 @@
 import {
     type AchievementMetric,
     ACHIEVEMENTS,
+    achievementDescription,
     achievementName,
     type AchievementDefinition,
-    type AchievementValueUnit,
+    formatValue,
 } from '../data/achievementsCatalog.ts';
 import {
     AUTOMATIC_ACHIEVEMENTS,
@@ -379,19 +380,4 @@ export class ProfileAchievementService {
             note: row.note ?? undefined,
         };
     }
-}
-
-function achievementDescription(definition: AchievementDefinition, locale: SupportedLocale): string {
-    return t(`achievements.descriptions.${definition.metric}`, locale);
-}
-
-function formatValue(
-    value: number | undefined,
-    unit: AchievementValueUnit,
-    locale: SupportedLocale
-): string | undefined {
-    if (value === undefined) {
-        return undefined;
-    }
-    return t(`achievements.units.${unit}`, locale, { value: value.toLocaleString('en-US') });
 }
