@@ -2,6 +2,8 @@
 // returned to the frontend — do not rename existing metrics.
 
 import { AchievementCriterion } from '../model/AchievementModels.ts';
+import type { SupportedLocale } from '../i18n/index.ts';
+import { t } from '../i18n/index.ts';
 
 export type AchievementValueUnit =
     | 'wins'
@@ -225,4 +227,19 @@ export function newStats(): PlayerStats {
         chombo_count: 0,
         biggest_deal_in: 0,
     };
+}
+
+/**
+ * The name shown for a tournament award. Lives here rather than in a service
+ * because both the tournament page and the profile page render these, and the
+ * English fallback it returns is the `name` field right above it.
+ *
+ * `t` echoes the key back when it is missing, which is how a metric with no
+ * translation yet falls back to the catalog name instead of printing
+ * "achievements.tournament.foo.name" at the user.
+ */
+export function achievementName(definition: AchievementDefinition, locale: SupportedLocale): string {
+    const key = `achievements.tournament.${definition.metric}.name`;
+    const translated = t(key, locale);
+    return translated === key ? definition.name : translated;
 }

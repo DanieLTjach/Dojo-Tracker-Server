@@ -2,11 +2,9 @@ import { dbManager } from '../src/db/dbInit.ts';
 import { createCustomEvent, dateInsideEventWindow, openEventWindow, resetTestDatabase } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { ProfileService } from '../src/service/ProfileService.ts';
-import { AchievementService, achievementName } from '../src/service/AchievementService.ts';
-import {
-    ProfileAchievementService,
-    achievementName as profileAchievementName,
-} from '../src/service/ProfileAchievementService.ts';
+import { AchievementService } from '../src/service/AchievementService.ts';
+import { ProfileAchievementService } from '../src/service/ProfileAchievementService.ts';
+import { achievementName } from '../src/data/achievementsCatalog.ts';
 import { EventService } from '../src/service/EventService.ts';
 import { GameService } from '../src/service/GameService.ts';
 import { AchievementCriterion } from '../src/model/AchievementModels.ts';
@@ -174,8 +172,6 @@ describe('AchievementService (persisted tournament achievements)', () => {
         };
         expect(achievementName(mockDef, 'uk')).toBe('Fallback Name');
         expect(achievementName(mockDef, 'en')).toBe('Fallback Name');
-        expect(profileAchievementName(mockDef, 'uk')).toBe('Fallback Name');
-        expect(profileAchievementName(mockDef, 'en')).toBe('Fallback Name');
     });
 
     it('does not recompute achievements when retrieving an event', () => {

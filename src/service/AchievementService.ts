@@ -1,4 +1,9 @@
-import { ACHIEVEMENTS, type AchievementDefinition, type AchievementValueUnit } from '../data/achievementsCatalog.ts';
+import {
+    ACHIEVEMENTS,
+    achievementName,
+    type AchievementDefinition,
+    type AchievementValueUnit,
+} from '../data/achievementsCatalog.ts';
 import { getAutomaticCatalog } from '../data/automaticAchievementCatalog.ts';
 import type { Event } from '../model/EventModels.ts';
 import {
@@ -183,12 +188,6 @@ export class AchievementService {
             };
         });
     }
-}
-
-export function achievementName(definition: AchievementDefinition, locale: SupportedLocale): string {
-    const key = `achievements.tournament.${definition.metric}.name`;
-    const translated = t(key, locale);
-    return translated === key ? definition.name : translated;
 }
 
 function achievementDescription(definition: AchievementDefinition, locale: SupportedLocale): string {
