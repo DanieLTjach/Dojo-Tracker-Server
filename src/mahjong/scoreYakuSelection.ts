@@ -108,7 +108,10 @@ const ROUNDED_FU = [30, 40, 50, 60, 70, 80, 90, 100, 110] as const;
  * hand gets a floor, and the operator picks above it when the wait or the
  * triplets add more.
  */
-function allowedFu(
+// Exported for the mini-app's yakuPicker parity test, which reads this file as
+// text to check the two implementations still agree. Nothing in this repo
+// imports it, so an unused-export sweep will look wrong about it.
+export function allowedFu(
     codes: readonly YakuCode[],
     winType: 'TSUMO' | 'RON',
     isOpen: boolean
