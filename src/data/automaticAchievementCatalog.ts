@@ -1515,10 +1515,6 @@ export function getAutomaticAchievementImageUrl(code: string): string {
     return `/achievement-icons/automatic/v1/details/${code}.webp`;
 }
 
-export function getAutomaticAchievementDefinition(code: string): AutomaticAchievementDefinition | undefined {
-    return AUTOMATIC_ACHIEVEMENTS_BY_CODE.get(code);
-}
-
 export function getAutomaticCatalog(locale: SupportedLocale) {
     return AUTOMATIC_ACHIEVEMENTS.map(def => ({
         code: def.code,

@@ -108,7 +108,7 @@ const ROUNDED_FU = [30, 40, 50, 60, 70, 80, 90, 100, 110] as const;
  * hand gets a floor, and the operator picks above it when the wait or the
  * triplets add more.
  */
-export function allowedFu(
+function allowedFu(
     codes: readonly YakuCode[],
     winType: 'TSUMO' | 'RON',
     isOpen: boolean

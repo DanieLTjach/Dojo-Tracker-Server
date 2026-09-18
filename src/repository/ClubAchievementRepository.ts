@@ -60,7 +60,7 @@ function assignmentFromDBEntity(dbEntity: ClubUserAchievementDBEntity): ClubUser
     };
 }
 
-export function normalizeAchievementName(name: string): string {
+function normalizeAchievementName(name: string): string {
     return name.trim().normalize('NFC').toLowerCase();
 }
 

@@ -14,7 +14,7 @@ class EnumParsingError extends InternalServerError {
     }
 }
 
-export function parseEnumValue<T extends Record<string, string>>(
+function parseEnumValue<T extends Record<string, string>>(
     enumName: string,
     enumObj: T,
     value: string

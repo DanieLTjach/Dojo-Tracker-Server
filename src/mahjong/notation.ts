@@ -63,7 +63,7 @@ export function getBaseTileCode(tile: TileCode): TileCode {
     return tile;
 }
 
-export function calledFromToSymbol(calledFrom: CalledFrom): '-' | '=' | '+' {
+function calledFromToSymbol(calledFrom: CalledFrom): '-' | '=' | '+' {
     if (calledFrom === 'KAMICHA') return '-';
     if (calledFrom === 'TOIMEN') return '=';
     if (calledFrom === 'SHIMOCHA') return '+';

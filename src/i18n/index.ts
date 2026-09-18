@@ -65,7 +65,7 @@ function interpolate(template: string, params: TranslationParams, locale: Suppor
     });
 }
 
-export function isSupportedLocale(locale: string): boolean {
+function isSupportedLocale(locale: string): boolean {
     return (SUPPORTED_LOCALES as readonly string[]).includes(locale);
 }
 
