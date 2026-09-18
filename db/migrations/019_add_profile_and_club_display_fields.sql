@@ -14,6 +14,13 @@ ALTER TABLE profile ADD COLUMN discord TEXT;
 ALTER TABLE profile ADD COLUMN majsoulAccount TEXT;
 ALTER TABLE profile ADD COLUMN tenhouAccount TEXT;
 
+-- Self-reported Mahjong Soul ranks. Yonma and sanma are ranked separately in
+-- game, so they are two independent columns rather than one. Stored as a code
+-- ('expert_3'), never a display name: the mini-app localizes the tier and the
+-- in-game names differ between clients.
+ALTER TABLE profile ADD COLUMN majsoulRankYonma TEXT;
+ALTER TABLE profile ADD COLUMN majsoulRankSanma TEXT;
+
 -- Per-profile theme override ('auto' | 'light' | 'dark').
 ALTER TABLE profile ADD COLUMN theme TEXT;
 

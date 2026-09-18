@@ -30,6 +30,8 @@ const EMPTY_PROFILE_VALUES: ProfileValues = {
     favouriteTile: null,
     discord: null,
     majsoulAccount: null,
+    majsoulRankYonma: null,
+    majsoulRankSanma: null,
     tenhouAccount: null,
 };
 
@@ -60,6 +62,8 @@ export function mergeProfileValues(existing: Profile | undefined, update: Profil
         favouriteTile: update.favouriteTile !== undefined ? update.favouriteTile : base.favouriteTile,
         discord: update.discord !== undefined ? update.discord : base.discord,
         majsoulAccount: update.majsoulAccount !== undefined ? update.majsoulAccount : base.majsoulAccount,
+        majsoulRankYonma: update.majsoulRankYonma !== undefined ? update.majsoulRankYonma : base.majsoulRankYonma,
+        majsoulRankSanma: update.majsoulRankSanma !== undefined ? update.majsoulRankSanma : base.majsoulRankSanma,
         tenhouAccount: update.tenhouAccount !== undefined ? update.tenhouAccount : base.tenhouAccount,
     };
 }

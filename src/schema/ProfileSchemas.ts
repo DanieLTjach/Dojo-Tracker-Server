@@ -5,6 +5,7 @@ import {
     gameAccountSchema,
     imageUrlSchema,
     localeSchema,
+    majsoulRankSchema,
     tenhouIdSchema,
 } from './CommonSchemas.ts';
 import { userIdParamSchema } from './UserSchemas.ts';
@@ -33,6 +34,8 @@ export const profileEditSchema = z.object({
         favouriteTile: boundedTextSchema(32),
         discord: discordHandleSchema.nullish(),
         majsoulAccount: gameAccountSchema.nullish(),
+        majsoulRankYonma: majsoulRankSchema.nullish(),
+        majsoulRankSanma: majsoulRankSchema.nullish(),
         tenhouAccount: tenhouIdSchema.nullish(),
     }),
 });

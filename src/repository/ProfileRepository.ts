@@ -18,13 +18,13 @@ export class ProfileRepository {
             INSERT INTO profile (
                 userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, locale, theme, hideProfile,
                 avatarUrl, statusLine, birthDay, birthMonth, birthYear, hideBirthYear,
-                city, favouriteYaku, favouriteTile, discord, majsoulAccount, tenhouAccount,
+                city, favouriteYaku, favouriteTile, discord, majsoulAccount, majsoulRankYonma, majsoulRankSanma, tenhouAccount,
                 modifiedBy, modifiedAt
             )
             VALUES (
                 :userId, :firstNameEn, :lastNameEn, :firstName, :lastName, :emaNumber, :locale, :theme, :hideProfile,
                 :avatarUrl, :statusLine, :birthDay, :birthMonth, :birthYear, :hideBirthYear,
-                :city, :favouriteYaku, :favouriteTile, :discord, :majsoulAccount, :tenhouAccount,
+                :city, :favouriteYaku, :favouriteTile, :discord, :majsoulAccount, :majsoulRankYonma, :majsoulRankSanma, :tenhouAccount,
                 :modifiedBy, :timestamp
             )
             ON CONFLICT(userId) DO UPDATE SET
@@ -47,6 +47,8 @@ export class ProfileRepository {
                 favouriteTile = :favouriteTile,
                 discord = :discord,
                 majsoulAccount = :majsoulAccount,
+                majsoulRankYonma = :majsoulRankYonma,
+                majsoulRankSanma = :majsoulRankSanma,
                 tenhouAccount = :tenhouAccount,
                 modifiedBy = :modifiedBy,
                 modifiedAt = :timestamp`);
@@ -74,6 +76,8 @@ export class ProfileRepository {
             favouriteTile: values.favouriteTile,
             discord: values.discord,
             majsoulAccount: values.majsoulAccount,
+            majsoulRankYonma: values.majsoulRankYonma,
+            majsoulRankSanma: values.majsoulRankSanma,
             tenhouAccount: values.tenhouAccount,
             modifiedBy,
             timestamp: new Date().toISOString(),
@@ -134,6 +138,8 @@ interface ProfileUpsertParams {
     favouriteTile: string | null;
     discord: string | null;
     majsoulAccount: string | null;
+    majsoulRankYonma: string | null;
+    majsoulRankSanma: string | null;
     tenhouAccount: string | null;
     modifiedBy: number;
     timestamp: string;
@@ -160,6 +166,8 @@ interface ProfileDBEntity {
     favouriteTile: string | null;
     discord: string | null;
     majsoulAccount: string | null;
+    majsoulRankYonma: string | null;
+    majsoulRankSanma: string | null;
     tenhouAccount: string | null;
     modifiedAt: string;
     modifiedBy: number;
@@ -187,6 +195,8 @@ function profileFromDBEntity(dbEntity: ProfileDBEntity): Profile {
         favouriteTile: dbEntity.favouriteTile,
         discord: dbEntity.discord,
         majsoulAccount: dbEntity.majsoulAccount,
+        majsoulRankYonma: dbEntity.majsoulRankYonma,
+        majsoulRankSanma: dbEntity.majsoulRankSanma,
         tenhouAccount: dbEntity.tenhouAccount,
     };
 }

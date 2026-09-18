@@ -27,6 +27,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
                 p.tenhouAccount as p_tenhouAccount,
                 p.theme as p_theme
             FROM user
@@ -67,6 +69,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
                 p.tenhouAccount as p_tenhouAccount,
                 p.theme as p_theme
             FROM user
@@ -110,6 +114,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
                 p.tenhouAccount as p_tenhouAccount,
                 p.theme as p_theme
             FROM user
@@ -143,6 +149,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
                 p.tenhouAccount as p_tenhouAccount,
                 p.theme as p_theme
             FROM user
@@ -176,6 +184,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
                 p.tenhouAccount as p_tenhouAccount,
                 p.theme as p_theme
             FROM user
@@ -209,6 +219,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
                 p.tenhouAccount as p_tenhouAccount,
                 p.theme as p_theme
             FROM user
@@ -345,6 +357,8 @@ interface UserWithProfileDBEntity {
     p_favouriteTile: string | null;
     p_discord: string | null;
     p_majsoulAccount: string | null;
+    p_majsoulRankYonma: string | null;
+    p_majsoulRankSanma: string | null;
     p_tenhouAccount: string | null;
 }
 
@@ -379,6 +393,8 @@ function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
                 favouriteTile: dbEntity.p_favouriteTile,
                 discord: dbEntity.p_discord,
                 majsoulAccount: dbEntity.p_majsoulAccount,
+                majsoulRankYonma: dbEntity.p_majsoulRankYonma,
+                majsoulRankSanma: dbEntity.p_majsoulRankSanma,
                 tenhouAccount: dbEntity.p_tenhouAccount,
             }
             : null,

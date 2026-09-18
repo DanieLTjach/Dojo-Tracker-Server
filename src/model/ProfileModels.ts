@@ -18,6 +18,8 @@ export interface Profile {
     favouriteTile: string | null;
     discord: string | null;
     majsoulAccount: string | null;
+    majsoulRankYonma: string | null;
+    majsoulRankSanma: string | null;
     tenhouAccount: string | null;
     theme: ThemePreference | null;
 }
@@ -51,6 +53,8 @@ export interface ProfileUpdate {
     favouriteTile?: string | null | undefined;
     discord?: string | null | undefined;
     majsoulAccount?: string | null | undefined;
+    majsoulRankYonma?: string | null | undefined;
+    majsoulRankSanma?: string | null | undefined;
     tenhouAccount?: string | null | undefined;
 }
 

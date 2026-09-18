@@ -33,6 +33,8 @@ describe('Profile visibility unit & integration tests', () => {
             favouriteTile: null,
             discord: null,
             majsoulAccount: null,
+            majsoulRankYonma: null,
+            majsoulRankSanma: null,
             tenhouAccount: null,
             theme: null,
         };

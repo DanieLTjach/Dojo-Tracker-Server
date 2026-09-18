@@ -445,10 +445,12 @@ describe('Profile API Endpoints', () => {
             favouriteTile: '1s',
             discord: 'riichi_player',
             majsoulAccount: '雀魂Master',
+            majsoulRankYonma: 'expert_3',
+            majsoulRankSanma: 'adept_1',
             tenhouAccount: 'TenhouAce',
         };
 
-        it('should allow user to update all 12 social fields on own profile', async () => {
+        it('should allow user to update all 14 social fields on own profile', async () => {
             const response = await request(app)
                 .patch(`/api/users/${testUserId}/profile`)
                 .set('Authorization', regularUserAuthHeader)
@@ -466,6 +468,8 @@ describe('Profile API Endpoints', () => {
             expect(response.body.favouriteTile).toBe(socialData.favouriteTile);
             expect(response.body.discord).toBe(socialData.discord);
             expect(response.body.majsoulAccount).toBe(socialData.majsoulAccount);
+            expect(response.body.majsoulRankYonma).toBe(socialData.majsoulRankYonma);
+            expect(response.body.majsoulRankSanma).toBe(socialData.majsoulRankSanma);
             expect(response.body.tenhouAccount).toBe(socialData.tenhouAccount);
         });
 
@@ -487,6 +491,8 @@ describe('Profile API Endpoints', () => {
             expect(response.body.profile.favouriteTile).toBe(socialData.favouriteTile);
             expect(response.body.profile.discord).toBe(socialData.discord);
             expect(response.body.profile.majsoulAccount).toBe(socialData.majsoulAccount);
+            expect(response.body.profile.majsoulRankYonma).toBe(socialData.majsoulRankYonma);
+            expect(response.body.profile.majsoulRankSanma).toBe(socialData.majsoulRankSanma);
             expect(response.body.profile.tenhouAccount).toBe(socialData.tenhouAccount);
         });
 
@@ -502,6 +508,33 @@ describe('Profile API Endpoints', () => {
             expect(response.body.city).toBe(socialData.city);
             expect(response.body.majsoulAccount).toBe(socialData.majsoulAccount);
             expect(response.body.tenhouAccount).toBe(socialData.tenhouAccount);
+        });
+
+        it('rejects a rank that is not in the catalog', async () => {
+            await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ majsoulRankYonma: 'grandmaster_9' })
+                .expect(400);
+        });
+
+        it('rejects a level on celestial, which has no levels', async () => {
+            await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ majsoulRankSanma: 'celestial_1' })
+                .expect(400);
+        });
+
+        it('keeps the two modes independent when one is cleared', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ majsoulRankYonma: null })
+                .expect(200);
+
+            expect(response.body.majsoulRankYonma).toBeNull();
+            expect(response.body.majsoulRankSanma).toBe(socialData.majsoulRankSanma);
         });
     });
 });

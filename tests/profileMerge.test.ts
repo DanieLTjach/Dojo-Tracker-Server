@@ -21,6 +21,8 @@ const existing: Profile = {
     favouriteTile: '1m',
     discord: 'ivan_d',
     majsoulAccount: 'IvanMajsoul',
+    majsoulRankYonma: null,
+    majsoulRankSanma: null,
     tenhouAccount: 'NoName',
     theme: 'auto',
 };
@@ -116,6 +118,8 @@ describe('mergeProfileValues', () => {
             favouriteTile: null,
             discord: null,
             majsoulAccount: null,
+            majsoulRankYonma: null,
+            majsoulRankSanma: null,
             tenhouAccount: null,
             theme: null,
         });

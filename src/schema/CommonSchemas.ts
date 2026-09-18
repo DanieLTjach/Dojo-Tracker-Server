@@ -1,5 +1,6 @@
 import z from 'zod';
 import { SUPPORTED_LOCALES } from '../i18n/index.ts';
+import { isMajsoulRankCode } from '../data/majsoulRanks.ts';
 
 export const dateSchema = z.iso.datetime('Invalid date format. Only ISO-8601 format is supported.')
     .transform(str => new Date(str));
@@ -45,6 +46,15 @@ export const gameAccountSchema = z.string()
         val => !/[\x00-\x1F\x7F\u0080-\u009F'"`<>]/.test(val),
         { message: 'Account name cannot contain control characters, quotes, or angle brackets' }
     );
+
+/**
+ * A self-reported Mahjong Soul rank code such as `expert_3`. Validated against
+ * the catalog rather than a regex, so an unknown tier cannot be stored and then
+ * render as a blank chip in the mini-app.
+ */
+export const majsoulRankSchema = z.string()
+    .trim()
+    .refine(isMajsoulRankCode, { message: 'Unknown Mahjong Soul rank' });
 
 export const clubIdParamSchema = z.coerce.number().int('Club ID must be an integer');
 export const countrySchema = z.string().trim().regex(/^[A-Z]{2}$/, 'Country must be an ISO alpha-2 code');
