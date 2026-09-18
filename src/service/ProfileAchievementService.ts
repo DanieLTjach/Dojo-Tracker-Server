@@ -67,7 +67,10 @@ export class ProfileAchievementService {
         if (state) {
             const def = AUTOMATIC_ACHIEVEMENTS_BY_CODE.get(state.code);
             if (def) {
-                return this.buildAutomaticAchievement(state, locale, false);
+                const eventName = state.sourceEventId != null
+                    ? this.resolveEventNames([state.sourceEventId]).get(state.sourceEventId)
+                    : undefined;
+                return this.buildAutomaticAchievement(state, locale, false, eventName);
             }
         }
 
@@ -105,10 +108,23 @@ export class ProfileAchievementService {
         };
     }
 
+    private resolveEventNames(eventIds: (number | null | undefined)[]): Map<number, string> {
+        const validIds = Array.from(new Set(eventIds.filter((id): id is number => id != null)));
+        if (validIds.length === 0) {
+            return new Map();
+        }
+        const placeholders = validIds.map(() => '?').join(',');
+        const rows = dbManager.db.prepare(`
+            SELECT id, name FROM event WHERE id IN (${placeholders})
+        `).all(...validIds) as Array<{ id: number, name: string }>;
+        return new Map(rows.map(r => [r.id, r.name]));
+    }
+
     buildAutomaticAchievement(
         row: ComputedAchievementState,
         locale: SupportedLocale,
-        isProgress: boolean = false
+        isProgress: boolean = false,
+        eventName?: string
     ): UserAchievement {
         const def = AUTOMATIC_ACHIEVEMENTS_BY_CODE.get(row.code);
         const name = def ? t(`achievements.automatic.${row.code}.name`, locale) : row.code;
@@ -131,7 +147,7 @@ export class ProfileAchievementService {
             value,
             valueFormatted,
             eventId: row.sourceEventId ?? undefined,
-            eventName: undefined,
+            eventName: eventName ?? undefined,
             metric: undefined,
             clubId: undefined,
             clubName: undefined,
@@ -157,19 +173,23 @@ export class ProfileAchievementService {
 
     private getAutomaticAchievements(userId: number, locale: SupportedLocale): UserAchievement[] {
         const rows = this.automaticAchievementRepository.findUnlockedStatesByUserId(userId);
+        const eventNames = this.resolveEventNames(rows.map(r => r.sourceEventId));
         return rows.flatMap(row => {
             const def = AUTOMATIC_ACHIEVEMENTS_BY_CODE.get(row.code);
             if (def === undefined) return [];
-            return [this.buildAutomaticAchievement(row, locale, false)];
+            const eventName = row.sourceEventId != null ? eventNames.get(row.sourceEventId) : undefined;
+            return [this.buildAutomaticAchievement(row, locale, false, eventName)];
         });
     }
 
     private getAutomaticProgress(userId: number, locale: SupportedLocale): UserAchievement[] {
         const rows = this.automaticAchievementRepository.findProgressStatesByUserId(userId);
+        const eventNames = this.resolveEventNames(rows.map(r => r.sourceEventId));
         return rows.flatMap(row => {
             const def = AUTOMATIC_ACHIEVEMENTS_BY_CODE.get(row.code);
             if (def === undefined) return [];
-            return [this.buildAutomaticAchievement(row, locale, true)];
+            const eventName = row.sourceEventId != null ? eventNames.get(row.sourceEventId) : undefined;
+            return [this.buildAutomaticAchievement(row, locale, true, eventName)];
         });
     }
 
@@ -180,6 +200,8 @@ export class ProfileAchievementService {
     ): GameAchievementUnlock[] {
         const unlockedStates = this.automaticAchievementRepository.findUnlockedStatesBySourceGameId(gameId);
         if (unlockedStates.length === 0) return [];
+
+        const eventNames = this.resolveEventNames(unlockedStates.map(s => s.sourceEventId));
 
         const statesByUser = new Map<number, ComputedAchievementState[]>();
         for (const s of unlockedStates) {
@@ -202,7 +224,10 @@ export class ProfileAchievementService {
                         profileFirstName: p.profileFirstName,
                         profileLastName: p.profileLastName,
                     },
-                    achievements: userStates.map(s => this.buildAutomaticAchievement(s, locale, false)),
+                    achievements: userStates.map(s => {
+                        const eventName = s.sourceEventId != null ? eventNames.get(s.sourceEventId) : undefined;
+                        return this.buildAutomaticAchievement(s, locale, false, eventName);
+                    }),
                 });
             }
         }
@@ -217,6 +242,8 @@ export class ProfileAchievementService {
             .findUnlockedStatesBySourceEventId(eventId)
             .filter(s => s.sourceRoundNumber != null);
         if (unlockedStates.length === 0) return [];
+
+        const eventName = this.resolveEventNames([eventId]).get(eventId);
 
         const statesByUser = new Map<number, ComputedAchievementState[]>();
         for (const s of unlockedStates) {
@@ -255,7 +282,7 @@ export class ProfileAchievementService {
                     profileFirstName: u ? u.profileFirstName : null,
                     profileLastName: u ? u.profileLastName : null,
                 },
-                achievements: uStates.map(s => this.buildAutomaticAchievement(s, locale, false)),
+                achievements: uStates.map(s => this.buildAutomaticAchievement(s, locale, false, eventName)),
             });
         }
         return unlocks;

@@ -368,7 +368,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
         dbManager.db.prepare(`
             INSERT OR REPLACE INTO automaticAchievementState
             (userId, code, scope, progress, target, unlockedAt, sourceEventId, sourceGameId, sourceRoundNumber, computedAt)
-            VALUES (?, 'HONITSU_1', 'GLOBAL', 1, 1, ?, ?, 1, 1, ?)
+            VALUES (?, 'FIRST_HONITSU', 'GLOBAL', 1, 1, ?, ?, 1, 1, ?)
         `).run(u1, ts, EVENT_ID, ts);
 
         // User 2 earned a cumulative achievement at this event with sourceRoundNumber = null
@@ -385,7 +385,23 @@ describe('AchievementService (persisted tournament achievements)', () => {
         const u2Group = unlocks.find(g => g.user.id === u2);
 
         expect(u1Group).toBeDefined();
-        expect(u1Group!.achievements.map(a => a.code)).toContain('HONITSU_1');
+        expect(u1Group!.achievements.map(a => a.code)).toContain('FIRST_HONITSU');
         expect(u2Group).toBeUndefined();
+    });
+
+    it('populates eventName on automatic achievements that have a sourceEventId', () => {
+        const profileAchievementService = new ProfileAchievementService();
+        const profileResponse = profileAchievementService.getUserProfileAchievementsResponse(u1, 'en');
+        const honitsu = profileResponse.achievements.find(a => a.code === 'FIRST_HONITSU');
+
+        expect(honitsu).toBeDefined();
+        expect(honitsu!.eventId).toBe(EVENT_ID);
+        expect(honitsu!.eventName).toBe('Achievements Cup');
+
+        // Check public achievement lookup path as well
+        const publicAchievement = profileAchievementService.getPublicUserAchievement(u1, 'FIRST_HONITSU', 'en');
+        expect(publicAchievement).toBeDefined();
+        expect(publicAchievement!.eventId).toBe(EVENT_ID);
+        expect(publicAchievement!.eventName).toBe('Achievements Cup');
     });
 });
