@@ -1,3 +1,6 @@
+-- Everything a member fills in about themselves, plus the club logo. Birthdays
+-- are three integer parts rather than a date so a hidden year does not force a
+-- sentinel value into the other two; `hideBirthYear` strips the year server-side.
 ALTER TABLE profile ADD COLUMN avatarUrl TEXT;
 ALTER TABLE profile ADD COLUMN statusLine TEXT;
 ALTER TABLE profile ADD COLUMN birthDay INTEGER CHECK (birthDay IS NULL OR (birthDay >= 1 AND birthDay <= 31));
@@ -10,5 +13,8 @@ ALTER TABLE profile ADD COLUMN favouriteTile TEXT;
 ALTER TABLE profile ADD COLUMN discord TEXT;
 ALTER TABLE profile ADD COLUMN majsoulAccount TEXT;
 ALTER TABLE profile ADD COLUMN tenhouAccount TEXT;
+
+-- Per-profile theme override ('auto' | 'light' | 'dark').
+ALTER TABLE profile ADD COLUMN theme TEXT;
 
 ALTER TABLE club ADD COLUMN logoUrl TEXT;
