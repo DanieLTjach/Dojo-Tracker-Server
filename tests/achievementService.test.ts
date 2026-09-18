@@ -3,7 +3,10 @@ import { createCustomEvent, dateInsideEventWindow, openEventWindow, resetTestDat
 import { UserService } from '../src/service/UserService.ts';
 import { ProfileService } from '../src/service/ProfileService.ts';
 import { AchievementService, achievementName } from '../src/service/AchievementService.ts';
-import { achievementName as profileAchievementName } from '../src/service/ProfileAchievementService.ts';
+import {
+    ProfileAchievementService,
+    achievementName as profileAchievementName,
+} from '../src/service/ProfileAchievementService.ts';
 import { EventService } from '../src/service/EventService.ts';
 import { GameService } from '../src/service/GameService.ts';
 import { AchievementCriterion } from '../src/model/AchievementModels.ts';
@@ -355,5 +358,34 @@ describe('AchievementService (persisted tournament achievements)', () => {
         expect(dealerWins.value).toBe(1);
         expect(dealerWins.description).toBe('Найбільше перемог на дилері');
         expect(dealerWins.valueFormatted).toBe('1 перемог');
+    });
+
+    it('filters lifetime unlocks to only include achievements earned in a hand (non-null sourceRoundNumber)', () => {
+        const profileAchievementService = new ProfileAchievementService();
+        const ts = '2025-01-01T00:00:00.000Z';
+
+        // User 1 earned a hand achievement with sourceRoundNumber = 1
+        dbManager.db.prepare(`
+            INSERT OR REPLACE INTO automaticAchievementState
+            (userId, code, scope, progress, target, unlockedAt, sourceEventId, sourceGameId, sourceRoundNumber, computedAt)
+            VALUES (?, 'HONITSU_1', 'GLOBAL', 1, 1, ?, ?, 1, 1, ?)
+        `).run(u1, ts, EVENT_ID, ts);
+
+        // User 2 earned a cumulative achievement at this event with sourceRoundNumber = null
+        dbManager.db.prepare(`
+            INSERT OR REPLACE INTO automaticAchievementState
+            (userId, code, scope, progress, target, unlockedAt, sourceEventId, sourceGameId, sourceRoundNumber, computedAt)
+            VALUES (?, 'GAMES_10', 'GLOBAL', 10, 10, ?, ?, 1, NULL, ?)
+        `).run(u2, ts, EVENT_ID, ts);
+
+        const unlocks = profileAchievementService.getEventLifetimeUnlocks(EVENT_ID, 'en');
+
+        // Only u1's hand achievement is returned; u2's cumulative unlock is excluded
+        const u1Group = unlocks.find(g => g.user.id === u1);
+        const u2Group = unlocks.find(g => g.user.id === u2);
+
+        expect(u1Group).toBeDefined();
+        expect(u1Group!.achievements.map(a => a.code)).toContain('HONITSU_1');
+        expect(u2Group).toBeUndefined();
     });
 });

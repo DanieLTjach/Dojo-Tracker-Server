@@ -213,7 +213,9 @@ export class ProfileAchievementService {
         eventId: number,
         locale: SupportedLocale
     ): GameAchievementUnlock[] {
-        const unlockedStates = this.automaticAchievementRepository.findUnlockedStatesBySourceEventId(eventId);
+        const unlockedStates = this.automaticAchievementRepository
+            .findUnlockedStatesBySourceEventId(eventId)
+            .filter(s => s.sourceRoundNumber != null);
         if (unlockedStates.length === 0) return [];
 
         const statesByUser = new Map<number, ComputedAchievementState[]>();
