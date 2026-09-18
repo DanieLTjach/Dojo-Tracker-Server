@@ -40,6 +40,10 @@ services:
       - PORT=3000
       - DB_PATH=/app/db/data/data.db
       - FRONTEND_URLS=https://mahjong-tma-1.web.app,https://tracker.japan-dojo.com,https://riichi-dojo.com
+      # The origin share links are minted on. Distinct from FRONTEND_URLS, which
+      # only decides which origins CORS lets call the API: this one is baked into
+      # every og:url and share redirect, so it must be the single canonical host.
+      - PUBLIC_WEB_URL=https://riichi-dojo.com
       - BOT_URL=https://t.me/japan_dojo_bot/tracker
     env_file:
       - .env
