@@ -16,6 +16,7 @@ export interface Profile {
     city: string | null;
     favouriteYaku: string | null;
     favouriteTile: string | null;
+    favouriteWait: string | null;
     discord: string | null;
     majsoulAccount: string | null;
     majsoulRankYonma: string | null;
@@ -51,6 +52,7 @@ export interface ProfileUpdate {
     city?: string | null | undefined;
     favouriteYaku?: string | null | undefined;
     favouriteTile?: string | null | undefined;
+    favouriteWait?: string | null | undefined;
     discord?: string | null | undefined;
     majsoulAccount?: string | null | undefined;
     majsoulRankYonma?: string | null | undefined;

@@ -18,13 +18,13 @@ export class ProfileRepository {
             INSERT INTO profile (
                 userId, firstNameEn, lastNameEn, firstName, lastName, emaNumber, locale, theme, hideProfile,
                 avatarUrl, statusLine, birthDay, birthMonth, birthYear, hideBirthYear,
-                city, favouriteYaku, favouriteTile, discord, majsoulAccount, majsoulRankYonma, majsoulRankSanma, tenhouAccount,
+                city, favouriteYaku, favouriteTile, favouriteWait, discord, majsoulAccount, majsoulRankYonma, majsoulRankSanma, tenhouAccount,
                 modifiedBy, modifiedAt
             )
             VALUES (
                 :userId, :firstNameEn, :lastNameEn, :firstName, :lastName, :emaNumber, :locale, :theme, :hideProfile,
                 :avatarUrl, :statusLine, :birthDay, :birthMonth, :birthYear, :hideBirthYear,
-                :city, :favouriteYaku, :favouriteTile, :discord, :majsoulAccount, :majsoulRankYonma, :majsoulRankSanma, :tenhouAccount,
+                :city, :favouriteYaku, :favouriteTile, :favouriteWait, :discord, :majsoulAccount, :majsoulRankYonma, :majsoulRankSanma, :tenhouAccount,
                 :modifiedBy, :timestamp
             )
             ON CONFLICT(userId) DO UPDATE SET
@@ -45,6 +45,7 @@ export class ProfileRepository {
                 city = :city,
                 favouriteYaku = :favouriteYaku,
                 favouriteTile = :favouriteTile,
+                favouriteWait = :favouriteWait,
                 discord = :discord,
                 majsoulAccount = :majsoulAccount,
                 majsoulRankYonma = :majsoulRankYonma,
@@ -74,6 +75,7 @@ export class ProfileRepository {
             city: values.city,
             favouriteYaku: values.favouriteYaku,
             favouriteTile: values.favouriteTile,
+            favouriteWait: values.favouriteWait,
             discord: values.discord,
             majsoulAccount: values.majsoulAccount,
             majsoulRankYonma: values.majsoulRankYonma,
@@ -136,6 +138,7 @@ interface ProfileUpsertParams {
     city: string | null;
     favouriteYaku: string | null;
     favouriteTile: string | null;
+    favouriteWait: string | null;
     discord: string | null;
     majsoulAccount: string | null;
     majsoulRankYonma: string | null;
@@ -164,6 +167,7 @@ interface ProfileDBEntity {
     city: string | null;
     favouriteYaku: string | null;
     favouriteTile: string | null;
+    favouriteWait: string | null;
     discord: string | null;
     majsoulAccount: string | null;
     majsoulRankYonma: string | null;
@@ -193,6 +197,7 @@ function profileFromDBEntity(dbEntity: ProfileDBEntity): Profile {
         city: dbEntity.city,
         favouriteYaku: dbEntity.favouriteYaku,
         favouriteTile: dbEntity.favouriteTile,
+        favouriteWait: dbEntity.favouriteWait,
         discord: dbEntity.discord,
         majsoulAccount: dbEntity.majsoulAccount,
         majsoulRankYonma: dbEntity.majsoulRankYonma,

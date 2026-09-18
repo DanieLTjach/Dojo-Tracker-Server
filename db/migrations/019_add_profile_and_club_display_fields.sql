@@ -21,6 +21,11 @@ ALTER TABLE profile ADD COLUMN tenhouAccount TEXT;
 ALTER TABLE profile ADD COLUMN majsoulRankYonma TEXT;
 ALTER TABLE profile ADD COLUMN majsoulRankSanma TEXT;
 
+-- Favourite wait shape, as a code ('ryanmen'). Free text rather than an enum:
+-- it is a profile preference, nothing scores from it, and the mini-app owns the
+-- catalog and its localized names.
+ALTER TABLE profile ADD COLUMN favouriteWait TEXT;
+
 -- Per-profile theme override ('auto' | 'light' | 'dark').
 ALTER TABLE profile ADD COLUMN theme TEXT;
 

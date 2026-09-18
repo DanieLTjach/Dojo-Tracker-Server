@@ -25,6 +25,7 @@ export class UserRepository {
                 p.city as p_city,
                 p.favouriteYaku as p_favouriteYaku,
                 p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
                 p.majsoulRankYonma as p_majsoulRankYonma,
@@ -67,6 +68,7 @@ export class UserRepository {
                 p.city as p_city,
                 p.favouriteYaku as p_favouriteYaku,
                 p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
                 p.majsoulRankYonma as p_majsoulRankYonma,
@@ -112,6 +114,7 @@ export class UserRepository {
                 p.city as p_city,
                 p.favouriteYaku as p_favouriteYaku,
                 p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
                 p.majsoulRankYonma as p_majsoulRankYonma,
@@ -147,6 +150,7 @@ export class UserRepository {
                 p.city as p_city,
                 p.favouriteYaku as p_favouriteYaku,
                 p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
                 p.majsoulRankYonma as p_majsoulRankYonma,
@@ -182,6 +186,7 @@ export class UserRepository {
                 p.city as p_city,
                 p.favouriteYaku as p_favouriteYaku,
                 p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
                 p.majsoulRankYonma as p_majsoulRankYonma,
@@ -217,6 +222,7 @@ export class UserRepository {
                 p.city as p_city,
                 p.favouriteYaku as p_favouriteYaku,
                 p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
                 p.majsoulRankYonma as p_majsoulRankYonma,
@@ -355,6 +361,7 @@ interface UserWithProfileDBEntity {
     p_city: string | null;
     p_favouriteYaku: string | null;
     p_favouriteTile: string | null;
+    p_favouriteWait: string | null;
     p_discord: string | null;
     p_majsoulAccount: string | null;
     p_majsoulRankYonma: string | null;
@@ -391,6 +398,7 @@ function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
                 city: dbEntity.p_city,
                 favouriteYaku: dbEntity.p_favouriteYaku,
                 favouriteTile: dbEntity.p_favouriteTile,
+                favouriteWait: dbEntity.p_favouriteWait,
                 discord: dbEntity.p_discord,
                 majsoulAccount: dbEntity.p_majsoulAccount,
                 majsoulRankYonma: dbEntity.p_majsoulRankYonma,

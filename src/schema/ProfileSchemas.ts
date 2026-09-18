@@ -32,6 +32,7 @@ export const profileEditSchema = z.object({
         city: boundedTextSchema(100),
         favouriteYaku: boundedTextSchema(100),
         favouriteTile: boundedTextSchema(32),
+        favouriteWait: boundedTextSchema(32),
         discord: discordHandleSchema.nullish(),
         majsoulAccount: gameAccountSchema.nullish(),
         majsoulRankYonma: majsoulRankSchema.nullish(),

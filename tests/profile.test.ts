@@ -443,6 +443,7 @@ describe('Profile API Endpoints', () => {
             city: 'Kyiv',
             favouriteYaku: 'Honitsu',
             favouriteTile: '1s',
+            favouriteWait: 'ryanmen',
             discord: 'riichi_player',
             majsoulAccount: '雀魂Master',
             majsoulRankYonma: 'expert_3',
@@ -466,6 +467,7 @@ describe('Profile API Endpoints', () => {
             expect(response.body.city).toBe(socialData.city);
             expect(response.body.favouriteYaku).toBe(socialData.favouriteYaku);
             expect(response.body.favouriteTile).toBe(socialData.favouriteTile);
+            expect(response.body.favouriteWait).toBe(socialData.favouriteWait);
             expect(response.body.discord).toBe(socialData.discord);
             expect(response.body.majsoulAccount).toBe(socialData.majsoulAccount);
             expect(response.body.majsoulRankYonma).toBe(socialData.majsoulRankYonma);
@@ -489,6 +491,7 @@ describe('Profile API Endpoints', () => {
             expect(response.body.profile.city).toBe(socialData.city);
             expect(response.body.profile.favouriteYaku).toBe(socialData.favouriteYaku);
             expect(response.body.profile.favouriteTile).toBe(socialData.favouriteTile);
+            expect(response.body.profile.favouriteWait).toBe(socialData.favouriteWait);
             expect(response.body.profile.discord).toBe(socialData.discord);
             expect(response.body.profile.majsoulAccount).toBe(socialData.majsoulAccount);
             expect(response.body.profile.majsoulRankYonma).toBe(socialData.majsoulRankYonma);

@@ -31,6 +31,7 @@ describe('Profile visibility unit & integration tests', () => {
             city: 'Tokyo',
             favouriteYaku: null,
             favouriteTile: null,
+            favouriteWait: null,
             discord: null,
             majsoulAccount: null,
             majsoulRankYonma: null,
