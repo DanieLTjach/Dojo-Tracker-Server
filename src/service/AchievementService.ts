@@ -167,7 +167,7 @@ export class AchievementService {
             const value = winners[0]?.value ?? undefined;
             return {
                 metric: definition.metric,
-                name: definition.name,
+                name: achievementName(definition, locale),
                 description: achievementDescription(definition, locale),
                 criterion: definition.criterion,
                 valueUnit: definition.valueUnit,
@@ -183,6 +183,12 @@ export class AchievementService {
             };
         });
     }
+}
+
+export function achievementName(definition: AchievementDefinition, locale: SupportedLocale): string {
+    const key = `achievements.tournament.${definition.metric}.name`;
+    const translated = t(key, locale);
+    return translated === key ? definition.name : translated;
 }
 
 function achievementDescription(definition: AchievementDefinition, locale: SupportedLocale): string {

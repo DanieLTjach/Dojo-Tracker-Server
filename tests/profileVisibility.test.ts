@@ -34,6 +34,7 @@ describe('Profile visibility unit & integration tests', () => {
             discord: null,
             majsoulAccount: null,
             tenhouAccount: null,
+            theme: null,
         };
 
         test('owner sees the year even when hideBirthYear is true', () => {

@@ -298,7 +298,7 @@ export class ProfileAchievementService {
             return [{
                 type: ProfileAchievementType.TOURNAMENT_AWARD,
                 code: definition.metric,
-                name: definition.name,
+                name: achievementName(definition, locale),
                 description: achievementDescription(definition, locale),
                 icon: null,
                 awardedAt: new Date(row.awardedAt),
@@ -349,6 +349,12 @@ export class ProfileAchievementService {
             note: row.note ?? undefined,
         };
     }
+}
+
+export function achievementName(definition: AchievementDefinition, locale: SupportedLocale): string {
+    const key = `achievements.tournament.${definition.metric}.name`;
+    const translated = t(key, locale);
+    return translated === key ? definition.name : translated;
 }
 
 function achievementDescription(definition: AchievementDefinition, locale: SupportedLocale): string {

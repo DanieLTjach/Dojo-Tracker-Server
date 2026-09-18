@@ -2,7 +2,8 @@ import { dbManager } from '../src/db/dbInit.ts';
 import { createCustomEvent, dateInsideEventWindow, openEventWindow, resetTestDatabase } from './testHelpers.ts';
 import { UserService } from '../src/service/UserService.ts';
 import { ProfileService } from '../src/service/ProfileService.ts';
-import { AchievementService } from '../src/service/AchievementService.ts';
+import { AchievementService, achievementName } from '../src/service/AchievementService.ts';
+import { achievementName as profileAchievementName } from '../src/service/ProfileAchievementService.ts';
 import { EventService } from '../src/service/EventService.ts';
 import { GameService } from '../src/service/GameService.ts';
 import { AchievementCriterion } from '../src/model/AchievementModels.ts';
@@ -133,6 +134,45 @@ describe('AchievementService (persisted tournament achievements)', () => {
         const yakuman = results.find(r => r.metric === 'yakuman_wins')!;
         expect(yakuman.winners).toEqual([]);
         expect(yakuman.value).toBeUndefined();
+    });
+
+    it('localizes tournament award names for English and Ukrainian requests', () => {
+        // u1 is pinned to English
+        const enResults = achievementService.getEventAchievements(EVENT_ID, u1);
+        const enDealer = enResults.find(r => r.metric === 'dealer_wins')!;
+        const enBaiman = enResults.find(r => r.metric === 'baiman_wins')!;
+        expect(enDealer.name).toBe('Dice keeper');
+        expect(enBaiman.name).toBe('YABAIman');
+
+        // u2 updated to Ukrainian
+        profileService.updateProfile(u2, { locale: 'uk' }, u2);
+        const ukResults = achievementService.getEventAchievements(EVENT_ID, u2);
+        const ukDealer = ukResults.find(r => r.metric === 'dealer_wins')!;
+        const ukBaiman = ukResults.find(r => r.metric === 'baiman_wins')!;
+        expect(ukDealer.name).toBe('Хранитель кубиків');
+        expect(ukBaiman.name).toBe('Ябайман');
+
+        // Profile response path
+        const enProfileAwards = achievementService.getUserAchievements(u1, u1);
+        const enProfileDealer = enProfileAwards.find(a => a.code === 'dealer_wins')!;
+        expect(enProfileDealer.name).toBe('Dice keeper');
+
+        const ukProfileAwards = achievementService.getUserAchievements(u1, u2);
+        const ukProfileDealer = ukProfileAwards.find(a => a.code === 'dealer_wins')!;
+        expect(ukProfileDealer.name).toBe('Хранитель кубиків');
+    });
+
+    it('falls back to definition.name when translation key is missing', () => {
+        const mockDef = {
+            metric: 'unknown_metric' as any,
+            name: 'Fallback Name',
+            criterion: AchievementCriterion.Highest,
+            valueUnit: 'wins' as const,
+        };
+        expect(achievementName(mockDef, 'uk')).toBe('Fallback Name');
+        expect(achievementName(mockDef, 'en')).toBe('Fallback Name');
+        expect(profileAchievementName(mockDef, 'uk')).toBe('Fallback Name');
+        expect(profileAchievementName(mockDef, 'en')).toBe('Fallback Name');
     });
 
     it('does not recompute achievements when retrieving an event', () => {

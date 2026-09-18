@@ -1,5 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import type { User, UserStatus } from '../model/UserModels.ts';
+import type { Profile } from '../model/ProfileModels.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
 import { parseUserStatus } from '../util/EnumUtil.ts';
@@ -26,7 +27,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
-                p.tenhouAccount as p_tenhouAccount
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
             LEFT JOIN (
@@ -65,7 +67,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
-                p.tenhouAccount as p_tenhouAccount
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             JOIN clubMembership cm ON user.id = cm.userId
             LEFT JOIN profile p ON user.id = p.userId
@@ -107,7 +110,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
-                p.tenhouAccount as p_tenhouAccount
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
             WHERE user.id = :id`);
@@ -139,7 +143,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
-                p.tenhouAccount as p_tenhouAccount
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
             WHERE telegramId = :telegramId`);
@@ -171,7 +176,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
-                p.tenhouAccount as p_tenhouAccount
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
             WHERE telegramUsername = :telegramUsername`);
@@ -203,7 +209,8 @@ export class UserRepository {
                 p.favouriteTile as p_favouriteTile,
                 p.discord as p_discord,
                 p.majsoulAccount as p_majsoulAccount,
-                p.tenhouAccount as p_tenhouAccount
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
             WHERE name = :name`);
@@ -325,6 +332,7 @@ interface UserWithProfileDBEntity {
     p_lastName: string | null;
     p_emaNumber: string | null;
     p_locale: string | null;
+    p_theme: string | null;
     p_hideProfile: number | null;
     p_avatarUrl: string | null;
     p_statusLine: string | null;
@@ -358,6 +366,7 @@ function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
                 lastName: dbEntity.p_lastName,
                 emaNumber: dbEntity.p_emaNumber,
                 locale: dbEntity.p_locale,
+                theme: (dbEntity.p_theme as Profile['theme']) ?? null,
                 hideProfile: Boolean(dbEntity.p_hideProfile),
                 avatarUrl: dbEntity.p_avatarUrl,
                 statusLine: dbEntity.p_statusLine,

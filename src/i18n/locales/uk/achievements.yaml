@@ -44,6 +44,49 @@ achievements:
     kans: "{{value}} канів"
     dora: "{{value}} дора"
     clubs: "{{value}} клубів"
+  tournament:
+    dealer_wins:
+      name: Хранитель кубиків
+    one_han_wins:
+      name: Фанат 1 хана
+    riichi_nomi_wins:
+      name: Ріічі-номі!
+    mangan_plus_wins_except_yakumans:
+      name: Все або нічого
+    thirteen_plus_han_wins:
+      name: Казоєман
+    points_fed_to_dealer:
+      name: Годувальник дилера
+    lost_riichi_sticks:
+      name: Ненависник ріічі-паличок
+    tsumo_wins:
+      name: Сам усе зроблю
+    max_fu_hand:
+      name: Фу-фу-фу
+    haneman_wins:
+      name: Мисливець на ханемани
+    points_lost_on_tsumo:
+      name: Це не твоя вина
+    riichi_declarations:
+      name: Не можу не ріічі
+    baiman_wins:
+      name: Ябайман
+    saki_zero_after_uma_games:
+      name: Премія Сакі
+    chiitoi_nomi_wins:
+      name: Фанат чіїтоі-номі
+    points_lost_on_ron:
+      name: Залізна оборона
+    best_game_points:
+      name: Найкраща гра
+    yakuman_wins:
+      name: Це була доля
+    best_hand_han_points:
+      name: Оце так рука!
+    chombo_count:
+      name: Правила створені, щоб їх порушувати
+    biggest_deal_in:
+      name: Ой, як боляче!
   manual:
     COMMUNITY_BUILDER:
       name: Будівничий спільноти
@@ -326,7 +369,7 @@ achievements:
       name: Спеціаліст хоніцу
       description: Виграв 10 рук з хоніцу
     CHINITSU_5:
-      name: Спеціаліст чиніцу
+      name: Спеціаліст чініцу
       description: Виграв 5 рук з чініцу
     TSUMO_WINS_50:
       name: Автономний гравець

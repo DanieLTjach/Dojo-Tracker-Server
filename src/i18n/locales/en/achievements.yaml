@@ -44,6 +44,49 @@ achievements:
     kans: "{{value}} kans"
     dora: "{{value}} dora"
     clubs: "{{value}} clubs"
+  tournament:
+    dealer_wins:
+      name: Dice keeper
+    one_han_wins:
+      name: 1-han fan
+    riichi_nomi_wins:
+      name: Riichi nomi!
+    mangan_plus_wins_except_yakumans:
+      name: Go big or go home
+    thirteen_plus_han_wins:
+      name: Kazoeman
+    points_fed_to_dealer:
+      name: Oya feeder
+    lost_riichi_sticks:
+      name: Riichi stick hater
+    tsumo_wins:
+      name: Go-getter
+    max_fu_hand:
+      name: Fu fu fu
+    haneman_wins:
+      name: Haneman hunter
+    points_lost_on_tsumo:
+      name: It was not your fault
+    riichi_declarations:
+      name: I MUST riichi
+    baiman_wins:
+      name: YABAIman
+    saki_zero_after_uma_games:
+      name: Saki award
+    chiitoi_nomi_wins:
+      name: Chiitoi nomi fan
+    points_lost_on_ron:
+      name: Defence award
+    best_game_points:
+      name: Best game award
+    yakuman_wins:
+      name: It was destiny
+    best_hand_han_points:
+      name: That was a big one!
+    chombo_count:
+      name: Rules are meant to be broken
+    biggest_deal_in:
+      name: Ouch! That hurts!
   manual:
     COMMUNITY_BUILDER:
       name: Community Builder
