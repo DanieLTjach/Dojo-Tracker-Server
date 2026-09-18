@@ -6,7 +6,7 @@ import { SkillRatingService } from '../src/service/SkillRatingService.ts';
 import { SkillRatingRepository } from '../src/repository/SkillRatingRepository.ts';
 import { GameRepository } from '../src/repository/GameRepository.ts';
 import { EventRegistrationRepository } from '../src/repository/EventRegistrationRepository.ts';
-import { InvalidGameSizeError, SkillRatingNotEnabledForClubError } from '../src/error/SkillErrors.ts';
+import { InvalidGameSizeError } from '../src/error/SkillErrors.ts';
 
 describe('SkillRatingService', () => {
     let service: SkillRatingService;
@@ -432,9 +432,23 @@ describe('SkillRatingService', () => {
             expect(lb.entries[0]!.place).toBe(1);
         });
 
-        it('should throw if skill rating is disabled for club', () => {
+        it('should return an empty, flagged board if skill rating is disabled for club', () => {
             service.updateConfig(CLUB_ID, 30, false, 0);
-            expect(() => service.getClubLeaderboard(CLUB_ID, 4)).toThrow(SkillRatingNotEnabledForClubError);
+
+            const lb = service.getClubLeaderboard(CLUB_ID, 4);
+
+            // The club page reads this on every visit, so a disabled club must
+            // not answer with an error. `isEnabled` is what tells an empty board
+            // apart from a club nobody has ranked in yet.
+            expect(lb.isEnabled).toBe(false);
+            expect(lb.entries).toEqual([]);
+            expect(lb.provisionalEntries).toEqual([]);
+            expect(lb.clubId).toBe(CLUB_ID);
+            expect(lb.gameSize).toBe(4);
+        });
+
+        it('should flag an enabled club board as enabled', () => {
+            expect(service.getClubLeaderboard(CLUB_ID, 4).isEnabled).toBe(true);
         });
 
         it('should throw on invalid gameSize', () => {

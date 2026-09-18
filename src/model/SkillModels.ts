@@ -101,6 +101,13 @@ export interface SkillLeaderboardResponse {
     gameSize: number;
     provisionalGameThreshold: number;
     isStale: boolean;
+    /**
+     * False when the club has the strength rating switched off. The board then
+     * comes back empty rather than as an error: "this club does not rank" is a
+     * normal state for a small club, not a bad request, and every club page
+     * used to log a 400 for it.
+     */
+    isEnabled: boolean;
     entries: SkillLeaderboardEntry[];
     provisionalEntries: SkillLeaderboardEntry[];
 }
