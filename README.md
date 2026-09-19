@@ -79,6 +79,7 @@ For detailed API documentation with curl examples, see:
 - **[Telegram Mini App Auth](docs/telegram-mini-app-auth.md)** - Integration guide for Telegram Mini Apps
 - **[User Endpoints](docs/api/users.md)** - Complete documentation for `/api/users`
 - **[Game Endpoints](docs/api/games.md)** - Complete documentation for `/api/games`
+- **[System Notifications](docs/system-notifications.md)** - Broadcasting an announcement to every active user (copy change + script run, no code changes)
 
 ### Authentication
 
