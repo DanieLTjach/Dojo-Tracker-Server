@@ -30,8 +30,13 @@ export class PlacementHistoryService {
 
         const tournaments: UserPlacementEntry[] = [];
         const seasons: UserPlacementEntry[] = [];
+        let gamesPlayed = 0;
+        let wins = 0;
 
         for (const event of events) {
+            gamesPlayed += event.gamesPlayed;
+            wins += event.wins;
+
             // Reuses RatingService.calculateStandings(eventId) — O(events played) queries
             const standingsMap = this.ratingService.calculateStandings(event.eventId);
             const rawPlace = standingsMap.get(userId) ?? null;
@@ -61,6 +66,8 @@ export class PlacementHistoryService {
 
         return {
             userId,
+            gamesPlayed,
+            wins,
             tournaments,
             seasons,
         };

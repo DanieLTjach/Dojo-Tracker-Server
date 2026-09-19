@@ -209,6 +209,10 @@ telegram:
     addedToClubBody: You are now a full club member and can add new games.
     openApp: Open app
 
+  # ── Shared user post (PostService) ──
+  post:
+    published: "{{author}} published:"
+
   registrationLog:
     nameLabel: "Name:"
     tournamentLabel: "Tournament:"
@@ -309,6 +313,23 @@ telegram:
     approvedByLabel: "Approved by:"
     removedByLabel: "Removed by:"
     changedByLabel: "Changed by:"
+
+  achievementLog:
+    definitionCreatedTitle: 🏅 Achievement Created
+    definitionArchivedTitle: 🗄️ Achievement Archived
+    definitionUnarchivedTitle: 📤 Achievement Unarchived
+    awardedTitle: 🏆 Achievement Awarded
+    revokedTitle: 🚫 Achievement Revoked
+    clubLabel: "Club:"
+    nameLabel: "Name:"
+    userLabel: "User:"
+    achievementLabel: "Achievement:"
+    noteLabel: "Note:"
+    createdByLabel: "Created by:"
+    archivedByLabel: "Archived by:"
+    unarchivedByLabel: "Unarchived by:"
+    awardedByLabel: "Awarded by:"
+    revokedByLabel: "Revoked by:"
 
   userLog:
     registeredTitle: 👤 New User Registered

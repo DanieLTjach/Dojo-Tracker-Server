@@ -3,6 +3,8 @@ import { createCustomEvent, dateInsideEventWindow, openEventWindow, resetTestDat
 import { UserService } from '../src/service/UserService.ts';
 import { ProfileService } from '../src/service/ProfileService.ts';
 import { AchievementService } from '../src/service/AchievementService.ts';
+import { ProfileAchievementService } from '../src/service/ProfileAchievementService.ts';
+import { achievementName } from '../src/data/achievementsCatalog.ts';
 import { EventService } from '../src/service/EventService.ts';
 import { GameService } from '../src/service/GameService.ts';
 import { AchievementCriterion } from '../src/model/AchievementModels.ts';
@@ -66,7 +68,7 @@ describe('AchievementService (persisted tournament achievements)', () => {
 
         // The requesting user's locale drives result formatting; pin u1 to English
         // so the formatted-value assertions below stay stable.
-        profileService.updateProfile(u1, undefined, undefined, undefined, undefined, undefined, undefined, u1, 'en');
+        profileService.updateProfile(u1, { locale: 'en' }, u1);
 
         createCustomEvent(
             EVENT_ID,
@@ -133,6 +135,43 @@ describe('AchievementService (persisted tournament achievements)', () => {
         const yakuman = results.find(r => r.metric === 'yakuman_wins')!;
         expect(yakuman.winners).toEqual([]);
         expect(yakuman.value).toBeUndefined();
+    });
+
+    it('localizes tournament award names for English and Ukrainian requests', () => {
+        // u1 is pinned to English
+        const enResults = achievementService.getEventAchievements(EVENT_ID, u1);
+        const enDealer = enResults.find(r => r.metric === 'dealer_wins')!;
+        const enBaiman = enResults.find(r => r.metric === 'baiman_wins')!;
+        expect(enDealer.name).toBe('Dice keeper');
+        expect(enBaiman.name).toBe('YABAIman');
+
+        // u2 updated to Ukrainian
+        profileService.updateProfile(u2, { locale: 'uk' }, u2);
+        const ukResults = achievementService.getEventAchievements(EVENT_ID, u2);
+        const ukDealer = ukResults.find(r => r.metric === 'dealer_wins')!;
+        const ukBaiman = ukResults.find(r => r.metric === 'baiman_wins')!;
+        expect(ukDealer.name).toBe('Хранитель кубиків');
+        expect(ukBaiman.name).toBe('Ябайман');
+
+        // Profile response path
+        const enProfileAwards = achievementService.getUserAchievements(u1, u1);
+        const enProfileDealer = enProfileAwards.find(a => a.code === 'dealer_wins')!;
+        expect(enProfileDealer.name).toBe('Dice keeper');
+
+        const ukProfileAwards = achievementService.getUserAchievements(u1, u2);
+        const ukProfileDealer = ukProfileAwards.find(a => a.code === 'dealer_wins')!;
+        expect(ukProfileDealer.name).toBe('Хранитель кубиків');
+    });
+
+    it('falls back to definition.name when translation key is missing', () => {
+        const mockDef = {
+            metric: 'unknown_metric' as any,
+            name: 'Fallback Name',
+            criterion: AchievementCriterion.Highest,
+            valueUnit: 'wins' as const,
+        };
+        expect(achievementName(mockDef, 'uk')).toBe('Fallback Name');
+        expect(achievementName(mockDef, 'en')).toBe('Fallback Name');
     });
 
     it('does not recompute achievements when retrieving an event', () => {
@@ -315,5 +354,50 @@ describe('AchievementService (persisted tournament achievements)', () => {
         expect(dealerWins.value).toBe(1);
         expect(dealerWins.description).toBe('Найбільше перемог на дилері');
         expect(dealerWins.valueFormatted).toBe('1 перемог');
+    });
+
+    it('filters lifetime unlocks to only include achievements earned in a hand (non-null sourceRoundNumber)', () => {
+        const profileAchievementService = new ProfileAchievementService();
+        const ts = '2025-01-01T00:00:00.000Z';
+
+        // User 1 earned a hand achievement with sourceRoundNumber = 1
+        dbManager.db.prepare(`
+            INSERT OR REPLACE INTO automaticAchievementState
+            (userId, code, scope, progress, target, unlockedAt, sourceEventId, sourceGameId, sourceRoundNumber, computedAt)
+            VALUES (?, 'FIRST_HONITSU', 'GLOBAL', 1, 1, ?, ?, 1, 1, ?)
+        `).run(u1, ts, EVENT_ID, ts);
+
+        // User 2 earned a cumulative achievement at this event with sourceRoundNumber = null
+        dbManager.db.prepare(`
+            INSERT OR REPLACE INTO automaticAchievementState
+            (userId, code, scope, progress, target, unlockedAt, sourceEventId, sourceGameId, sourceRoundNumber, computedAt)
+            VALUES (?, 'GAMES_10', 'GLOBAL', 10, 10, ?, ?, 1, NULL, ?)
+        `).run(u2, ts, EVENT_ID, ts);
+
+        const unlocks = profileAchievementService.getEventLifetimeUnlocks(EVENT_ID, 'en');
+
+        // Only u1's hand achievement is returned; u2's cumulative unlock is excluded
+        const u1Group = unlocks.find(g => g.user.id === u1);
+        const u2Group = unlocks.find(g => g.user.id === u2);
+
+        expect(u1Group).toBeDefined();
+        expect(u1Group!.achievements.map(a => a.code)).toContain('FIRST_HONITSU');
+        expect(u2Group).toBeUndefined();
+    });
+
+    it('populates eventName on automatic achievements that have a sourceEventId', () => {
+        const profileAchievementService = new ProfileAchievementService();
+        const profileResponse = profileAchievementService.getUserProfileAchievementsResponse(u1, 'en');
+        const honitsu = profileResponse.achievements.find(a => a.code === 'FIRST_HONITSU');
+
+        expect(honitsu).toBeDefined();
+        expect(honitsu!.eventId).toBe(EVENT_ID);
+        expect(honitsu!.eventName).toBe('Achievements Cup');
+
+        // Check public achievement lookup path as well
+        const publicAchievement = profileAchievementService.getPublicUserAchievement(u1, 'FIRST_HONITSU', 'en');
+        expect(publicAchievement).toBeDefined();
+        expect(publicAchievement!.eventId).toBe(EVENT_ID);
+        expect(publicAchievement!.eventName).toBe('Achievements Cup');
     });
 });

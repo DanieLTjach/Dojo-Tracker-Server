@@ -38,6 +38,17 @@ errors:
   inviteExpired: Термін дії цього запрошення сплив
   inviteExhausted: Це запрошення вичерпало ліміт використань
   nameRequiredForNewUser: Для реєстрації потрібно вказати імʼя
+  clubAchievementDefinitionNotFound: Нагороду з id {{definitionId}} не знайдено
+  clubAchievementDefinitionNameAlreadyExists: "Нагорода з назвою '{{name}}' вже існує в цьому клубі"
+  clubAchievementDefinitionArchived: "Нагорода '{{name}}' архівована і не може бути присвоєна"
+  clubAchievementDefinitionFromAnotherClub: Нагорода {{definitionId}} належить іншому клубу
+  invalidAchievementSource: Вкажіть рівно одне з наступного — код вбудованої нагороди, id власної нагороди або дані для створення нової нагороди
+  unknownBuiltInAchievementCode: "Невідомий код вбудованої нагороди '{{code}}'"
+  clubAchievementAlreadyAssigned: Користувач {{userId}} вже має цю нагороду
+  clubAchievementAssignmentNotFound: Присвоєння нагороди з id {{assignmentId}} не знайдено
+  clubAchievementAssignmentAlreadyRevoked: Присвоєння нагороди {{assignmentId}} вже скасовано
+  targetNotActiveClubMember: Користувач {{userId}} має бути активним учасником клубу, щоб отримати цю нагороду
+  achievementNotFound: Досягнення з кодом '{{code}}' не знайдено
 
   eventNotFound: Подію з id {{eventId}} не знайдено
   insufficientEventManagementPermissions: Недостатньо прав для управління цією подією. Потрібна роль адміна або OWNER/MODERATOR клубу події.
@@ -113,7 +124,11 @@ errors:
   missingProfileNamesForTournamentRegistration: Для подачі заявки на турнір потрібно заповнити імʼя та прізвище у профілі
   eventNotTournament: "Реєстрація доступна лише для подій типу TOURNAMENT (поточний тип: {{type}})"
   eventCapacityReached: 'Турнір "{{eventName}}" вже досяг максимальної кількості учасників ({{maxParticipants}})'
+  gameNotFound: Гру не знайдено
   gameNotFoundById: Гру з id {{id}} не знайдено
+  gameRoundNotFound: Раунд гри не знайдено
+  notGameParticipant: Ви не є учасником цієї гри
+  roundRequiresGame: Номер раунду вимагає вказання гри
   tooManyGamesFound: Знайдено забагато ігор. Будь ласка, звузьте критерії пошуку.
   incorrectPlayerCount: Для гри потрібно {{requiredPlayers}} гравців
   duplicatePlayer: Гравець {{playerName}} присутній більше одного разу в цій грі

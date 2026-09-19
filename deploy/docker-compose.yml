@@ -19,11 +19,15 @@ services:
     image: certbot/certbot:latest
     depends_on:
       - nginx
+    # tracker.japan-dojo.com is absent on purpose: it still resolves to Firebase,
+    # so HTTP-01 cannot be answered here. Add it once its DNS points at this box.
     command: >-
       certonly --reinstall --webroot --webroot-path=/var/www/certbot
       --non-interactive --agree-tos
       -d dojo-tracker.japan-dojo.com
       -d games.japan-dojo.com
+      -d riichi-dojo.com
+      -d www.riichi-dojo.com
     networks:
       - shared_network
     volumes:
@@ -35,7 +39,11 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DB_PATH=/app/db/data/data.db
-      - FRONTEND_URLS=https://mahjong-tma-1.web.app,https://tracker.japan-dojo.com
+      - FRONTEND_URLS=https://mahjong-tma-1.web.app,https://tracker.japan-dojo.com,https://riichi-dojo.com
+      # The origin share links are minted on. Distinct from FRONTEND_URLS, which
+      # only decides which origins CORS lets call the API: this one is baked into
+      # every og:url and share redirect, so it must be the single canonical host.
+      - PUBLIC_WEB_URL=https://riichi-dojo.com
       - BOT_URL=https://t.me/japan_dojo_bot/tracker
     env_file:
       - .env

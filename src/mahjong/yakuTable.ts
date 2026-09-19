@@ -105,11 +105,6 @@ export function isClosedOnlyYaku(code: YakuCode): boolean {
     return Boolean(spec && 'closedOnly' in spec && spec.closedOnly);
 }
 
-export function isYakumanYakuCode(code: YakuCode): boolean {
-    const spec = STANDARD_YAKU_SPECS[code];
-    return Boolean(spec && 'yakumanCount' in spec);
-}
-
 /**
  * Han for one standard yaku. Returns undefined for yakuman-valued codes (the
  * caller handles those separately) and for codes this table does not price.

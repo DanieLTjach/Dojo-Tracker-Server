@@ -26,11 +26,22 @@ export interface Club {
     locale: string;
     description: string | null;
     contactInfo: string | null;
+    logoUrl: string | null;
     isActive: boolean;
     currentRatingEventId: number | null;
     createdAt: Date;
     modifiedAt: Date;
     modifiedBy: number;
+}
+
+/**
+ * A club plus counters that are derived rather than stored. Only the
+ * single-club read returns this: the count is a join across every game in the
+ * club's events, which the permission checks that call findClubById have no
+ * use for.
+ */
+export interface ClubWithStats extends Club {
+    gamesCount: number;
 }
 
 export interface ClubTelegramTopics {
@@ -46,6 +57,7 @@ export interface ClubMembership {
     clubName: string;
     userId: number;
     userName: string;
+    avatarUrl: string | null;
     role: ClubRole;
     status: ClubMembershipStatus;
     createdAt: Date;

@@ -193,6 +193,37 @@ describe('Profile API Endpoints', () => {
             expect(response.status).toBe(400);
         });
 
+        it('should allow non-admin to update own profile theme', async () => {
+            for (const theme of ['light', 'dark', 'auto'] as const) {
+                const response = await request(app)
+                    .patch(`/api/users/${testUserId}/profile`)
+                    .set('Authorization', regularUserAuthHeader)
+                    .send({ theme })
+                    .expect(200);
+
+                expect(response.body.theme).toBe(theme);
+            }
+        });
+
+        it('should allow clearing profile theme to null', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ theme: null })
+                .expect(200);
+
+            expect(response.body.theme).toBeNull();
+        });
+
+        it('should reject invalid profile theme', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ theme: 'blue' });
+
+            expect(response.status).toBe(400);
+        });
+
         it('should fail when non-admin tries to update another users profile', async () => {
             const response = await request(app)
                 .patch(`/api/users/${testUser2Id}/profile`)
@@ -398,6 +429,115 @@ describe('Profile API Endpoints', () => {
 
             const hiddenUser = response.body.find((u: any) => u.id === testUserId);
             expect(hiddenUser.profile).toBeNull();
+        });
+    });
+
+    describe('Social profile fields', () => {
+        const socialData = {
+            avatarUrl: 'https://example.com/my-avatar.jpg',
+            statusLine: 'Playing Riichi Mahjong since 2020',
+            birthDay: 24,
+            birthMonth: 8,
+            birthYear: 1990,
+            hideBirthYear: false,
+            city: 'Kyiv',
+            favouriteYaku: 'Honitsu',
+            favouriteTile: '1s',
+            favouriteWait: 'ryanmen',
+            discord: 'riichi_player',
+            majsoulAccount: '雀魂Master',
+            majsoulRankYonma: 'expert_3',
+            majsoulRankSanma: 'adept_1',
+            tenhouAccount: 'TenhouAce',
+        };
+
+        it('should allow user to update all 14 social fields on own profile', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send(socialData)
+                .expect(200);
+
+            expect(response.body.avatarUrl).toBe(socialData.avatarUrl);
+            expect(response.body.statusLine).toBe(socialData.statusLine);
+            expect(response.body.birthDay).toBe(socialData.birthDay);
+            expect(response.body.birthMonth).toBe(socialData.birthMonth);
+            expect(response.body.birthYear).toBe(socialData.birthYear);
+            expect(response.body.hideBirthYear).toBe(false);
+            expect(response.body.city).toBe(socialData.city);
+            expect(response.body.favouriteYaku).toBe(socialData.favouriteYaku);
+            expect(response.body.favouriteTile).toBe(socialData.favouriteTile);
+            expect(response.body.favouriteWait).toBe(socialData.favouriteWait);
+            expect(response.body.discord).toBe(socialData.discord);
+            expect(response.body.majsoulAccount).toBe(socialData.majsoulAccount);
+            expect(response.body.majsoulRankYonma).toBe(socialData.majsoulRankYonma);
+            expect(response.body.majsoulRankSanma).toBe(socialData.majsoulRankSanma);
+            expect(response.body.tenhouAccount).toBe(socialData.tenhouAccount);
+        });
+
+        it('should return all social fields via GET /api/users/:id', async () => {
+            const response = await request(app)
+                .get(`/api/users/${testUserId}`)
+                .set('Authorization', regularUserAuthHeader)
+                .expect(200);
+
+            expect(response.body.profile).not.toBeNull();
+            expect(response.body.profile.avatarUrl).toBe(socialData.avatarUrl);
+            expect(response.body.profile.statusLine).toBe(socialData.statusLine);
+            expect(response.body.profile.birthDay).toBe(socialData.birthDay);
+            expect(response.body.profile.birthMonth).toBe(socialData.birthMonth);
+            expect(response.body.profile.birthYear).toBe(socialData.birthYear);
+            expect(response.body.profile.hideBirthYear).toBe(false);
+            expect(response.body.profile.city).toBe(socialData.city);
+            expect(response.body.profile.favouriteYaku).toBe(socialData.favouriteYaku);
+            expect(response.body.profile.favouriteTile).toBe(socialData.favouriteTile);
+            expect(response.body.profile.favouriteWait).toBe(socialData.favouriteWait);
+            expect(response.body.profile.discord).toBe(socialData.discord);
+            expect(response.body.profile.majsoulAccount).toBe(socialData.majsoulAccount);
+            expect(response.body.profile.majsoulRankYonma).toBe(socialData.majsoulRankYonma);
+            expect(response.body.profile.majsoulRankSanma).toBe(socialData.majsoulRankSanma);
+            expect(response.body.profile.tenhouAccount).toBe(socialData.tenhouAccount);
+        });
+
+        it('should clear only the specified field when set to null', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ discord: null })
+                .expect(200);
+
+            expect(response.body.discord).toBeNull();
+            expect(response.body.avatarUrl).toBe(socialData.avatarUrl);
+            expect(response.body.city).toBe(socialData.city);
+            expect(response.body.majsoulAccount).toBe(socialData.majsoulAccount);
+            expect(response.body.tenhouAccount).toBe(socialData.tenhouAccount);
+        });
+
+        it('rejects a rank that is not in the catalog', async () => {
+            await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ majsoulRankYonma: 'grandmaster_9' })
+                .expect(400);
+        });
+
+        it('rejects a level on celestial, which has no levels', async () => {
+            await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ majsoulRankSanma: 'celestial_1' })
+                .expect(400);
+        });
+
+        it('keeps the two modes independent when one is cleared', async () => {
+            const response = await request(app)
+                .patch(`/api/users/${testUserId}/profile`)
+                .set('Authorization', regularUserAuthHeader)
+                .send({ majsoulRankYonma: null })
+                .expect(200);
+
+            expect(response.body.majsoulRankYonma).toBeNull();
+            expect(response.body.majsoulRankSanma).toBe(socialData.majsoulRankSanma);
         });
     });
 });

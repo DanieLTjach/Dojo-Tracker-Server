@@ -769,7 +769,7 @@ export class EventService {
 // shapes differ: Event holds the full `gameRules` object and a rich `tournament`
 // row, while EventData wants `gameRulesId` and a minimal `{ totalRounds }`. This
 // projection is the base a PATCH merges onto.
-export function projectEventToData(event: Event): EventData {
+function projectEventToData(event: Event): EventData {
     const base: EventData = {
         name: event.name,
         description: event.description,
@@ -800,7 +800,7 @@ export function projectEventToData(event: Event): EventData {
 // Merge a partial patch over a base EventData. Only keys present in the patch
 // override the base; JSON objects are merged one level deep so patching one
 // sub-key preserves its siblings.
-export function mergeEventData(base: EventData, patch: EventPatchBody): EventData {
+function mergeEventData(base: EventData, patch: EventPatchBody): EventData {
     const merged: EventData = { ...base };
     assignIfPresent(merged, patch, 'name');
     assignIfPresent(merged, patch, 'description');

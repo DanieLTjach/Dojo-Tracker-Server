@@ -50,8 +50,10 @@ import { EventService } from './EventService.ts';
 import { GameRepository } from '../repository/GameRepository.ts';
 import { GameCreationBlockedError, TournamentGameNotInCurrentRoundError } from '../error/EventErrors.ts';
 import { AchievementService } from './AchievementService.ts';
+import AchievementRecomputeQueue from './AchievementRecomputeQueue.ts';
 import { TournamentStatus } from '../model/TournamentModels.ts';
-import { type SupportedLocale, t } from '../i18n/index.ts';
+import { ProfileAchievementService } from './ProfileAchievementService.ts';
+import { DEFAULT_LOCALE, type SupportedLocale, t } from '../i18n/index.ts';
 import { resolveClubLocale } from '../util/LocaleResolver.ts';
 import { computeTournamentGameTimer } from '../util/TournamentTimerUtil.ts';
 
@@ -64,6 +66,7 @@ export class GameService {
     private clubService: ClubService = new ClubService();
     private clubMembershipService: ClubMembershipService = new ClubMembershipService();
     private achievementService: AchievementService = new AchievementService();
+    private profileAchievementService: ProfileAchievementService = new ProfileAchievementService();
 
     addGame(
         eventId: number,
@@ -72,8 +75,9 @@ export class GameService {
         createdAt: Date | undefined,
         hideNewGameMessage: boolean,
         tournamentRound: number | null,
-        tournamentTable: string | null
-    ): GameWithPlayers {
+        tournamentTable: string | null,
+        locale: SupportedLocale = DEFAULT_LOCALE
+    ): DetailedGame {
         const gameTimestamp = createdAt ?? new Date();
         if (createdAt !== undefined) {
             this.userService.validateUserIsAdmin(createdBy, () => new YouHaveToBeAdminToCreateGameWithCustomTime());
@@ -110,10 +114,17 @@ export class GameService {
         );
         this.skillRatingService.applyFinishedGame(newGameId);
         this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+        try {
+            // Synchronous: the response below returns achievementUnlocks read back
+            // from the recomputed state.
+            AchievementRecomputeQueue.recomputeNow(playersData.map(p => p.userId));
+        } catch (err: any) {
+            LogService.logError('Failed to recompute achievements in addGame', err);
+        }
 
         const standingsAfter = this.ratingService.calculateStandings(eventId);
 
-        const newGame = this.getGameById(newGameId);
+        const newGame = this.getDetailedGameById(newGameId, locale);
         this.logNewGame(newGame, event);
         if (!hideNewGameMessage) {
             this.logRatingUpdateForGame(newGame, event, standingsBefore, standingsAfter, createdBy);
@@ -133,7 +144,7 @@ export class GameService {
         };
     }
 
-    getDetailedGameById(gameId: number): DetailedGame {
+    getDetailedGameById(gameId: number, locale: SupportedLocale = DEFAULT_LOCALE): DetailedGame {
         const game = this.getGameById(gameId);
         const rounds = this.gameRepository.findGameRoundsByGameId(gameId);
         // Only a game that belongs to a tournament round can have a running timer, so
@@ -142,11 +153,18 @@ export class GameService {
             ? this.eventService.getEventById(game.eventId)
             : null;
 
+        const achievementUnlocks = this.profileAchievementService.getGameAchievementUnlocks(
+            gameId,
+            game.players,
+            locale
+        );
+
         return {
             ...game,
             rounds,
             currentState: this.calculateCurrentGameState(game, rounds),
             timer: computeTournamentGameTimer(game, event ?? { tournament: null }),
+            achievementUnlocks,
         };
     }
 
@@ -220,6 +238,12 @@ export class GameService {
         if (oldEvent.id !== event.id) {
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(oldEvent);
         }
+        try {
+            const affectedUserIds = [...oldGame.players.map(p => p.userId), ...playersData.map(p => p.userId)];
+            AchievementRecomputeQueue.enqueueUsers(affectedUserIds);
+        } catch (err: any) {
+            LogService.logError('Failed to enqueue achievement recompute in updateGame', err);
+        }
 
         const updatedGame = this.getGameById(gameId);
         this.logEditedGame(oldGame, updatedGame, event, modifiedBy);
@@ -247,6 +271,11 @@ export class GameService {
         if (game.status === GameStatus.FINISHED) {
             this.recalculateRatingForFinishedGame(gameId, game.createdAt, event);
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+            try {
+                AchievementRecomputeQueue.enqueueUsers(game.players.map(p => p.userId));
+            } catch (err: any) {
+                LogService.logError('Failed to enqueue achievement recompute in setSubstitutePlayer', err);
+            }
         }
 
         return this.gameRepository.findGamePlayersByGameId(gameId)
@@ -284,6 +313,11 @@ export class GameService {
 
         if (game.status === GameStatus.FINISHED) {
             this.achievementService.recomputeEventAchievementsIfAlreadyComputed(event);
+            try {
+                AchievementRecomputeQueue.enqueueUsers(game.players.map(p => p.userId));
+            } catch (err: any) {
+                LogService.logError('Failed to enqueue achievement recompute in deleteGame', err);
+            }
         }
 
         this.logDeletedGame(game, event, deletedBy);

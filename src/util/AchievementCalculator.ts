@@ -9,13 +9,9 @@ import type { GameRoundResult, WinningHandData } from '../model/GameRoundResultM
 import { ACHIEVEMENTS, newStats, type AchievementDefinition, type PlayerStats } from '../data/achievementsCatalog.ts';
 import { AchievementCriterion, type ComputedAchievement } from '../model/AchievementModels.ts';
 import { calculateHandBaseValue } from './PointCalculationUtil.ts';
+import { isBaiman, isHaneman, iterWinningHands } from './handTiers.ts';
 import type { GameRulesValues } from '../data/gameRulesCatalog.ts';
 import { getSubstitutePlayerPenaltyBeforeUma } from './RulesUtils.ts';
-
-interface WinningHand {
-    hand: WinningHandData;
-    winType: 'TSUMO' | 'RON';
-}
 
 // Only the players and rounds of a game are needed to compute achievements. Taking a
 // narrow shape rather than the full DetailedGame means callers don't have to fabricate
@@ -61,6 +57,10 @@ export function computeAchievements(
         }
 
         for (const round of game.rounds) {
+            for (const player of game.players) {
+                getStats(player.userId).tracked_rounds_played += 1;
+            }
+
             const result = round.result;
             const dealerId = getDealerUserId(startPlaceToPlayerId, round.dealerNumber);
 
@@ -162,6 +162,7 @@ export function computeAchievements(
                         ps.points_lost_on_tsumo += loss;
                     } else {
                         ps.points_lost_on_ron += loss;
+                        ps.ron_deal_in_count += 1;
                     }
                 }
             }
@@ -191,28 +192,8 @@ function isManganPlusExceptYakuman(hand: WinningHandData, rules: GameRulesValues
     return calculateHandBaseValue(hand, rules) >= 2000;
 }
 
-function isHaneman(hand: WinningHandData): boolean {
-    const han = hand.han || 0;
-    return han >= 6 && han <= 7;
-}
-
-function isBaiman(hand: WinningHandData): boolean {
-    const han = hand.han || 0;
-    return han >= 8 && han <= 10;
-}
-
 function isRiichiNomi(hand: WinningHandData, winnerId: number, riichiPlayerIds: Set<number>): boolean {
     return hand.han === 1 && riichiPlayerIds.has(winnerId);
-}
-
-function iterWinningHands(result: GameRoundResult): WinningHand[] {
-    if (result.type === 'TSUMO') {
-        return [{ hand: result.winningHandData, winType: 'TSUMO' }];
-    }
-    if (result.type === 'RON') {
-        return result.winningHandData.map(hand => ({ hand, winType: 'RON' as const }));
-    }
-    return [];
 }
 
 function getRiichiPlayerIds(result: GameRoundResult): number[] {
@@ -252,8 +233,17 @@ function resolveWinners(stats: Map<number, PlayerStats>, definition: Achievement
             return { metric, value: best, winnerUserIds: values.filter(v => v.value === best).map(v => v.userId) };
         }
         case AchievementCriterion.Lowest: {
-            const best = Math.min(...values.map(v => v.value));
-            return { metric, value: best, winnerUserIds: values.filter(v => v.value === best).map(v => v.userId) };
+            const applicabilityMetric = definition.applicabilityMetric;
+            const candidates = applicabilityMetric === undefined
+                ? values
+                : [...stats.entries()]
+                    .filter(([, s]) => s[applicabilityMetric] > 0)
+                    .map(([userId, s]) => ({ userId, value: s[metric] }));
+            if (candidates.length === 0) {
+                return { metric, value: undefined, winnerUserIds: [] };
+            }
+            const best = Math.min(...candidates.map(v => v.value));
+            return { metric, value: best, winnerUserIds: candidates.filter(v => v.value === best).map(v => v.userId) };
         }
     }
 }

@@ -2,6 +2,8 @@
 // returned to the frontend — do not rename existing metrics.
 
 import { AchievementCriterion } from '../model/AchievementModels.ts';
+import type { SupportedLocale } from '../i18n/index.ts';
+import { t } from '../i18n/index.ts';
 
 export type AchievementValueUnit =
     | 'wins'
@@ -11,7 +13,21 @@ export type AchievementValueUnit =
     | 'han'
     | 'declarations'
     | 'chombo'
-    | 'players';
+    | 'players'
+    | 'games'
+    | 'finishes'
+    | 'winds'
+    | 'draws'
+    | 'rounds'
+    | 'events'
+    | 'deal_ins'
+    | 'rolls'
+    | 'rating'
+    | 'championships'
+    | 'podiums'
+    | 'kans'
+    | 'dora'
+    | 'clubs';
 
 export interface PlayerStats {
     dealer_wins: number;
@@ -30,6 +46,8 @@ export interface PlayerStats {
     saki_zero_after_uma_games: number;
     chiitoi_nomi_wins: number;
     points_lost_on_ron: number;
+    ron_deal_in_count: number;
+    tracked_rounds_played: number;
     best_game_points: number;
     yakuman_wins: number;
     best_hand_han_points: number;
@@ -45,6 +63,12 @@ export interface AchievementDefinition {
     criterion: AchievementCriterion;
     /** Shown after the numeric value, e.g. "5 wins". */
     valueUnit: AchievementValueUnit;
+    /**
+     * For `Lowest`: the `PlayerStats` field counting rounds where this metric could
+     * have moved. Players with zero applicable rounds are excluded from the min,
+     * so "never faced the situation" isn't confused with "faced it and won every time".
+     */
+    applicabilityMetric?: AchievementMetric;
 }
 
 export const ACHIEVEMENTS: readonly AchievementDefinition[] = [
@@ -143,6 +167,7 @@ export const ACHIEVEMENTS: readonly AchievementDefinition[] = [
         name: 'Defence award',
         criterion: AchievementCriterion.Lowest,
         valueUnit: 'points',
+        applicabilityMetric: 'tracked_rounds_played',
     },
     {
         metric: 'best_game_points',
@@ -194,10 +219,50 @@ export function newStats(): PlayerStats {
         saki_zero_after_uma_games: 0,
         chiitoi_nomi_wins: 0,
         points_lost_on_ron: 0,
+        ron_deal_in_count: 0,
+        tracked_rounds_played: 0,
         best_game_points: 0,
         yakuman_wins: 0,
         best_hand_han_points: 0,
         chombo_count: 0,
         biggest_deal_in: 0,
     };
+}
+
+/**
+ * The name shown for a tournament award. Lives here rather than in a service
+ * because both the tournament page and the profile page render these, and the
+ * English fallback it returns is the `name` field right above it.
+ *
+ * `t` echoes the key back when it is missing, which is how a metric with no
+ * translation yet falls back to the catalog name instead of printing
+ * "achievements.tournament.foo.name" at the user.
+ */
+export function achievementName(definition: AchievementDefinition, locale: SupportedLocale): string {
+    const key = `achievements.tournament.${definition.metric}.name`;
+    const translated = t(key, locale);
+    return translated === key ? definition.name : translated;
+}
+
+/**
+ * The description shown under a tournament award's name.
+ */
+export function achievementDescription(definition: AchievementDefinition, locale: SupportedLocale): string {
+    return t(`achievements.descriptions.${definition.metric}`, locale);
+}
+
+/**
+ * A metric value with its unit, e.g. "5 wins". Grouping digits with en-US and
+ * then translating only the unit keeps the number readable in every locale
+ * without a per-locale number format to maintain.
+ */
+export function formatValue(
+    value: number | undefined,
+    unit: AchievementValueUnit,
+    locale: SupportedLocale
+): string | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+    return t(`achievements.units.${unit}`, locale, { value: value.toLocaleString('en-US') });
 }

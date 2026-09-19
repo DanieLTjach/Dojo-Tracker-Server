@@ -1,5 +1,6 @@
 import type { Statement } from 'better-sqlite3';
 import type { User, UserStatus } from '../model/UserModels.ts';
+import type { Profile } from '../model/ProfileModels.ts';
 import { dbManager } from '../db/dbInit.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
 import { parseUserStatus } from '../util/EnumUtil.ts';
@@ -14,7 +15,23 @@ export class UserRepository {
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.locale as p_locale,
-                p.hideProfile as p_hideProfile
+                p.hideProfile as p_hideProfile,
+                p.avatarUrl as p_avatarUrl,
+                p.statusLine as p_statusLine,
+                p.birthDay as p_birthDay,
+                p.birthMonth as p_birthMonth,
+                p.birthYear as p_birthYear,
+                p.hideBirthYear as p_hideBirthYear,
+                p.city as p_city,
+                p.favouriteYaku as p_favouriteYaku,
+                p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
+                p.discord as p_discord,
+                p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
             LEFT JOIN (
@@ -41,7 +58,23 @@ export class UserRepository {
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.locale as p_locale,
-                p.hideProfile as p_hideProfile
+                p.hideProfile as p_hideProfile,
+                p.avatarUrl as p_avatarUrl,
+                p.statusLine as p_statusLine,
+                p.birthDay as p_birthDay,
+                p.birthMonth as p_birthMonth,
+                p.birthYear as p_birthYear,
+                p.hideBirthYear as p_hideBirthYear,
+                p.city as p_city,
+                p.favouriteYaku as p_favouriteYaku,
+                p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
+                p.discord as p_discord,
+                p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             JOIN clubMembership cm ON user.id = cm.userId
             LEFT JOIN profile p ON user.id = p.userId
@@ -71,7 +104,23 @@ export class UserRepository {
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.locale as p_locale,
-                p.hideProfile as p_hideProfile
+                p.hideProfile as p_hideProfile,
+                p.avatarUrl as p_avatarUrl,
+                p.statusLine as p_statusLine,
+                p.birthDay as p_birthDay,
+                p.birthMonth as p_birthMonth,
+                p.birthYear as p_birthYear,
+                p.hideBirthYear as p_hideBirthYear,
+                p.city as p_city,
+                p.favouriteYaku as p_favouriteYaku,
+                p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
+                p.discord as p_discord,
+                p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
             WHERE user.id = :id`);
@@ -91,7 +140,23 @@ export class UserRepository {
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.locale as p_locale,
-                p.hideProfile as p_hideProfile
+                p.hideProfile as p_hideProfile,
+                p.avatarUrl as p_avatarUrl,
+                p.statusLine as p_statusLine,
+                p.birthDay as p_birthDay,
+                p.birthMonth as p_birthMonth,
+                p.birthYear as p_birthYear,
+                p.hideBirthYear as p_hideBirthYear,
+                p.city as p_city,
+                p.favouriteYaku as p_favouriteYaku,
+                p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
+                p.discord as p_discord,
+                p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
             WHERE telegramId = :telegramId`);
@@ -111,7 +176,23 @@ export class UserRepository {
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.locale as p_locale,
-                p.hideProfile as p_hideProfile
+                p.hideProfile as p_hideProfile,
+                p.avatarUrl as p_avatarUrl,
+                p.statusLine as p_statusLine,
+                p.birthDay as p_birthDay,
+                p.birthMonth as p_birthMonth,
+                p.birthYear as p_birthYear,
+                p.hideBirthYear as p_hideBirthYear,
+                p.city as p_city,
+                p.favouriteYaku as p_favouriteYaku,
+                p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
+                p.discord as p_discord,
+                p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
             WHERE telegramUsername = :telegramUsername`);
@@ -131,7 +212,23 @@ export class UserRepository {
                 p.lastName as p_lastName,
                 p.emaNumber as p_emaNumber,
                 p.locale as p_locale,
-                p.hideProfile as p_hideProfile
+                p.hideProfile as p_hideProfile,
+                p.avatarUrl as p_avatarUrl,
+                p.statusLine as p_statusLine,
+                p.birthDay as p_birthDay,
+                p.birthMonth as p_birthMonth,
+                p.birthYear as p_birthYear,
+                p.hideBirthYear as p_hideBirthYear,
+                p.city as p_city,
+                p.favouriteYaku as p_favouriteYaku,
+                p.favouriteTile as p_favouriteTile,
+                p.favouriteWait as p_favouriteWait,
+                p.discord as p_discord,
+                p.majsoulAccount as p_majsoulAccount,
+                p.majsoulRankYonma as p_majsoulRankYonma,
+                p.majsoulRankSanma as p_majsoulRankSanma,
+                p.tenhouAccount as p_tenhouAccount,
+                p.theme as p_theme
             FROM user
             LEFT JOIN profile p ON user.id = p.userId
             WHERE name = :name`);
@@ -253,7 +350,23 @@ interface UserWithProfileDBEntity {
     p_lastName: string | null;
     p_emaNumber: string | null;
     p_locale: string | null;
+    p_theme: string | null;
     p_hideProfile: number | null;
+    p_avatarUrl: string | null;
+    p_statusLine: string | null;
+    p_birthDay: number | null;
+    p_birthMonth: number | null;
+    p_birthYear: number | null;
+    p_hideBirthYear: number | null;
+    p_city: string | null;
+    p_favouriteYaku: string | null;
+    p_favouriteTile: string | null;
+    p_favouriteWait: string | null;
+    p_discord: string | null;
+    p_majsoulAccount: string | null;
+    p_majsoulRankYonma: string | null;
+    p_majsoulRankSanma: string | null;
+    p_tenhouAccount: string | null;
 }
 
 function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
@@ -274,7 +387,23 @@ function userWithProfileFromDBEntity(dbEntity: UserWithProfileDBEntity): User {
                 lastName: dbEntity.p_lastName,
                 emaNumber: dbEntity.p_emaNumber,
                 locale: dbEntity.p_locale,
+                theme: (dbEntity.p_theme as Profile['theme']) ?? null,
                 hideProfile: Boolean(dbEntity.p_hideProfile),
+                avatarUrl: dbEntity.p_avatarUrl,
+                statusLine: dbEntity.p_statusLine,
+                birthDay: dbEntity.p_birthDay,
+                birthMonth: dbEntity.p_birthMonth,
+                birthYear: dbEntity.p_birthYear,
+                hideBirthYear: Boolean(dbEntity.p_hideBirthYear),
+                city: dbEntity.p_city,
+                favouriteYaku: dbEntity.p_favouriteYaku,
+                favouriteTile: dbEntity.p_favouriteTile,
+                favouriteWait: dbEntity.p_favouriteWait,
+                discord: dbEntity.p_discord,
+                majsoulAccount: dbEntity.p_majsoulAccount,
+                majsoulRankYonma: dbEntity.p_majsoulRankYonma,
+                majsoulRankSanma: dbEntity.p_majsoulRankSanma,
+                tenhouAccount: dbEntity.p_tenhouAccount,
             }
             : null,
         createdAt: new Date(dbEntity.createdAt),

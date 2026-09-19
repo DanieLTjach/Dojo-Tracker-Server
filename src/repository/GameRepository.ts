@@ -5,8 +5,11 @@ import { dbManager } from '../db/dbInit.ts';
 import { RATING_TO_POINTS_COEFFICIENT } from '../model/RatingModels.ts';
 import { parseGameStatus, parseWind } from '../util/EnumUtil.ts';
 import { booleanToInteger } from '../db/dbUtils.ts';
+import { PostRepository } from './PostRepository.ts';
 
 export class GameRepository {
+    private postRepository: PostRepository = new PostRepository();
+
     private createGameStatement(): Statement<{
         eventId: number;
         modifiedBy: number;
@@ -45,10 +48,12 @@ export class GameRepository {
         tournamentTable: string | null;
         status: GameStatus;
         startedAt: string | null;
+        startingDie1: number | null;
+        startingDie2: number | null;
     }, void> {
         return dbManager.db.prepare(`
-            INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt, tournamentRound, tournamentTable, status, startedAt, endedAt, lastRoundWasDeleted)
-            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentRound, :tournamentTable, :status, :startedAt, NULL, 0)`);
+            INSERT INTO game (eventId, modifiedBy, createdAt, modifiedAt, tournamentRound, tournamentTable, status, startedAt, endedAt, lastRoundWasDeleted, startingDie1, startingDie2)
+            VALUES (:eventId, :modifiedBy, :timestamp, :timestamp, :tournamentRound, :tournamentTable, :status, :startedAt, NULL, 0, :startingDie1, :startingDie2)`);
     }
 
     createTrackedGame(
@@ -57,7 +62,8 @@ export class GameRepository {
         timestamp: Date,
         status: GameStatus,
         tournamentRound: number | undefined,
-        tournamentTable: string | undefined
+        tournamentTable: string | undefined,
+        startingDice?: [number, number] | undefined
     ): number {
         const timestampStr = timestamp.toISOString();
 
@@ -70,6 +76,8 @@ export class GameRepository {
                 tournamentTable: tournamentTable ?? null,
                 status,
                 startedAt: status === 'CREATED' ? null : timestampStr,
+                startingDie1: startingDice ? startingDice[0] : null,
+                startingDie2: startingDice ? startingDice[1] : null,
             }).lastInsertRowid
         );
     }
@@ -339,6 +347,9 @@ export class GameRepository {
 
     deleteGameRound(gameId: number, roundNumber: number): void {
         this.deleteGameRoundStatement().run({ gameId, roundNumber });
+        // A hand photo outlives the round it was taken in: drop the dangling
+        // link rather than the user's post.
+        this.postRepository.nullPostRoundLink(gameId, roundNumber);
     }
 
     private deleteGameRoundsByGameIdStatement(): Statement<{ gameId: number }, void> {
@@ -347,6 +358,7 @@ export class GameRepository {
 
     deleteGameRoundsByGameId(gameId: number): void {
         this.deleteGameRoundsByGameIdStatement().run({ gameId });
+        this.postRepository.nullAllPostRoundLinks(gameId);
     }
 
     private setLastRoundWasDeletedStatement(): Statement<{
@@ -692,6 +704,30 @@ export class GameRepository {
         return this.countStartedGamesByEventAndTournamentRoundStatement().get({ eventId, tournamentRound })!.count;
     }
 
+    private updateStartingDiceStatement(): Statement<{
+        id: number;
+        startingDie1: number | null;
+        startingDie2: number | null;
+        modifiedBy: number;
+        modifiedAt: string;
+    }, void> {
+        return dbManager.db.prepare(`
+            UPDATE game
+            SET startingDie1 = :startingDie1, startingDie2 = :startingDie2,
+                modifiedBy = :modifiedBy, modifiedAt = :modifiedAt
+            WHERE id = :id`);
+    }
+
+    updateStartingDice(gameId: number, die1: number | null, die2: number | null, modifiedBy: number): void {
+        this.updateStartingDiceStatement().run({
+            id: gameId,
+            startingDie1: die1,
+            startingDie2: die2,
+            modifiedBy,
+            modifiedAt: new Date().toISOString(),
+        });
+    }
+
     private findGamesByEventIdStatement(): Statement<{ eventId: number }, GameDBEntity> {
         return dbManager.db.prepare(
             'SELECT * FROM game WHERE eventId = :eventId ORDER BY tournamentRound, tournamentTable, createdAt'
@@ -715,6 +751,8 @@ interface GameDBEntity {
     startedAt: string | null;
     endedAt: string | null;
     lastRoundWasDeleted: number;
+    startingDie1: number | null;
+    startingDie2: number | null;
     enterHandDetail: number;
 }
 
@@ -731,6 +769,8 @@ function gameFromDBEntity(dbEntity: GameDBEntity): Game {
         startedAt: dbEntity.startedAt !== null ? new Date(dbEntity.startedAt) : null,
         endedAt: dbEntity.endedAt !== null ? new Date(dbEntity.endedAt) : null,
         lastRoundWasDeleted: Boolean(dbEntity.lastRoundWasDeleted),
+        startingDie1: dbEntity.startingDie1,
+        startingDie2: dbEntity.startingDie2,
         enterHandDetail: Boolean(dbEntity.enterHandDetail),
     };
 }

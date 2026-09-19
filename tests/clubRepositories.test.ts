@@ -41,6 +41,11 @@ function seedTestUsers(): void {
         isAdmin: 0,
         status: 'ACTIVE',
     });
+
+    dbManager.db.prepare(`
+        INSERT INTO profile (userId, avatarUrl, modifiedAt, modifiedBy)
+        VALUES (?, 'https://example.com/avatar_a.jpg', ?, ?)
+    `).run(TEST_USER_A_ID, timestamp, SYSTEM_USER_ID);
 }
 
 function cleanupRepositoryData(): void {
@@ -50,6 +55,7 @@ function cleanupRepositoryData(): void {
 
 function cleanupRepositoryFixtures(): void {
     cleanupRepositoryData();
+    dbManager.db.prepare('DELETE FROM profile WHERE userId IN (?, ?)').run(TEST_USER_A_ID, TEST_USER_B_ID);
     dbManager.db.prepare('DELETE FROM user WHERE id IN (?, ?)').run(TEST_USER_A_ID, TEST_USER_B_ID);
 }
 
@@ -186,9 +192,13 @@ describe('Club and Membership repositories', () => {
 
         const allMembers = membershipRepository.findMembersByClubId(clubId);
         expect(allMembers.map(member => member.userId)).toEqual([TEST_USER_A_ID, TEST_USER_B_ID]);
+        expect(allMembers[0]!.avatarUrl).toBe('https://example.com/avatar_a.jpg');
+        expect(allMembers[1]!.avatarUrl).toBeNull();
 
         const pendingMembers = membershipRepository.findPendingMembersByClubId(clubId);
         expect(pendingMembers).toHaveLength(2);
+        expect(pendingMembers[0]!.avatarUrl).toBe('https://example.com/avatar_a.jpg');
+        expect(pendingMembers[1]!.avatarUrl).toBeNull();
 
         expect(membershipRepository.getUserClubRole(clubId, TEST_USER_A_ID)).toBeUndefined();
 
@@ -200,6 +210,7 @@ describe('Club and Membership repositories', () => {
         expect(updated).toMatchObject({
             clubId,
             userId: TEST_USER_A_ID,
+            avatarUrl: 'https://example.com/avatar_a.jpg',
             role: 'MODERATOR',
             status: 'ACTIVE',
             modifiedBy: TEST_USER_B_ID,
@@ -209,5 +220,80 @@ describe('Club and Membership repositories', () => {
 
         membershipRepository.deleteMembership(clubId, TEST_USER_A_ID);
         expect(membershipRepository.findMembership(clubId, TEST_USER_A_ID)).toBeUndefined();
+    });
+});
+
+describe('ClubRepository.countClubGames', () => {
+    const clubRepository = new ClubRepository();
+
+    function createClub(name: string): number {
+        const timestamp = new Date().toISOString();
+        const result = dbManager.db.prepare(`
+            INSERT INTO club (name, country, locale, isActive, createdAt, modifiedAt, modifiedBy)
+            VALUES (?, 'UA', 'uk', 1, ?, ?, ?)
+        `).run(name, timestamp, timestamp, SYSTEM_USER_ID);
+        return Number(result.lastInsertRowid);
+    }
+
+    function createEvent(clubId: number, name: string): number {
+        const timestamp = new Date().toISOString();
+        const result = dbManager.db.prepare(`
+            INSERT INTO event (
+                name, type, clubId, gameRules, minimumGamesForRating, startingRating,
+                blockGameCreation, format, isRated, createdAt, modifiedAt, modifiedBy
+            )
+            VALUES (?, 'SEASON', ?, 2, 0, 0, 0, 'INDIVIDUAL', 1, ?, ?, ?)
+        `).run(name, clubId, timestamp, timestamp, SYSTEM_USER_ID);
+        return Number(result.lastInsertRowid);
+    }
+
+    // game has a UNIQUE(eventId, createdAt), so each game in an event needs a
+    // distinct timestamp rather than whatever `now` happens to be.
+    let gameClock = 0;
+
+    function createGame(eventId: number, status: string): void {
+        gameClock += 1;
+        const timestamp = new Date(Date.UTC(2026, 0, 1, 0, 0, gameClock)).toISOString();
+        dbManager.db.prepare(`
+            INSERT INTO game (eventId, status, createdAt, modifiedAt, modifiedBy)
+            VALUES (?, ?, ?, ?, ?)
+        `).run(eventId, status, timestamp, timestamp, SYSTEM_USER_ID);
+    }
+
+    it('counts only finished games, and only for the club asked about', () => {
+        const clubId = createClub('Count Games Club');
+        const otherClubId = createClub('Other Count Games Club');
+
+        expect(clubRepository.countClubGames(clubId)).toBe(0);
+
+        const eventId = createEvent(clubId, 'Counting Season');
+        createGame(eventId, 'FINISHED');
+        createGame(eventId, 'FINISHED');
+        // A game still being played has not been played yet - counting it would
+        // make the number tick up and down as tables start and finish.
+        createGame(eventId, 'IN_PROGRESS');
+
+        // Another club's games must not leak into this club's total.
+        const otherEventId = createEvent(otherClubId, 'Other Season');
+        createGame(otherEventId, 'FINISHED');
+
+        expect(clubRepository.countClubGames(clubId)).toBe(2);
+        expect(clubRepository.countClubGames(otherClubId)).toBe(1);
+    });
+
+    it('sums games across every event the club owns', () => {
+        const clubId = createClub('Multi Event Club');
+        const firstEvent = createEvent(clubId, 'Season One');
+        const secondEvent = createEvent(clubId, 'Season Two');
+
+        createGame(firstEvent, 'FINISHED');
+        createGame(secondEvent, 'FINISHED');
+        createGame(secondEvent, 'FINISHED');
+
+        expect(clubRepository.countClubGames(clubId)).toBe(3);
+    });
+
+    it('returns zero for a club that does not exist', () => {
+        expect(clubRepository.countClubGames(987654)).toBe(0);
     });
 });

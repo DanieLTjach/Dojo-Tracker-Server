@@ -1,0 +1,427 @@
+import { dbManager } from '../db/dbInit.ts';
+import type {
+    CreateCommentDTO,
+    CreatePostDTO,
+    CreatePostImageDTO,
+    Post,
+    PostComment,
+    PostGameTag,
+    UpdatePostDTO,
+} from '../model/PostModels.ts';
+
+interface PostDBRow {
+    id: number;
+    authorId: number;
+    authorName: string | null;
+    authorAvatarUrl: string | null;
+    clubId: number | null;
+    gameId: number | null;
+    roundNumber: number | null;
+    text: string | null;
+    createdAt: string;
+    editedAt: string | null;
+    likeCount: number;
+    commentCount: number;
+    likedByMe: number;
+    gamePlayedAt: string | null;
+    gameScore: number | null;
+    gameClubName: string | null;
+    roundWind: string | null;
+    roundDealerNumber: number | null;
+}
+
+interface CommentDBRow {
+    id: number;
+    postId: number;
+    authorId: number;
+    authorName: string | null;
+    authorAvatarUrl: string | null;
+    text: string;
+    createdAt: string;
+    editedAt: string | null;
+    likeCount: number;
+    likedByMe: number;
+}
+
+// Shared by all post feed and retrieval queries so the joins and projection never drift.
+const POST_SELECT = `
+    SELECT 
+        p.id,
+        p.authorId,
+        CASE WHEN prof.hideProfile = 1 THEN NULL ELSE u.name END as authorName,
+        CASE WHEN prof.hideProfile = 1 THEN NULL ELSE prof.avatarUrl END as authorAvatarUrl,
+        p.clubId,
+        p.gameId,
+        p.roundNumber,
+        p.text,
+        p.createdAt,
+        p.editedAt,
+        (SELECT COUNT(*) FROM post_like WHERE postId = p.id) as likeCount,
+        (SELECT COUNT(*) FROM post_comment WHERE postId = p.id) as commentCount,
+        EXISTS(SELECT 1 FROM post_like WHERE postId = p.id AND userId = ?) as likedByMe,
+        g.createdAt as gamePlayedAt,
+        utg.points as gameScore,
+        c.name as gameClubName,
+        gr.wind as roundWind,
+        gr.dealerNumber as roundDealerNumber
+    FROM post p
+    JOIN user u ON p.authorId = u.id
+    LEFT JOIN profile prof ON u.id = prof.userId
+    LEFT JOIN game g ON p.gameId = g.id
+    LEFT JOIN event e ON g.eventId = e.id
+    LEFT JOIN club c ON e.clubId = c.id
+    LEFT JOIN userToGame utg ON p.gameId = utg.gameId AND p.authorId = utg.userId
+    LEFT JOIN gameRound gr ON gr.gameId = p.gameId AND gr.roundNumber = p.roundNumber
+`;
+
+// Shared by the single-comment and thread queries so the two can never drift.
+const COMMENT_SELECT = `
+    SELECT
+        pc.id,
+        pc.postId,
+        pc.authorId,
+        CASE WHEN prof.hideProfile = 1 THEN NULL ELSE u.name END as authorName,
+        CASE WHEN prof.hideProfile = 1 THEN NULL ELSE prof.avatarUrl END as authorAvatarUrl,
+        pc.text,
+        pc.createdAt,
+        pc.editedAt,
+        (SELECT COUNT(*) FROM post_comment_like WHERE commentId = pc.id) as likeCount,
+        EXISTS(
+            SELECT 1 FROM post_comment_like WHERE commentId = pc.id AND userId = ?
+        ) as likedByMe
+    FROM post_comment pc
+    JOIN user u ON pc.authorId = u.id
+    LEFT JOIN profile prof ON u.id = prof.userId
+`;
+
+function mapCommentRow(row: CommentDBRow): PostComment {
+    return {
+        id: row.id,
+        postId: row.postId,
+        authorId: row.authorId,
+        author: {
+            id: row.authorId,
+            name: row.authorName,
+            avatarUrl: row.authorAvatarUrl,
+        },
+        text: row.text,
+        createdAt: row.createdAt,
+        editedAt: row.editedAt,
+        likeCount: row.likeCount,
+        likedByMe: Boolean(row.likedByMe),
+    };
+}
+
+export class PostRepository {
+    createPost(authorId: number, dto: CreatePostDTO): number {
+        const now = new Date().toISOString();
+        const stmt = dbManager.db.prepare(`
+            INSERT INTO post (authorId, clubId, gameId, roundNumber, text, createdAt)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        const result = stmt.run(
+            authorId,
+            dto.clubId ?? null,
+            dto.gameId ?? null,
+            dto.roundNumber ?? null,
+            dto.text ?? null,
+            now
+        );
+        const postId = Number(result.lastInsertRowid);
+
+        if (dto.images && dto.images.length > 0) {
+            this.insertImages(postId, dto.images);
+        }
+
+        return postId;
+    }
+
+    findPostById(id: number, currentUserId?: number): Post | null {
+        const row = dbManager.db.prepare(`
+            ${POST_SELECT}
+            WHERE p.id = ?
+        `).get(currentUserId ?? -1, id) as PostDBRow | undefined;
+
+        if (!row) return null;
+        return this.mapPostRowToPost(row);
+    }
+
+    findPostsByAuthorId(authorId: number, currentUserId?: number): Post[] {
+        const rows = dbManager.db.prepare(`
+            ${POST_SELECT}
+            WHERE p.authorId = ?
+            ORDER BY p.createdAt DESC, p.id DESC
+        `).all(currentUserId ?? -1, authorId) as PostDBRow[];
+
+        return this.mapPostRowsToPosts(rows);
+    }
+
+    findPostsByClubId(clubId: number, currentUserId?: number): Post[] {
+        const rows = dbManager.db.prepare(`
+            ${POST_SELECT}
+            WHERE p.clubId = ?
+            ORDER BY p.createdAt DESC, p.id DESC
+        `).all(currentUserId ?? -1, clubId) as PostDBRow[];
+
+        return this.mapPostRowsToPosts(rows);
+    }
+
+    findPostsByGameId(gameId: number, currentUserId?: number): Post[] {
+        const rows = dbManager.db.prepare(`
+            ${POST_SELECT}
+            WHERE p.gameId = ?
+            ORDER BY p.createdAt DESC, p.id DESC
+        `).all(currentUserId ?? -1, gameId) as PostDBRow[];
+
+        return this.mapPostRowsToPosts(rows);
+    }
+
+    /**
+     * Clears the round link when a round is rolled back. The post itself
+     * survives as a game-tagged photo - a user's photo is not ours to delete.
+     */
+    nullPostRoundLink(gameId: number, roundNumber: number): void {
+        dbManager.db.prepare(`
+            UPDATE post SET roundNumber = NULL WHERE gameId = ? AND roundNumber = ?
+        `).run(gameId, roundNumber);
+    }
+
+    /** Same, for every round of a game (a full round wipe). */
+    nullAllPostRoundLinks(gameId: number): void {
+        dbManager.db.prepare(`
+            UPDATE post SET roundNumber = NULL WHERE gameId = ?
+        `).run(gameId);
+    }
+
+    /**
+     * Applies only the fields present in the DTO, so a caller editing just the
+     * caption cannot accidentally clear the club by omitting it.
+     */
+    private insertImages(postId: number, images: CreatePostImageDTO[]): void {
+        const imgStmt = dbManager.db.prepare(`
+            INSERT INTO post_image (postId, url, width, height, sortOrder)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+        // sortOrder is the array position, so the caller's order is the order
+        // the collage renders in.
+        for (let i = 0; i < images.length; i++) {
+            const img = images[i]!;
+            imgStmt.run(postId, img.url, img.width ?? null, img.height ?? null, i);
+        }
+    }
+
+    /**
+     * Replaces a post's images with exactly the list given.
+     *
+     * Rows are swapped wholesale rather than diffed: image identity is the URL
+     * and the client already re-sends the ones it kept, so a diff would buy
+     * nothing but a chance to get reordering subtly wrong. Callers run inside
+     * the request transaction, so a failure leaves the old set in place.
+     */
+    replaceImages(postId: number, images: CreatePostImageDTO[]): void {
+        dbManager.db.prepare(`DELETE FROM post_image WHERE postId = ?`).run(postId);
+        if (images.length > 0) {
+            this.insertImages(postId, images);
+        }
+    }
+
+    updatePost(id: number, dto: UpdatePostDTO): void {
+        const assignments: string[] = [];
+        const values: (string | number | null)[] = [];
+
+        if ('text' in dto) {
+            assignments.push('text = ?');
+            values.push(dto.text ?? null);
+        }
+        if ('clubId' in dto) {
+            assignments.push('clubId = ?');
+            values.push(dto.clubId ?? null);
+        }
+
+        if (dto.images !== undefined) {
+            this.replaceImages(id, dto.images);
+        } else if (assignments.length === 0) {
+            return;
+        }
+
+        assignments.push('editedAt = ?');
+        values.push(new Date().toISOString());
+        values.push(id);
+
+        dbManager.db.prepare(`UPDATE post SET ${assignments.join(', ')} WHERE id = ?`).run(...values);
+    }
+
+    deletePost(id: number): void {
+        dbManager.db.prepare(`DELETE FROM post WHERE id = ?`).run(id);
+    }
+
+    createComment(postId: number, authorId: number, dto: CreateCommentDTO): number {
+        const now = new Date().toISOString();
+        const result = dbManager.db.prepare(`
+            INSERT INTO post_comment (postId, authorId, text, createdAt)
+            VALUES (?, ?, ?, ?)
+        `).run(postId, authorId, dto.text, now);
+        return Number(result.lastInsertRowid);
+    }
+
+    findCommentById(id: number, currentUserId?: number): PostComment | null {
+        const row = dbManager.db.prepare(`
+            ${COMMENT_SELECT}
+            WHERE pc.id = ?
+        `).get(currentUserId ?? -1, id) as CommentDBRow | undefined;
+        return row ? mapCommentRow(row) : null;
+    }
+
+    findCommentsByPostId(postId: number, currentUserId?: number): PostComment[] {
+        const rows = dbManager.db.prepare(`
+            ${COMMENT_SELECT}
+            WHERE pc.postId = ?
+            ORDER BY pc.createdAt ASC, pc.id ASC
+        `).all(currentUserId ?? -1, postId) as CommentDBRow[];
+        return rows.map(mapCommentRow);
+    }
+
+    addCommentLike(commentId: number, userId: number): boolean {
+        const result = dbManager.db.prepare(`
+            INSERT OR IGNORE INTO post_comment_like (commentId, userId, createdAt)
+            VALUES (?, ?, ?)
+        `).run(commentId, userId, new Date().toISOString());
+        return result.changes > 0;
+    }
+
+    removeCommentLike(commentId: number, userId: number): void {
+        dbManager.db.prepare(`
+            DELETE FROM post_comment_like WHERE commentId = ? AND userId = ?
+        `).run(commentId, userId);
+    }
+
+    updateComment(id: number, text: string): void {
+        dbManager.db.prepare(`
+            UPDATE post_comment SET text = ?, editedAt = ? WHERE id = ?
+        `).run(text, new Date().toISOString(), id);
+    }
+
+    deleteComment(id: number): void {
+        dbManager.db.prepare(`DELETE FROM post_comment WHERE id = ?`).run(id);
+    }
+
+    addLike(postId: number, userId: number): boolean {
+        const now = new Date().toISOString();
+        const result = dbManager.db.prepare(`
+            INSERT OR IGNORE INTO post_like (postId, userId, createdAt)
+            VALUES (?, ?, ?)
+        `).run(postId, userId, now);
+        return result.changes > 0;
+    }
+
+    removeLike(postId: number, userId: number): void {
+        dbManager.db.prepare(`
+            DELETE FROM post_like WHERE postId = ? AND userId = ?
+        `).run(postId, userId);
+    }
+
+    private mapPostRowToPost(row: PostDBRow): Post {
+        const images = dbManager.db.prepare(`
+            SELECT id, url, width, height FROM post_image WHERE postId = ? ORDER BY sortOrder ASC, id ASC
+        `).all(row.id) as { id: number, url: string, width: number | null, height: number | null }[];
+
+        let game: PostGameTag | null = null;
+        if (row.gameId && row.gamePlayedAt) {
+            game = {
+                id: row.gameId,
+                playedAt: row.gamePlayedAt,
+                score: row.gameScore ?? undefined,
+                clubName: row.gameClubName ?? undefined,
+                roundNumber: row.roundNumber ?? undefined,
+                wind: row.roundWind ?? undefined,
+                dealerNumber: row.roundDealerNumber ?? undefined,
+            };
+        }
+
+        return {
+            id: row.id,
+            authorId: row.authorId,
+            author: {
+                id: row.authorId,
+                name: row.authorName,
+                avatarUrl: row.authorAvatarUrl,
+            },
+            clubId: row.clubId,
+            gameId: row.gameId,
+            roundNumber: row.roundNumber ?? null,
+            game,
+            text: row.text,
+            images,
+            likeCount: row.likeCount,
+            commentCount: row.commentCount,
+            likedByMe: Boolean(row.likedByMe),
+            createdAt: row.createdAt,
+            editedAt: row.editedAt,
+        };
+    }
+
+    private mapPostRowsToPosts(rows: PostDBRow[]): Post[] {
+        if (rows.length === 0) return [];
+        const postIds = rows.map(r => r.id);
+        const images = dbManager.db.prepare(`
+            SELECT id, postId, url, width, height FROM post_image
+            WHERE postId IN (${postIds.map(() => '?').join(',')})
+            ORDER BY sortOrder ASC, id ASC
+        `).all(...postIds) as {
+            id: number;
+            postId: number;
+            url: string;
+            width: number | null;
+            height: number | null;
+        }[];
+
+        const imagesByPostId = new Map<
+            number,
+            { id: number, url: string, width: number | null, height: number | null }[]
+        >();
+        for (const img of images) {
+            let list = imagesByPostId.get(img.postId);
+            if (!list) {
+                list = [];
+                imagesByPostId.set(img.postId, list);
+            }
+            list.push({ id: img.id, url: img.url, width: img.width, height: img.height });
+        }
+
+        return rows.map(row => {
+            let game: PostGameTag | null = null;
+            if (row.gameId && row.gamePlayedAt) {
+                game = {
+                    id: row.gameId,
+                    playedAt: row.gamePlayedAt,
+                    score: row.gameScore ?? undefined,
+                    clubName: row.gameClubName ?? undefined,
+                    roundNumber: row.roundNumber ?? undefined,
+                    wind: row.roundWind ?? undefined,
+                    dealerNumber: row.roundDealerNumber ?? undefined,
+                };
+            }
+
+            return {
+                id: row.id,
+                authorId: row.authorId,
+                author: {
+                    id: row.authorId,
+                    name: row.authorName,
+                    avatarUrl: row.authorAvatarUrl,
+                },
+                clubId: row.clubId,
+                gameId: row.gameId,
+                roundNumber: row.roundNumber ?? null,
+                game,
+                text: row.text,
+                images: imagesByPostId.get(row.id) || [],
+                likeCount: row.likeCount,
+                commentCount: row.commentCount,
+                likedByMe: Boolean(row.likedByMe),
+                createdAt: row.createdAt,
+                editedAt: row.editedAt,
+            };
+        });
+    }
+}

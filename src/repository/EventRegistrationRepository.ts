@@ -11,6 +11,7 @@ const REGISTRATION_SELECT_COLUMNS = `
     u.name as userName,
     p.firstName as firstName,
     p.lastName as lastName,
+    p.avatarUrl as avatarUrl,
     p.hideProfile as hideProfile,
     er.isFillerPlayer as isFillerPlayer,
     er.status,
@@ -248,6 +249,7 @@ interface EventRegistrationDBEntity {
     userName: string;
     firstName: string | null;
     lastName: string | null;
+    avatarUrl: string | null;
     hideProfile: number | null;
     isFillerPlayer: number;
     status: string;
@@ -264,6 +266,7 @@ function eventRegistrationFromDBEntity(dbEntity: EventRegistrationDBEntity): Eve
         userName: dbEntity.userName,
         firstName: dbEntity.firstName,
         lastName: dbEntity.lastName,
+        avatarUrl: dbEntity.avatarUrl,
         hideProfile: Boolean(dbEntity.hideProfile),
         isFillerPlayer: Boolean(dbEntity.isFillerPlayer),
         status: parseEventRegistrationStatus(dbEntity.status),

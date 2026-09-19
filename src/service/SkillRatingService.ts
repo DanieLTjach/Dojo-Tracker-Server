@@ -234,8 +234,20 @@ export class SkillRatingService {
         }
 
         const config = this.getOrCreateConfig(clubId);
+        // An empty board rather than a 400. A club with the rating switched off
+        // is an ordinary state, and the club page reads this endpoint on every
+        // visit, so refusing it filled the logs with errors nobody could act on.
+        // `isEnabled` keeps "switched off" distinguishable from "nobody ranked yet".
         if (!config.isEnabled) {
-            throw new SkillRatingNotEnabledForClubError(clubId);
+            return {
+                clubId,
+                gameSize,
+                provisionalGameThreshold: config.provisionalGameThreshold,
+                isStale: false,
+                isEnabled: false,
+                entries: [],
+                provisionalEntries: [],
+            };
         }
 
         const isStale = this.skillRatingRepository.isTrackDirty(clubId, gameSize);
@@ -253,6 +265,7 @@ export class SkillRatingService {
             gameSize,
             provisionalGameThreshold: config.provisionalGameThreshold,
             isStale,
+            isEnabled: true,
             entries: ranked,
             provisionalEntries: provisional,
         };

@@ -16,6 +16,7 @@ import {
 } from './testHelpers.ts';
 import type { ExhaustiveDraw } from '../src/model/GameRoundResultModels.ts';
 import { ProfileRepository } from '../src/repository/ProfileRepository.ts';
+import { mergeProfileValues } from '../src/service/ProfileService.ts';
 
 const app = express();
 app.use(express.json());
@@ -742,12 +743,34 @@ describe('Game API Endpoints', () => {
 
         test('should expose profileFirstName/profileLastName alongside user.name in players[]', async () => {
             const profileRepo = new ProfileRepository();
-            profileRepo.upsertProfile(testUser1Id, null, null, 'Роман', 'Дорошенко', null, false, SYSTEM_USER_ID);
+            profileRepo.upsertProfile(
+                testUser1Id,
+                mergeProfileValues(undefined, {
+                    firstName: 'Роман',
+                    lastName: 'Дорошенко',
+                }),
+                SYSTEM_USER_ID
+            );
             // testUser2Id has no profile row; profile fields should be null
             // testUser3Id has profile but only firstName
-            profileRepo.upsertProfile(testUser3Id, null, null, 'Іван', null, null, false, SYSTEM_USER_ID);
+            profileRepo.upsertProfile(
+                testUser3Id,
+                mergeProfileValues(undefined, {
+                    firstName: 'Іван',
+                    lastName: null,
+                }),
+                SYSTEM_USER_ID
+            );
             // testUser4Id has a profile name but opted to hide it.
-            profileRepo.upsertProfile(testUser4Id, null, null, 'Олександр', 'Прихований', null, true, SYSTEM_USER_ID);
+            profileRepo.upsertProfile(
+                testUser4Id,
+                mergeProfileValues(undefined, {
+                    firstName: 'Олександр',
+                    lastName: 'Прихований',
+                    hideProfile: true,
+                }),
+                SYSTEM_USER_ID
+            );
 
             try {
                 const response = await request(app)

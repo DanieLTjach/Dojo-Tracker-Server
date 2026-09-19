@@ -3,7 +3,11 @@ import { dbManager } from '../db/dbInit.ts';
 import type { GameStatsData } from '../model/UserStatsModels.ts';
 
 export class UserStatsRepository {
-    // Get all game data for a user in an event (points, placement, rating changes)
+    // Points, placement and rating change for each of a user's games in an event.
+    // The join to userRatingChange is an inner one, so a game with no rating row
+    // drops out entirely: an unrated game is not a game with a missing figure.
+    // Placement is computed per game rather than stored, by counting the players
+    // who finished above this one.
     private getUserGameStatsStatement(): Statement<
         { userId: number, eventId: number },
         GameStatsData

@@ -2,7 +2,10 @@ import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { EventService } from '../service/EventService.ts';
 import { AchievementService } from '../service/AchievementService.ts';
+import { EventRegistrationRepository } from '../repository/EventRegistrationRepository.ts';
 import { TournamentSeatingService } from '../service/TournamentSeatingService.ts';
+import AchievementRecomputeQueue from '../service/AchievementRecomputeQueue.ts';
+import LogService from '../service/LogService.ts';
 import {
     eventGetByIdSchema,
     eventCreateSchema,
@@ -19,6 +22,7 @@ import {
 export class EventController {
     private eventService: EventService = new EventService();
     private achievementService: AchievementService = new AchievementService();
+    private eventRegistrationRepository: EventRegistrationRepository = new EventRegistrationRepository();
     private tournamentSeatingService: TournamentSeatingService = new TournamentSeatingService();
 
     getAllEvents(req: Request, res: Response) {
@@ -63,6 +67,12 @@ export class EventController {
         const { params: { eventId, roundId } } = tournamentRoundStartSchema.parse(req);
         const userId = req.user!.userId;
         const event = this.eventService.startTournamentRound(eventId, roundId, userId);
+        try {
+            const registrations = this.eventRegistrationRepository.findRegistrationsByEventId(eventId);
+            AchievementRecomputeQueue.enqueueUsers(registrations.map(r => r.userId));
+        } catch (err: any) {
+            LogService.logError('Failed to enqueue achievement recompute in startTournamentRound', err);
+        }
         return res.status(StatusCodes.OK).json(event);
     }
 
@@ -77,7 +87,15 @@ export class EventController {
         const { params: { eventId } } = eventGetByIdSchema.parse(req);
         const userId = req.user!.userId;
         const event = this.eventService.finishTournament(eventId, userId);
-        this.achievementService.recomputeEventAchievements(event);
+        try {
+            this.achievementService.recomputeEventAchievements(event);
+            const registrations = this.eventRegistrationRepository.findRegistrationsByEventId(eventId);
+            // Synchronous: finishing a tournament awards placement achievements the
+            // client reads back immediately.
+            AchievementRecomputeQueue.recomputeNow(registrations.map(r => r.userId));
+        } catch (err: any) {
+            LogService.logError('Failed to recompute achievements in finishTournament', err);
+        }
         return res.status(StatusCodes.OK).json(event);
     }
 

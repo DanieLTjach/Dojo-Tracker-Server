@@ -30,6 +30,7 @@ export class PublicTournamentController {
             userName: registration.userName,
             firstName: registration.hideProfile ? null : registration.firstName,
             lastName: registration.hideProfile ? null : registration.lastName,
+            avatarUrl: registration.hideProfile ? null : registration.avatarUrl,
             hideProfile: registration.hideProfile,
         }));
         const approvedCount = participants.length;

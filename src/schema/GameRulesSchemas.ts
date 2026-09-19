@@ -79,7 +79,7 @@ function ruleSpecToSchema(spec: RuleSpec): z.ZodType<RuleValue> {
 
 // Noten payments must stay whole: yonma can split 1/2/3 ways (LCM 6),
 // sanma can split 1/2 ways (LCM 2).
-export function notenPenaltyDivisorFor(numberOfPlayers: number): number {
+function notenPenaltyDivisorFor(numberOfPlayers: number): number {
     return numberOfPlayers === 3 ? 2 : 6;
 }
 
@@ -116,7 +116,7 @@ export const SANMA_RED_FIVES_MESSAGE = 'red_fives must represent 0, 2, or 3 red 
 export const UMA_SUM_NON_ZERO_MESSAGE = 'uma must sum to 0 unless the ruleset allows a non-zero-sum uma';
 export const UMA_NON_ZERO_SUM_MATRIX_MESSAGE = 'a non-zero-sum uma is only supported for a flat (non-matrix) uma';
 
-export function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRulesDetails> {
+function buildDetailsSchema(catalog: GameRulesCatalog): z.ZodType<GameRulesDetails> {
     const allOptionalShape = Object.fromEntries(
         catalog.rules.map(spec => [spec.key, ruleSpecToSchema(spec).optional()])
     );

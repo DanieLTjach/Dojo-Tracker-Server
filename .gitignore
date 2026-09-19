@@ -10,3 +10,11 @@ coverage
 .env*
 !.env.example
 !.env.test
+
+# ZCode session artifacts (plans etc.)
+.zcode/
+notes/
+
+# Firebase service account keys (used by storage:cleanup) - secrets, never commit
+service-account*.json
+*-firebase-adminsdk-*.json

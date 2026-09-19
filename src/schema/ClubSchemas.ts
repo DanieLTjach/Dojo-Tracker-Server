@@ -1,7 +1,13 @@
 import z from 'zod';
 import { ClubRole } from '../model/ClubModels.ts';
 import { userIdParamSchema } from './UserSchemas.ts';
-import { optionalTextFieldSchema, clubIdParamSchema, countrySchema, localeSchema } from './CommonSchemas.ts';
+import {
+    clubIdParamSchema,
+    countrySchema,
+    imageUrlSchema,
+    localeSchema,
+    optionalTextFieldSchema,
+} from './CommonSchemas.ts';
 
 export const clubIdSchema = z.number().int('Club ID must be an integer');
 export { clubIdParamSchema };
@@ -16,6 +22,7 @@ const clubBodySchema = z.object({
     locale: localeSchema,
     description: optionalTextFieldSchema,
     contactInfo: optionalTextFieldSchema,
+    logoUrl: imageUrlSchema.nullish(),
     isActive: z.boolean().nullish(),
 });
 

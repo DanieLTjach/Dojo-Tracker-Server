@@ -7,6 +7,7 @@ import { handleErrors } from '../src/middleware/ErrorHandling.ts';
 import { dbManager } from '../src/db/dbInit.ts';
 import { createAuthHeader, resetTestDatabase } from './testHelpers.ts';
 import { ProfileRepository } from '../src/repository/ProfileRepository.ts';
+import { mergeProfileValues } from '../src/service/ProfileService.ts';
 
 const app = express();
 app.use(express.json());
@@ -81,7 +82,14 @@ describe('Event registration permissions matrix', () => {
     }
 
     function setProfile(userId: number, firstName: string | null, lastName: string | null): void {
-        profileRepo.upsertProfile(userId, null, null, firstName, lastName, null, false, SYSTEM_USER_ID);
+        profileRepo.upsertProfile(
+            userId,
+            mergeProfileValues(undefined, {
+                firstName: firstName,
+                lastName: lastName,
+            }),
+            SYSTEM_USER_ID
+        );
     }
 
     function clearRegistrations(): void {
@@ -458,7 +466,14 @@ describe('Event registration permissions matrix', () => {
 
         it('apply without firstName/lastName → 400 MissingProfileNamesForTournamentRegistrationError', async () => {
             // Strip names from MEMBER user
-            profileRepo.upsertProfile(MEMBER_USER_ID, null, null, null, null, null, false, SYSTEM_USER_ID);
+            profileRepo.upsertProfile(
+                MEMBER_USER_ID,
+                mergeProfileValues(undefined, {
+                    firstName: null,
+                    lastName: null,
+                }),
+                SYSTEM_USER_ID
+            );
             try {
                 const response = await request(app)
                     .post(`/api/events/${TOURNAMENT_EVENT_ID}/register`)
