@@ -145,4 +145,53 @@ export class NotificationRepository {
         `).run(now, userId);
         return result.changes;
     }
+
+    broadcastSystemNotification(
+        key: string,
+        url?: string,
+        options: { dryRun?: boolean } = {}
+    ): { recipientCount: number, insertedCount: number } {
+        const payload = JSON.stringify(url ? { key, url } : { key });
+        const now = new Date().toISOString();
+
+        const findEligibleStmt = dbManager.db.prepare(`
+            SELECT u.id
+            FROM user u
+            WHERE u.isActive = 1
+              AND u.id != 0
+              AND NOT EXISTS (
+                SELECT 1 FROM notification n
+                WHERE n.userId = u.id
+                  AND n.type = 'SYSTEM'
+                  AND json_extract(n.payload, '$.key') = :key
+              )
+        `);
+
+        const eligibleUsers = findEligibleStmt.all({ key }) as { id: number }[];
+        const recipientCount = eligibleUsers.length;
+
+        if (options.dryRun || recipientCount === 0) {
+            return { recipientCount, insertedCount: 0 };
+        }
+
+        const insertStmt = dbManager.db.prepare(`
+            INSERT INTO notification (
+                userId, type, payload, createdAt
+            ) VALUES (
+                :userId, 'SYSTEM', :payload, :createdAt
+            )
+        `);
+
+        dbManager.db.transaction(() => {
+            for (const user of eligibleUsers) {
+                insertStmt.run({
+                    userId: user.id,
+                    payload,
+                    createdAt: now,
+                });
+            }
+        })();
+
+        return { recipientCount, insertedCount: recipientCount };
+    }
 }
