@@ -63,10 +63,12 @@ describe('NotificationRepository - broadcastSystemNotification', () => {
         expect(userIds).not.toContain(USER_INACTIVE);
         expect(userIds).not.toContain(0);
 
-        const parsed = JSON.parse(rows[0].payload);
+        expect(rows.length).toBeGreaterThan(0);
+        const first = rows[0]!;
+        const parsed = JSON.parse(first.payload);
         expect(parsed.key).toBe(testKey);
         expect(parsed.url).toBe('/info');
-        expect(rows[0].type).toBe('SYSTEM');
+        expect(first.type).toBe('SYSTEM');
     });
 
     it('is idempotent: running twice with the same key inserts 0 on the second run', () => {

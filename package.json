@@ -15,6 +15,8 @@
         "skill:recompute:dev": "dotenv -e .env.development -- node src/script/recomputeSkillRatings.ts",
         "achievements:recompute": "node src/script/recomputeAchievements.ts",
         "achievements:recompute:dev": "dotenv -e .env.development -- node src/script/recomputeAchievements.ts",
+        "welcome:send": "node src/script/sendWelcomeNotification.ts",
+        "welcome:send:dev": "dotenv -e .env.development -- node src/script/sendWelcomeNotification.ts",
         "storage:cleanup": "node src/script/cleanupOrphanedImages.ts",
         "storage:cleanup:dev": "dotenv -e .env.development -- node src/script/cleanupOrphanedImages.ts",
         "initdata:dev": "dotenv -e .env.development -- node src/script/generateLocalInitData.ts",
